@@ -1,0 +1,122 @@
+{% extends "doctors/base.html" %}
+{% load static %}
+
+{% block title %}Doctor | Treatment Monitoring{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center">
+      <h1 class="m-0 text-dark">Treatment Monitoring</h1>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Info + Summary -->
+<section class="content">
+  <div class="container-fluid">
+
+    <!-- Patient Summary Card -->
+    <div class="card card-outline card-info">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <h5 class="font-weight-bold mb-1">{{ patient.full_name }}</h5>
+            <p class="text-muted mb-0">Gender: {{ patient.get_gender_display }}</p>
+            <p class="text-muted mb-0">Blood Group: {{ patient.blood_group }}</p>
+            <p class="text-muted mb-0">Status:
+              <span class="badge badge-{% if patient.status == 'active' %}success{% elif patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                {{ patient.get_status_display }}
+              </span>
+            </p>
+          </div>
+          <div class="col-md-8">
+            <div class="alert alert-info mb-0">
+              <i class="fas fa-info-circle mr-2"></i>
+              Current Treatment Plan: <strong>{{ patient.current_plan|default:"N/A" }}</strong>
+              <br>
+              Last Update: {{ patient.last_update|date:"M d, Y H:i" }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Treatment Log Entry Form -->
+    <div class="card card-outline card-success">
+      <div class="card-header">
+        <h3 class="card-title">Log New Treatment</h3>
+      </div>
+      <form method="post" action="">
+        {% csrf_token %}
+        <div class="card-body">
+          <input type="hidden" name="patient_id" value="{{ patient.id }}">
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label>Date</label>
+              <input type="date" name="date" class="form-control" required>
+            </div>
+            <div class="form-group col-md-4">
+              <label>Treatment/Action</label>
+              <input type="text" name="action" class="form-control" required>
+            </div>
+            <div class="form-group col-md-3">
+              <label>Status</label>
+              <select name="status" class="form-control" required>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div class="form-group col-md-12">
+              <label>Notes</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Any additional info..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-right">
+          <button type="submit" class="btn btn-success"><i class="fas fa-plus-circle mr-1"></i> Save Entry</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Existing Treatment Logs -->
+    <div class="card card-outline card-primary">
+      <div class="card-header">
+        <h3 class="card-title">Treatment Progress Log</h3>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-striped table-hover mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Date</th>
+              <th>Treatment/Action</th>
+              <th>Notes</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in treatment_logs %}
+            <tr>
+              <td>{{ log.date|date:"M d, Y" }}</td>
+              <td>{{ log.action }}</td>
+              <td>{{ log.notes }}</td>
+              <td>
+                <span class="badge badge-{% if log.status == 'completed' %}success{% elif log.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                  {{ log.status|title }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted">No treatment records found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

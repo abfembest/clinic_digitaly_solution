@@ -1,0 +1,79 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}HMS | Budget Planning {% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Budget Planning</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-warning">
+        <div class="card-header">
+          <h3 class="card-title">Budget Planning</h3>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>Budget Category</label>
+                <input type="text" name="category" class="form-control" placeholder="e.g. Salaries, Equipment" required>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Allocated Amount</label>
+                <input type="number" name="amount" class="form-control" required>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Period</label>
+                <input type="month" name="period" class="form-control">
+              </div>
+            </div>
+            <button class="btn btn-warning">Save Budget</button>
+          </form>
+  
+          <hr class="my-4">
+  
+          <h5>Existing Budgets</h5>
+          <table class="table table-sm table-bordered">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Period</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in budgets %}
+              <tr>
+                <td>{{ b.category }}</td>
+                <td>₦{{ b.amount }}</td>
+                <td>{{ b.period }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center">No budgets defined.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% endblock %}

@@ -1,0 +1,99 @@
+{% extends "doctors/base.html" %}
+
+{% load static %}
+{% block title %}Doctors | Patient List{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <h1 class="m-0 text-dark">Patient List</h1>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Summary Card -->
+            <div class="col-md-4">
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Total Patients Today:</strong> {{ patients|length }}</p>
+                        <p><strong>In-Patients:</strong> {{ inpatients|length }}</p>
+                        <p><strong>Out-Patients:</strong> {{ outpatients|length }}</p>
+                        <p><strong>Critical Cases:</strong> {{ critical_count }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Table -->
+            <div class="col-md-8">
+                <div class="card card-secondary">
+                    <div class="card-header">
+                        <h3 class="card-title">Today's Patients</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Ward / Bed</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for patient in patients %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ patient.full_name }}</td>
+                                            <td>
+                                                {% if patient.is_inpatient %}
+                                                    <span class="badge badge-info">In-Patient</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">Out-Patient</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if patient.ward %}
+                                                    {{ patient.ward.name }} / Bed {{ patient.bed.bed_number }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if patient.status == "stable" %}
+                                                    <span class="badge badge-success">Stable</span>
+                                                {% elif patient.status == "critical" %}
+                                                    <span class="badge badge-danger">Critical</span>
+                                                {% else %}
+                                                    <span class="badge badge-warning">{{ patient.status|capfirst }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'view_patient' patient.id %}" class="btn btn-sm btn-outline-primary mb-1">View</a>
+                                                <a href="{% url 'add_diagnosis' patient.id %}" class="btn btn-sm btn-outline-info mb-1">Diagnose</a>
+                                                <a href="{% url 'prescribe_med' patient.id %}" class="btn btn-sm btn-outline-success mb-1">Prescribe</a>
+                                                <a href="{% url 'write_notes' patient.id %}" class="btn btn-sm btn-outline-warning mb-1">Write Notes</a>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center">No patients found.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    
+</section>
+{% endblock %}

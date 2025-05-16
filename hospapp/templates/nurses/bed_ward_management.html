@@ -1,0 +1,252 @@
+{% extends "nurses/base.html" %}
+
+{% load static %}
+
+{% block title %}Ward Actions | Nurses{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <h4 class="mb-2">Ward & Patient Management</h4>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <ul class="nav nav-tabs" id="wardTabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="admit-tab" data-toggle="tab" href="#admit" role="tab">Admit Patient</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="assign-tab" data-toggle="tab" href="#assign" role="tab">Assign Ward/Bed</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="discharge-tab" data-toggle="tab" href="#discharge" role="tab">Discharge</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="monitor-tab" data-toggle="tab" href="#monitor" role="tab">Monitor Status</a>
+      </li>
+    </ul>
+
+    <div class="tab-content border rounded p-3 bg-white" id="wardTabsContent">
+      <!-- Admit Patient -->
+      <div class="tab-pane fade show active" id="admit" role="tabpanel">
+          <form method="POST" action="{% url 'admit_patient_nurse' %}">
+              {% csrf_token %}
+              <div class="form-row">
+
+                  <div class="form-group col-md-6">
+                      <label>Patient ID or Name</label>
+                      <select class="form-control" autocomplete="on" placeholder="Search..." name="patient_id">
+                          {% for patient in patients %}
+                          <option value="{{patient.id}}">{{patient.full_name}}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+
+                  <div class="form-group col-md-6">
+                      <label>Ward</label>
+                      <select name="ward" class="form-control" id="admit-ward-select" required>
+                          <option value="" selected disabled>-- Select Ward --</option>
+                          {% for ward in wards %}
+                          <option value="{{ ward.id }}">{{ ward.name }}</option>
+                          {% endfor %}
+                      </select>
+
+                  </div>
+              </div>
+              <div class="form-row">
+                  <div class="form-group col-md-6">
+                      <label>Bed Number</label>
+                      <select name="bed_number" class="form-control" id="admit-bed-select" required>
+                          <option value="" selected disabled>-- Select Bed --</option>
+                          {% for bed in available_beds %}
+                          <option value="{{ bed.number }}" data-ward="{{ bed.ward.id }}">
+                              {{ bed.number }} (Ward: {{ bed.ward.name }})
+                          </option>
+                          {% endfor %}
+                      </select>
+
+                  </div>
+
+                  <div class="form-group col-md-6">
+
+                      <label>Assign Doctor /Nurse</label>
+                      <select name="bed_number" class="form-control" required>
+                          <option value="" selected disabled>-- Select Doctor --</option>
+                          {% for doctor in doctors %}
+                          <option value="{{ doctor.user.get_full_name }}}}">{{ doctor.role }}-{{ doctor.user.get_full_name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+                  </div>
+            
+                  <div class="form-group">
+                      <label>Reason for Admission</label>
+                      <textarea name="admission_reason" class="form-control" required></textarea>
+                  </div> 
+
+                  <div class="form-group text-center">
+                      <button type="submit" class="btn btn-primary">Admit Patient</button>
+                  </div>
+                
+          </form>
+      </div>
+
+      <!-- Assign -->
+      <div class="tab-pane fade" id="assign" role="tabpanel">
+          <form action="{% url 'assign_ward_bed' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-group">
+                  <label>Patient ID</label>
+                  <select name="patient_id" class="form-control" required>
+                      <option value="">Select Patient</option>
+                      {% for patient in patients %}
+                      <option value="{{ patient.id }}">{{ patient.full_name }} (ID: {{ patient.id }})</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Select Ward</label>
+                  <select name="ward_id" class="form-control" id="assign-ward-select" required>
+                      <option value="" disabled selected>Select Ward</option>
+                      {% for ward in wards %}
+                      <option value="{{ ward.id }}">{{ ward.name }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Bed Number</label>
+                  <select name="bed_number" class="form-control" id="assign-bed-select" required>
+                      <option value="" disabled selected>Select Bed</option>
+                      {% for bed in available_beds %}
+                      <option value="{{ bed.number }}" data-ward="{{ bed.ward.id }}">Bed {{ bed.number }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+
+              <div class="form-group">
+
+                  <label>Assign Doctor /Nurse</label>
+                  <select name="bed_number" class="form-control" required>
+                      <option value="" selected disabled>-- Select Doctor --</option>
+                      {% for doctor in doctors %}
+                      <option value="{{ doctor.user.get_full_name }}}}">{{ doctor.role }}-{{ doctor.user.get_full_name }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-warning">Assign Bed</button>
+              </div>
+          </form>
+      </div>
+
+      <!-- Discharge -->
+      <div class="tab-pane fade" id="discharge" role="tabpanel">
+          <form action="{% url 'discharge_patient' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-group">
+                  <label>Patient ID</label>
+                  <select name="patient_id" class="form-control" required>
+                      <option value="" selected disabled>Select Patient</option>
+                      {% for patient in admitted_patients %}
+                      <option value="{{ patient.id }}">
+                          {{ patient.full_name }} - {{ patient.bed }}
+                      </option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Discharge Summary</label>
+                  <textarea name="discharge_summary" class="form-control" rows="3" required></textarea>
+              </div>
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-danger">Discharge Patient</button>
+              </div>
+          </form>
+      </div>
+
+      <!-- Monitor -->
+      <div class="tab-pane fade" id="monitor" role="tabpanel">
+          <form action="{% url 'update_patient_status' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-group">
+                  <label>Patient Name/ID</label>
+                  <select name="patient_id" class="form-control" required>
+                      <option value="">Select Patient</option>
+                      {% for patient in admitted_patients %}
+                      <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.ward.name }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Condition Status</label>
+                  <select name="status" class="form-control" required>
+                      <option value="stable">Stable</option>
+                      <option value="critical">Critical</option>
+                      <option value="under_observation">Under Observation</option>
+                      <option value="improving">Improving</option>
+                      <option value="deteriorating">Deteriorating</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Notes</label>
+                  <textarea name="notes" class="form-control" rows="3" required></textarea>
+              </div>
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-info">Update Status</button>
+              </div>
+          </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% comment %} {% if messages %}
+<div class="messages-container mt-3 container-fluid">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %} {% endcomment %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Reusable function to filter beds by ward
+    function setupWardBedFilter(wardSelectorId, bedSelectorId) {
+      const wardSelect = document.getElementById(wardSelectorId);
+      const bedSelect = document.getElementById(bedSelectorId);
+
+      if (!wardSelect || !bedSelect) return;
+
+      function filterBeds() {
+        const selectedWard = wardSelect.value;
+
+        Array.from(bedSelect.options).forEach(option => {
+          const bedWard = option.getAttribute('data-ward');
+          if (!bedWard || selectedWard === '') {
+            option.style.display = '';
+          } else {
+            option.style.display = (bedWard === selectedWard) ? '' : 'none';
+          }
+        });
+
+        bedSelect.value = '';
+      }
+
+      wardSelect.addEventListener('change', filterBeds);
+      filterBeds(); // Initial filter on page load
+    }
+
+    // Apply to both tabs
+    setupWardBedFilter('admit-ward-select', 'admit-bed-select');
+    setupWardBedFilter('assign-ward-select', 'assign-bed-select');
+  });
+</script>
+
+{% endblock %}

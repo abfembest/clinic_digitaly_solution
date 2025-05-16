@@ -1,0 +1,126 @@
+{% extends "doctors/base.html" %}
+
+{% load static %}
+
+{% block title %}Doctors | Patient Consultation{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <h1 class="m-0 text-dark">Patient Consultation</h1>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-primary card-outline">
+            <div class="card-header p-2">
+                <ul class="nav nav-pills" id="doctorTabs">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#diagnosis">Diagnosis</a>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#prescription">Prescription</a>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#consultation">Consultation
+                            Notes</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tests">Request Tests</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#plan">Care Plan</a></li>
+                </ul>
+            </div>
+
+            <div class="card-body">
+                <div class="tab-content">
+
+                    <!-- Diagnosis Tab -->
+                    <div class="tab-pane fade show active" id="diagnosis">
+                        <form>
+                            <div class="form-group">
+                                <label>Diagnosis Summary</label>
+                                <textarea class="form-control" rows="3"
+                                    placeholder="Enter diagnosis details..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Doctor's Advice</label>
+                                <textarea class="form-control" rows="3"
+                                    placeholder="Advice or recommendations..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Diagnosis</button>
+                        </form>
+                    </div>
+
+                    <!-- Prescription Tab -->
+                    <div class="tab-pane fade" id="prescription">
+                        <form>
+                            <div class="form-group">
+                                <label>Medication Name</label>
+                                <input type="text" class="form-control" placeholder="e.g., Metformin">
+                            </div>
+                            <div class="form-group">
+                                <label>Dosage & Instructions</label>
+                                <textarea class="form-control" rows="2"
+                                    placeholder="Dosage, frequency, and route..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-success">Add Prescription</button>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="consultation">
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                            <div class="form-group">
+                                <label>Consultation Notes</label>
+                                <textarea class="form-control" name="notes" rows="5"
+                                    placeholder="Enter symptoms, observations, complaints..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Save Notes</button>
+                        </form>
+                    </div>
+
+
+                    <!-- Request Tests Tab -->
+                    <div class="tab-pane fade" id="tests">
+                        <form>
+                            <div class="form-group">
+                                <label>Select Tests to Request</label>
+                                <select multiple class="form-control">
+                                    <option>Fertility Hormone Panel</option>
+                                    <option>Ultrasound Scan</option>
+                                    <option>Blood Count</option>
+                                    <option>Thyroid Function Test</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Instructions</label>
+                                <textarea class="form-control" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning">Request Tests</button>
+                        </form>
+                    </div>
+
+                    <!-- Care Plan Tab -->
+                    <div class="tab-pane fade" id="plan">
+                        <form>
+                            <div class="form-group">
+                                <label>Clinical Findings</label>
+                                <textarea class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Plan of Care</label>
+                                <textarea class="form-control" rows="3"
+                                    placeholder="Next steps, referrals, follow-up..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-info">Save Care Plan</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

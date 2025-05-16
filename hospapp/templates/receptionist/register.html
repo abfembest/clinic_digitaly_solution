@@ -1,0 +1,512 @@
+{% extends "receptionist/base.html" %}
+
+{% block title %}HMS | Receptionist{% endblock %}
+
+{% block content %}
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Patient Management</h1>
+            </div><!-- /.col -->
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active">Patient Management</li>
+                </ol>
+            </div><!-- /.col -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container p-4 shadow-sm">
+        <div class=" flex-wrap ">
+            <!-- Nav Tabs -->
+            <ul class="nav nav-tabs mb-4" id="patientTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="register-tab" data-toggle="tab" href="#register" role="tab">
+                        New
+                        Patient
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="admit-tab" data-toggle="tab" href="#admit" role="tab">
+                        Admit Patient
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="update-tab" data-toggle="tab" href="#update" role="tab">Update Info</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
+                        Schedule
+                        Appointment
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="refer-tab" data-toggle="tab" href="#refer" role="tab">Department
+                        Referral</a>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="patientTabsContent">
+                <!-- Register Patient Tab -->
+                <div class="tab-pane fade show active" id="register" role="tabpanel">
+                    <form enctype="multipart/form-data" action="{% url 'register_p' %}" method="post">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Full Name</label>
+                                <input type="text" class="form-control" placeholder="John Doe" required
+                                    name="full_name">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Date of Birth</label>
+                                <input type="date" class="form-control" required name="dob">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Gender</label>
+                                <select class="form-control" required name="gender">
+                                    <option disabled selected>Choose...</option>
+                                    <option>Male</option>
+                                    <option>Female</option>
+                                    <!-- <option>Other</option> -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label>Phone</label>
+                                <input type="tel" class="form-control" placeholder="+234..." required name="phone">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Email (optional)</label>
+                                <input type="email" class="form-control" placeholder="example@mail.com" name="email">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Marital Status</label>
+                                <select class="form-control" name="marital_status">
+                                    <option>Single</option>
+                                    <option>Married</option>
+                                    <option>Divorced</option>
+                                    <option>Widowed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Home Address</label>
+                                <input type="text" class="form-control" placeholder="123 Street, City" name="address">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Nationality</label>
+                                <input type="text" class="form-control" placeholder="e.g. Nigerian" name="nationality">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>State of Origin</label>
+                                <input type="text" class="form-control" name="state_of_origin">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label>ID Type</label>
+                                <select class="form-control" name="id_type">
+                                    <option>National ID</option>
+                                    <option>Voter Card</option>
+                                    <option>Driver's License</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>ID Number</label>
+                                <input type="text" class="form-control" placeholder="Enter ID number" name="id_number">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Upload Photo</label>
+                                <input type="file" class="form-control-file" name="photo">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>First Time or Returning?</label>
+                                <select class="form-control" name="first_time">
+                                    <option>First Time</option>
+                                    <option>Returning</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Referred By (if any)</label>
+                                <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
+                                    name="referred_by">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Additional Notes</label>
+                            <textarea class="form-control" rows="3" placeholder="Any other relevant information..."
+                                name="notes"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Register Patient</button>
+                    </form>
+                </div>
+
+                <!-- Admit Patient -->
+                <div class="tab-pane fade" id="admit" role="tabpanel">
+                    <form method="POST" action="{% url 'admit_patient' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Patient ID or Name</label>
+                            <select class="form-control" autocomplete="on" placeholder="Search..." name="patient_id">
+                                {% for patient in patients %}
+                                <option value="{{patient.full_name}}">{{patient.full_name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Ward</label>
+                            <select name="ward" class="form-control" required>
+                                <option value="" selected disabled>-- Select Ward --</option>
+                                {% for ward in wards %}
+                                <option value="{{ward.name}}">{{ward.name}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Bed Number</label>
+                            <select name="bed_number" class="form-control" required>
+                                <option value="" selected disabled>-- Select Bed --</option>
+                                {% for bed in available_beds %}
+                                <option value="{{ bed.number }}">{{ bed.number }} (Ward: {{ bed.ward }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Reason for Admission</label>
+                            <textarea name="admission_reason" class="form-control" rows="3" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Attending Doctor</label>
+                            <input type="text" name="doctor" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Admission Date</label>
+                            <input type="date" name="admission_date" class="form-control"
+                                value="{{ today|date:'Y-m-d' }}">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Admit Patient</button>
+                    </form>
+                </div>
+
+
+                <!-- Update Info -->
+                <div class="tab-pane fade" id="update" role="tabpanel">
+                    <form action="{% url 'update_patient_info' %}" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Patient ID or Name</label>
+                            <select class="form-control" id="patientSelect" name="patient_id" required>
+                                <option value="" selected disabled>-- Select Patient --</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Full Name</label>
+                                <input type="text" class="form-control" placeholder="John Doe" required name="full_name"
+                                    id="fullNameField">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Date of Birth</label>
+                                <input type="date" class="form-control" required name="dob" id="dobField">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Gender</label>
+                                <select class="form-control" required name="gender" id="genderField">
+                                    <option disabled selected>Choose...</option>
+                                    <option>Male</option>
+                                    <option>Female</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label>Phone</label>
+                                <input type="tel" class="form-control" placeholder="+234..." required name="phone"
+                                    id="phoneField">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Email (optional)</label>
+                                <input type="email" class="form-control" placeholder="example@mail.com" name="email"
+                                    id="emailField">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Marital Status</label>
+                                <select class="form-control" name="marital_status" id="maritalStatusField">
+                                    <option>Single</option>
+                                    <option>Married</option>
+                                    <option>Divorced</option>
+                                    <option>Widowed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Home Address</label>
+                                <input type="text" class="form-control" placeholder="123 Street, City" name="address"
+                                    id="addressField">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>Nationality</label>
+                                <input type="text" class="form-control" placeholder="e.g. Nigerian" name="nationality"
+                                    id="nationalityField">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>State of Origin</label>
+                                <input type="text" class="form-control" name="state_of_origin" id="stateField">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label>ID Type</label>
+                                <select class="form-control" name="id_type" id="idTypeField">
+                                    <option>National ID</option>
+                                    <option>Voter Card</option>
+                                    <option>Driver's License</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>ID Number</label>
+                                <input type="text" class="form-control" placeholder="Enter ID number" name="id_number"
+                                    id="idNumberField">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Update Photo</label>
+                                <input type="file" class="form-control-file" name="photo">
+                                <small class="form-text text-muted">Leave empty to keep current photo</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>First Time or Returning?</label>
+                                <select class="form-control" name="first_time" id="firstTimeField">
+                                    <option>First Time</option>
+                                    <option>Returning</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Referred By (if any)</label>
+                                <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
+                                    name="referred_by" id="referredByField">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Blood Group</label>
+                                <select class="form-control" name="blood_group" id="bloodGroupField">
+                                    <option>A+</option>
+                                    <option>A-</option>
+                                    <option>B+</option>
+                                    <option>B-</option>
+                                    <option>AB+</option>
+                                    <option>AB-</option>
+                                    <option>O+</option>
+                                    <option>O-</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Next of Kin Name</label>
+                                <input type="text" class="form-control" placeholder="Next of Kin Name"
+                                    name="next_of_kin_name" id="nextOfKinNameField">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Next of Kin Phone</label>
+                            <input type="tel" class="form-control" placeholder="+234..." name="next_of_kin_phone"
+                                id="nextOfKinPhoneField">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Additional Notes</label>
+                            <textarea class="form-control" rows="3" placeholder="Any other relevant information..."
+                                name="notes" id="notesField"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">Update Patient Information</button>
+                    </form>
+                </div>
+
+                <!-- Schedule Appointment -->
+                <div class="tab-pane fade" id="schedule" role="tabpanel">
+                    <form action="{% url 'schedule_appointment' %}" method="post">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Patient</label>
+                                <select class="form-control" name="patient_id" required>
+                                    <option value="" disabled selected>-- Select Patient --</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Date & Time</label>
+                                <input type="datetime-local" class="form-control" name="scheduled_time" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Department</label>
+                            <select class="form-control" name="department" required>
+                                <option disabled selected>-- Select Department --</option>
+                                <option>Pediatrics</option>
+                                <option>Cardiology</option>
+                                <option>Orthopedics</option>
+                                <option>General Surgery</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Schedule</button>
+                    </form>
+                </div>
+
+
+                <!-- Referral -->
+                <div class="tab-pane fade" id="refer" role="tabpanel">
+                    <form action="{% url 'refer_patient' %}" method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Patient</label>
+                            <select class="form-control" name="patient_id" required>
+                                <option value="" disabled selected>-- Select Patient --</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Department</label>
+                            <select class="form-control" name="department" required>
+                                <option disabled selected>-- Select Department --</option>
+                                <option>Pediatrics</option>
+                                <option>Cardiology</option>
+                                <option>Orthopedics</option>
+                                <option>General Surgery</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Referral Note</label>
+                            <textarea class="form-control" rows="3" name="notes" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-danger">Refer Patient</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Updated AJAX script for patient data fetching
+    document.getElementById('patientSelect').addEventListener('change', function () {
+        const patientId = this.value;
+        if (!patientId) return;
+
+        fetch(`/ajax/patient-info/${patientId}/`)
+            .then(response => response.json())
+            .then(data => {
+                // Populate all fields with retrieved patient data
+                document.getElementById('fullNameField').value = data.full_name || '';
+                document.getElementById('dobField').value = data.date_of_birth || '';
+
+                // Set select values
+                const genderSelect = document.getElementById('genderField');
+                for (let i = 0; i < genderSelect.options.length; i++) {
+                    if (genderSelect.options[i].text === data.gender) {
+                        genderSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+
+                document.getElementById('phoneField').value = data.phone || '';
+                document.getElementById('emailField').value = data.email || '';
+
+                // Set marital status dropdown
+                const maritalSelect = document.getElementById('maritalStatusField');
+                for (let i = 0; i < maritalSelect.options.length; i++) {
+                    if (maritalSelect.options[i].text === data.marital_status) {
+                        maritalSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+
+                document.getElementById('addressField').value = data.address || '';
+                document.getElementById('nationalityField').value = data.nationality || '';
+                document.getElementById('stateField').value = data.state_of_origin || '';
+
+                // Set ID type dropdown
+                const idTypeSelect = document.getElementById('idTypeField');
+                for (let i = 0; i < idTypeSelect.options.length; i++) {
+                    if (idTypeSelect.options[i].text === data.id_type) {
+                        idTypeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+
+                document.getElementById('idNumberField').value = data.id_number || '';
+
+                // Set first time dropdown
+                const firstTimeSelect = document.getElementById('firstTimeField');
+                for (let i = 0; i < firstTimeSelect.options.length; i++) {
+                    if (firstTimeSelect.options[i].text === data.first_time) {
+                        firstTimeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+
+                document.getElementById('referredByField').value = data.referred_by || '';
+
+                // Set blood group dropdown
+                const bloodGroupSelect = document.getElementById('bloodGroupField');
+                for (let i = 0; i < bloodGroupSelect.options.length; i++) {
+                    if (bloodGroupSelect.options[i].text === data.blood_group) {
+                        bloodGroupSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+
+                document.getElementById('nextOfKinNameField').value = data.next_of_kin_name || '';
+                document.getElementById('nextOfKinPhoneField').value = data.next_of_kin_phone || '';
+                document.getElementById('notesField').value = data.notes || '';
+            })
+            .catch(error => {
+                console.error('Error fetching patient info:', error);
+            });
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "pharmacy/base.html" %}
+
+{% block title %}HMS | Inventory{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Inventory</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-secondary">
+        <div class="card-header">
+          <h3 class="card-title">Drug Inventory</h3>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Drug</th>
+                <th>Stock</th>
+                <th>Expiry</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in inventory %}
+              <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.stock }}</td>
+                <td>{{ item.expiry_date }}</td>
+                <td>
+                  <span class="badge badge-{% if item.stock < 10 %}danger{% else %}success{% endif %}">
+                    {% if item.stock < 10 %}Low{% else %}OK{% endif %}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center">No stock data.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "hr/base.html" %}
+
+{% block title %}HMS | Staff Profiles{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Staff Profiles</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Staff Records</h3>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm">
+              <thead class="thead-light">
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Department</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for staff in staff_list %}
+                <tr>
+                  <td>{{ forloop.counter }}</td>
+                  <td>{{ staff.full_name }}</td>
+                  <td>{{ staff.role }}</td>
+                  <td>{{ staff.department }}</td>
+                  <td>{{ staff.phone }}</td>
+                  <td>{{ staff.email }}</td>
+                  <td>
+                    <a href="{% url 'edit_staff_profile' staff.id %}" class="btn btn-sm btn-info">Edit</a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted">No staff found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  {% endblock %}

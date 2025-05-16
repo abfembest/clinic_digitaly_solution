@@ -1,0 +1,111 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}HMS | Patient Payment Tracker{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Financial Summary (P)</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-success">
+        <div class="card-header">
+          <h3 class="card-title">Patient Financial Summary</h3>
+        </div>
+        <div class="card-body">
+          <!-- Tabs -->
+          <ul class="nav nav-pills mb-3" id="accountTabs">
+            <li class="nav-item">
+              <a class="nav-link active" data-toggle="tab" href="#record">Record Payment</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-toggle="tab" href="#balance">View Balance</a>
+            </li>
+          </ul>
+  
+          <div class="tab-content">
+            <!-- Record Payment -->
+            <div class="tab-pane fade show active" id="record">
+              <form method="post">
+                {% csrf_token %}
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label>Patient</label>
+                    <input type="text" name="patient_name" class="form-control" placeholder="Search or enter name" required>
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label>Amount Paid</label>
+                    <input type="number" name="amount" class="form-control" required>
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label>Payment Method</label>
+                    <select class="form-control" name="method">
+                      <option>Cash</option>
+                      <option>POS</option>
+                      <option>Transfer</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Note</label>
+                  <textarea name="note" class="form-control" rows="2"></textarea>
+                </div>
+                <button class="btn btn-success">Record Payment</button>
+              </form>
+            </div>
+  
+            <!-- Balance View -->
+            <div class="tab-pane fade" id="balance">
+              <div class="table-responsive">
+                <table class="table table-bordered mt-3">
+                  <thead class="thead-light">
+                    <tr>
+                      <th>Patient</th>
+                      <th>Total Paid</th>
+                      <th>Total Billed</th>
+                      <th>Outstanding</th>
+                      <th>Refunds</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for record in balance_list %}
+                    <tr>
+                      <td>{{ record.patient.full_name }}</td>
+                      <td>₦{{ record.total_paid }}</td>
+                      <td>₦{{ record.total_billed }}</td>
+                      <td>₦{{ record.outstanding }}</td>
+                      <td>₦{{ record.refunds }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center text-muted">No records found.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+  
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

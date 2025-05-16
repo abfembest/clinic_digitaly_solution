@@ -1,0 +1,113 @@
+{% extends "nurses/base.html" %}
+{% load static %}
+
+{% block title %}Nurse | Record Vitals{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <h4 class="mb-2">Record Patient Vitals</h4>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="card card-outline card-success">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Enter Vital Signs</h5>
+      </div>
+      <div class="card-body">
+          <form method="POST" action="{% url 'record_vitals' %}">
+              {% csrf_token %}
+
+
+              <div class="form-row">
+                  <div class="form-group col-md-6">
+                      <label for="patient_id">Patient ID</label>
+                      <select name="patient_id" id="patient_id" class="form-control" required autocomplete="off">
+                          <option value="" disabled selected>Select Patient</option>
+                          {% for patient in patients %}
+                          <option value="{{ patient.id }}">{{ patient.id }}- {{ patient.full_name }} </option>
+                          {% endfor %}
+                      </select>
+                  </div>
+
+                  <div class="form-group col-md-6">
+                      <label for="temperature">Temperature (°C)</label>
+                      <input type="number" step="0.1" name="temperature" id="temperature" class="form-control" placeholder="e.g. 36.6" autocomplete="off">
+                  </div>
+
+              </div>
+
+              <div class="form-row">
+
+                  <div class="form-group col-md-4">
+                      <label for="height">Height (cm)</label>
+                      <input type="number" step="0.1" name="height" id="height" class="form-control" placeholder="e.g. 170" autocomplete="off">
+                  </div>
+                  <div class="form-group col-md-4">
+                      <label for="blood_pressure">Blood Pressure</label>
+                      <input type="text" name="blood_pressure" id="blood_pressure" class="form-control" placeholder="e.g. 120/80" autocomplete="off">
+                  </div>
+                  <div class="form-group col-md-4">
+                      <label for="pulse">Pulse (bpm)</label>
+                      <input type="number" name="pulse" id="pulse" class="form-control" placeholder="e.g. 72" autocomplete="off">
+                  </div>
+              </div>
+
+              <div class="form-row">
+
+                  <div class="form-group col-md-4">
+                      <label for="respiratory_rate">Respiratory Rate</label>
+                      <input type="number" name="respiratory_rate" id="respiratory_rate" class="form-control" placeholder="e.g. 16" autocomplete="off">
+                  </div>
+                  <div class="form-group col-md-4">
+                      <label for="weight">Weight (kg)</label>
+                      <input type="number" step="0.1" name="weight" id="weight" class="form-control" placeholder="e.g. 70.5" autocomplete="off">
+                  </div>
+
+                  <div class="form-group col-md-4">
+                      <label for="bmi">BMI</label>
+                      <input type="text" id="bmi" class="form-control" readonly name="bmi" placeholder="Auto-calculated">
+                  </div>
+              </div>
+
+              <div class="form-row">
+
+                  <div class="form-group col-md-8">
+                      <label for="notes">Additional Notes</label>
+                      <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Enter any additional observations or comments"></textarea>
+                  </div>
+              </div>
+
+             
+
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-secondary px-4">Submit Vitals</button>
+              </div>
+          </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  function calculateBMI() {
+    const weight = parseFloat(document.getElementById('weight').value);
+    const heightCm = parseFloat(document.getElementById('height').value);
+    const bmiInput = document.getElementById('bmi');
+
+    if (weight > 0 && heightCm > 0) {
+      const heightM = heightCm / 100;
+      const bmi = weight / (heightM * heightM);
+      bmiInput.value = bmi.toFixed(2);
+    } else {
+      bmiInput.value = '';
+    }
+  }
+
+  document.getElementById('weight').addEventListener('input', calculateBMI);
+  document.getElementById('height').addEventListener('input', calculateBMI);
+</script>
+
+{% endblock %}

@@ -1,0 +1,11 @@
+# Ignore Visual Studio settings
+.vs/
+# Ignore Python files
+__pycache__/
+*.pyc
+
+# Ignore environment files
+.env
+venv/
+
+clinic_digitaly_solution_clone/
