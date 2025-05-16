@@ -1,0 +1,104 @@
+{% extends "pharmacy/base.html" %}
+
+{% block title %}HMS | Pharmacy Medication{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Dispense Medication</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-success">
+        <div class="card-header">
+          <h3 class="card-title">Patient: {{ patient.full_name }}</h3>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-pills mb-3" id="pharmacyTabs">
+            <li class="nav-item">
+              <a class="nav-link active" data-toggle="tab" href="#dispense">Dispense Medication</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-toggle="tab" href="#record">Medication History</a>
+            </li>
+          </ul>
+  
+          <div class="tab-content">
+            <!-- Dispense Medication -->
+            <div class="tab-pane fade show active" id="dispense">
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label>Drug Name</label>
+                    <input type="text" class="form-control" name="drug_name" required>
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label>Dosage</label>
+                    <input type="text" class="form-control" name="dosage">
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label>Quantity</label>
+                    <input type="number" class="form-control" name="quantity" min="1">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Instructions</label>
+                  <textarea class="form-control" name="instructions" rows="2"></textarea>
+                </div>
+                <button class="btn btn-success">Dispense</button>
+              </form>
+            </div>
+  
+            <!-- Medication Record -->
+            <div class="tab-pane fade" id="record">
+              <table class="table table-striped mt-3">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Drug</th>
+                    <th>Dosage</th>
+                    <th>Quantity</th>
+                    <th>Instructions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for record in medication_records %}
+                  <tr>
+                    <td>{{ record.date }}</td>
+                    <td>{{ record.drug_name }}</td>
+                    <td>{{ record.dosage }}</td>
+                    <td>{{ record.quantity }}</td>
+                    <td>{{ record.instructions }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-center text-muted">No records available.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

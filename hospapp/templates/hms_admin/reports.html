@@ -1,0 +1,128 @@
+{% extends "hms_admin/base.html" %}
+
+{% block title %}HMS | Full Reports{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Full Reports</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<!-- 🌟 Departmental Reports Icons -->
+<section class="dashboard-icons py-4 bg-light rounded">
+  <div class="container">
+    <div class="row g-3 justify-content-center">
+
+      <!-- Reception -->
+      <div class="col-auto">
+        <a href="{ url 'reception_reports' %}" class="btn btn-primary d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-person-lines-fill fs-3 mb-1"></i>
+          <span class="small text-nowrap">Reception</span>
+        </a>
+      </div>
+
+      <!-- Nursing -->
+      <div class="col-auto">
+        <a href="{ url 'nurse_reports' %}" class="btn btn-success d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-heart-pulse fs-3 mb-1"></i>
+          <span class="small text-nowrap">Nursing</span>
+        </a>
+      </div>
+
+      <!-- Doctors -->
+      <div class="col-auto">
+        <a href="{ url 'doctor_reports' %}" class="btn btn-info d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-clipboard-pulse fs-3 mb-1"></i>
+          <span class="small text-nowrap">Doctors</span>
+        </a>
+      </div>
+
+      <!-- Laboratory -->
+      <div class="col-auto">
+        <a href="{ url 'lab_reports' %}" class="btn btn-warning d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-eyedropper fs-3 mb-1"></i>
+          <span class="small text-nowrap">Lab</span>
+        </a>
+      </div>
+
+      <!-- Pharmacy -->
+      <div class="col-auto">
+        <a href="{ url 'pharmacy_reports' %}" class="btn btn-danger d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-capsule fs-3 mb-1"></i>
+          <span class="small text-nowrap">Pharmacy</span>
+        </a>
+      </div>
+
+      <!-- Accounting -->
+      <div class="col-auto">
+        <a href="{ url 'accounts_reports' %}" class="btn btn-secondary d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-cash-coin fs-3 mb-1"></i>
+          <span class="small text-nowrap">Accounts</span>
+        </a>
+      </div>
+
+      <!-- HR -->
+      <div class="col-auto">
+        <a href="{ url 'hr_reports' %}" class="btn btn-dark d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
+          style="width: 100px; height: 100px;">
+          <i class="bi bi-people fs-3 mb-1"></i>
+          <span class="small text-nowrap">HR</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-info">
+        <div class="card-header">
+          <h3 class="card-title">System-Wide Reports</h3>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#lab">Lab</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#finance">Accounts</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#hr">HR</a></li>
+          </ul>
+  
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="lab">
+              <div class="alert alert-info text-center">Clinical reports coming soon.</div>
+            </div>
+            <div class="tab-pane fade" id="finance">
+              <div class="alert alert-warning text-center">Financial report not yet available.</div>
+            </div>
+            <div class="tab-pane fade" id="hr">
+              <div class="alert alert-secondary text-center">HR reports will be shown here.</div>
+            </div>            
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

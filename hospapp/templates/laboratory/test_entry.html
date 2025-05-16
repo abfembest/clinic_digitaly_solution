@@ -1,0 +1,133 @@
+{% extends "laboratory/base.html" %}
+
+{% block title %}HMS | Lab Home{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Lab Test Entry</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-outline card-info">
+            <div class="card-header">
+                <h3 class="card-title">Log New Lab Test</h3>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-pills mb-3" id="labTabs">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#semen">Semen Analysis</a>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#blood">Blood Screening</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#hormone">Hormonal Assay</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pregnancy">Pregnancy Test</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#infection">Infection Screening</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- Semen Analysis -->
+                    <div class="tab-pane fade show active" id="semen">
+                        <form method="post">{% csrf_token %}
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                            <div class="form-group">
+                                <label>Sperm Count (million/ml)</label>
+                                <input type="number" class="form-control" name="sperm_count" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Motility (%)</label>
+                                <input type="number" class="form-control" name="motility">
+                            </div>
+                            <button class="btn btn-success">Submit Analysis</button>
+                        </form>
+                    </div>
+
+                    <!-- Blood Screening -->
+                    <div class="tab-pane fade" id="blood">
+                        <form method="post">{% csrf_token %}
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                            <div class="form-group">
+                                <label>Blood Type</label>
+                                <input type="text" class="form-control" name="blood_type">
+                            </div>
+                            <div class="form-group">
+                                <label>Screening Notes</label>
+                                <textarea class="form-control" name="notes"></textarea>
+                            </div>
+                            <button class="btn btn-success">Submit Result</button>
+                        </form>
+                    </div>
+
+                    <!-- Hormonal Assay -->
+                    <div class="tab-pane fade" id="hormone">
+                        <form method="post">{% csrf_token %}
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                            <div class="form-group">
+                                <label>Hormone Type</label>
+                                <input type="text" class="form-control" name="hormone">
+                            </div>
+                            <div class="form-group">
+                                <label>Level (ng/mL)</label>
+                                <input type="number" class="form-control" name="level">
+                            </div>
+                            <button class="btn btn-success">Submit Assay</button>
+                        </form>
+                    </div>
+
+                    <!-- Pregnancy Test -->
+                    <div class="tab-pane fade" id="pregnancy">
+                        <form method="post">{% csrf_token %}
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                            <div class="form-group">
+                                <label>Test Result</label>
+                                <select class="form-control" name="result">
+                                    <option value="positive">Positive</option>
+                                    <option value="negative">Negative</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success">Save Result</button>
+                        </form>
+                    </div>
+
+                    <!-- Infection Screening -->
+                    <div class="tab-pane fade" id="infection">
+                        <form method="post">{% csrf_token %}
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                            <div class="form-group">
+                                <label>Infection Type</label>
+                                <input type="text" class="form-control" name="infection_type">
+                            </div>
+                            <div class="form-group">
+                                <label>Screening Result</label>
+                                <select class="form-control" name="result">
+                                    <option value="positive">Positive</option>
+                                    <option value="negative">Negative</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success">Record Screening</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

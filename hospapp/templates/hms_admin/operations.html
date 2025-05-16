@@ -1,0 +1,85 @@
+{% extends "hms_admin/base.html" %}
+
+{% block title %}HMS | Operations & Approval{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Operations & Approvals</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-warning">
+        <div class="card-header">
+          <h3 class="card-title">Operational Approvals</h3>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-pills mb-3">
+            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#discharges">Pending Discharges</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#expenses">Expenses Approval</a></li>
+          </ul>
+  
+          <div class="tab-content">
+            <!-- Pending Discharges -->
+            <div class="tab-pane fade show active" id="discharges">
+              <table class="table table-bordered">
+                <thead>
+                  <tr><th>Patient</th><th>Requested By</th><th>Date</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {% for d in pending_discharges %}
+                  <tr>
+                    <td>{{ d.patient.full_name }}</td>
+                    <td>{{ d.requested_by }}</td>
+                    <td>{{ d.date }}</td>
+                    <td><a href="{% url 'approve_discharge' d.id %}" class="btn btn-sm btn-success">Approve</a></td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-center">No pending discharges</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+  
+            <!-- Expenses -->
+            <div class="tab-pane fade" id="expenses">
+              <table class="table table-bordered">
+                <thead>
+                  <tr><th>Description</th><th>Amount</th><th>Requested By</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {% for exp in pending_expenses %}
+                  <tr>
+                    <td>{{ exp.description }}</td>
+                    <td>₦{{ exp.amount }}</td>
+                    <td>{{ exp.submitted_by }}</td>
+                    <td><a href="{% url 'approve_expense' exp.id %}" class="btn btn-sm btn-success">Approve</a></td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-center">No expenses pending</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% endblock %}

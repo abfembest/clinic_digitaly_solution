@@ -1,0 +1,60 @@
+{% extends "pharmacy/base.html" %}
+
+{% block title %}HMS | Reorder Alerts{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Alerts</h1>
+            </div><!-- /.col -->
+            <!-- <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Dashboard</li>
+                </ol>
+            </div> -->
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-danger">
+        <div class="card-header">
+          <h3 class="card-title">Low Stock / Reorder Needed</h3>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Drug</th>
+                <th>Stock</th>
+                <th>Reorder Level</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for drug in reorder_drugs %}
+              <tr>
+                <td>{{ drug.name }}</td>
+                <td>{{ drug.stock }}</td>
+                <td>{{ drug.reorder_level }}</td>
+                <td>
+                  <a href="#" class="btn btn-warning btn-sm">Reorder</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center">No alerts.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
