@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Ward, Bed, Patient, Appointment, Referral, Admission,
     HandoverLog, Shift, TaskAssignment, EmergencyAlert,
-    MedicalRecord, Profile, Vitals, NursingNote
+    MedicalRecord, Profile, Vitals, NursingNote, Consultation, Prescription
 )
 
 admin.site.register(Ward)
@@ -19,3 +19,5 @@ admin.site.register(MedicalRecord)
 admin.site.register(Profile)
 admin.site.register(Vitals)
 admin.site.register(NursingNote)
+admin.site.register(Consultation)
+admin.site.register(Prescription)

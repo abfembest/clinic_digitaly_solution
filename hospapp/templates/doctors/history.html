@@ -1,0 +1,232 @@
+<div class="container-fluid">
+  <!-- Patient Header -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="callout callout-info">
+        <h5 class="text-primary"><i class="fas fa-user-circle mr-2"></i>{{ patient.full_name }}</h5>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Patient Info Card -->
+  <div class="card card-outline card-primary mb-3 shadow-sm">
+    <div class="card-header">
+      <h3 class="card-title font-weight-bold">Patient Information</h3>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm table-bordered text-sm mb-0">
+        <tbody>
+          <tr>
+            <th class="bg-light" style="width:15%">Status</th>
+            <td style="width:35%">
+              {% if patient.status|lower == 'active' %}
+                <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>{{ patient.status }}</span>
+              {% else %}
+                <span class="badge badge-secondary"><i class="fas fa-times-circle mr-1"></i>{{ patient.status }}</span>
+              {% endif %}
+            </td>
+            <th class="bg-light" style="width:15%">Blood Group</th>
+            <td style="width:35%"><span class="badge badge-danger">{{ patient.blood_group }}</span></td>
+          </tr>
+          <tr>
+            <th class="bg-light">Gender</th>
+            <td>
+              {% if patient.gender|lower == 'male' %}
+                <i class="fas fa-male text-primary mr-1"></i>
+              {% elif patient.gender|lower == 'female' %}
+                <i class="fas fa-female text-pink mr-1"></i>
+              {% else %}
+                <i class="fas fa-user text-secondary mr-1"></i>
+              {% endif %}
+              {{ patient.gender }}
+            </td>
+            <th class="bg-light">Date of Birth</th>
+            <td><i class="fas fa-calendar-alt text-info mr-1"></i>{{ patient.date_of_birth }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div class="row">
+    <!-- Consultations -->
+    <div class="col-md-6">
+      <div class="card card-outline card-primary mb-3 shadow-sm">
+        <div class="card-header bg-primary py-2">
+          <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-stethoscope mr-1"></i> Consultations</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0 text-sm">
+            <tbody>
+              {% for c in consultations %}
+              <tr>
+                <td style="width:30%" class="text-bold text-primary">
+                  <i class="far fa-calendar mr-1"></i>{{ c.created_at|date:"M d, Y" }}
+                </td>
+                <td><i class="fas fa-comment-medical text-muted mr-1"></i>{{ c.diagnosis_summary|truncatechars:60 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-3">
+                  <i class="fas fa-info-circle mr-1"></i> No consultations yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Admissions -->
+    <div class="col-md-6">
+      <div class="card card-outline card-success mb-3 shadow-sm">
+        <div class="card-header bg-success py-2">
+          <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-procedures mr-1"></i> Admissions</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0 text-sm">
+            <tbody>
+              {% for a in admissions %}
+              <tr>
+                <td style="width:30%" class="text-bold text-success">
+                  <i class="far fa-calendar-check mr-1"></i>{{ a.admission_date }}
+                </td>
+                <td>
+                  <i class="fas fa-hospital mr-1 text-muted"></i>Ward: {{ a.ward.name }}, 
+                  <i class="fas fa-bed text-muted mr-1"></i>Bed: {{ a.bed.number }}
+                  {% if a.status|lower == 'discharged' %}
+                    <span class="badge badge-secondary float-right"><i class="fas fa-sign-out-alt mr-1"></i>{{ a.status }}</span>
+                  {% else %}
+                    <span class="badge badge-info float-right"><i class="fas fa-clipboard-check mr-1"></i>{{ a.status }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-3">
+                  <i class="fas fa-info-circle mr-1"></i> No admissions found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Vitals -->
+    <div class="col-md-6">
+      <div class="card card-outline card-info mb-3 shadow-sm">
+        <div class="card-header bg-info py-2">
+          <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-heartbeat mr-1"></i> Vitals</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0 text-sm">
+            <tbody>
+              {% for v in vitals %}
+              <tr>
+                <td style="width:40%" class="text-bold text-info">
+                  <i class="far fa-clock mr-1"></i>{{ v.recorded_at|date:"M d, Y H:i" }}
+                </td>
+                <td>
+                  <span class="mr-2"><i class="fas fa-thermometer-half text-danger mr-1"></i>{{ v.temperature }}°C</span>
+                  <span class="mr-2"><i class="fas fa-tachometer-alt text-primary mr-1"></i>BP: {{ v.blood_pressure }}</span>
+                  <span><i class="fas fa-heartbeat text-success mr-1"></i>{{ v.pulse }} bpm</span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-3">
+                  <i class="fas fa-info-circle mr-1"></i> No vitals recorded.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Nursing Notes -->
+    <div class="col-md-6">
+      <div class="card card-outline card-warning mb-3 shadow-sm">
+        <div class="card-header bg-warning py-2">
+          <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-notes-medical mr-1"></i> Nursing Notes</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0 text-sm">
+            <tbody>
+              {% for n in nursing_notes %}
+              <tr>
+                <td style="width:40%" class="text-bold text-warning">
+                  <i class="far fa-clock mr-1"></i>{{ n.note_datetime|date:"M d, Y H:i" }}
+                  <br>
+                  <small class="badge badge-light">{{ n.note_type|title }}</small>
+                </td>
+                <td>
+                  <i class="fas fa-quote-left text-muted mr-1 fa-xs"></i>
+                  {{ n.notes|truncatechars:60 }}
+                  <i class="fas fa-quote-right text-muted ml-1 fa-xs"></i>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-3">
+                  <i class="fas fa-info-circle mr-1"></i> No nursing notes found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Medical Records -->
+    <div class="col-md-12">
+      <div class="card card-outline card-secondary mb-3 shadow-sm">
+        <div class="card-header bg-secondary py-2">
+          <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-file-medical mr-1"></i> Medical Records</h6>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0 text-sm">
+            <tbody>
+              {% for r in medical_records %}
+              <tr>
+                <td style="width:20%" class="text-bold">
+                  <i class="far fa-calendar-alt mr-1"></i>{{ r.record_date }}
+                </td>
+                <td><i class="fas fa-file-medical-alt text-muted mr-1"></i>{{ r.description|truncatechars:80 }}</td>
+                <td style="width:20%" class="text-right">
+                  <small class="text-muted"><i class="fas fa-user-md mr-1"></i>{{ r.created_by }}</small>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted py-3">
+                  <i class="fas fa-info-circle mr-1"></i> No medical records available.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h6 class="text-success">Prescriptions</h6>
+<ul class="list-group mb-3">
+    {% for p in prescriptions %}
+        <li class="list-group-item">
+            <strong>{{ p.medication }}</strong> — {{ p.instructions|truncatechars:80 }}<br>
+            <small class="text-muted">
+                Start: {{ p.start_date }} | By: {{ p.prescribed_by.get_full_name }}
+            </small>
+        </li>
+    {% empty %}
+        <li class="list-group-item text-muted">No prescriptions found.</li>
+    {% endfor %}
+</ul>

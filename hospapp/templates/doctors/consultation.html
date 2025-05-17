@@ -32,40 +32,96 @@
 
                     <!-- Diagnosis Tab -->
                     <div class="tab-pane fade show active" id="diagnosis">
-                        <form>
+                        <form method="POST" action="{% url 'save_consultation' %}">
+                            {% csrf_token %}
+
+                            <!-- Patient Selector -->
+                            <div class="form-group">
+                                <label>Select Patient</label>
+                                <select class="form-control" name="patient_id" id="patient-select" required>
+                                    <option value="" disabled selected>-- Choose Patient --</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Patient History Display (populated via AJAX) -->
+                            <div id="patient-history" class="border rounded p-3 bg-light mb-3" style="display: none;">
+                                <strong>Patient Medical History</strong>
+                                <div id="history-content" class="mt-2 text-muted small">
+                                    <!-- AJAX-loaded content -->
+                                </div>
+                            </div>
+
+                            <!-- Diagnosis Summary -->
                             <div class="form-group">
                                 <label>Diagnosis Summary</label>
-                                <textarea class="form-control" rows="3"
+                                <textarea class="form-control" name="diagnosis_summary" rows="3" required
                                     placeholder="Enter diagnosis details..."></textarea>
                             </div>
+
+                            <!-- Doctor Advice -->
                             <div class="form-group">
                                 <label>Doctor's Advice</label>
-                                <textarea class="form-control" rows="3"
+                                <textarea class="form-control" name="advice" rows="3" required
                                     placeholder="Advice or recommendations..."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary">Save Diagnosis</button>
+
+                            <div class="form-group text-center">
+                                <button type="submit" class="btn btn-primary">Save Diagnosis</button>
+                            </div>
                         </form>
                     </div>
 
+
                     <!-- Prescription Tab -->
                     <div class="tab-pane fade" id="prescription">
-                        <form>
+                        <form method="POST" action="{% url 'add_prescription' %}">
+                            {% csrf_token %}
+
+                            <!-- Patient Selector -->
+                            <div class="form-group">
+                                <label>Select Patient</label>
+                                <select name="patient_id" class="form-control" required>
+                                    <option value="" disabled selected>-- Choose Patient --</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Patient History Display (populated via AJAX) -->
+                            <div id="patient-history" class="border rounded p-3 bg-light mb-3" style="display: none;">
+                                <strong>Patient Medical History</strong>
+                                <div id="history-content" class="mt-2 text-muted small">
+                                    <!-- AJAX-loaded content -->
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label>Medication Name</label>
-                                <input type="text" class="form-control" placeholder="e.g., Metformin">
+                                <input type="text" name="medication" class="form-control" placeholder="e.g., Metformin"
+                                    required>
                             </div>
+
                             <div class="form-group">
                                 <label>Dosage & Instructions</label>
-                                <textarea class="form-control" rows="2"
-                                    placeholder="Dosage, frequency, and route..."></textarea>
+                                <textarea name="instructions" class="form-control" rows="2"
+                                    placeholder="e.g., 500mg twice daily after meals" required></textarea>
                             </div>
+
                             <div class="form-group">
                                 <label>Start Date</label>
-                                <input type="date" class="form-control">
+                                <input type="date" name="start_date" class="form-control" required>
                             </div>
-                            <button type="submit" class="btn btn-success">Add Prescription</button>
+
+                            <div class="form-group text-center">
+                                <button type="submit" class="btn btn-success">Add Prescription</button>
+                            </div>
                         </form>
                     </div>
+
 
                     <div class="tab-pane fade" id="consultation">
                         <form method="post">
@@ -122,5 +178,35 @@
         </div>
     </div>
 </section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const patientSelect = document.getElementById('patient-select');
+        const historyContainer = document.getElementById('patient-history');
+        const historyContent = document.getElementById('history-content');
+
+        // Get base URL from Django template
+        const baseUrl = "{% url 'patient_history_ajax' 0 %}".replace('/0/', '/');  // remove dummy 0
+
+        patientSelect.addEventListener('change', function () {
+            const patientId = this.value;
+
+            if (patientId) {
+                fetch(`${baseUrl}${patientId}/`)
+                    .then(response => response.text())
+                    .then(data => {
+                        historyContent.innerHTML = data;
+                        historyContainer.style.display = 'block';
+                    })
+                    .catch(error => {
+                        historyContent.innerHTML = "<p class='text-danger'>Failed to load history.</p>";
+                        historyContainer.style.display = 'block';
+                    });
+            } else {
+                historyContainer.style.display = 'none';
+            }
+        });
+    });
+</script>
 
 {% endblock %}

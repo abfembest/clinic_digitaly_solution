@@ -72,7 +72,7 @@
                   <div class="form-group col-md-6">
 
                       <label>Assign Doctor /Nurse</label>
-                      <select name="bed_number" class="form-control" required>
+                      <select name="doctor" class="form-control" required>
                           <option value="" selected disabled>-- Select Doctor --</option>
                           {% for doctor in doctors %}
                           <option value="{{ doctor.user.get_full_name }}}}">{{ doctor.role }}-{{ doctor.user.get_full_name }}</option>
@@ -128,7 +128,7 @@
               <div class="form-group">
 
                   <label>Assign Doctor /Nurse</label>
-                  <select name="bed_number" class="form-control" required>
+                  <select name="doctor" class="form-control" required>
                       <option value="" selected disabled>-- Select Doctor --</option>
                       {% for doctor in doctors %}
                       <option value="{{ doctor.user.get_full_name }}}}">{{ doctor.role }}-{{ doctor.user.get_full_name }}</option>

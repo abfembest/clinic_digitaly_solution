@@ -219,3 +219,28 @@ class NursingNote(models.Model):
 
     def __str__(self):
         return f"Nursing Note for {self.patient.full_name} on {self.note_datetime.strftime('%Y-%m-%d %H:%M')}"
+    
+class Consultation(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='consultations')
+    admission = models.ForeignKey(Admission, null=True, blank=True, on_delete=models.SET_NULL)
+    # test = models.ForeignKey(LabTest, null=True, blank=True, on_delete=models.SET_NULL)
+    
+    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    diagnosis_summary = models.TextField()
+    advice = models.TextField()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Consultation for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
+
+class Prescription(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='prescriptions')
+    medication = models.CharField(max_length=200)
+    instructions = models.TextField()
+    start_date = models.DateField()
+    prescribed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.medication} for {self.patient.full_name}"

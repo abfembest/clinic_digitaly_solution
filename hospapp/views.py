@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from .forms import PatientForm
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote
+from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -180,7 +180,7 @@ def assign_ward_bed(request):
         patient_id = request.POST.get('patient_id')
         ward_id = request.POST.get('ward_id')
         bed_number = request.POST.get('bed_number')
-        doctor = request.POST.get('doctor', '')
+        doctor = request.POST.get('doctor')
 
         try:
             patient = Patient.objects.get(id=patient_id)
@@ -502,7 +502,72 @@ def doctors(request):
 
 @login_required(login_url='home')
 def doctor_consultation(request):
-    return render(request, 'doctors/consultation.html')
+    context = {'patients': Patient.objects.all(),}
+    return render(request, 'doctors/consultation.html', context)
+
+@login_required(login_url='home')
+def save_consultation(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        diagnosis_summary = request.POST.get('diagnosis_summary')
+        advice = request.POST.get('advice')
+
+        patient = get_object_or_404(Patient, id=patient_id)
+
+        Consultation.objects.create(
+            patient=patient,
+            doctor=request.user,
+            diagnosis_summary=diagnosis_summary,
+            advice=advice
+        )
+
+        messages.success(request, f"Diagnosis saved for {patient.full_name}.")
+        return redirect('doctor_consultation')  # Or wherever you want to land after saving
+
+
+@csrf_exempt
+def patient_history_ajax(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    consultations = patient.consultations.order_by('-created_at')[:5]
+    admissions = patient.admission_set.order_by('-admission_date')[:5]
+    vitals = patient.vitals_set.order_by('-recorded_at')[:5]
+    notes = patient.nursing_notes.order_by('-note_datetime')[:5]
+    records = patient.medical_records.order_by('-record_date')[:5]
+    prescriptions = patient.prescriptions.order_by('-created_at')[:5]
+
+    return render(request, 'doctors/history.html', {
+        'patient': patient,
+        'consultations': consultations,
+        'admissions': admissions,
+        'vitals': vitals,
+        'nursing_notes': notes,
+        'medical_records': records,
+        'prescriptions': prescriptions,
+    })
+
+@csrf_exempt
+def add_prescription(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        medication = request.POST.get('medication')
+        instructions = request.POST.get('instructions')
+        start_date = request.POST.get('start_date')
+
+        patient = get_object_or_404(Patient, id=patient_id)
+
+        Prescription.objects.create(
+            patient=patient,
+            medication=medication,
+            instructions=instructions,
+            start_date=start_date,
+            prescribed_by=request.user
+        )
+
+        messages.success(request, f"Prescription added for {patient.full_name}.")
+        return redirect('doctor_consultation')  # Or wherever appropriate
+
+    return redirect('home')
 
 # def patient_list(request):
 #     return render(request, 'doctors/patient_list.html')

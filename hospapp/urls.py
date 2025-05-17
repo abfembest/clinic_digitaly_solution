@@ -22,6 +22,9 @@ urlpatterns = [
 
     path('d/home', views.doctors, name='doctors'),
     path('d/consultations', views.doctor_consultation, name='doctor_consultation'),
+    path('save-consultations', views.save_consultation, name='save_consultation'),
+    path('patient-history/<int:patient_id>/', views.patient_history_ajax, name='patient_history_ajax'),
+    path('add-prescription/', views.add_prescription, name='add_prescription'),
     path('d/medical-records/', views.access_medical_records, name='access_medical_records'),
     path('d/monitoring/', views.monitoring, name='monitoring'),
 
