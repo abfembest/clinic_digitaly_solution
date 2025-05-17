@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from .forms import PatientForm
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription
+from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -509,19 +509,21 @@ def doctor_consultation(request):
 def save_consultation(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
+        symptoms = request.POST.get('symptoms')
         diagnosis_summary = request.POST.get('diagnosis_summary')
         advice = request.POST.get('advice')
-
+        
         patient = get_object_or_404(Patient, id=patient_id)
-
+        
         Consultation.objects.create(
             patient=patient,
             doctor=request.user,
+            symptoms=symptoms,
             diagnosis_summary=diagnosis_summary,
             advice=advice
         )
-
-        messages.success(request, f"Diagnosis saved for {patient.full_name}.")
+        
+        messages.success(request, f"Consultation saved for {patient.full_name}.")
         return redirect('doctor_consultation')  # Or wherever you want to land after saving
 
 
@@ -568,6 +570,60 @@ def add_prescription(request):
         return redirect('doctor_consultation')  # Or wherever appropriate
 
     return redirect('home')
+
+@csrf_exempt
+def request_tests(request):
+    if request.method == "POST":
+        patient_id = request.POST.get('patient_id')
+        tests = request.POST.getlist('test')
+        instructions = request.POST.get('instructions', '').strip()
+
+        if not patient_id or not tests:
+            messages.error(request, "Please select a patient and at least one test.")
+            return redirect(request.META.get('HTTP_REFERER', 'doctor_consultation'))
+
+        patient = get_object_or_404(Patient, id=patient_id)
+        
+        # Save tests as comma-separated string
+        test_str = ", ".join(tests)
+
+        TestRequest.objects.create(
+            patient=patient,
+            requested_by=request.user,
+            tests=test_str,
+            instructions=instructions
+        )
+        messages.success(request, "Test request submitted successfully.")
+        return redirect('doctor_consultation')
+
+    # If GET or other method, redirect or raise error
+    return redirect('doctor_consultation')
+
+@csrf_exempt
+def save_care_plan(request):
+    if request.method == "POST":
+        patient_id = request.POST.get('patient_id')
+        clinical_findings = request.POST.get('clinical_findings', '').strip()
+        plan_of_care = request.POST.get('plan_of_care', '').strip()
+
+        if not patient_id or not clinical_findings or not plan_of_care:
+            messages.error(request, "Please fill in all required fields.")
+            return redirect(request.META.get('HTTP_REFERER', 'doctor_consultation'))
+
+        patient = get_object_or_404(Patient, id=patient_id)
+
+        CarePlan.objects.create(
+            patient=patient,
+            clinical_findings=clinical_findings,
+            plan_of_care=plan_of_care,
+            created_by=request.user
+        )
+
+        messages.success(request, "Care plan saved successfully.")
+        return redirect('doctor_consultation')
+
+    # For GET or other methods, redirect somewhere appropriate
+    return redirect('doctor_consultation')
 
 # def patient_list(request):
 #     return render(request, 'doctors/patient_list.html')

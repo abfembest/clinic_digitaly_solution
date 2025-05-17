@@ -16,12 +16,11 @@
         <div class="card card-primary card-outline">
             <div class="card-header p-2">
                 <ul class="nav nav-pills" id="doctorTabs">
-                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#diagnosis">Diagnosis</a>
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#diagnosis">Consultation &
+                            Diagnosis</a>
                     </li>
                     <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#prescription">Prescription</a>
                     </li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#consultation">Consultation
-                            Notes</a></li>
                     <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tests">Request Tests</a></li>
                     <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#plan">Care Plan</a></li>
                 </ul>
@@ -30,7 +29,7 @@
             <div class="card-body">
                 <div class="tab-content">
 
-                    <!-- Diagnosis Tab -->
+                    <!-- Diagnosis Tab (Combined with Consultation) -->
                     <div class="tab-pane fade show active" id="diagnosis">
                         <form method="POST" action="{% url 'save_consultation' %}">
                             {% csrf_token %}
@@ -54,6 +53,13 @@
                                 </div>
                             </div>
 
+                            <!-- Symptoms -->
+                            <div class="form-group">
+                                <label>Symptoms / Complaints</label>
+                                <textarea class="form-control" name="symptoms" rows="3" required
+                                    placeholder="Enter patient symptoms and complaints..."></textarea>
+                            </div>
+
                             <!-- Diagnosis Summary -->
                             <div class="form-group">
                                 <label>Diagnosis Summary</label>
@@ -63,13 +69,13 @@
 
                             <!-- Doctor Advice -->
                             <div class="form-group">
-                                <label>Doctor's Advice</label>
+                                <label>Doctor's Advice & Notes</label>
                                 <textarea class="form-control" name="advice" rows="3" required
-                                    placeholder="Advice or recommendations..."></textarea>
+                                    placeholder="Advice, recommendations, or additional notes..."></textarea>
                             </div>
 
                             <div class="form-group text-center">
-                                <button type="submit" class="btn btn-primary">Save Diagnosis</button>
+                                <button type="submit" class="btn btn-primary">Save Consultation</button>
                             </div>
                         </form>
                     </div>
@@ -92,9 +98,10 @@
                             </div>
 
                             <!-- Patient History Display (populated via AJAX) -->
-                            <div id="patient-history" class="border rounded p-3 bg-light mb-3" style="display: none;">
+                            <div id="prescription-patient-history" class="border rounded p-3 bg-light mb-3"
+                                style="display: none;">
                                 <strong>Patient Medical History</strong>
-                                <div id="history-content" class="mt-2 text-muted small">
+                                <div id="prescription-history-content" class="mt-2 text-muted small">
                                     <!-- AJAX-loaded content -->
                                 </div>
                             </div>
@@ -122,27 +129,25 @@
                         </form>
                     </div>
 
-
-                    <div class="tab-pane fade" id="consultation">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
-                            <div class="form-group">
-                                <label>Consultation Notes</label>
-                                <textarea class="form-control" name="notes" rows="5"
-                                    placeholder="Enter symptoms, observations, complaints..."></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-secondary">Save Notes</button>
-                        </form>
-                    </div>
-
-
                     <!-- Request Tests Tab -->
                     <div class="tab-pane fade" id="tests">
-                        <form>
+                        <form method="POST" action="{% url 'request_tests' %}">
+                            {% csrf_token %}
+                            <!-- Patient Selector -->
+                            <div class="form-group">
+                                <label>Select Patient</label>
+                                <select class="form-control" name="patient_id" id="test-patient-select" required>
+                                    <option value="" disabled selected>-- Choose Patient --</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
                             <div class="form-group">
                                 <label>Select Tests to Request</label>
-                                <select multiple class="form-control">
+                                <select class="form-control" name="test">
+                                    <option value="" selected disabled>-- Select Test --</option>
                                     <option>Fertility Hormone Panel</option>
                                     <option>Ultrasound Scan</option>
                                     <option>Blood Count</option>
@@ -151,24 +156,36 @@
                             </div>
                             <div class="form-group">
                                 <label>Additional Instructions</label>
-                                <textarea class="form-control" rows="2"></textarea>
+                                <textarea class="form-control" rows="2" name="instructions"></textarea>
                             </div>
                             <button type="submit" class="btn btn-warning">Request Tests</button>
                         </form>
                     </div>
 
-                    <!-- Care Plan Tab -->
                     <div class="tab-pane fade" id="plan">
-                        <form>
+                        <form method="POST" action="{% url 'save_care_plan' %}">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label>Select Patient</label>
+                                <select class="form-control" name="patient_id" id="plan-patient-select" required>
+                                    <option value="" disabled selected>-- Choose Patient --</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
                             <div class="form-group">
                                 <label>Clinical Findings</label>
-                                <textarea class="form-control" rows="3"></textarea>
+                                <textarea class="form-control" name="clinical_findings" rows="3" required></textarea>
                             </div>
+
                             <div class="form-group">
                                 <label>Plan of Care</label>
-                                <textarea class="form-control" rows="3"
-                                    placeholder="Next steps, referrals, follow-up..."></textarea>
+                                <textarea class="form-control" name="plan_of_care" rows="3"
+                                    placeholder="Next steps, referrals, follow-up..." required></textarea>
                             </div>
+
                             <button type="submit" class="btn btn-info">Save Care Plan</button>
                         </form>
                     </div>
@@ -181,31 +198,42 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const patientSelect = document.getElementById('patient-select');
-        const historyContainer = document.getElementById('patient-history');
-        const historyContent = document.getElementById('history-content');
+        // Function to set up patient history loading
+        function setupPatientHistoryLoading(selectId, historyContainerId, historyContentId) {
+            const patientSelect = document.getElementById(selectId);
+            const historyContainer = document.getElementById(historyContainerId);
+            const historyContent = document.getElementById(historyContentId);
 
-        // Get base URL from Django template
-        const baseUrl = "{% url 'patient_history_ajax' 0 %}".replace('/0/', '/');  // remove dummy 0
+            if (!patientSelect) return;
 
-        patientSelect.addEventListener('change', function () {
-            const patientId = this.value;
+            // Get base URL from Django template
+            const baseUrl = "{% url 'patient_history_ajax' 0 %}".replace('/0/', '/');  // remove dummy 0
 
-            if (patientId) {
-                fetch(`${baseUrl}${patientId}/`)
-                    .then(response => response.text())
-                    .then(data => {
-                        historyContent.innerHTML = data;
-                        historyContainer.style.display = 'block';
-                    })
-                    .catch(error => {
-                        historyContent.innerHTML = "<p class='text-danger'>Failed to load history.</p>";
-                        historyContainer.style.display = 'block';
-                    });
-            } else {
-                historyContainer.style.display = 'none';
-            }
-        });
+            patientSelect.addEventListener('change', function () {
+                const patientId = this.value;
+
+                if (patientId) {
+                    fetch(`${baseUrl}${patientId}/`)
+                        .then(response => response.text())
+                        .then(data => {
+                            historyContent.innerHTML = data;
+                            historyContainer.style.display = 'block';
+                        })
+                        .catch(error => {
+                            historyContent.innerHTML = "<p class='text-danger'>Failed to load history.</p>";
+                            historyContainer.style.display = 'block';
+                        });
+                } else {
+                    historyContainer.style.display = 'none';
+                }
+            });
+        }
+
+        // Set up history loading for main diagnosis tab
+        setupPatientHistoryLoading('patient-select', 'patient-history', 'history-content');
+
+        // Apply the same patient history loading to other tabs that need it
+        // You may need to create the corresponding HTML elements in those tabs
     });
 </script>
 

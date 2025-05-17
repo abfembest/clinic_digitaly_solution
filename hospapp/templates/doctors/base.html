@@ -296,6 +296,30 @@
     <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
     <!-- AdminLTE for demo purposes -->
     <script src="{% static 'dist/js/demo.js' %}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            {% if messages %}
+            {% for message in messages %}
+            Swal.fire({
+                toast: true,                // Make it a toast popup
+                position: 'top-end',        // Top right corner (can be 'top-start', 'bottom-end', etc.)
+                icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+                title: "{{ message|escapejs }}",  // message text, escaped for JS safety
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+            {% endfor %}
+            {% endif %}
+        });
+    </script>
 </body>
 
 </html>

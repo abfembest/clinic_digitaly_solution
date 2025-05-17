@@ -226,6 +226,7 @@ class Consultation(models.Model):
     # test = models.ForeignKey(LabTest, null=True, blank=True, on_delete=models.SET_NULL)
     
     doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    symptoms = models.TextField()  # New field for symptoms
     diagnosis_summary = models.TextField()
     advice = models.TextField()
     
@@ -244,3 +245,29 @@ class Prescription(models.Model):
 
     def __str__(self):
         return f"{self.medication} for {self.patient.full_name}"
+
+class TestRequest(models.Model):
+    TEST_CHOICES = [
+        ('Fertility Hormone Panel', 'Fertility Hormone Panel'),
+        ('Ultrasound Scan', 'Ultrasound Scan'),
+        ('Blood Count', 'Blood Count'),
+        ('Thyroid Function Test', 'Thyroid Function Test'),
+    ]
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    tests = models.TextField()  # store comma separated test names or JSON if preferred
+    instructions = models.TextField(blank=True, null=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Test Request for {self.patient.full_name} at {self.requested_at}"
+    
+class CarePlan(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    clinical_findings = models.TextField()
+    plan_of_care = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
