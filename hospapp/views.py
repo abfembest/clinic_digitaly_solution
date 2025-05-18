@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.utils.dateparse import parse_date
 from django.db.models import Q
+from django.http import Http404
 
 
 # Create your views here.
@@ -691,8 +692,89 @@ def access_medical_records(request):
     })
 
 @login_required(login_url='home')
+def get_patient_overview(request, patient_id):
+    try:
+        patient = Patient.objects.get(id=patient_id)
+        # Get the latest admission for this patient, if any
+        admission = Admission.objects.filter(patient=patient).order_by('-admission_date').first()
+        
+        # Get the latest vitals for this patient, limited to 5
+        vitals = Vitals.objects.filter(patient=patient).order_by('-recorded_at')[:5]
+        
+        # Calculate age from date_of_birth (implement as needed)
+        # For simplicity, we're not calculating age here, but you would typically do:
+        # from datetime import date
+        # age = (date.today() - patient.date_of_birth).days // 365
+        
+        return JsonResponse({
+            "name": patient.full_name,
+            "gender": patient.gender,
+            "status": patient.status,
+            "ward": admission.ward.name if admission and admission.ward else None,
+            "bed": str(admission.bed) if admission and admission.bed else None,
+            "last_vitals": [
+                {
+                    "bp": vital.blood_pressure, 
+                    "hr": vital.pulse, 
+                    "temp": vital.temperature,
+                    "date": vital.recorded_at.strftime("%Y-%m-%d %H:%M")
+                } 
+                for vital in vitals
+            ],
+        })
+    except Patient.DoesNotExist:
+        return JsonResponse({"error": "Patient not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@login_required(login_url='home')
+def get_patient_monitor(request, patient_id):
+    try:
+        patient = Patient.objects.get(id=patient_id)
+        # Get consultations for this patient, ordered by most recent first
+        consultations = Consultation.objects.filter(patient=patient).order_by('-created_at')
+        
+        # Get prescriptions for this patient, ordered by most recent first
+        prescriptions = Prescription.objects.filter(patient=patient).order_by('-created_at')
+        
+        return JsonResponse({
+            "consultations": [
+                {
+                    "notes": c.diagnosis_summary,  # Using diagnosis_summary instead of notes
+                    "date": c.created_at.strftime("%Y-%m-%d")
+                } 
+                for c in consultations
+            ],
+            "prescriptions": [
+                {
+                    "drug": p.medication,  # Using medication instead of drug
+                    "dosage": p.instructions,  # Using instructions instead of dosage
+                    "date": p.created_at.strftime("%Y-%m-%d")
+                } 
+                for p in prescriptions
+            ],
+        })
+    except Patient.DoesNotExist:
+        return JsonResponse({"error": "Patient not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@login_required(login_url='home')
 def monitoring(request):
-    return render(request, 'doctors/treatment_monitoring.html')
+    patient_id = request.GET.get("patient_id")
+    patient = Patient.objects.filter(id=patient_id).first() if patient_id else None
+
+    context = {
+        "all_patients": Patient.objects.all(),
+        "patient": patient,
+        "consultations": patient.consultations.all() if patient else [],
+        "prescriptions": patient.prescriptions.all() if patient else [],
+        "vitals": patient.vitals_set.all() if patient else [],
+        "notes": patient.nursing_notes.all() if patient else [],
+        "careplans": patient.careplan_set.all() if patient else [],
+        "admissions": patient.admission_set.all() if patient else [],
+    }
+    return render(request, "doctors/treatment_monitoring.html", context)
 
 @login_required(login_url='home')                          
 def ae(request):     

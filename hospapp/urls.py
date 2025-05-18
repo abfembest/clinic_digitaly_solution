@@ -28,7 +28,8 @@ urlpatterns = [
     path('request-tests/', views.request_tests, name='request_tests'),
     path('save-care-plan/', views.save_care_plan, name='save_care_plan'),
     path('d/medical-records/', views.access_medical_records, name='access_medical_records'),
-    path('api/patient/<int:patient_id>/', views.get_patient_details, name='get_patient_details'),
+    path('patient/<int:patient_id>/overview/', views.get_patient_overview, name='patient_overview'),
+    path('patient/<int:patient_id>/monitor/', views.get_patient_monitor, name='patient_monitor'),
     path('d/monitoring/', views.monitoring, name='monitoring'),
 
     path('ae/', views.ae, name='ae'),

@@ -4,119 +4,708 @@
 {% block title %}Doctor | Treatment Monitoring{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
+<!-- Content Header -->
 <div class="content-header">
   <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center">
-      <h1 class="m-0 text-dark">Treatment Monitoring</h1>
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0 text-dark d-flex align-items-center">
+          <i class="fas fa-chart-line text-primary mr-2"></i>Treatment Monitoring
+        </h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="#">Dashboard</a></li>
+          <li class="breadcrumb-item active">Treatment Monitoring</li>
+        </ol>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Patient Info + Summary -->
 <section class="content">
   <div class="container-fluid">
-
-    <!-- Patient Summary Card -->
-    <div class="card card-outline card-info">
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4">
-            <h5 class="font-weight-bold mb-1">{{ patient.full_name }}</h5>
-            <p class="text-muted mb-0">Gender: {{ patient.get_gender_display }}</p>
-            <p class="text-muted mb-0">Blood Group: {{ patient.blood_group }}</p>
-            <p class="text-muted mb-0">Status:
-              <span class="badge badge-{% if patient.status == 'active' %}success{% elif patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+    <!-- Top Row: Patient Selector and Summary -->
+    <div class="row">
+      <!-- Patient Selector -->
+      <div class="col-lg-3 col-md-4">
+        <div class="card card-primary card-outline elevation-2">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-user-injured mr-1"></i>Select Patient</h3>
+          </div>
+          <div class="card-body p-2">
+            <form method="get">
+              <div class="input-group input-group-sm">
+                <select name="patient_id" class="form-control select2" onchange="this.form.submit()" required data-placeholder="-- Choose Patient --">
+                  <option value="">-- Choose Patient --</option>
+                  {% for p in all_patients %}
+                    <option value="{{ p.id }}" {% if patient and patient.id == p.id %}selected{% endif %}>{{ p.full_name }}</option>
+                  {% endfor %}
+                </select>
+                <div class="input-group-append">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check-circle"></i>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      {% if patient %}
+      <!-- Patient Summary Card -->
+      <div class="col-lg-9 col-md-8">
+        <div class="card card-widget widget-user-2 elevation-2">
+          <div class="widget-user-header bg-info">
+            <div class="widget-user-image">
+              <img class="img-circle elevation-2" src="{% static 'img/default-avatar.png' %}" alt="Patient Avatar">
+            </div>
+            <h3 class="widget-user-username">{{ patient.full_name }}</h3>
+            <h5 class="widget-user-desc">
+              <span class="badge badge-light">{{ patient.get_gender_display }}</span>
+              <span class="badge badge-light">Blood: {{ patient.blood_group }}</span>
+              <span class="badge badge-{% if patient.status == 'stable' %}success{% elif patient.status == 'critical' %}danger{% else %}warning{% endif %}">
                 {{ patient.get_status_display }}
               </span>
-            </p>
+            </h5>
           </div>
-          <div class="col-md-8">
-            <div class="alert alert-info mb-0">
-              <i class="fas fa-info-circle mr-2"></i>
-              Current Treatment Plan: <strong>{{ patient.current_plan|default:"N/A" }}</strong>
-              <br>
-              Last Update: {{ patient.last_update|date:"M d, Y H:i" }}
-            </div>
+          <div class="card-footer p-0">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="fas fa-calendar-plus mr-1"></i> Registered <span class="float-right text-muted">{{ patient.date_registered|date:"M d, Y" }}</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="fas fa-clipboard-list mr-1"></i> Notes <span class="float-right text-muted">{{ patient.notes|default:"N/A"|truncatechars:30 }}</span>
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
+      {% endif %}
     </div>
 
-    <!-- New Treatment Log Entry Form -->
-    <div class="card card-outline card-success">
-      <div class="card-header">
-        <h3 class="card-title">Log New Treatment</h3>
-      </div>
-      <form method="post" action="">
-        {% csrf_token %}
-        <div class="card-body">
-          <input type="hidden" name="patient_id" value="{{ patient.id }}">
-          <div class="form-row">
-            <div class="form-group col-md-3">
-              <label>Date</label>
-              <input type="date" name="date" class="form-control" required>
-            </div>
-            <div class="form-group col-md-4">
-              <label>Treatment/Action</label>
-              <input type="text" name="action" class="form-control" required>
-            </div>
-            <div class="form-group col-md-3">
-              <label>Status</label>
-              <select name="status" class="form-control" required>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            <div class="form-group col-md-12">
-              <label>Notes</label>
-              <textarea name="notes" class="form-control" rows="2" placeholder="Any additional info..."></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="card-footer text-right">
-          <button type="submit" class="btn btn-success"><i class="fas fa-plus-circle mr-1"></i> Save Entry</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Existing Treatment Logs -->
-    <div class="card card-outline card-primary">
-      <div class="card-header">
-        <h3 class="card-title">Treatment Progress Log</h3>
+    {% if patient %}
+    <!-- Medical Information Card -->
+    <div class="card card-outline card-primary elevation-3">
+      <div class="card-header p-0">
+        <ul class="nav nav-pills nav-justified p-2" id="medical-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="timeline-tab" data-toggle="pill" href="#timeline" role="tab">
+              <i class="fas fa-history mr-1"></i> Timeline
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="consultations-tab" data-toggle="pill" href="#consultations" role="tab">
+              <i class="fas fa-stethoscope mr-1"></i> Consultations
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="prescriptions-tab" data-toggle="pill" href="#prescriptions" role="tab">
+              <i class="fas fa-pills mr-1"></i> Prescriptions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="vitals-tab" data-toggle="pill" href="#vitals" role="tab">
+              <i class="fas fa-heartbeat mr-1"></i> Vitals
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="admissions-tab" data-toggle="pill" href="#admissions" role="tab">
+              <i class="fas fa-procedures mr-1"></i> Admissions
+            </a>
+          </li>
+        </ul>
       </div>
       <div class="card-body p-0">
-        <table class="table table-striped table-hover mb-0">
-          <thead class="thead-light">
-            <tr>
-              <th>Date</th>
-              <th>Treatment/Action</th>
-              <th>Notes</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in treatment_logs %}
-            <tr>
-              <td>{{ log.date|date:"M d, Y" }}</td>
-              <td>{{ log.action }}</td>
-              <td>{{ log.notes }}</td>
-              <td>
-                <span class="badge badge-{% if log.status == 'completed' %}success{% elif log.status == 'pending' %}warning{% else %}secondary{% endif %}">
-                  {{ log.status|title }}
-                </span>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="4" class="text-center text-muted">No treatment records found.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <div class="tab-content" id="medical-tabContent">
+          <!-- Timeline Tab -->
+          <div class="tab-pane fade show active" id="timeline" role="tabpanel">
+            <div class="timeline timeline-inverse p-3">
+              {% if consultations or prescriptions or vitals or notes or careplans or admissions %}
+                <!-- Consultations Timeline -->
+                {% for item in consultations %}
+                  <div class="time-label">
+                    <span class="bg-primary text-white elevation-1">{{ item.created_at|date:"M d, Y" }}</span>
+                  </div>
+                  <div>
+                    <i class="fas fa-stethoscope bg-primary"></i>
+                    <div class="timeline-item elevation-1">
+                      <span class="time"><i class="far fa-clock"></i> {{ item.created_at|date:"H:i" }}</span>
+                      <h3 class="timeline-header bg-light"><strong>Consultation</strong></h3>
+                      <div class="timeline-body">
+                        <div class="callout callout-info mb-2 py-1">
+                          <h5 class="mb-1"><i class="fas fa-comments mr-1"></i> Symptoms</h5>
+                          <p class="text-muted mb-0">{{ item.symptoms }}</p>
+                        </div>
+                        <div class="callout callout-warning mb-2 py-1">
+                          <h5 class="mb-1"><i class="fas fa-chart-pie mr-1"></i> Diagnosis</h5>
+                          <p class="text-muted mb-0">{{ item.diagnosis_summary }}</p>
+                        </div>
+                        <div class="callout callout-success mb-0 py-1">
+                          <h5 class="mb-1"><i class="fas fa-info-circle mr-1"></i> Advice</h5>
+                          <p class="text-muted mb-0">{{ item.advice }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+                <!-- Prescriptions Timeline -->
+                {% for item in prescriptions %}
+                  <div class="time-label">
+                    <span class="bg-success text-white elevation-1">{{ item.created_at|date:"M d, Y" }}</span>
+                  </div>
+                  <div>
+                    <i class="fas fa-pills bg-success"></i>
+                    <div class="timeline-item elevation-1">
+                      <span class="time"><i class="far fa-clock"></i> {{ item.created_at|date:"H:i" }}</span>
+                      <h3 class="timeline-header bg-light"><strong>Prescription</strong></h3>
+                      <div class="timeline-body">
+                        <div class="callout callout-success mb-2 py-1">
+                          <h5 class="mb-1"><i class="fas fa-capsules mr-1"></i> Medication</h5>
+                          <p class="text-muted mb-0">{{ item.medication }}</p>
+                        </div>
+                        <div class="callout callout-info mb-0 py-1">
+                          <h5 class="mb-1"><i class="fas fa-file-medical mr-1"></i> Instructions</h5>
+                          <p class="text-muted mb-0">{{ item.instructions }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+                <!-- Vitals Timeline -->
+                {% for item in vitals %}
+                  <div class="time-label">
+                    <span class="bg-warning text-white elevation-1">{{ item.recorded_at|date:"M d, Y" }}</span>
+                  </div>
+                  <div>
+                    <i class="fas fa-heartbeat bg-warning"></i>
+                    <div class="timeline-item elevation-1">
+                      <span class="time"><i class="far fa-clock"></i> {{ item.recorded_at|date:"H:i" }}</span>
+                      <h3 class="timeline-header bg-light"><strong>Vitals</strong></h3>
+                      <div class="timeline-body">
+                        <div class="row">
+                          <div class="col-md-3 col-6">
+                            <div class="info-box bg-danger bg-gradient-danger">
+                              <span class="info-box-icon"><i class="fas fa-thermometer-half"></i></span>
+                              <div class="info-box-content">
+                                <span class="info-box-text">Temperature</span>
+                                <span class="info-box-number">{{ item.temperature }}°C</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-3 col-6">
+                            <div class="info-box bg-primary bg-gradient-primary">
+                              <span class="info-box-icon"><i class="fas fa-heartbeat"></i></span>
+                              <div class="info-box-content">
+                                <span class="info-box-text">Pulse</span>
+                                <span class="info-box-number">{{ item.pulse }}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-3 col-6">
+                            <div class="info-box bg-info bg-gradient-info">
+                              <span class="info-box-icon"><i class="fas fa-lungs"></i></span>
+                              <div class="info-box-content">
+                                <span class="info-box-text">Respiratory</span>
+                                <span class="info-box-number">{{ item.respiratory_rate }}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-3 col-6">
+                            <div class="info-box bg-warning bg-gradient-warning">
+                              <span class="info-box-icon"><i class="fas fa-tachometer-alt"></i></span>
+                              <div class="info-box-content">
+                                <span class="info-box-text">BP</span>
+                                <span class="info-box-number">{{ item.blood_pressure }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+                <!-- Notes Timeline -->
+                {% for note in notes %}
+                  <div class="time-label">
+                    <span class="bg-secondary text-white elevation-1">{{ note.note_datetime|date:"M d, Y" }}</span>
+                  </div>
+                  <div>
+                    <i class="fas fa-clipboard-list bg-secondary"></i>
+                    <div class="timeline-item elevation-1">
+                      <span class="time"><i class="far fa-clock"></i> {{ note.note_datetime|date:"H:i" }}</span>
+                      <h3 class="timeline-header bg-light"><strong>Nursing Note ({{ note.get_note_type_display }})</strong></h3>
+                      <div class="timeline-body">
+                        <div class="callout callout-secondary mb-2 py-1">
+                          <h5 class="mb-1"><i class="fas fa-check-circle mr-1"></i> Status</h5>
+                          <p class="text-muted mb-0">{{ note.patient_status }}</p>
+                        </div>
+                        <div class="callout callout-info mb-0 py-1">
+                          <h5 class="mb-1"><i class="fas fa-file-alt mr-1"></i> Notes</h5>
+                          <p class="text-muted mb-0">{{ note.notes }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+                <!-- Care Plans Timeline -->
+                {% for plan in careplans %}
+                  <div class="time-label">
+                    <span class="bg-dark text-white elevation-1">{{ plan.created_at|date:"M d, Y" }}</span>
+                  </div>
+                  <div>
+                    <i class="fas fa-clipboard-check bg-dark"></i>
+                    <div class="timeline-item elevation-1">
+                      <span class="time"><i class="far fa-clock"></i> {{ plan.created_at|date:"H:i" }}</span>
+                      <h3 class="timeline-header bg-light"><strong>Care Plan</strong></h3>
+                      <div class="timeline-body">
+                        <div class="callout callout-dark mb-2 py-1">
+                          <h5 class="mb-1"><i class="fas fa-search-plus mr-1"></i> Findings</h5>
+                          <p class="text-muted mb-0">{{ plan.clinical_findings }}</p>
+                        </div>
+                        <div class="callout callout-info mb-0 py-1">
+                          <h5 class="mb-1"><i class="fas fa-tasks mr-1"></i> Plan</h5>
+                          <p class="text-muted mb-0">{{ plan.plan_of_care }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+
+                <!-- Admissions Timeline -->
+                {% for adm in admissions %}
+                  <div class="time-label">
+                    <span class="bg-danger text-white elevation-1">{{ adm.admission_date|date:"M d, Y" }}</span>
+                  </div>
+                  <div>
+                    <i class="fas fa-procedures bg-danger"></i>
+                    <div class="timeline-item elevation-1">
+                      <span class="time"><i class="far fa-calendar-alt"></i> {{ adm.admission_date|date:"M d, Y" }}</span>
+                      <h3 class="timeline-header bg-light"><strong>Admission</strong></h3>
+                      <div class="timeline-body">
+                        <div class="row">
+                          <div class="col-md-4 col-sm-6">
+                            <div class="small-box bg-danger">
+                              <div class="inner">
+                                <h4>{{ adm.ward.name }}</h4>
+                                <p>Ward</p>
+                              </div>
+                              <div class="icon">
+                                <i class="fas fa-hospital"></i>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-4 col-sm-6">
+                            <div class="small-box bg-primary">
+                              <div class="inner">
+                                <h4>{{ adm.bed.number }}</h4>
+                                <p>Bed</p>
+                              </div>
+                              <div class="icon">
+                                <i class="fas fa-bed"></i>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-4 col-sm-12">
+                            <div class="small-box bg-info">
+                              <div class="inner">
+                                <h4>{{ adm.status }}</h4>
+                                <p>Status</p>
+                              </div>
+                              <div class="icon">
+                                <i class="fas fa-info-circle"></i>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="alert alert-info alert-dismissible">
+                  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                  <h5><i class="icon fas fa-info"></i> No Records!</h5>
+                  No medical records found for this patient. Select a different patient or add new records.
+                </div>
+              {% endif %}
+              
+              <div>
+                <i class="far fa-clock bg-gray"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Consultations Tab -->
+          <div class="tab-pane fade" id="consultations" role="tabpanel">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                  <thead class="thead-dark">
+                    <tr>
+                      <th style="width: 100px"><i class="far fa-calendar-alt mr-1"></i>Date</th>
+                      <th><i class="fas fa-comments mr-1"></i>Symptoms</th>
+                      <th><i class="fas fa-chart-pie mr-1"></i>Diagnosis</th>
+                      <th><i class="fas fa-info-circle mr-1"></i>Advice</th>
+                      <th style="width: 100px"><i class="fas fa-cog mr-1"></i>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in consultations %}
+                      <tr>
+                        <td class="text-nowrap text-bold">{{ item.created_at|date:"M d, Y" }}</td>
+                        <td>{{ item.symptoms }}</td>
+                        <td>{{ item.diagnosis_summary }}</td>
+                        <td>{{ item.advice }}</td>
+                        <td>
+                          <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
+                            <button type="button" class="btn btn-primary"><i class="fas fa-print"></i></button>
+                          </div>
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr>
+                        <td colspan="5" class="text-center p-5">
+                          <div class="text-muted">
+                            <i class="fas fa-folder-open fa-3x mb-3"></i>
+                            <p>No consultations found for this patient.</p>
+                            <button type="button" class="btn btn-sm btn-primary">
+                              <i class="fas fa-plus mr-1"></i> Add Consultation
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prescriptions Tab -->
+          <div class="tab-pane fade" id="prescriptions" role="tabpanel">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                  <thead class="thead-dark">
+                    <tr>
+                      <th style="width: 100px"><i class="far fa-calendar-alt mr-1"></i>Date</th>
+                      <th><i class="fas fa-capsules mr-1"></i>Medication</th>
+                      <th><i class="fas fa-file-medical mr-1"></i>Instructions</th>
+                      <th style="width: 100px"><i class="fas fa-cog mr-1"></i>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in prescriptions %}
+                      <tr>
+                        <td class="text-nowrap text-bold">{{ item.created_at|date:"M d, Y" }}</td>
+                        <td>{{ item.medication }}</td>
+                        <td>{{ item.instructions }}</td>
+                        <td>
+                          <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
+                            <button type="button" class="btn btn-primary"><i class="fas fa-print"></i></button>
+                          </div>
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr>
+                        <td colspan="4" class="text-center p-5">
+                          <div class="text-muted">
+                            <i class="fas fa-pills fa-3x mb-3"></i>
+                            <p>No prescriptions found for this patient.</p>
+                            <button type="button" class="btn btn-sm btn-success">
+                              <i class="fas fa-plus mr-1"></i> New Prescription
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vitals Tab -->
+          <div class="tab-pane fade" id="vitals" role="tabpanel">
+            <div class="p-3">
+              <!-- Chart area -->
+              <div class="card card-info card-outline mb-3">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i class="fas fa-chart-line mr-1"></i>
+                    Vitals Trend
+                  </h3>
+                  <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="chart">
+                    <canvas id="vitalsChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Table area -->
+              <div class="card card-primary card-outline">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i class="fas fa-table mr-1"></i>
+                    Recorded Vitals
+                  </h3>
+                  <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                      <thead class="thead-dark">
+                        <tr>
+                          <th><i class="far fa-calendar-alt mr-1"></i>Date & Time</th>
+                          <th><i class="fas fa-thermometer-half mr-1 text-danger"></i>Temp</th>
+                          <th><i class="fas fa-tachometer-alt mr-1 text-warning"></i>BP</th>
+                          <th><i class="fas fa-heartbeat mr-1 text-primary"></i>Pulse</th>
+                          <th><i class="fas fa-lungs mr-1 text-info"></i>Resp Rate</th>
+                          <th style="width: 100px"><i class="fas fa-cog mr-1"></i>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for item in vitals %}
+                          <tr>
+                            <td class="text-nowrap text-bold">{{ item.recorded_at|date:"M d, Y H:i" }}</td>
+                            <td>{{ item.temperature }}°C</td>
+                            <td>{{ item.blood_pressure }}</td>
+                            <td>{{ item.pulse }}</td>
+                            <td>{{ item.respiratory_rate }}</td>
+                            <td>
+                              <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
+                                <button type="button" class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                              </div>
+                            </td>
+                          </tr>
+                        {% empty %}
+                          <tr>
+                            <td colspan="6" class="text-center p-5">
+                              <div class="text-muted">
+                                <i class="fas fa-heartbeat fa-3x mb-3"></i>
+                                <p>No vitals recorded for this patient.</p>
+                                <button type="button" class="btn btn-sm btn-warning">
+                                  <i class="fas fa-plus mr-1"></i> Record Vitals
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admissions Tab -->
+          <div class="tab-pane fade" id="admissions" role="tabpanel">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                  <thead class="thead-dark">
+                    <tr>
+                      <th style="width: 120px"><i class="far fa-calendar-plus mr-1"></i>Admitted On</th>
+                      <th><i class="fas fa-hospital mr-1"></i>Ward</th>
+                      <th><i class="fas fa-bed mr-1"></i>Bed</th>
+                      <th><i class="fas fa-info-circle mr-1"></i>Status</th>
+                      <th style="width: 120px"><i class="fas fa-cog mr-1"></i>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for adm in admissions %}
+                      <tr>
+                        <td class="text-nowrap text-bold">{{ adm.admission_date }}</td>
+                        <td>{{ adm.ward.name }}</td>
+                        <td>{{ adm.bed.number }}</td>
+                        <td>
+                          <span class="badge badge-pill badge-{% if adm.status == 'Discharged' %}success{% elif adm.status == 'Admitted' %}primary{% else %}secondary{% endif %}">
+                            {{ adm.status }}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
+                            <button type="button" class="btn btn-success"><i class="fas fa-notes-medical"></i></button>
+                          </div>
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr>
+                        <td colspan="5" class="text-center p-5">
+                          <div class="text-muted">
+                            <i class="fas fa-procedures fa-3x mb-3"></i>
+                            <p>No admissions found for this patient.</p>
+                            <button type="button" class="btn btn-sm btn-danger">
+                              <i class="fas fa-plus mr-1"></i> New Admission
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="float-right">
+          <button type="button" class="btn btn-primary">
+            <i class="fas fa-plus-circle mr-1"></i> Add Record
+          </button>
+          <button type="button" class="btn btn-success">
+            <i class="fas fa-print mr-1"></i> Print Report
+          </button>
+        </div>
       </div>
     </div>
-
+    {% else %}
+    <!-- No Patient Selected Message -->
+    <div class="callout callout-info">
+      <h5><i class="fas fa-info-circle mr-1"></i> No Patient Selected</h5>
+      <p>Please select a patient from the dropdown above to view their treatment monitoring data.</p>
+    </div>
+    {% endif %}
   </div>
 </section>
+
+<!-- Add Charts JS -->
+{% if patient and vitals %}
+<script>
+  $(function() {
+    // Initialize Select2
+    $('.select2').select2();
+    
+    // Setup vitals chart if there are vitals
+    {% if vitals %}
+      var ctx = document.getElementById('vitalsChart').getContext('2d');
+      var vitalsDates = [{% for item in vitals %}"{{ item.recorded_at|date:'M d, Y H:i' }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+      var temperatures = [{% for item in vitals %}{{ item.temperature }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+      var pulseRates = [{% for item in vitals %}{{ item.pulse }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+      var respiratoryRates = [{% for item in vitals %}{{ item.respiratory_rate }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+      
+      var vitalsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: vitalsDates,
+          datasets: [
+            {
+              label: 'Temperature (°C)',
+              data: temperatures,
+              borderColor: '#dc3545',
+              backgroundColor: 'rgba(220, 53, 69, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#dc3545'
+            },
+            {
+              label: 'Pulse Rate',
+              data: pulseRates,
+              borderColor: '#007bff',
+              backgroundColor: 'rgba(0, 123, 255, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#007bff'
+            },
+            {
+              label: 'Respiratory Rate',
+              data: respiratoryRates,
+              borderColor: '#17a2b8',
+              backgroundColor: 'rgba(23, 162, 184, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#17a2b8'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                boxWidth: 15,
+                usePointStyle: true
+              }
+            },
+            tooltip: {
+              usePointStyle: true,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += context.parsed.y;
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              beginAtZero: false,
+              grid: {
+                drawBorder: false
+              }
+            }
+          }
+        }
+      });
+    {% endif %}
+    
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Initialize all card widgets
+    $('.card-widget').CardWidget();
+    
+    // Initialize all card tools
+    $('[data-card-widget="collapse"]').CardWidget();
+  });
+</script>
+{% endif %}
 {% endblock %}
