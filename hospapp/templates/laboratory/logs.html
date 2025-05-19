@@ -1,10 +1,14 @@
 {% extends "laboratory/base.html" %}
 
+{% block title %}HMS | Test Logs{% endblock %}
+
 {% block content %}
 <section class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
-      <div class="col-sm-6"><h1>Laboratory Internal Logs</h1></div>
+      <div class="col-sm-6">
+        <h1 class="text-primary">Laboratory Internal Logs</h1>
+      </div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
           <li class="breadcrumb-item"><a href="{% url 'laboratory' %}">Home</a></li>
@@ -18,50 +22,54 @@
 <section class="content">
   <div class="container-fluid">
     {% if lab_logs %}
-    <div class="card">
-      <div class="card-header"><h3 class="card-title">Recent Lab Tests</h3></div>
+    <div class="card elevation-3">
+      <div class="card-header bg-primary text-white">
+        <h3 class="card-title"><i class="fas fa-vials mr-2"></i>Recent Lab Tests</h3>
+      </div>
 
-      <div class="card-body table-responsive p-0" style="max-height: 500px;">
-        <table class="table table-head-fixed table-hover text-nowrap">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Patient</th>
-              <th>Test Type</th>
-              <th>Lab Staff</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in lab_logs %}
-            <tr>
-              <td>{{ log.date|date:"M d, Y" }}</td>
-              <td>{{ log.patient_name }}</td>
-              <td>{{ log.test_type }}</td>
-              <td>{{ log.lab_staff }}</td>
-              <td>
-                <span class="badge 
-                  {% if log.status == 'Completed' %}badge-success
-                  {% elif log.status == 'Pending' %}badge-warning
-                  {% else %}badge-secondary{% endif %}">
-                  {{ log.status }}
-                </span>
-              </td>
-              <td>
-                <button 
-                  type="button" 
-                  class="btn btn-sm btn-primary view-details-btn" 
-                  data-toggle="modal" 
-                  data-target="#logDetailsModal" 
-                  data-log-id="{{ log.id }}">
-                  View Details
-                </button>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover text-nowrap table-bordered">
+            <thead class="bg-light">
+              <tr>
+                <th>Date</th>
+                <th>Patient</th>
+                <th>Test Type</th>
+                <th>Lab Staff</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in lab_logs %}
+              <tr>
+                <td>{{ log.date|date:"M d, Y" }}</td>
+                <td>{{ log.patient_name }}</td>
+                <td>{{ log.test_type }}</td>
+                <td>{{ log.lab_staff }}</td>
+                <td>
+                  <span class="badge 
+                    {% if log.status == 'Completed' %}badge-success
+                    {% elif log.status == 'Pending' %}badge-warning
+                    {% else %}badge-secondary{% endif %}">
+                    {{ log.status }}
+                  </span>
+                </td>
+                <td>
+                  <button 
+                    type="button" 
+                    class="btn btn-info btn-sm view-details-btn" 
+                    data-toggle="modal" 
+                    data-target="#logDetailsModal" 
+                    data-log-id="{{ log.id }}">
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     {% else %}
@@ -72,59 +80,52 @@
 
 <!-- Modal -->
 <div class="modal fade" id="logDetailsModal" tabindex="-1" role="dialog" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
     <div class="modal-content">
-      <div class="modal-header">
+      <div class="modal-header bg-primary text-white">
         <h5 class="modal-title" id="logDetailsModalLabel">Lab Test Details</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <!-- Details content loaded dynamically here -->
-        <div id="modal-loading" class="text-center my-5">
+        <div id="modal-loading" class="text-center my-4">
           <i class="fas fa-spinner fa-spin fa-3x"></i>
-          <p>Loading details...</p>
+          <p class="mt-2">Loading details...</p>
         </div>
-        <div id="modal-content" style="display:none;">
-          <!-- Fetched HTML will be injected here -->
-        </div>
+        <div id="modal-content" style="display: none;"></div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      <div class="modal-footer justify-content-end">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+          <i class="fas fa-times-circle"></i> Close
+        </button>
       </div>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  $(document).ready(function(){
-    $('#logDetailsModal').on('show.bs.modal', function (event) {
+  $(document).ready(function() {
+    $('#logDetailsModal').on('show.bs.modal', function(event) {
       var button = $(event.relatedTarget);
       var logId = button.data('log-id');
       var modal = $(this);
 
-      // Show loading spinner
       modal.find('#modal-loading').show();
       modal.find('#modal-content').hide().empty();
 
-      // AJAX fetch log details from server
       $.ajax({
-        url: "{% url 'lab_log_detail_ajax' %}",  // You must create this URL & view
-        data: {
-          'log_id': logId
-        },
+        url: "{% url 'lab_log_detail_ajax' %}",
+        data: { 'log_id': logId },
         success: function(data) {
-          // Hide loading, show content
           modal.find('#modal-loading').hide();
-          modal.find('#modal-content').html(data).show();
+          modal.find('#modal-content').html(data).fadeIn();
         },
         error: function() {
           modal.find('#modal-loading').hide();
-          modal.find('#modal-content').html('<p class="text-danger">Failed to load details.</p>').show();
+          modal.find('#modal-content').html('<div class="alert alert-danger">Failed to load details.</div>').show();
         }
       });
     });

@@ -963,15 +963,16 @@ def lab_internal_logs(request):
             key_results = test.notes or "N/A"
 
         logs.append({
+            'id': test.id,
             'date': test.date_recorded.date(),
             'patient_name': test.patient.full_name,
             'test_type': test.get_test_type_display(),
             'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
             'key_results': key_results,
             'notes': test.notes,
-            # You can add status if your model supports it, otherwise assume 'completed'
             'status': 'Completed',
         })
+
 
     context = {
         'lab_logs': logs,
@@ -980,15 +981,14 @@ def lab_internal_logs(request):
 
 def lab_log_detail_ajax(request):
     log_id = request.GET.get('log_id')
+    print("DEBUG: log_id =", log_id)  # <== ADD THIS
+
     if not log_id:
         return HttpResponseBadRequest("Missing log ID")
 
     lab_test = get_object_or_404(LabTest, id=log_id)
+    return render(request, 'laboratory/log_detail.html', {'lab_test': lab_test})
 
-    # Render a small template snippet with the lab test details
-    return render(request, 'laboratory/lab_log_detail_partial.html', {
-        'lab_test': lab_test,
-    })
 
 # Pharmacy Views
 @login_required(login_url='home')
