@@ -941,10 +941,10 @@ def lab_result_upload(request):
 @login_required(login_url='home')
 def lab_internal_logs(request):
     user = request.user
-
+    
     # Retrieve all lab tests, optionally filter by lab staff if needed:
     lab_tests = LabTest.objects.select_related('patient', 'recorded_by').all().order_by('-date_recorded')
-
+    
     logs = []
     for test in lab_tests:
         # Extract key result info based on test type, example:
@@ -961,7 +961,7 @@ def lab_internal_logs(request):
             key_results = f"Infection Type: {test.infection_type}, Result: {test.infection_result}"
         else:
             key_results = test.notes or "N/A"
-
+        
         logs.append({
             'id': test.id,
             'date': test.date_recorded.date(),
@@ -972,8 +972,7 @@ def lab_internal_logs(request):
             'notes': test.notes,
             'status': 'Completed',
         })
-
-
+    
     context = {
         'lab_logs': logs,
     }
@@ -981,13 +980,51 @@ def lab_internal_logs(request):
 
 def lab_log_detail_ajax(request):
     log_id = request.GET.get('log_id')
-    print("DEBUG: log_id =", log_id)  # <== ADD THIS
-
+    
     if not log_id:
-        return HttpResponseBadRequest("Missing log ID")
-
-    lab_test = get_object_or_404(LabTest, id=log_id)
-    return render(request, 'laboratory/log_detail.html', {'lab_test': lab_test})
+        return JsonResponse({"error": "Missing log ID"}, status=400)
+    
+    try:
+        lab_test = get_object_or_404(LabTest, id=log_id)
+        
+        # Return JSON data matching what the JavaScript expects
+        data = {
+            'patient': lab_test.patient.full_name,
+            'test_type': lab_test.get_test_type_display(),
+            'date': lab_test.date_recorded.strftime('%B %d, %Y'),
+            'recorded_by': lab_test.recorded_by.get_full_name() if lab_test.recorded_by else "Unknown",
+            'notes': lab_test.notes,
+        }
+        
+        # Add test-specific fields based on test type
+        if lab_test.test_type == 'semen':
+            data.update({
+                'sperm_count': lab_test.sperm_count,
+                'motility': lab_test.motility
+            })
+        elif lab_test.test_type == 'blood':
+            data.update({
+                'blood_type': lab_test.blood_type
+            })
+        elif lab_test.test_type == 'hormone':
+            data.update({
+                'hormone': lab_test.hormone,
+                'hormone_level': lab_test.hormone_level
+            })
+        elif lab_test.test_type == 'pregnancy':
+            data.update({
+                'pregnancy_result': lab_test.pregnancy_result
+            })
+        elif lab_test.test_type == 'infection':
+            data.update({
+                'infection_type': lab_test.infection_type,
+                'infection_result': lab_test.infection_result
+            })
+        
+        return JsonResponse(data)
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 # Pharmacy Views

@@ -2,12 +2,14 @@
 
 {% block title %}HMS | Test Logs{% endblock %}
 
+{% load static %}
+
 {% block content %}
 <section class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
       <div class="col-sm-6">
-        <h1 class="text-primary">Laboratory Internal Logs</h1>
+        <h1><i class="fas fa-history mr-2"></i>Laboratory Test Logs</h1>
       </div>
       <div class="col-sm-6">
         <ol class="breadcrumb float-sm-right">
@@ -21,113 +23,409 @@
 
 <section class="content">
   <div class="container-fluid">
-    {% if lab_logs %}
-    <div class="card elevation-3">
-      <div class="card-header bg-primary text-white">
-        <h3 class="card-title"><i class="fas fa-vials mr-2"></i>Recent Lab Tests</h3>
-      </div>
-
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover text-nowrap table-bordered">
-            <thead class="bg-light">
-              <tr>
-                <th>Date</th>
-                <th>Patient</th>
-                <th>Test Type</th>
-                <th>Lab Staff</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for log in lab_logs %}
-              <tr>
-                <td>{{ log.date|date:"M d, Y" }}</td>
-                <td>{{ log.patient_name }}</td>
-                <td>{{ log.test_type }}</td>
-                <td>{{ log.lab_staff }}</td>
-                <td>
-                  <span class="badge 
-                    {% if log.status == 'Completed' %}badge-success
-                    {% elif log.status == 'Pending' %}badge-warning
-                    {% else %}badge-secondary{% endif %}">
-                    {{ log.status }}
-                  </span>
-                </td>
-                <td>
-                  <button 
-                    type="button" 
-                    class="btn btn-info btn-sm view-details-btn" 
-                    data-toggle="modal" 
-                    data-target="#logDetailsModal" 
-                    data-log-id="{{ log.id }}">
-                    <i class="fas fa-eye"></i> View
+    <div class="row">
+      <div class="col-12">
+        <!-- Filter Card -->
+        <div class="card card-outline card-info mb-3 collapsed-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Filter Options</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body" style="display: none;">
+            <form method="get">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Date Range:</label>
+                    <div class="input-group">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text">
+                          <i class="far fa-calendar-alt"></i>
+                        </span>
+                      </div>
+                      <input type="text" class="form-control float-right" id="date-range" name="date_range" placeholder="Select date range">
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Test Type:</label>
+                    <select class="form-control" name="test_type">
+                      <option value="">All Types</option>
+                      <option value="semen">Semen Analysis</option>
+                      <option value="blood">Blood Screening</option>
+                      <option value="hormone">Hormonal Assay</option>
+                      <option value="pregnancy">Pregnancy Test</option>
+                      <option value="infection">Infection Screening</option>
+                      <option value="combined">Combined Tests</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label>Status:</label>
+                    <select class="form-control" name="status">
+                      <option value="">All Status</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Pending">Pending</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-8">
+                  <div class="form-group">
+                    <label>Search Patient:</label>
+                    <input type="text" class="form-control" name="patient_search" placeholder="Enter patient name or ID">
+                  </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-search mr-2"></i>Apply Filters
                   </button>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
+        
+        <!-- Test Logs Card -->
+        {% if lab_logs %}
+        <div class="card">
+          <div class="card-header bg-primary">
+            <h3 class="card-title"><i class="fas fa-vials mr-2"></i>Lab Test Records</h3>
+            <div class="card-tools">
+              <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                <i class="fas fa-minus text-white"></i>
+              </button>
+              <div class="btn-group">
+                <button type="button" class="btn btn-tool dropdown-toggle text-white" data-toggle="dropdown">
+                  <i class="fas fa-download"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right" role="menu">
+                  <a href="#" class="dropdown-item">
+                    <i class="fas fa-file-excel mr-2"></i>Export to Excel
+                  </a>
+                  <a href="#" class="dropdown-item">
+                    <i class="fas fa-file-pdf mr-2"></i>Export to PDF
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-striped">
+                <thead class="thead-light">
+                  <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Patient</th>
+                    <th>Test Type</th>
+                    <th>Lab Staff</th>
+                    <th>Key Results</th>
+                    <th>Status</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for log in lab_logs %}
+                  <tr>
+                    <td><span class="badge badge-secondary">{{ log.id }}</span></td>
+                    <td>{{ log.date|date:"M d, Y" }}</td>
+                    <td>{{ log.patient_name }}</td>
+                    <td>{{ log.test_type }}</td>
+                    <td>{{ log.lab_staff }}</td>
+                    <td>
+                      <span class="text-truncate d-inline-block" style="max-width: 300px;">
+                        {{ log.key_results }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge badge-pill 
+                        {% if log.status == 'Completed' %}badge-success
+                        {% elif log.status == 'Pending' %}badge-warning
+                        {% else %}badge-secondary{% endif %}">
+                        {{ log.status }}
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <div class="btn-group">
+                        <button type="button" class="btn btn-info btn-sm view-details-btn" 
+                          data-toggle="modal" 
+                          data-target="#logDetailsModal" 
+                          data-log-id="{{ log.id }}">
+                          <i class="fas fa-eye"></i> View
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm">
+                          <i class="fas fa-print"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="row">
+              <div class="col-sm-12 col-md-5">
+                <div class="dataTables_info" role="status" aria-live="polite">
+                  Showing entries 1 to {{ lab_logs|length }} of {{ lab_logs|length }}
+                </div>
+              </div>
+              <div class="col-sm-12 col-md-7">
+                <div class="dataTables_paginate paging_simple_numbers">
+                  <ul class="pagination justify-content-end">
+                    <li class="paginate_button page-item previous disabled">
+                      <a href="#" class="page-link">Previous</a>
+                    </li>
+                    <li class="paginate_button page-item active">
+                      <a href="#" class="page-link">1</a>
+                    </li>
+                    <li class="paginate_button page-item next disabled">
+                      <a href="#" class="page-link">Next</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+          <h5><i class="icon fas fa-info-circle"></i> No Records Found</h5>
+          There are no lab test logs available. New tests will appear here once they are recorded.
+        </div>
+        {% endif %}
       </div>
     </div>
-    {% else %}
-    <div class="alert alert-info">No lab test logs available.</div>
-    {% endif %}
   </div>
 </section>
 
 <!-- Modal -->
 <div class="modal fade" id="logDetailsModal" tabindex="-1" role="dialog" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+  <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="logDetailsModalLabel">Lab Test Details</h5>
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="logDetailsModalLabel">
+          <i class="fas fa-flask mr-2"></i>Lab Test Details
+        </h5>
         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <div id="modal-loading" class="text-center my-4">
-          <i class="fas fa-spinner fa-spin fa-3x"></i>
-          <p class="mt-2">Loading details...</p>
+        <div id="modal-loading" class="text-center my-5">
+          <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="sr-only">Loading...</span>
+          </div>
+          <p class="mt-3 text-muted">Loading test details...</p>
         </div>
-        <div id="modal-content" style="display: none;"></div>
+        <div id="modal-content" style="display: none;">
+          <!-- Content will be loaded via AJAX -->
+        </div>
       </div>
-      <div class="modal-footer justify-content-end">
+      <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">
-          <i class="fas fa-times-circle"></i> Close
+          <i class="fas fa-times-circle mr-1"></i>Close
+        </button>
+        <button type="button" class="btn btn-primary">
+          <i class="fas fa-print mr-1"></i>Print Report
         </button>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
+
 <script>
   $(document).ready(function() {
+    // Initialize date range picker if available
+    if ($.fn.daterangepicker) {
+      $('#date-range').daterangepicker({
+        locale: {
+          format: 'MM/DD/YYYY'
+        }
+      });
+    }
+    
+    // Modal detail loading
     $('#logDetailsModal').on('show.bs.modal', function(event) {
       var button = $(event.relatedTarget);
       var logId = button.data('log-id');
       var modal = $(this);
-
+      
       modal.find('#modal-loading').show();
-      modal.find('#modal-content').hide().empty();
-
+      modal.find('#modal-content').hide();
+      
       $.ajax({
         url: "{% url 'lab_log_detail_ajax' %}",
         data: { 'log_id': logId },
+        dataType: 'json',
         success: function(data) {
           modal.find('#modal-loading').hide();
-          modal.find('#modal-content').html(data).fadeIn();
+          
+          var contentHtml = `
+            <div class="card card-primary card-outline card-outline-tabs">
+              <div class="card-header p-0 border-bottom-0">
+                <ul class="nav nav-tabs" id="test-detail-tabs" role="tablist">
+                  <li class="nav-item">
+                    <a class="nav-link active" id="general-tab" data-toggle="pill" href="#general" role="tab" aria-controls="general" aria-selected="true">
+                      General Info
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" id="results-tab" data-toggle="pill" href="#results" role="tab" aria-controls="results" aria-selected="false">
+                      Test Results
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content" id="test-detail-tabContent">
+                  <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="info-box bg-light">
+                          <div class="info-box-content">
+                            <span class="info-box-text text-muted">Patient</span>
+                            <span class="info-box-number">${data.patient}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="info-box bg-light">
+                          <div class="info-box-content">
+                            <span class="info-box-text text-muted">Test Type</span>
+                            <span class="info-box-number">${data.test_type}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="info-box bg-light">
+                          <div class="info-box-content">
+                            <span class="info-box-text text-muted">Date Recorded</span>
+                            <span class="info-box-number">${data.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="info-box bg-light">
+                          <div class="info-box-content">
+                            <span class="info-box-text text-muted">Recorded By</span>
+                            <span class="info-box-number">${data.recorded_by}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-12">
+                        <div class="callout callout-info">
+                          <h5>Notes</h5>
+                          <p>${data.notes || 'No additional notes provided.'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade" id="results" role="tabpanel" aria-labelledby="results-tab">
+                    <div class="table-responsive">
+                      <table class="table table-bordered">
+                        <thead class="thead-light">
+                          <tr>
+                            <th>Parameter</th>
+                            <th>Result</th>
+                            <th>Normal Range</th>
+                          </tr>
+                        </thead>
+                        <tbody>`;
+                          
+          // Add test-specific result rows based on test type
+          if (data.test_type === 'Semen Analysis') {
+            contentHtml += `
+              <tr>
+                <td>Sperm Count</td>
+                <td>${data.sperm_count} million/ml</td>
+                <td>15-200 million/ml</td>
+              </tr>
+              <tr>
+                <td>Motility</td>
+                <td>${data.motility}%</td>
+                <td>40-81%</td>
+              </tr>`;
+          } else if (data.test_type === 'Blood Screening') {
+            contentHtml += `
+              <tr>
+                <td>Blood Type</td>
+                <td>${data.blood_type}</td>
+                <td>N/A</td>
+              </tr>`;
+          } else if (data.test_type === 'Hormonal Assay') {
+            contentHtml += `
+              <tr>
+                <td>${data.hormone}</td>
+                <td>${data.hormone_level}</td>
+                <td>Varies by hormone</td>
+              </tr>`;
+          } else if (data.test_type === 'Pregnancy Test') {
+            contentHtml += `
+              <tr>
+                <td>Pregnancy Result</td>
+                <td>
+                  <span class="badge badge-${data.pregnancy_result === 'positive' ? 'success' : 'secondary'}">
+                    ${data.pregnancy_result}
+                  </span>
+                </td>
+                <td>N/A</td>
+              </tr>`;
+          } else if (data.test_type === 'Infection Screening') {
+            contentHtml += `
+              <tr>
+                <td>${data.infection_type}</td>
+                <td>
+                  <span class="badge badge-${data.infection_result === 'positive' ? 'danger' : 'success'}">
+                    ${data.infection_result}
+                  </span>
+                </td>
+                <td>Negative</td>
+              </tr>`;
+          }
+          
+          contentHtml += `
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          
+          modal.find('#modal-content').html(contentHtml).fadeIn();
         },
-        error: function() {
+        error: function(xhr, status, error) {
           modal.find('#modal-loading').hide();
-          modal.find('#modal-content').html('<div class="alert alert-danger">Failed to load details.</div>').show();
+          modal.find('#modal-content').html(`
+            <div class="alert alert-danger">
+              <h5><i class="icon fas fa-ban"></i> Error Loading Data</h5>
+              <p>Could not load test details. Please try again or contact support.</p>
+              <p class="mb-0"><small>Error: ${error}</small></p>
+            </div>
+          `).show();
         }
       });
+    });
+    
+    // Clear modal content when hidden
+    $('#logDetailsModal').on('hidden.bs.modal', function() {
+      $(this).find('#modal-content').empty();
     });
   });
 </script>
