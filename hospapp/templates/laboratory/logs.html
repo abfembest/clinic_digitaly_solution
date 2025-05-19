@@ -1,60 +1,133 @@
 {% extends "laboratory/base.html" %}
 
-{% block title %}HMS | Lab Home{% endblock %}
-
 {% block content %}
-
-<!-- Content Header (Page header) -->
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Internal Logs</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
-</div>
-<!-- /.content-header -->
-
-<section class="content">
-    <div class="container-fluid">
-      <div class="card card-outline card-secondary">
-        <div class="card-header">
-          <h3 class="card-title">Internal Lab Test Logs</h3>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Patient</th>
-                <th>Test Type</th>
-                <th>Performed By</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for log in lab_logs %}
-              <tr>
-                <td>{{ log.date }}</td>
-                <td>{{ log.patient.full_name }}</td>
-                <td>{{ log.test_type }}</td>
-                <td>{{ log.lab_staff.username }}</td>
-                <td><span class="badge badge-{{ log.status }}">{{ log.status|title }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+<section class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1>Laboratory Internal Logs</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="{% url 'laboratory' %}">Home</a></li>
+          <li class="breadcrumb-item active">Lab Logs</li>
+        </ol>
       </div>
     </div>
-  </section>
-  
+  </div>
+</section>
 
+<section class="content">
+  <div class="container-fluid">
+    {% if lab_logs %}
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">Recent Lab Tests</h3></div>
+
+      <div class="card-body table-responsive p-0" style="max-height: 500px;">
+        <table class="table table-head-fixed table-hover text-nowrap">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Patient</th>
+              <th>Test Type</th>
+              <th>Lab Staff</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in lab_logs %}
+            <tr>
+              <td>{{ log.date|date:"M d, Y" }}</td>
+              <td>{{ log.patient_name }}</td>
+              <td>{{ log.test_type }}</td>
+              <td>{{ log.lab_staff }}</td>
+              <td>
+                <span class="badge 
+                  {% if log.status == 'Completed' %}badge-success
+                  {% elif log.status == 'Pending' %}badge-warning
+                  {% else %}badge-secondary{% endif %}">
+                  {{ log.status }}
+                </span>
+              </td>
+              <td>
+                <button 
+                  type="button" 
+                  class="btn btn-sm btn-primary view-details-btn" 
+                  data-toggle="modal" 
+                  data-target="#logDetailsModal" 
+                  data-log-id="{{ log.id }}">
+                  View Details
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">No lab test logs available.</div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Modal -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1" role="dialog" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="logDetailsModalLabel">Lab Test Details</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Details content loaded dynamically here -->
+        <div id="modal-loading" class="text-center my-5">
+          <i class="fas fa-spinner fa-spin fa-3x"></i>
+          <p>Loading details...</p>
+        </div>
+        <div id="modal-content" style="display:none;">
+          <!-- Fetched HTML will be injected here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function(){
+    $('#logDetailsModal').on('show.bs.modal', function (event) {
+      var button = $(event.relatedTarget);
+      var logId = button.data('log-id');
+      var modal = $(this);
+
+      // Show loading spinner
+      modal.find('#modal-loading').show();
+      modal.find('#modal-content').hide().empty();
+
+      // AJAX fetch log details from server
+      $.ajax({
+        url: "{% url 'lab_log_detail_ajax' %}",  // You must create this URL & view
+        data: {
+          'log_id': logId
+        },
+        success: function(data) {
+          // Hide loading, show content
+          modal.find('#modal-loading').hide();
+          modal.find('#modal-content').html(data).show();
+        },
+        error: function() {
+          modal.find('#modal-loading').hide();
+          modal.find('#modal-content').html('<p class="text-danger">Failed to load details.</p>').show();
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}

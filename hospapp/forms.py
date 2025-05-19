@@ -1,5 +1,5 @@
 from django import forms
-from .models import Patient, Admission, Ward, Bed
+from .models import Patient, Admission, Ward, Bed, LabTest
 
 class PatientForm(forms.ModelForm):
     class Meta:
@@ -52,6 +52,16 @@ class WardForm(forms.ModelForm):
         fields = ['name']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control form-control-sm'})
+        }
+
+class LabTestForm(forms.ModelForm):
+    class Meta:
+        model = LabTest
+        fields = ['test_type', 'sperm_count', 'motility', 'blood_type', 'notes', 'hormone', 'hormone_level',
+                  'pregnancy_result', 'infection_type', 'infection_result']
+        widgets = {
+            'test_type': forms.HiddenInput(),
+            'notes': forms.Textarea(attrs={'rows':2}),
         }
 
 # class BedForm(forms.ModelForm):

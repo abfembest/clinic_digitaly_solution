@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from .forms import PatientForm
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan
+from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.http import Http404
+from django.http import HttpResponseBadRequest
 
 
 # Create your views here.
@@ -789,13 +790,205 @@ def laboratory(request):
 def lab_test_entry(request):
     return render(request, 'laboratory/test_entry.html')
 
+@csrf_exempt
+@login_required(login_url='home')
+def submit_lab_test(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        if not patient_id:
+            return redirect('lab_test_entry')
+        patient = get_object_or_404(Patient, pk=patient_id)
+
+        # Extract all fields
+        sperm_count = request.POST.get('sperm_count')
+        motility = request.POST.get('motility')
+
+        blood_type = request.POST.get('blood_type')
+        blood_notes = request.POST.get('blood_notes')
+
+        hormone = request.POST.get('hormone_type')
+        hormone_level = request.POST.get('hormone_level')
+
+        pregnancy_result = request.POST.get('pregnancy_result')
+
+        infection_type = request.POST.get('infection_type')
+        infection_result = request.POST.get('infection_result')
+
+        # Check if all fields are filled (you can adjust this condition as needed)
+        all_filled = all([
+            sperm_count, motility,
+            blood_type, blood_notes,
+            hormone, hormone_level,
+            pregnancy_result,
+            infection_type, infection_result,
+        ])
+
+        if all_filled:
+            # Create one combined LabTest
+            LabTest.objects.create(
+                patient=patient,
+                test_type='combined',
+                recorded_by=request.user,
+                sperm_count=sperm_count,
+                motility=motility,
+                blood_type=blood_type,
+                notes=blood_notes,
+                hormone=hormone,
+                hormone_level=hormone_level,
+                pregnancy_result=pregnancy_result,
+                infection_type=infection_type,
+                infection_result=infection_result,
+            )
+        else:
+            # Create per test_type if fields exist
+
+            if sperm_count or motility:
+                LabTest.objects.create(
+                    patient=patient,
+                    test_type='semen',
+                    recorded_by=request.user,
+                    sperm_count=sperm_count or None,
+                    motility=motility or None,
+                )
+
+            if blood_type or blood_notes:
+                LabTest.objects.create(
+                    patient=patient,
+                    test_type='blood',
+                    recorded_by=request.user,
+                    blood_type=blood_type or None,
+                    notes=blood_notes or None,
+                )
+
+            if hormone or hormone_level:
+                LabTest.objects.create(
+                    patient=patient,
+                    test_type='hormone',
+                    recorded_by=request.user,
+                    hormone=hormone or None,
+                    hormone_level=hormone_level or None,
+                )
+
+            if pregnancy_result:
+                LabTest.objects.create(
+                    patient=patient,
+                    test_type='pregnancy',
+                    recorded_by=request.user,
+                    pregnancy_result=pregnancy_result,
+                )
+
+            if infection_type or infection_result:
+                LabTest.objects.create(
+                    patient=patient,
+                    test_type='infection',
+                    recorded_by=request.user,
+                    infection_type=infection_type or None,
+                    infection_result=infection_result or None,
+                )
+
+        return redirect('lab_test_entry')
+
+    return redirect('lab_test_entry')
+
+@login_required
+def patient_search(request):
+    query = request.GET.get('q', '')
+    results = []
+
+    if query:
+        patients = Patient.objects.filter(full_name__icontains=query)[:10]
+        results = [{'id': p.id, 'full_name': p.full_name} for p in patients]
+
+    return JsonResponse({'results': results})
+
 @login_required(login_url='home')
 def lab_result_upload(request):
-    return render(request, 'laboratory/result_upload.html')
+    patients = Patient.objects.all().order_by('full_name')
+    selected_patient = None
+    lab_tests = []
+    uploaded_files = []
+
+    if request.method == "POST":
+        patient_id = request.POST.get('patient_id')
+        patient = get_object_or_404(Patient, id=patient_id)
+        result_file = request.FILES.get('result_file')
+
+        if result_file:
+            LabResultFile.objects.create(
+                patient=patient,
+                uploaded_by=request.user,
+                result_file=result_file
+            )
+            messages.success(request, "Lab result file uploaded successfully.")
+            return redirect(f"{request.path}?patient_id={patient_id}")
+        else:
+            messages.error(request, "Please upload a valid file.")
+
+    selected_patient_id = request.GET.get('patient_id')
+    if selected_patient_id:
+        selected_patient = get_object_or_404(Patient, id=selected_patient_id)
+        lab_tests = LabTest.objects.filter(patient=selected_patient).order_by('-date_recorded')
+        uploaded_files = LabResultFile.objects.filter(patient=selected_patient).order_by('-uploaded_at')
+
+    context = {
+        'patients': patients,
+        'selected_patient': selected_patient,
+        'lab_tests': lab_tests,
+        'uploaded_files': uploaded_files,
+    }
+    return render(request, 'laboratory/result_upload.html', context)
 
 @login_required(login_url='home')
 def lab_internal_logs(request):
-    return render(request, 'laboratory/logs.html')
+    user = request.user
+
+    # Retrieve all lab tests, optionally filter by lab staff if needed:
+    lab_tests = LabTest.objects.select_related('patient', 'recorded_by').all().order_by('-date_recorded')
+
+    logs = []
+    for test in lab_tests:
+        # Extract key result info based on test type, example:
+        key_results = None
+        if test.test_type == 'semen':
+            key_results = f"Sperm Count: {test.sperm_count}, Motility: {test.motility}"
+        elif test.test_type == 'blood':
+            key_results = f"Blood Type: {test.blood_type}"
+        elif test.test_type == 'hormone':
+            key_results = f"Hormone: {test.hormone}, Level: {test.hormone_level}"
+        elif test.test_type == 'pregnancy':
+            key_results = f"Result: {test.pregnancy_result}"
+        elif test.test_type == 'infection':
+            key_results = f"Infection Type: {test.infection_type}, Result: {test.infection_result}"
+        else:
+            key_results = test.notes or "N/A"
+
+        logs.append({
+            'date': test.date_recorded.date(),
+            'patient_name': test.patient.full_name,
+            'test_type': test.get_test_type_display(),
+            'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
+            'key_results': key_results,
+            'notes': test.notes,
+            # You can add status if your model supports it, otherwise assume 'completed'
+            'status': 'Completed',
+        })
+
+    context = {
+        'lab_logs': logs,
+    }
+    return render(request, 'laboratory/logs.html', context)
+
+def lab_log_detail_ajax(request):
+    log_id = request.GET.get('log_id')
+    if not log_id:
+        return HttpResponseBadRequest("Missing log ID")
+
+    lab_test = get_object_or_404(LabTest, id=log_id)
+
+    # Render a small template snippet with the lab test details
+    return render(request, 'laboratory/lab_log_detail_partial.html', {
+        'lab_test': lab_test,
+    })
 
 # Pharmacy Views
 @login_required(login_url='home')

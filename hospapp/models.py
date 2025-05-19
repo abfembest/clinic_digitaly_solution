@@ -271,3 +271,45 @@ class CarePlan(models.Model):
 
     def __str__(self):
         return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
+    
+class LabTest(models.Model):
+    TEST_TYPES = [
+        ('semen', 'Semen Analysis'),
+        ('blood', 'Blood Screening'),
+        ('hormone', 'Hormonal Assay'),
+        ('pregnancy', 'Pregnancy Test'),
+        ('infection', 'Infection Screening'),
+        ('combined', 'Combined Tests'),
+    ]
+
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    test_type = models.CharField(max_length=20, choices=TEST_TYPES)
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date_recorded = models.DateTimeField(auto_now_add=True)
+
+    # Common fields (nullable depending on test)
+    sperm_count = models.FloatField(null=True, blank=True)
+    motility = models.FloatField(null=True, blank=True)
+
+    blood_type = models.CharField(max_length=5, null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+
+    hormone = models.CharField(max_length=100, null=True, blank=True)
+    hormone_level = models.FloatField(null=True, blank=True)
+
+    pregnancy_result = models.CharField(max_length=10, choices=[('positive', 'Positive'), ('negative', 'Negative')], null=True, blank=True)
+
+    infection_type = models.CharField(max_length=100, null=True, blank=True)
+    infection_result = models.CharField(max_length=10, choices=[('positive', 'Positive'), ('negative', 'Negative')], null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.get_test_type_display()} ({self.date_recorded.date()})"
+    
+class LabResultFile(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    result_file = models.FileField(upload_to='lab_results/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Result for {self.patient.full_name} uploaded on {self.uploaded_at.date()}"

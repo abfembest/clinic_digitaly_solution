@@ -1,133 +1,173 @@
 {% extends "laboratory/base.html" %}
+{% load static %}
 
-{% block title %}HMS | Lab Home{% endblock %}
+{% block title %}HMS | Lab Test{% endblock %}
 
 {% block content %}
 
-<!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Lab Test Entry</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+        <h1 class="m-0 text-dark">Lab Test Entry</h1>
+    </div>
 </div>
-<!-- /.content-header -->
 
-<!-- Main content -->
 <section class="content">
     <div class="container-fluid">
-        <div class="card card-outline card-info">
-            <div class="card-header">
-                <h3 class="card-title">Log New Lab Test</h3>
-            </div>
+
+        <!-- Patient Search -->
+        <div class="card card-outline card-info mb-3">
             <div class="card-body">
-                <ul class="nav nav-pills mb-3" id="labTabs">
-                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#semen">Semen Analysis</a>
-                    </li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#blood">Blood Screening</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#hormone">Hormonal Assay</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pregnancy">Pregnancy Test</a></li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#infection">Infection Screening</a>
-                    </li>
-                </ul>
+                <div class="form-group position-relative">
+                    <label for="patient_search">Search Patient</label>
+                    <input type="text" class="form-control" id="patient_search" placeholder="Start typing patient name..." autocomplete="off">
+                    <div id="patientSuggestions" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                </div>
+                <input type="hidden" name="patient_id" id="patient_id">
+                <div id="selectedPatient" class="text-muted mt-2" style="display: none;"></div>
+            </div>
+        </div>
 
-                <div class="tab-content">
+        <!-- Lab Test Form -->
+        <form method="post" action="{% url 'submit_lab_test' %}">
+            {% csrf_token %}
+            <input type="hidden" name="patient_id" id="form_patient">
 
-                    <!-- Semen Analysis -->
-                    <div class="tab-pane fade show active" id="semen">
-                        <form method="post">{% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+            <div class="card card-outline card-info">
+                <div class="card-header"><h3 class="card-title">Lab Tests</h3></div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#semen">Semen Analysis</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#blood">Blood Screening</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#hormone">Hormonal Assay</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#pregnancy">Pregnancy Test</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#infection">Infection Screening</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Semen -->
+                        <div class="tab-pane fade show active" id="semen">
                             <div class="form-group">
                                 <label>Sperm Count (million/ml)</label>
-                                <input type="number" class="form-control" name="sperm_count" required>
+                                <input type="number" class="form-control" name="sperm_count">
                             </div>
                             <div class="form-group">
                                 <label>Motility (%)</label>
                                 <input type="number" class="form-control" name="motility">
                             </div>
-                            <button class="btn btn-success">Submit Analysis</button>
-                        </form>
-                    </div>
+                        </div>
 
-                    <!-- Blood Screening -->
-                    <div class="tab-pane fade" id="blood">
-                        <form method="post">{% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                        <!-- Blood -->
+                        <div class="tab-pane fade" id="blood">
                             <div class="form-group">
                                 <label>Blood Type</label>
-                                <input type="text" class="form-control" name="blood_type">
+                                <select class="form-control" name="blood_type">
+                                    <option value="">-- Choose --</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
                             </div>
+
                             <div class="form-group">
                                 <label>Screening Notes</label>
-                                <textarea class="form-control" name="notes"></textarea>
+                                <textarea class="form-control" name="blood_notes"></textarea>
                             </div>
-                            <button class="btn btn-success">Submit Result</button>
-                        </form>
-                    </div>
+                        </div>
 
-                    <!-- Hormonal Assay -->
-                    <div class="tab-pane fade" id="hormone">
-                        <form method="post">{% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                        <!-- Hormone -->
+                        <div class="tab-pane fade" id="hormone">
                             <div class="form-group">
                                 <label>Hormone Type</label>
-                                <input type="text" class="form-control" name="hormone">
+                                <input type="text" class="form-control" name="hormone_type">
                             </div>
                             <div class="form-group">
                                 <label>Level (ng/mL)</label>
-                                <input type="number" class="form-control" name="level">
+                                <input type="number" class="form-control" name="hormone_level">
                             </div>
-                            <button class="btn btn-success">Submit Assay</button>
-                        </form>
-                    </div>
+                        </div>
 
-                    <!-- Pregnancy Test -->
-                    <div class="tab-pane fade" id="pregnancy">
-                        <form method="post">{% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                        <!-- Pregnancy -->
+                        <div class="tab-pane fade" id="pregnancy">
                             <div class="form-group">
                                 <label>Test Result</label>
-                                <select class="form-control" name="result">
+                                <select class="form-control" name="pregnancy_result">
+                                    <option value="">-- Choose --</option>
                                     <option value="positive">Positive</option>
                                     <option value="negative">Negative</option>
                                 </select>
                             </div>
-                            <button class="btn btn-success">Save Result</button>
-                        </form>
-                    </div>
+                        </div>
 
-                    <!-- Infection Screening -->
-                    <div class="tab-pane fade" id="infection">
-                        <form method="post">{% csrf_token %}
-                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                        <!-- Infection -->
+                        <div class="tab-pane fade" id="infection">
                             <div class="form-group">
                                 <label>Infection Type</label>
                                 <input type="text" class="form-control" name="infection_type">
                             </div>
                             <div class="form-group">
                                 <label>Screening Result</label>
-                                <select class="form-control" name="result">
+                                <select class="form-control" name="infection_result">
+                                    <option value="">-- Choose --</option>
                                     <option value="positive">Positive</option>
                                     <option value="negative">Negative</option>
                                 </select>
                             </div>
-                            <button class="btn btn-success">Record Screening</button>
-                        </form>
+                        </div>
                     </div>
-
+                    <button class="btn btn-primary mt-3">Submit All Available Tests</button>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 </section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById('patient_search');
+    const suggestions = document.getElementById('patientSuggestions');
+    const patientIdField = document.getElementById('form_patient');
+    const display = document.getElementById('selectedPatient');
+
+    searchInput.addEventListener('keyup', function () {
+        const query = this.value;
+        if (query.length < 2) {
+            suggestions.innerHTML = '';
+            return;
+        }
+
+        fetch(`/patient-search/?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                suggestions.innerHTML = '';
+                data.results.forEach(patient => {
+                    const item = document.createElement('a');
+                    item.classList.add('list-group-item', 'list-group-item-action');
+                    item.textContent = `${patient.full_name} (ID: ${patient.id})`;
+                    item.href = "#";
+                    item.onclick = function (e) {
+                        e.preventDefault();
+                        searchInput.value = patient.full_name;
+                        suggestions.innerHTML = '';
+                        display.textContent = `Selected Patient: ${patient.full_name}`;
+                        display.style.display = 'block';
+                        patientIdField.value = patient.id;
+                    };
+                    suggestions.appendChild(item);
+                });
+            });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!searchInput.contains(e.target)) {
+            suggestions.innerHTML = '';
+        }
+    });
+});
+</script>
 
 {% endblock %}
