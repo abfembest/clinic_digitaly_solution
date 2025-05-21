@@ -75,5 +75,6 @@ urlpatterns = [
     path('schedule', views.schedule_appointment, name='schedule_appointment'),
     path('refer', views.refer_patient, name='refer_patient'),
     path('ajax/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
+    path('ajax/get-available-beds/', views.get_available_beds, name='get_available_beds'),
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

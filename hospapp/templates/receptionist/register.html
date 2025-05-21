@@ -166,6 +166,7 @@
                         <div class="form-group">
                             <label>Patient ID or Name</label>
                             <select class="form-control" autocomplete="on" placeholder="Search..." name="patient_id">
+                                <option value="" disabled selected>-- Select Patient --</option>
                                 {% for patient in patients %}
                                 <option value="{{patient.full_name}}">{{patient.full_name}}</option>
                                 {% endfor %}
@@ -174,21 +175,19 @@
 
                         <div class="form-group">
                             <label>Ward</label>
-                            <select name="ward" class="form-control" required>
+                            <select name="ward" id="wardSelect" class="form-control" required>
                                 <option value="" selected disabled>-- Select Ward --</option>
                                 {% for ward in wards %}
-                                <option value="{{ward.name}}">{{ward.name}}</option>
+                                <option value="{{ ward.name }}">{{ ward.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label>Bed Number</label>
-                            <select name="bed_number" class="form-control" required>
+                            <select name="bed_number" id="bedSelect" class="form-control" required>
                                 <option value="" selected disabled>-- Select Bed --</option>
-                                {% for bed in available_beds %}
-                                <option value="{{ bed.number }}">{{ bed.number }} (Ward: {{ bed.ward }})</option>
-                                {% endfor %}
+                                <!-- Options will be filled dynamically -->
                             </select>
                         </div>
 
@@ -383,10 +382,9 @@
                             <label>Select Department</label>
                             <select class="form-control" name="department" required>
                                 <option disabled selected>-- Select Department --</option>
-                                <option>Pediatrics</option>
-                                <option>Cardiology</option>
-                                <option>Orthopedics</option>
-                                <option>General Surgery</option>
+                                {% for i in department %}
+                                <option value="{{i.id}}">{{i.name}}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <button type="submit" class="btn btn-warning">Schedule</button>
@@ -411,10 +409,9 @@
                             <label>Select Department</label>
                             <select class="form-control" name="department" required>
                                 <option disabled selected>-- Select Department --</option>
-                                <option>Pediatrics</option>
-                                <option>Cardiology</option>
-                                <option>Orthopedics</option>
-                                <option>General Surgery</option>
+                                {% for i in department %}
+                                <option value="{{i.id}}">{{i.name}}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="form-group">
@@ -507,6 +504,42 @@
                 console.error('Error fetching patient info:', error);
             });
     });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const wardSelect = document.querySelector('select[name="ward"]');
+    const bedSelect = document.querySelector('select[name="bed_number"]');
+
+    wardSelect.addEventListener('change', function () {
+        const selectedWard = this.value;
+        bedSelect.innerHTML = '<option disabled selected>Loading...</option>';
+
+        fetch(`/ajax/get-available-beds/?ward_name=${encodeURIComponent(selectedWard)}`)
+            .then(response => response.json())
+            .then(data => {
+                bedSelect.innerHTML = '';
+                if (data.beds.length > 0) {
+                    data.beds.forEach(bed => {
+                        const option = document.createElement('option');
+                        option.value = bed.number;
+                        option.textContent = bed.number;
+                        bedSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.disabled = true;
+                    option.selected = true;
+                    option.textContent = 'No beds available';
+                    bedSelect.appendChild(option);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching beds:', error);
+                bedSelect.innerHTML = '<option disabled selected>Error loading beds</option>';
+            });
+    });
+});
 </script>
 
 {% endblock %}

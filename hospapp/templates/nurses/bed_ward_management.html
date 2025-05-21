@@ -26,6 +26,9 @@
       <li class="nav-item">
         <a class="nav-link" id="monitor-tab" data-toggle="tab" href="#monitor" role="tab">Monitor Status</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" id="referral-tab" data-toggle="tab" href="#referral" role="tab">Refer Patient</a>
+      </li>
     </ul>
 
     <div class="tab-content border rounded p-3 bg-white" id="wardTabsContent">
@@ -55,16 +58,12 @@
 
                   </div>
               </div>
+              
               <div class="form-row">
                   <div class="form-group col-md-6">
                       <label>Bed Number</label>
                       <select name="bed_number" class="form-control" id="admit-bed-select" required>
-                          <option value="" selected disabled>-- Select Bed --</option>
-                          {% for bed in available_beds %}
-                          <option value="{{ bed.number }}" data-ward="{{ bed.ward.id }}">
-                              {{ bed.number }} (Ward: {{ bed.ward.name }})
-                          </option>
-                          {% endfor %}
+                        <option value="" selected disabled>-- Select Bed --</option>
                       </select>
 
                   </div>
@@ -72,10 +71,10 @@
                   <div class="form-group col-md-6">
 
                       <label>Assign Doctor /Nurse</label>
-                      <select name="doctor" class="form-control" required>
+                      <select name="doctor" class="form-control text-capitalize" required>
                           <option value="" selected disabled>-- Select Doctor --</option>
                           {% for doctor in doctors %}
-                          <option value="{{ doctor.user.get_full_name }}}}">{{ doctor.role }}-{{ doctor.user.get_full_name }}</option>
+                          <option value="{{ doctor.user.get_full_name }}">{{ doctor.role }} - {{ doctor.user.get_full_name }}</option>
                           {% endfor %}
                       </select>
                   </div>
@@ -108,7 +107,7 @@
               </div>
               <div class="form-group">
                   <label>Select Ward</label>
-                  <select name="ward_id" class="form-control" id="assign-ward-select" required>
+                  <select name="ward_id" class="form-control text-capitalize" id="assign-ward-select" required>
                       <option value="" disabled selected>Select Ward</option>
                       {% for ward in wards %}
                       <option value="{{ ward.id }}">{{ ward.name }}</option>
@@ -118,20 +117,17 @@
               <div class="form-group">
                   <label>Bed Number</label>
                   <select name="bed_number" class="form-control" id="assign-bed-select" required>
-                      <option value="" disabled selected>Select Bed</option>
-                      {% for bed in available_beds %}
-                      <option value="{{ bed.number }}" data-ward="{{ bed.ward.id }}">Bed {{ bed.number }}</option>
-                      {% endfor %}
+                    <option value="" selected disabled>-- Select Bed --</option>
                   </select>
               </div>
 
               <div class="form-group">
 
                   <label>Assign Doctor /Nurse</label>
-                  <select name="doctor" class="form-control" required>
+                  <select name="doctor" class="form-control text-capitalize" required>
                       <option value="" selected disabled>-- Select Doctor --</option>
                       {% for doctor in doctors %}
-                      <option value="{{ doctor.user.get_full_name }}}}">{{ doctor.role }}-{{ doctor.user.get_full_name }}</option>
+                      <option value="{{ doctor.user.get_full_name }}">{{ doctor.role }} - {{ doctor.user.get_full_name }}</option>
                       {% endfor %}
                   </select>
               </div>
@@ -196,54 +192,90 @@
               <div class="form-group text-center">
                   <button type="submit" class="btn btn-info">Update Status</button>
               </div>
-          </form>
+        </form>
       </div>
+
+      <!-- Referral -->
+      <div class="tab-pane fade" id="referral" role="tabpanel">
+        <form method="POST" action="{% url 'refer_patient' %}">
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label>Patient</label>
+            <select name="patient_id" class="form-control" required>
+              <option value="">Select Patient</option>
+              {% for patient in admitted_patients %}
+              <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.ward.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Department to Refer To</label>
+            <select name="department" class="form-control" required>
+              <option value="">Select Department</option>
+              {% for department in departments %}
+              <option value="{{ department.id }}">{{ department.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Reason for Referral / Notes</label>
+            <textarea name="notes" class="form-control" rows="3" required></textarea>
+          </div>
+
+          <div class="form-group text-center">
+            <button type="submit" class="btn btn-secondary">Submit Referral</button>
+          </div>
+        </form>
+      </div>
+      
     </div>
   </div>
 </section>
 
-{% comment %} {% if messages %}
-<div class="messages-container mt-3 container-fluid">
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-    {{ message }}
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-      <span aria-hidden="true">&times;</span>
-    </button>
-  </div>
-  {% endfor %}
-</div>
-{% endif %} {% endcomment %}
-
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    // Reusable function to filter beds by ward
+    // Parse bed data from context
+    const beds = JSON.parse('{{ beds_json|escapejs }}');
+
     function setupWardBedFilter(wardSelectorId, bedSelectorId) {
       const wardSelect = document.getElementById(wardSelectorId);
       const bedSelect = document.getElementById(bedSelectorId);
 
       if (!wardSelect || !bedSelect) return;
 
-      function filterBeds() {
+      function populateBeds() {
         const selectedWard = wardSelect.value;
 
-        Array.from(bedSelect.options).forEach(option => {
-          const bedWard = option.getAttribute('data-ward');
-          if (!bedWard || selectedWard === '') {
-            option.style.display = '';
-          } else {
-            option.style.display = (bedWard === selectedWard) ? '' : 'none';
+        // Clear existing options except placeholder
+        bedSelect.innerHTML = `<option value="" selected disabled>-- Select Bed --</option>`;
+
+        // Filter beds for selected ward and append options
+        beds.forEach(bed => {
+          if (bed.ward_id == selectedWard) {
+            const option = document.createElement('option');
+            option.value = bed.number;
+            option.textContent = `Bed ${bed.number} (Ward: ${bed.ward__name})`;
+            bedSelect.appendChild(option);
           }
         });
 
+        // Reset bed selection
         bedSelect.value = '';
       }
 
-      wardSelect.addEventListener('change', filterBeds);
-      filterBeds(); // Initial filter on page load
+      // Attach event listener
+      wardSelect.addEventListener('change', populateBeds);
+
+      // Optionally pre-populate if ward pre-selected
+      if (wardSelect.value) {
+        populateBeds();
+      }
     }
 
-    // Apply to both tabs
+    // Apply filtering to both Admit and Assign tabs
     setupWardBedFilter('admit-ward-select', 'admit-bed-select');
     setupWardBedFilter('assign-ward-select', 'assign-bed-select');
   });

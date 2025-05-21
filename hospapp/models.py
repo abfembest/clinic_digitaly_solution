@@ -68,21 +68,28 @@ class Patient(models.Model):
     def __str__(self):
         return f"{self.full_name}"
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+    
 class Appointment(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    department = models.CharField(max_length=100)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     scheduled_time = models.DateTimeField()
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department}"
+    
 
 class Referral(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    department = models.CharField(max_length=100)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     notes = models.TextField()
 
     def __str__(self):
-        return f"{self.patient.full_name} - {self.department}"
+        return f"{self.patient.full_name} - {self.department.name}"
 
 # Admission by Nurse
 class Admission(models.Model):
@@ -245,22 +252,6 @@ class Prescription(models.Model):
 
     def __str__(self):
         return f"{self.medication} for {self.patient.full_name}"
-
-class TestRequest(models.Model):
-    TEST_CHOICES = [
-        ('Fertility Hormone Panel', 'Fertility Hormone Panel'),
-        ('Ultrasound Scan', 'Ultrasound Scan'),
-        ('Blood Count', 'Blood Count'),
-        ('Thyroid Function Test', 'Thyroid Function Test'),
-    ]
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    tests = models.TextField()  # store comma separated test names or JSON if preferred
-    instructions = models.TextField(blank=True, null=True)
-    requested_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Test Request for {self.patient.full_name} at {self.requested_at}"
     
 class CarePlan(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
@@ -272,22 +263,36 @@ class CarePlan(models.Model):
     def __str__(self):
         return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
     
-class LabTest(models.Model):
-    TEST_TYPES = [
-        ('semen', 'Semen Analysis'),
-        ('blood', 'Blood Screening'),
-        ('hormone', 'Hormonal Assay'),
-        ('pregnancy', 'Pregnancy Test'),
-        ('infection', 'Infection Screening'),
-        ('combined', 'Combined Tests'),
-    ]
+class LabTestType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    category = models.CharField(max_length=100, blank=True, null=True)  # e.g., "Hormonal", "Imaging", etc.
+    units = models.CharField(max_length=50, blank=True, null=True)      # e.g., "ng/mL", "%", etc.
+    reference_range = models.CharField(max_length=100, blank=True, null=True)  # optional
 
+    def __str__(self):
+        return self.name
+
+    
+class TestRequest(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    test_type = models.CharField(max_length=20, choices=TEST_TYPES)
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    tests = models.ManyToManyField('LabTestType')
+    instructions = models.TextField(blank=True, null=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Test Request for {self.patient.full_name} at {self.requested_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    
+class LabTest(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    test_request = models.ForeignKey('TestRequest', on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_tests')
+
+    test_type = models.ForeignKey('LabTestType', on_delete=models.CASCADE)  # ✅ dynamic test type
     recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     date_recorded = models.DateTimeField(auto_now_add=True)
 
-    # Common fields (nullable depending on test)
+    # Result fields (nullable by test type)
     sperm_count = models.FloatField(null=True, blank=True)
     motility = models.FloatField(null=True, blank=True)
 
@@ -303,7 +308,7 @@ class LabTest(models.Model):
     infection_result = models.CharField(max_length=10, choices=[('positive', 'Positive'), ('negative', 'Negative')], null=True, blank=True)
 
     def __str__(self):
-        return f"{self.patient.full_name} - {self.get_test_type_display()} ({self.date_recorded.date()})"
+        return f"{self.patient.full_name} - {self.test_type.name} ({self.date_recorded.date()})"
     
 class LabResultFile(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
