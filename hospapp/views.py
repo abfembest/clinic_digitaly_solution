@@ -360,26 +360,26 @@ def vitals(request):
     return render(request, 'nurses/vital_signs.html', context)
 
 @csrf_exempt
-@login_required(login_url='home')
 def record_vitals(request):
     if request.method == 'POST':
-        Vitals.objects.create(
-            patient_id=request.POST.get('patient_id'),
-            recorded_at=request.POST.get('recorded_at'),
-            temperature=request.POST.get('temperature'),
-            blood_pressure=request.POST.get('blood_pressure'),
-            pulse=request.POST.get('pulse'),
-            respiratory_rate=request.POST.get('respiratory_rate'),
-            weight=request.POST.get('weight'),
-            height=request.POST.get('height'),
-            bmi=request.POST.get('bmi'),  # ✅ use submitted BMI
-            notes=request.POST.get('notes'),
-            recorded_by=request.user.username
-        )
-        messages.success(request, "Vitals recorded successfully.")
-        return redirect('vitals')
+        try:
+            Vitals.objects.create(
+                patient_id=request.POST.get('patient_id'),
+                recorded_at=timezone.now(),
+                temperature=request.POST.get('temperature') or None,
+                blood_pressure=request.POST.get('blood_pressure'),
+                pulse=request.POST.get('pulse') or None,
+                respiratory_rate=request.POST.get('respiratory_rate') or None,
+                weight=request.POST.get('weight') or None,
+                height=request.POST.get('height') or None,
+                bmi=request.POST.get('bmi') or None,
+                notes=request.POST.get('notes'),
+                recorded_by=request.user.username
+            )
+            messages.success(request, "Vitals recorded successfully.")
+        except Exception as e:
+            messages.error(request, f"Error recording vitals: {str(e)}")
     return redirect('vitals')
-
 
 @login_required(login_url='home')
 def nursing_notes(request):
@@ -1201,29 +1201,55 @@ def get_available_beds(request):
     bed_list = [{'number': bed.number} for bed in beds]
     return JsonResponse({'beds': bed_list})
 
+from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import redirect
+from .models import Patient
+
 @csrf_exempt
 def register_p(request):
     if request.method == 'POST':
         data = request.POST
         photo = request.FILES.get('photo')
-        Patient.objects.create(
-            full_name=data.get('full_name'),
-            date_of_birth=data.get('dob'),
-            gender=data.get('gender'),
-            phone=data.get('phone'),
-            email=data.get('email'),
-            marital_status=data.get('marital_status'),
-            address=data.get('address'),
-            nationality=data.get('nationality'),
-            state_of_origin=data.get('state_of_origin'),
-            id_type=data.get('id_type'),
-            id_number=data.get('id_number'),
-            photo=photo,
-            first_time=data.get('first_time'),
-            referred_by=data.get('referred_by'),
-            notes=data.get('notes')
-        )
-        return redirect('register_patient')
+
+        full_name = data.get('full_name')
+        phone = data.get('phone')
+        dob = data.get('dob')
+        gender = data.get('gender')
+
+        if not full_name or not phone or not dob or not gender:
+            messages.error(request, "Full name, phone, gender, and date of birth are required.")
+            return redirect('register_patient')
+
+        if Patient.objects.filter(full_name=full_name, date_of_birth=dob).exists():
+            messages.warning(request, "A patient with the same name and date of birth already exists.")
+            return redirect('register_patient')
+
+        try:
+            Patient.objects.create(
+                full_name=full_name,
+                date_of_birth=dob,
+                gender=gender,
+                phone=phone,
+                email=data.get('email'),
+                marital_status=data.get('marital_status'),
+                address=data.get('address'),
+                nationality=data.get('nationality'),
+                state_of_origin=data.get('state_of_origin'),
+                id_type=data.get('id_type'),
+                id_number=data.get('id_number'),
+                photo=photo,
+                first_time=data.get('first_time'),
+                referred_by=data.get('referred_by'),
+                notes=data.get('notes')
+            )
+
+            messages.success(request, "Patient registered successfully.")
+            return redirect('register_patient')
+
+        except Exception as e:
+            messages.error(request, f"An error occurred: {str(e)}")
+            return redirect('register_patient')
 
 @csrf_exempt
 def update_patient_info(request):
@@ -1258,13 +1284,11 @@ def update_patient_info(request):
             patient.notes = request.POST.get('notes')
             
             patient.save()
-            
-            # Add success message if you have message framework set up
-            # messages.success(request, f"Patient {patient.full_name}'s information updated successfully.")
+        
+            messages.success(request, f"Patient {patient.full_name}'s information updated successfully.")
             
         except Patient.DoesNotExist:
-            # Add error message if you have message framework set up
-            # messages.error(request, "Patient not found.")
+            messages.error(request, "Patient not found.")
             pass
             
         return redirect('register_patient')
@@ -1273,16 +1297,29 @@ def update_patient_info(request):
 def schedule_appointment(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
+        department = request.POST.get('department')
+        scheduled_time = request.POST.get('scheduled_time')
+
         try:
             patient = Patient.objects.get(id=patient_id)
-            Appointment.objects.create(
-                patient=patient,
-                department=request.POST.get('department'),
-                scheduled_time=request.POST.get('scheduled_time')
-            )
-            messages.success(request, "Appointment scheduled successfully.")
+
+            existing = Appointment.objects.filter(patient=patient, department=department).first()
+
+            if existing:
+                existing.scheduled_time = scheduled_time
+                existing.save()
+                messages.success(request, "Appointment rescheduled successfully.")
+            else:
+                Appointment.objects.create(
+                    patient=patient,
+                    department=department,
+                    scheduled_time=scheduled_time
+                )
+                messages.success(request, "Appointment scheduled successfully.")
+        
         except Patient.DoesNotExist:
             messages.error(request, "Patient not found.")
+
         return redirect('register_patient')
 
 @csrf_exempt
