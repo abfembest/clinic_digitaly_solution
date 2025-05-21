@@ -1383,4 +1383,4 @@ def get_patient_info(request, patient_id):
 def chart_view(request):
     context= { 'labels':['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
                'data': [12, 19, 20, 5, 7]}    
-    return render(request, 'index.html', context)   
+    return render(request, 'doctors/chart.html', context)   
