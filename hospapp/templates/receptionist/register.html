@@ -382,20 +382,9 @@
                             <label>Select Department</label>
                             <select class="form-control" name="department" required>
                                 <option disabled selected>-- Select Department --</option>
-                                <option>Reproductive Medicine</option>
-                                <option>Fertility & IVF</option>
-                                <option>Andrology</option>
-                                <option>Gynecology</option>
-                                <option>Obstetrics</option>
-                                <option>Embryology</option>
-                                <option>Endocrinology</option>
-                                <option>Urology</option>
-                                <option>Genetic Counseling</option>
-                                <option>Ultrasound & Imaging</option>
-                                <option>Laboratory Services</option>
-                                <option>Mental Health / Counseling</option>
-                                <option>Nutrition & Lifestyle</option>
-                                <option>Nursing</option>
+                                {% for i in department %}
+                                <option value="{{i.id}}">{{i.name}}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <button type="submit" class="btn btn-warning">Schedule</button>
@@ -420,20 +409,9 @@
                             <label>Select Department</label>
                             <select class="form-control" name="department" required>
                                 <option disabled selected>-- Select Department --</option>
-                                <option>Reproductive Medicine</option>
-                                <option>Fertility & IVF</option>
-                                <option>Andrology</option>
-                                <option>Gynecology</option>
-                                <option>Obstetrics</option>
-                                <option>Embryology</option>
-                                <option>Endocrinology</option>
-                                <option>Urology</option>
-                                <option>Genetic Counseling</option>
-                                <option>Ultrasound & Imaging</option>
-                                <option>Laboratory Services</option>
-                                <option>Mental Health / Counseling</option>
-                                <option>Nutrition & Lifestyle</option>
-                                <option>Nursing</option>
+                                {% for i in department %}
+                                <option value="{{i.id}}">{{i.name}}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="form-group">

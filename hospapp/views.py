@@ -1,8 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.models import User
-from .forms import PatientForm
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, HandoverLog, TaskAssignment, Shift, EmergencyAlert, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -12,8 +11,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.utils.dateparse import parse_date
 from django.db.models import Q
-from django.http import Http404
-from django.http import HttpResponseBadRequest
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 # Create your views here.
@@ -105,12 +104,16 @@ def nurses(request):
 
 @login_required(login_url='home')
 def bed_ward_management_view(request):
+    beds = Bed.objects.filter(is_occupied=False).values('id', 'number', 'ward_id', 'ward__name')
+    beds_json = json.dumps(list(beds), cls=DjangoJSONEncoder)
+
     context = {
         'patients': Patient.objects.all(),
         'wards': Ward.objects.all(),
-        'available_beds': Bed.objects.filter(is_occupied=False),
+        'beds_json': beds_json,
         'admitted_patients': Patient.objects.filter(is_inpatient=True),
-        'doctors': Profile.objects.select_related('user').filter(Q(role='doctor') | Q(role='nurse'))
+        'doctors': Profile.objects.select_related('user').filter(Q(role='doctor') | Q(role='nurse')),
+        'departments' : Department.objects.all()
     }
     return render(request, 'nurses/bed_ward_management.html', context)
 
@@ -118,7 +121,7 @@ def bed_ward_management_view(request):
 @login_required(login_url='home')
 def admit_patient_nurse(request):
     if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')  # <-- This must now be the patient ID
+        patient_id = request.POST.get('patient_id')
         admission_reason = request.POST.get('admission_reason')
         ward_id = request.POST.get('ward')
         bed_number = request.POST.get('bed_number')
@@ -420,82 +423,82 @@ def save_nursing_note(request):
 
     return redirect('nursing_notes')
 
-@login_required(login_url='home')
-def mar(request):
-    return render(request, 'nurses/mar.html')
+# @login_required(login_url='home')
+# def mar(request):
+#     return render(request, 'nurses/mar.html')
 
-@login_required(login_url='home')
-def handover_logs_view(request):
-    if request.method == 'POST' and 'handover_submit' in request.POST:
-        patient_id = request.POST.get('patient_id')
-        notes = request.POST.get('notes')
+# @login_required(login_url='home')
+# def handover_logs_view(request):
+#     if request.method == 'POST' and 'handover_submit' in request.POST:
+#         patient_id = request.POST.get('patient_id')
+#         notes = request.POST.get('notes')
 
-        if patient_id and notes:
-            try:
-                patient = Patient.objects.get(id=patient_id)
-                HandoverLog.objects.create(
-                    patient=patient,
-                    author=request.user,
-                    notes=notes
-                )
-            except Patient.DoesNotExist:
-                # optionally handle error if patient is not found
-                pass
+#         if patient_id and notes:
+#             try:
+#                 patient = Patient.objects.get(id=patient_id)
+#                 HandoverLog.objects.create(
+#                     patient=patient,
+#                     author=request.user,
+#                     notes=notes
+#                 )
+#             except Patient.DoesNotExist:
+#                 # optionally handle error if patient is not found
+#                 pass
 
-        return redirect('handover_logs')  # update with your actual URL name
+#         return redirect('handover_logs')  # update with your actual URL name
 
-    context = {
-        'patients': Patient.objects.all(),
-        'handovers': HandoverLog.objects.select_related('patient', 'author').order_by('-timestamp')[:50],
-    }
-    return render(request, 'nurses/handover_logs.html', context)
+#     context = {
+#         'patients': Patient.objects.all(),
+#         'handovers': HandoverLog.objects.select_related('patient', 'author').order_by('-timestamp')[:50],
+#     }
+#     return render(request, 'nurses/handover_logs.html', context)
 
-@login_required(login_url='home')
-def task_assignments_view(request):
-    if request.method == 'POST':
-        nurse_id = request.POST.get('nurse_id')
-        shift_id = request.POST.get('shift_id')
-        task_description = request.POST.get('task_description')
+# @login_required(login_url='home')
+# def task_assignments_view(request):
+#     if request.method == 'POST':
+#         nurse_id = request.POST.get('nurse_id')
+#         shift_id = request.POST.get('shift_id')
+#         task_description = request.POST.get('task_description')
 
-        if nurse_id and shift_id and task_description:
-            nurse = User.objects.get(id=nurse_id)
-            shift = Shift.objects.get(id=shift_id)
+#         if nurse_id and shift_id and task_description:
+#             nurse = User.objects.get(id=nurse_id)
+#             shift = Shift.objects.get(id=shift_id)
 
-            TaskAssignment.objects.create(
-                nurse=nurse,
-                shift=shift,
-                task_description=task_description
-            )
-            return redirect('task_assignments')
+#             TaskAssignment.objects.create(
+#                 nurse=nurse,
+#                 shift=shift,
+#                 task_description=task_description
+#             )
+#             return redirect('task_assignments')
 
-    context = {
-        'assignments': TaskAssignment.objects.select_related('nurse', 'shift').order_by('-created_at')[:50],
-        'nurses': User.objects.all(),
-        'shifts': Shift.objects.all()
-    }
-    return render(request, 'nurses/task_assignments.html', context)
+#     context = {
+#         'assignments': TaskAssignment.objects.select_related('nurse', 'shift').order_by('-created_at')[:50],
+#         'nurses': User.objects.all(),
+#         'shifts': Shift.objects.all()
+#     }
+#     return render(request, 'nurses/task_assignments.html', context)
 
-@login_required(login_url='home')
-def emergency_alerts_view(request):
-    if request.method == 'POST':
-        if 'acknowledge' in request.POST:
-            alert_id = request.POST.get('alert_id')
-            alert = EmergencyAlert.objects.get(id=alert_id)
-            alert.acknowledged_by.add(request.user)
+# @login_required(login_url='home')
+# def emergency_alerts_view(request):
+#     if request.method == 'POST':
+#         if 'acknowledge' in request.POST:
+#             alert_id = request.POST.get('alert_id')
+#             alert = EmergencyAlert.objects.get(id=alert_id)
+#             alert.acknowledged_by.add(request.user)
 
-        elif 'trigger' in request.POST:
-            message = request.POST.get('message')
-            if message:
-                EmergencyAlert.objects.create(
-                    message=message,
-                    triggered_by=request.user
-                )
-        return redirect('emergency_alerts')
+#         elif 'trigger' in request.POST:
+#             message = request.POST.get('message')
+#             if message:
+#                 EmergencyAlert.objects.create(
+#                     message=message,
+#                     triggered_by=request.user
+#                 )
+#         return redirect('emergency_alerts')
 
-    context = {
-        'alerts': EmergencyAlert.objects.prefetch_related('acknowledged_by').order_by('-timestamp')[:50]
-    }
-    return render(request, 'nurses/emergency_alerts.html', context)
+#     context = {
+#         'alerts': EmergencyAlert.objects.prefetch_related('acknowledged_by').order_by('-timestamp')[:50]
+#     }
+#     return render(request, 'nurses/emergency_alerts.html', context)
 
 """ Doctors Views"""
 @login_required(login_url='home')
@@ -1122,11 +1125,13 @@ def register_patient(request):
     patients = Patient.objects.all().order_by('-date_registered')
     wards = Ward.objects.all()
     available_beds = Bed.objects.filter(is_occupied=False)
+    department = Department.objects.all()
         
     return render(request, 'receptionist/register.html', {
         'wards': wards,
         'patients': patients,
-        'available_beds' : available_beds
+        'available_beds' : available_beds,
+        'department' : department
     }
 )
 
@@ -1200,11 +1205,6 @@ def get_available_beds(request):
     beds = Bed.objects.filter(ward=ward, is_occupied=False)
     bed_list = [{'number': bed.number} for bed in beds]
     return JsonResponse({'beds': bed_list})
-
-from django.contrib import messages
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import redirect
-from .models import Patient
 
 @csrf_exempt
 def register_p(request):
@@ -1297,11 +1297,12 @@ def update_patient_info(request):
 def schedule_appointment(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
-        department = request.POST.get('department')
+        department_id = request.POST.get('department')
         scheduled_time = request.POST.get('scheduled_time')
 
         try:
             patient = Patient.objects.get(id=patient_id)
+            department = Department.objects.get(id=department_id)
 
             existing = Appointment.objects.filter(patient=patient, department=department).first()
 
@@ -1319,6 +1320,8 @@ def schedule_appointment(request):
         
         except Patient.DoesNotExist:
             messages.error(request, "Patient not found.")
+        except Department.DoesNotExist:
+            messages.error(request, "Selected department not found.")
 
         return redirect('register_patient')
 
@@ -1326,17 +1329,27 @@ def schedule_appointment(request):
 def refer_patient(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
+        department_id = request.POST.get('department')
+        notes = request.POST.get('notes')
+
         try:
             patient = Patient.objects.get(id=patient_id)
+            department = Department.objects.get(id=department_id)
+
             Referral.objects.create(
                 patient=patient,
-                department=request.POST.get('department'),
-                notes=request.POST.get('notes')
+                department=department,
+                notes=notes
             )
             messages.success(request, "Patient referred successfully.")
         except Patient.DoesNotExist:
             messages.error(request, "Patient not found.")
-        return redirect('register_patient')
+        except Department.DoesNotExist:
+            messages.error(request, "Department not found.")
+        
+        referer = request.META.get('HTTP_REFERER', '/')
+        return redirect(referer)
+
     
 @csrf_exempt
 def get_patient_info(request, patient_id):

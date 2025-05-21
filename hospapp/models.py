@@ -68,21 +68,28 @@ class Patient(models.Model):
     def __str__(self):
         return f"{self.full_name}"
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+    
 class Appointment(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    department = models.CharField(max_length=100)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     scheduled_time = models.DateTimeField()
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department}"
+    
 
 class Referral(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    department = models.CharField(max_length=100)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     notes = models.TextField()
 
     def __str__(self):
-        return f"{self.patient.full_name} - {self.department}"
+        return f"{self.patient.full_name} - {self.department.name}"
 
 # Admission by Nurse
 class Admission(models.Model):
