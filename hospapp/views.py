@@ -586,15 +586,13 @@ def request_tests(request):
 
         patient = get_object_or_404(Patient, id=patient_id)
         
-        # Save tests as comma-separated string
-        test_str = ", ".join(tests)
-
-        TestRequest.objects.create(
+        test_request = TestRequest.objects.create(
             patient=patient,
             requested_by=request.user,
-            tests=test_str,
             instructions=instructions
         )
+        test_request.tests.set(tests)  # assuming 'tests' is a list of LabTestType IDs
+
         messages.success(request, "Test request submitted successfully.")
         return redirect('doctor_consultation')
 
@@ -1186,7 +1184,22 @@ def admit_patient(request):
         )
 
         messages.success(request, f"{patient.full_name} has been admitted successfully.")
-        return redirect('register_patient')  # Redirect to the main registration page/tab
+        return redirect('register_patient')
+    
+@csrf_exempt
+def get_available_beds(request):
+    ward_name = request.GET.get('ward_name')
+    if not ward_name:
+        return JsonResponse({'error': 'Ward not specified'}, status=400)
+    
+    try:
+        ward = Ward.objects.get(name=ward_name)
+    except Ward.DoesNotExist:
+        return JsonResponse({'error': 'Ward not found'}, status=404)
+    
+    beds = Bed.objects.filter(ward=ward, is_occupied=False)
+    bed_list = [{'number': bed.number} for bed in beds]
+    return JsonResponse({'beds': bed_list})
 
 @csrf_exempt
 def register_p(request):
