@@ -1,0 +1,116 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'dist/css/bootstrap_5.css' %}" >
+<link href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet" >
+<style >
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #0d6efd, #0099ff);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.12);
+    }
+
+.card-feature {
+    background: white;
+    min-height: 280px;
+}
+
+.icon-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2.5rem;
+    color: white;
+}
+
+.card-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.card-text {
+    color: #6c757d;
+    text-align: center;
+}
+
+.bg-patient {
+    background: linear-gradient(135deg, #20c997, #0dcaf0);
+}
+
+.bg-diagnose {
+    background: linear-gradient(135deg, #0d6efd, #6610f2);
+}
+
+.bg-prescribe {
+    background: linear-gradient(135deg, #fd7e14, #ffc107);
+}
+
+.bg-tests {
+    background: linear-gradient(135deg, #6f42c1, #dc3545);
+}
+
+.bg-monitor {
+    background: linear-gradient(135deg, #198754, #20c997);
+}
+
+.card-footer {
+    background: transparent;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.action-link {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+    .action-link:hover {
+        color: #0a58ca;
+        text-decoration: underline;
+    }
+
+.bi {
+    line-height: 1;
+}
+
+.chart-container {
+    position: relative;
+    margin: auto;
+    height: 80vh;
+    max-height: 400px;
+}
+
+.chart-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+</style >

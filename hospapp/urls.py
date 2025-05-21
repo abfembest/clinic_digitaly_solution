@@ -21,6 +21,7 @@ urlpatterns = [
     path('n/save_nursing_notes', views.save_nursing_note, name='save_nursing_note'),
 
     path('d/home', views.doctors, name='doctors'),
+    path('d/home', views.chart_view, name='chart_view'),
     path('d/consultations', views.doctor_consultation, name='doctor_consultation'),
     path('save-consultations', views.save_consultation, name='save_consultation'),
     path('patient-history/<int:patient_id>/', views.patient_history_ajax, name='patient_history_ajax'),
@@ -76,5 +77,8 @@ urlpatterns = [
     path('refer', views.refer_patient, name='refer_patient'),
     path('ajax/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
     path('ajax/get-available-beds/', views.get_available_beds, name='get_available_beds'),
+    
+    path('chart', views.chart_view, name='chart_view'),
+
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
