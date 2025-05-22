@@ -1,3 +1,4 @@
+from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
@@ -38,7 +39,7 @@ def home(request):
                 role = user.profile.role
                 dashboard_path = ROLE_DASHBOARD_PATHS.get(role)
                 if dashboard_path:
-                    return redirect(f'/{dashboard_path}')
+                    return redirect(f'/{dashboard_path}',context )
                 else:
                     messages.error(request, "Role not recognized.")
             except AttributeError:
@@ -1328,3 +1329,10 @@ def get_patient_info(request, patient_id):
         })
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
+
+
+#Charts views
+def chart_view(request):
+    context= { 'labels':['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+               'data': [12, 19, 20, 5, 7]}    
+    return render(request, 'doctors/chart.html', context)   

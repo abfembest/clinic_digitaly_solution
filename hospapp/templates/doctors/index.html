@@ -3,930 +3,1253 @@
 {% block title %}HMS | Doctor Home{% endblock %}
 <!-- Content Wrapper. Contains page content -->
 {% block content %}
-<!-- Content Header (Page header) -->
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Dashboard</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
-</div>
-<!-- /.content-header -->
 
-<!-- 🌟 Doctor Dashboard Icons -->
-<section class="dashboard-icons py-3 my-2 rounded">
-    <div class="container-fluid">
-        <div class="d-flex flex-wrap justify-content-center">
 
-            <!-- Home -->
-            <div class="p-2">
-                <a href="{% url 'doctors' %}" class="bg-primary text-white p-4 text-center d-block"
-                    style="width: 150px; border-radius: 30px">
-                    <i class="bi bi-house-door display-4 d-block mb-2"></i>
-                    <span>Home</span>
-                </a>
+<!-- NEW dashboard items-->
+   {% include 'dashboardstyle.css' %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doctor's Dashboard</title>
+
+<div class="container py-5">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-0">Doctor's Dashboard: {%for data1 in context%} {{data1}} {%endfor%}</h1>
+                <p class="mb-0 opacity-75">Fertility Clinic Management System</p>
             </div>
-
-            <!-- Patient Consultation -->
-            <div class="p-2">
-                <a href="{% url 'doctor_consultation' %}" class="bg-success text-white p-4 text-center d-block"
-                    style="width: 150px; border-radius: 30px">
-                    <i class="bi bi-person-lines-fill display-4 d-block mb-2"></i>
-                    <span>Consultation</span>
-                </a>
+            <div class="text-end">
+                <p class="mb-0"><i class="bi bi-calendar3"></i> {% now "l, F j, Y" %}</p>
+                <p class="mb-0"><i class="bi bi-person-circle"></i> Dr. {{ user.username }}</p>
             </div>
-
-            <!-- Patient Records -->
-            <div class="p-2">
-                <a href="{% url 'access_medical_records' %}" class="bg-info text-white p-4 text-center d-block"
-                    style="width: 150px; border-radius: 30px">
-                    <i class="bi bi-folder2-open display-4 d-block mb-2"></i>
-                    <span>Records</span>
-                </a>
-            </div>
-
-            <!-- Treatment Monitoring -->
-            <div class="p-2">
-                <a href="{% url 'monitoring' %}"
-                    class="bg-warning text-white p-4 text-center d-block" style="width: 150px; border-radius: 30px">
-                    <i class="bi bi-activity display-4 d-block mb-2"></i>
-                    <span>Monitoring</span>
-                </a>
-            </div>
-
         </div>
     </div>
-</section>
 
-
-<!-- Main content -->
-<section class="content">
-    <div class="container-fluid">
-        <!-- Info boxes -->
-        <div class="row">
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box">
-                    <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">CPU Traffic</span>
-                        <span class="info-box-number">
-                            10
-                            <small>%</small>
-                        </span>
+    <!-- Feature Cards -->
+    <div class="row g-4">
+        <!-- Patient Notes Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-patient">
+                            <i class="bi bi-journal-medical"></i>
+                        </div>
+                        <h5 class="card-title">Patient Records</h5>
+                        <p class="card-text">Review consultation notes, medical history, and laboratory results for your patients.</p>
                     </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box mb-3">
-                    <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-thumbs-up"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Likes</span>
-                        <span class="info-box-number">41,410</span>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-info">12 New Results</span>
+                            <span class="badge bg-warning text-dark">3 Pending Reviews</span>
+                        </div>
                     </div>
-                    <!-- /.info-box-content -->
                 </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
-            <!-- fix for small devices only -->
-            <div class="clearfix hidden-md-up"></div>
-
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box mb-3">
-                    <span class="info-box-icon bg-success elevation-1"><i class="fas fa-shopping-cart"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Sales</span>
-                        <span class="info-box-number">760</span>
-                    </div>
-                    <!-- /.info-box-content -->
+                <div class="card-footer py-3">
+                    <a href="#" class="action-link">Access Patient Records <i class="bi bi-arrow-right"></i></a>
                 </div>
-                <!-- /.info-box -->
             </div>
-            <!-- /.col -->
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box mb-3">
-                    <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-users"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">New Members</span>
-                        <span class="info-box-number">2,000</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
         </div>
-        <!-- /.row -->
 
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title">Monthly Recap Report</h5>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-tool dropdown-toggle" data-toggle="dropdown">
-                                    <i class="fas fa-wrench"></i>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-right" role="menu">
-                                    <a href="#" class="dropdown-item">Action</a>
-                                    <a href="#" class="dropdown-item">Another action</a>
-                                    <a href="#" class="dropdown-item">Something else here</a>
-                                    <a class="dropdown-divider"></a>
-                                    <a href="#" class="dropdown-item">Separated link</a>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
+        <!-- Diagnose Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-diagnose">
+                            <i class="bi bi-clipboard2-pulse"></i>
+                        </div>
+                        <h5 class="card-title">Diagnosis & Advice</h5>
+                        <p class="card-text">Diagnose conditions and provide medical advice based on patient assessments.</p>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-primary">8 Waiting Assessment</span>
+                            <span class="badge bg-success">4 Completed Today</span>
                         </div>
                     </div>
-                    <!-- /.card-header -->
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <p class="text-center">
-                                    <strong>Sales: 1 Jan, 2014 - 30 Jul, 2014</strong>
-                                </p>
-
-                                <div class="chart">
-                                    <!-- Sales Chart Canvas -->
-                                    <canvas id="salesChart" height="180" style="height: 180px;"></canvas>
-                                </div>
-                                <!-- /.chart-responsive -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-md-4">
-                                <p class="text-center">
-                                    <strong>Goal Completion</strong>
-                                </p>
-
-                                <div class="progress-group">
-                                    Add Products to Cart
-                                    <span class="float-right"><b>160</b>/200</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-primary" style="width: 80%"></div>
-                                    </div>
-                                </div>
-                                <!-- /.progress-group -->
-
-                                <div class="progress-group">
-                                    Complete Purchase
-                                    <span class="float-right"><b>310</b>/400</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-danger" style="width: 75%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- /.progress-group -->
-                                <div class="progress-group">
-                                    <span class="progress-text">Visit Premium Page</span>
-                                    <span class="float-right"><b>480</b>/800</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-success" style="width: 60%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- /.progress-group -->
-                                <div class="progress-group">
-                                    Send Inquiries
-                                    <span class="float-right"><b>250</b>/500</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-warning" style="width: 50%"></div>
-                                    </div>
-                                </div>
-                                <!-- /.progress-group -->
-                            </div>
-                            <!-- /.col -->
-                        </div>
-                        <!-- /.row -->
-                    </div>
-                    <!-- ./card-body -->
-                    <div class="card-footer">
-                        <div class="row">
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                    <span class="description-percentage text-success"><i class="fas fa-caret-up"></i>
-                                        17%</span>
-                                    <h5 class="description-header">$35,210.43</h5>
-                                    <span class="description-text">TOTAL REVENUE</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                    <span class="description-percentage text-warning"><i class="fas fa-caret-left"></i>
-                                        0%</span>
-                                    <h5 class="description-header">$10,390.90</h5>
-                                    <span class="description-text">TOTAL COST</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                    <span class="description-percentage text-success"><i class="fas fa-caret-up"></i>
-                                        20%</span>
-                                    <h5 class="description-header">$24,813.53</h5>
-                                    <span class="description-text">TOTAL PROFIT</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block">
-                                    <span class="description-percentage text-danger"><i class="fas fa-caret-down"></i>
-                                        18%</span>
-                                    <h5 class="description-header">1200</h5>
-                                    <span class="description-text">GOAL COMPLETIONS</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                        </div>
-                        <!-- /.row -->
-                    </div>
-                    <!-- /.card-footer -->
                 </div>
-                <!-- /.card -->
+                <div class="card-footer py-3">
+                    <a href="#" class="action-link">Start Diagnosis <i class="bi bi-arrow-right"></i></a>
+                </div>
             </div>
-            <!-- /.col -->
         </div>
-        <!-- /.row -->
-        <!-- Main row -->
-        <div class="row">
-            <!-- Left col -->
-            <div class="col-md-8">
-                <!-- MAP & BOX PANE -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">US-Visitors Report</h3>
 
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
+        <!-- Prescribe Card -->
+        <div class="col-md-4 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-prescribe">
+                            <i class="bi bi-prescription2"></i>
+                        </div>
+                        <h5 class="card-title">Prescriptions</h5>
+                        <p class="card-text">Prescribe medications or fertility treatments with digital prescription system.</p>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-warning text-dark">5 Pending Approvals</span>
+                            <span class="badge bg-success">10 Recent Prescriptions</span>
                         </div>
                     </div>
-                    <!-- /.card-header -->
-                    <div class="card-body p-0">
-                        <div class="d-md-flex">
-                            <div class="p-1 flex-fill" style="overflow: hidden">
-                                <!-- Map will be created here -->
-                                <div id="world-map-markers" style="height: 325px; overflow: hidden">
-                                    <div class="map"></div>
-                                </div>
-                            </div>
-                            <div class="card-pane-right bg-success pt-2 pb-2 pl-4 pr-4">
-                                <div class="description-block mb-4">
-                                    <div class="sparkbar pad" data-color="#fff">90,70,90,70,75,80,70</div>
-                                    <h5 class="description-header">8390</h5>
-                                    <span class="description-text">Visits</span>
-                                </div>
-                                <!-- /.description-block -->
-                                <div class="description-block mb-4">
-                                    <div class="sparkbar pad" data-color="#fff">90,50,90,70,61,83,63</div>
-                                    <h5 class="description-header">30%</h5>
-                                    <span class="description-text">Referrals</span>
-                                </div>
-                                <!-- /.description-block -->
-                                <div class="description-block">
-                                    <div class="sparkbar pad" data-color="#fff">90,50,90,70,61,83,63</div>
-                                    <h5 class="description-header">70%</h5>
-                                    <span class="description-text">Organic</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div><!-- /.card-pane-right -->
-                        </div><!-- /.d-md-flex -->
-                    </div>
-                    <!-- /.card-body -->
                 </div>
-                <!-- /.card -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <!-- DIRECT CHAT -->
-                        <div class="card direct-chat direct-chat-warning">
-                            <div class="card-header">
-                                <h3 class="card-title">Direct Chat</h3>
+                <div class="card-footer py-3">
+                    <a href="#" class="action-link">Write Prescription <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
 
-                                <div class="card-tools">
-                                    <span data-toggle="tooltip" title="3 New Messages"
-                                        class="badge badge-warning">3</span>
-                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" data-toggle="tooltip" title="Contacts"
-                                        data-widget="chat-pane-toggle">
-                                        <i class="fas fa-comments"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
+        <!-- Tests Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-tests">
+                            <i class="bi bi-file-earmark-medical"></i>
+                        </div>
+                        <h5 class="card-title">Lab Tests & Scans</h5>
+                        <p class="card-text">Request further diagnostic tests such as hormone assessments and ultrasound scans.</p>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-secondary">7 Tests Ordered</span>
+                            <span class="badge bg-info">15 Results Available</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer py-3">
+                    <a href="#" class="action-link">Request Tests <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitor Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-monitor">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h5 class="card-title">Treatment Monitoring</h5>
+                        <p class="card-text">Monitor ongoing treatments and IVF cycles with comprehensive tracking tools.</p>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-primary">9 Active IVF Cycles</span>
+                            <span class="badge bg-danger">2 Need Attention</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer py-3">
+                    <a href="#" class="action-link">View Treatment Progress <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+        <!--Reports and data-->
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-monitor">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h5 class="card-title">Reports and Data</h5>
+                        <p class="card-text">Monitor ongoing treatments and IVF cycles with comprehensive tracking tools.</p>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-primary">9 Active IVF Cycles</span>
+                            <span class="badge bg-danger">2 Need Attention</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer py-3">
+                    <a href="#" class="action-link">View Treatment Progress <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>Recent Activity</h3>
+            <button class="btn btn-outline-primary btn-sm">View All</button>
+        </div>
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-check fs-4 me-3 text-success"></i>
+                            <div>
+                                <p class="mb-0 fw-medium">Emily Parker - Consultation Completed</p>
+                                <small class="text-muted">Fertility assessment and treatment plan created</small>
                             </div>
-                            <!-- /.card-header -->
-                            <div class="card-body">
-                                <!-- Conversations are loaded here -->
-                                <div class="direct-chat-messages">
-                                    <!-- Message. Default to the left -->
-                                    <div class="direct-chat-msg">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-left">Alexander Pierce</span>
-                                            <span class="direct-chat-timestamp float-right">23 Jan 2:00 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user1-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            Is this template really for free? That's unbelievable!
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-                                    <!-- Message to the right -->
-                                    <div class="direct-chat-msg right">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-right">Sarah Bullock</span>
-                                            <span class="direct-chat-timestamp float-left">23 Jan 2:05 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user3-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            You better believe it!
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-                                    <!-- Message. Default to the left -->
-                                    <div class="direct-chat-msg">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-left">Alexander Pierce</span>
-                                            <span class="direct-chat-timestamp float-right">23 Jan 5:37 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user1-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            Working with AdminLTE on a great new app! Wanna join?
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-                                    <!-- Message to the right -->
-                                    <div class="direct-chat-msg right">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-right">Sarah Bullock</span>
-                                            <span class="direct-chat-timestamp float-left">23 Jan 6:10 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user3-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            I would love to.
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
+                        </div>
+                        <small class="text-muted">10:30 AM</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-file-earmark-text fs-4 me-3 text-primary"></i>
+                            <div>
+                                <p class="mb-0 fw-medium">Lab Results Received - Mark Johnson</p>
+                                <small class="text-muted">Hormone profile and sperm analysis completed</small>
+                            </div>
+                        </div>
+                        <small class="text-muted">9:15 AM</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-calendar-check fs-4 me-3 text-warning"></i>
+                            <div>
+                                <p class="mb-0 fw-medium">IVF Cycle Monitoring - Sarah Williams</p>
+                                <small class="text-muted">Day 8 follicle scan performed</small>
+                            </div>
+                        </div>
+                        <small class="text-muted">Yesterday</small>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-prescription fs-4 me-3 text-danger"></i>
+                            <div>
+                                <p class="mb-0 fw-medium">Prescription Updated - Michael Davis</p>
+                                <small class="text-muted">Clomiphene dosage adjusted based on response</small>
+                            </div>
+                        </div>
+                        <small class="text-muted">Yesterday</small>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Clinic Activity Charts1 -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="container mt-5">
+                    <h4 class="text-center">Activities Chart</h4>
+                    <canvas id="myBarChart" height="100"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+
+
+            <!--End of charts-->
+            <!-- Content Header (Page header) -->
+            <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row mb-2">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">Dashboard</h1>
+                        </div><!-- /.col -->
+                        <!-- <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                            <li class="breadcrumb-item active">Dashboard</li>
+                        </ol>
+                    </div> -->
+                    </div><!-- /.row -->
+                </div><!-- /.container-fluid -->
+            </div>
+            <!-- /.content-header -->
+            <!-- 🌟 Doctor Dashboard Icons -->
+            <section class="dashboard-icons py-3 my-2 rounded">
+                <div class="container-fluid">
+                    <div class="d-flex flex-wrap justify-content-center">
+
+
+                        <div class="col-md-6">
+                            <!-- Bar chart -->
+                            <div class="card card-primary card-outline">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="far fa-chart-bar"></i>
+                                        Bar Chart
+                                    </h3>
+
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <!--/.direct-chat-messages-->
-                                <!-- Contacts are loaded here -->
-                                <div class="direct-chat-contacts">
-                                    <ul class="contacts-list">
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user1-128x128.jpg">
+                                <div class="card-body">
+                                    <div id="bar-chart" style="height: 300px;"></div>
+                                </div>
+                                <!-- /.card-body-->
+                            </div>
+                        </div>
 
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Count Dracula
-                                                        <small class="contacts-list-date float-right">2/28/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">How have you been? I was...</span>
+
+
+
+
+                        <!-- Home -->
+                        <div class="p-2">
+                            <a href="{% url 'doctors' %}" class="bg-primary text-white p-4 text-center d-block"
+                               style="width: 150px; border-radius: 30px">
+                                <i class="bi bi-house-door display-4 d-block mb-2"></i>
+                                <span>Home</span>
+                            </a>
+                        </div>
+
+                        <!-- Patient Consultation -->
+                        <div class="p-2">
+                            <a href="{% url 'doctor_consultation' %}" class="bg-success text-white p-4 text-center d-block"
+                               style="width: 150px; border-radius: 30px">
+                                <i class="bi bi-person-lines-fill display-4 d-block mb-2"></i>
+                                <span>Consultation</span>
+                            </a>
+                        </div>
+
+                        <!-- Patient Records -->
+                        <div class="p-2">
+                            <a href="{% url 'access_medical_records' %}" class="bg-info text-white p-4 text-center d-block"
+                               style="width: 150px; border-radius: 30px">
+                                <i class="bi bi-folder2-open display-4 d-block mb-2"></i>
+                                <span>Records</span>
+                            </a>
+                        </div>
+
+                        <!-- Treatment Monitoring -->
+                        <div class="p-2">
+                            <a href="{% url 'monitoring' %}"
+                               class="bg-warning text-white p-4 text-center d-block" style="width: 150px; border-radius: 30px">
+                                <i class="bi bi-activity display-4 d-block mb-2"></i>
+                                <span>Monitoring</span>
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- Main content -->
+            <section class="content">
+                <div class="container-fluid">
+                    <!-- Info boxes -->
+                    <div class="row">
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">CPU Traffic</span>
+                                    <span class="info-box-number">
+                                        10
+                                        <small>%</small>
+                                    </span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="info-box mb-3">
+                                <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-thumbs-up"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Likes</span>
+                                    <span class="info-box-number">41,410</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <!-- fix for small devices only -->
+                        <div class="clearfix hidden-md-up"></div>
+
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="info-box mb-3">
+                                <span class="info-box-icon bg-success elevation-1"><i class="fas fa-shopping-cart"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Sales</span>
+                                    <span class="info-box-number">760</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="info-box mb-3">
+                                <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-users"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">New Members</span>
+                                    <span class="info-box-number">2,000</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                    </div>
+                    <!-- /.row -->
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Monthly Recap Report</h5>
+
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-tool dropdown-toggle" data-toggle="dropdown">
+                                                <i class="fas fa-wrench"></i>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right" role="menu">
+                                                <a href="#" class="dropdown-item">Action</a>
+                                                <a href="#" class="dropdown-item">Another action</a>
+                                                <a href="#" class="dropdown-item">Something else here</a>
+                                                <a class="dropdown-divider"></a>
+                                                <a href="#" class="dropdown-item">Separated link</a>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- /.card-header -->
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <p class="text-center">
+                                                <strong>Sales: 1 Jan, 2014 - 30 Jul, 2014</strong>
+                                            </p>
+
+                                            <div class="chart">
+                                                <!-- Sales Chart Canvas -->
+                                                <canvas id="salesChart" height="180" style="height: 180px;"></canvas>
+                                            </div>
+                                            <!-- /.chart-responsive -->
+                                        </div>
+                                        <!-- /.col -->
+                                        <div class="col-md-4">
+                                            <p class="text-center">
+                                                <strong>Goal Completion</strong>
+                                            </p>
+
+                                            <div class="progress-group">
+                                                Add Products to Cart
+                                                <span class="float-right"><b>160</b>/200</span>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-primary" style="width: 80%"></div>
                                                 </div>
-                                                <!-- /.contacts-list-info -->
+                                            </div>
+                                            <!-- /.progress-group -->
+
+                                            <div class="progress-group">
+                                                Complete Purchase
+                                                <span class="float-right"><b>310</b>/400</span>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-danger" style="width: 75%"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- /.progress-group -->
+                                            <div class="progress-group">
+                                                <span class="progress-text">Visit Premium Page</span>
+                                                <span class="float-right"><b>480</b>/800</span>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-success" style="width: 60%"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- /.progress-group -->
+                                            <div class="progress-group">
+                                                Send Inquiries
+                                                <span class="float-right"><b>250</b>/500</span>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar bg-warning" style="width: 50%"></div>
+                                                </div>
+                                            </div>
+                                            <!-- /.progress-group -->
+                                        </div>
+                                        <!-- /.col -->
+                                    </div>
+                                    <!-- /.row -->
+                                </div>
+                                <!-- ./card-body -->
+                                <div class="card-footer">
+                                    <div class="row">
+                                        <div class="col-sm-3 col-6">
+                                            <div class="description-block border-right">
+                                                <span class="description-percentage text-success">
+                                                    <i class="fas fa-caret-up"></i>
+                                                    17%
+                                                </span>
+                                                <h5 class="description-header">$35,210.43</h5>
+                                                <span class="description-text">TOTAL REVENUE</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                        </div>
+                                        <!-- /.col -->
+                                        <div class="col-sm-3 col-6">
+                                            <div class="description-block border-right">
+                                                <span class="description-percentage text-warning">
+                                                    <i class="fas fa-caret-left"></i>
+                                                    0%
+                                                </span>
+                                                <h5 class="description-header">$10,390.90</h5>
+                                                <span class="description-text">TOTAL COST</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                        </div>
+                                        <!-- /.col -->
+                                        <div class="col-sm-3 col-6">
+                                            <div class="description-block border-right">
+                                                <span class="description-percentage text-success">
+                                                    <i class="fas fa-caret-up"></i>
+                                                    20%
+                                                </span>
+                                                <h5 class="description-header">$24,813.53</h5>
+                                                <span class="description-text">TOTAL PROFIT</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                        </div>
+                                        <!-- /.col -->
+                                        <div class="col-sm-3 col-6">
+                                            <div class="description-block">
+                                                <span class="description-percentage text-danger">
+                                                    <i class="fas fa-caret-down"></i>
+                                                    18%
+                                                </span>
+                                                <h5 class="description-header">1200</h5>
+                                                <span class="description-text">GOAL COMPLETIONS</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                        </div>
+                                    </div>
+                                    <!-- /.row -->
+                                </div>
+                                <!-- /.card-footer -->
+                            </div>
+                            <!-- /.card -->
+                        </div>
+                        <!-- /.col -->
+                    </div>
+                    <!-- /.row -->
+                    <!-- Main row -->
+                    <div class="row">
+                        <!-- Left col -->
+                        <div class="col-md-8">
+                            <!-- MAP & BOX PANE -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">US-Visitors Report</h3>
+
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- /.card-header -->
+                                <div class="card-body p-0">
+                                    <div class="d-md-flex">
+                                        <div class="p-1 flex-fill" style="overflow: hidden">
+                                            <!-- Map will be created here -->
+                                            <div id="world-map-markers" style="height: 325px; overflow: hidden">
+                                                <div class="map"></div>
+                                            </div>
+                                        </div>
+                                        <div class="card-pane-right bg-success pt-2 pb-2 pl-4 pr-4">
+                                            <div class="description-block mb-4">
+                                                <div class="sparkbar pad" data-color="#fff">90,70,90,70,75,80,70</div>
+                                                <h5 class="description-header">8390</h5>
+                                                <span class="description-text">Visits</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                            <div class="description-block mb-4">
+                                                <div class="sparkbar pad" data-color="#fff">90,50,90,70,61,83,63</div>
+                                                <h5 class="description-header">30%</h5>
+                                                <span class="description-text">Referrals</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                            <div class="description-block">
+                                                <div class="sparkbar pad" data-color="#fff">90,50,90,70,61,83,63</div>
+                                                <h5 class="description-header">70%</h5>
+                                                <span class="description-text">Organic</span>
+                                            </div>
+                                            <!-- /.description-block -->
+                                        </div><!-- /.card-pane-right -->
+                                    </div><!-- /.d-md-flex -->
+                                </div>
+                                <!-- /.card-body -->
+                            </div>
+                            <!-- /.card -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <!-- DIRECT CHAT -->
+                                    <div class="card direct-chat direct-chat-warning">
+                                        <div class="card-header">
+                                            <h3 class="card-title">Direct Chat</h3>
+
+                                            <div class="card-tools">
+                                                <span data-toggle="tooltip" title="3 New Messages"
+                                                      class="badge badge-warning">3</span>
+                                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-tool" data-toggle="tooltip" title="Contacts"
+                                                        data-widget="chat-pane-toggle">
+                                                    <i class="fas fa-comments"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <!-- /.card-header -->
+                                        <div class="card-body">
+                                            <!-- Conversations are loaded here -->
+                                            <div class="direct-chat-messages">
+                                                <!-- Message. Default to the left -->
+                                                <div class="direct-chat-msg">
+                                                    <div class="direct-chat-infos clearfix">
+                                                        <span class="direct-chat-name float-left">Alexander Pierce</span>
+                                                        <span class="direct-chat-timestamp float-right">23 Jan 2:00 pm</span>
+                                                    </div>
+                                                    <!-- /.direct-chat-infos -->
+                                                    <img class="direct-chat-img" src="dist/img/user1-128x128.jpg"
+                                                         alt="message user image">
+                                                    <!-- /.direct-chat-img -->
+                                                    <div class="direct-chat-text">
+                                                        Is this template really for free? That's unbelievable!
+                                                    </div>
+                                                    <!-- /.direct-chat-text -->
+                                                </div>
+                                                <!-- /.direct-chat-msg -->
+                                                <!-- Message to the right -->
+                                                <div class="direct-chat-msg right">
+                                                    <div class="direct-chat-infos clearfix">
+                                                        <span class="direct-chat-name float-right">Sarah Bullock</span>
+                                                        <span class="direct-chat-timestamp float-left">23 Jan 2:05 pm</span>
+                                                    </div>
+                                                    <!-- /.direct-chat-infos -->
+                                                    <img class="direct-chat-img" src="dist/img/user3-128x128.jpg"
+                                                         alt="message user image">
+                                                    <!-- /.direct-chat-img -->
+                                                    <div class="direct-chat-text">
+                                                        You better believe it!
+                                                    </div>
+                                                    <!-- /.direct-chat-text -->
+                                                </div>
+                                                <!-- /.direct-chat-msg -->
+                                                <!-- Message. Default to the left -->
+                                                <div class="direct-chat-msg">
+                                                    <div class="direct-chat-infos clearfix">
+                                                        <span class="direct-chat-name float-left">Alexander Pierce</span>
+                                                        <span class="direct-chat-timestamp float-right">23 Jan 5:37 pm</span>
+                                                    </div>
+                                                    <!-- /.direct-chat-infos -->
+                                                    <img class="direct-chat-img" src="dist/img/user1-128x128.jpg"
+                                                         alt="message user image">
+                                                    <!-- /.direct-chat-img -->
+                                                    <div class="direct-chat-text">
+                                                        Working with AdminLTE on a great new app! Wanna join?
+                                                    </div>
+                                                    <!-- /.direct-chat-text -->
+                                                </div>
+                                                <!-- /.direct-chat-msg -->
+                                                <!-- Message to the right -->
+                                                <div class="direct-chat-msg right">
+                                                    <div class="direct-chat-infos clearfix">
+                                                        <span class="direct-chat-name float-right">Sarah Bullock</span>
+                                                        <span class="direct-chat-timestamp float-left">23 Jan 6:10 pm</span>
+                                                    </div>
+                                                    <!-- /.direct-chat-infos -->
+                                                    <img class="direct-chat-img" src="dist/img/user3-128x128.jpg"
+                                                         alt="message user image">
+                                                    <!-- /.direct-chat-img -->
+                                                    <div class="direct-chat-text">
+                                                        I would love to.
+                                                    </div>
+                                                    <!-- /.direct-chat-text -->
+                                                </div>
+                                                <!-- /.direct-chat-msg -->
+
+                                            </div>
+                                            <!--/.direct-chat-messages-->
+                                            <!-- Contacts are loaded here -->
+                                            <div class="direct-chat-contacts">
+                                                <ul class="contacts-list">
+                                                    <li>
+                                                        <a href="#">
+                                                            <img class="contacts-list-img" src="dist/img/user1-128x128.jpg">
+
+                                                            <div class="contacts-list-info">
+                                                                <span class="contacts-list-name">
+                                                                    Count Dracula
+                                                                    <small class="contacts-list-date float-right">2/28/2015</small>
+                                                                </span>
+                                                                <span class="contacts-list-msg">How have you been? I was...</span>
+                                                            </div>
+                                                            <!-- /.contacts-list-info -->
+                                                        </a>
+                                                    </li>
+                                                    <!-- End Contact Item -->
+                                                    <li>
+                                                        <a href="#">
+                                                            <img class="contacts-list-img" src="dist/img/user7-128x128.jpg">
+
+                                                            <div class="contacts-list-info">
+                                                                <span class="contacts-list-name">
+                                                                    Sarah Doe
+                                                                    <small class="contacts-list-date float-right">2/23/2015</small>
+                                                                </span>
+                                                                <span class="contacts-list-msg">I will be waiting for...</span>
+                                                            </div>
+                                                            <!-- /.contacts-list-info -->
+                                                        </a>
+                                                    </li>
+                                                    <!-- End Contact Item -->
+                                                    <li>
+                                                        <a href="#">
+                                                            <img class="contacts-list-img" src="dist/img/user3-128x128.jpg">
+
+                                                            <div class="contacts-list-info">
+                                                                <span class="contacts-list-name">
+                                                                    Nadia Jolie
+                                                                    <small class="contacts-list-date float-right">2/20/2015</small>
+                                                                </span>
+                                                                <span class="contacts-list-msg">I'll call you back at...</span>
+                                                            </div>
+                                                            <!-- /.contacts-list-info -->
+                                                        </a>
+                                                    </li>
+                                                    <!-- End Contact Item -->
+                                                    <li>
+                                                        <a href="#">
+                                                            <img class="contacts-list-img" src="dist/img/user5-128x128.jpg">
+
+                                                            <div class="contacts-list-info">
+                                                                <span class="contacts-list-name">
+                                                                    Nora S. Vans
+                                                                    <small class="contacts-list-date float-right">2/10/2015</small>
+                                                                </span>
+                                                                <span class="contacts-list-msg">Where is your new...</span>
+                                                            </div>
+                                                            <!-- /.contacts-list-info -->
+                                                        </a>
+                                                    </li>
+                                                    <!-- End Contact Item -->
+                                                    <li>
+                                                        <a href="#">
+                                                            <img class="contacts-list-img" src="dist/img/user6-128x128.jpg">
+
+                                                            <div class="contacts-list-info">
+                                                                <span class="contacts-list-name">
+                                                                    John K.
+                                                                    <small class="contacts-list-date float-right">1/27/2015</small>
+                                                                </span>
+                                                                <span class="contacts-list-msg">Can I take a look at...</span>
+                                                            </div>
+                                                            <!-- /.contacts-list-info -->
+                                                        </a>
+                                                    </li>
+                                                    <!-- End Contact Item -->
+                                                    <li>
+                                                        <a href="#">
+                                                            <img class="contacts-list-img" src="dist/img/user8-128x128.jpg">
+
+                                                            <div class="contacts-list-info">
+                                                                <span class="contacts-list-name">
+                                                                    Kenneth M.
+                                                                    <small class="contacts-list-date float-right">1/4/2015</small>
+                                                                </span>
+                                                                <span class="contacts-list-msg">Never mind I found...</span>
+                                                            </div>
+                                                            <!-- /.contacts-list-info -->
+                                                        </a>
+                                                    </li>
+                                                    <!-- End Contact Item -->
+                                                </ul>
+                                                <!-- /.contacts-list -->
+                                            </div>
+                                            <!-- /.direct-chat-pane -->
+                                        </div>
+                                        <!-- /.card-body -->
+                                        <div class="card-footer">
+                                            <form action="#" method="post">
+                                                <div class="input-group">
+                                                    <input type="text" name="message" placeholder="Type Message ..."
+                                                           class="form-control">
+                                                    <span class="input-group-append">
+                                                        <button type="button" class="btn btn-warning">Send</button>
+                                                    </span>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <!-- /.card-footer-->
+                                    </div>
+                                    <!--/.direct-chat -->
+                                </div>
+                                <!-- /.col -->
+
+                                <div class="col-md-6">
+                                    <!-- USERS LIST -->
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">Latest Members</h3>
+
+                                            <div class="card-tools">
+                                                <span class="badge badge-danger">8 New Members</span>
+                                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <!-- /.card-header -->
+                                        <div class="card-body p-0">
+                                            <ul class="users-list clearfix">
+                                                <li>
+                                                    <img src="dist/img/user1-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Alexander Pierce</a>
+                                                    <span class="users-list-date">Today</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user8-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Norman</a>
+                                                    <span class="users-list-date">Yesterday</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user7-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Jane</a>
+                                                    <span class="users-list-date">12 Jan</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user6-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">John</a>
+                                                    <span class="users-list-date">12 Jan</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user2-160x160.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Alexander</a>
+                                                    <span class="users-list-date">13 Jan</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user5-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Sarah</a>
+                                                    <span class="users-list-date">14 Jan</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user4-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Nora</a>
+                                                    <span class="users-list-date">15 Jan</span>
+                                                </li>
+                                                <li>
+                                                    <img src="dist/img/user3-128x128.jpg" alt="User Image">
+                                                    <a class="users-list-name" href="#">Nadia</a>
+                                                    <span class="users-list-date">15 Jan</span>
+                                                </li>
+                                            </ul>
+                                            <!-- /.users-list -->
+                                        </div>
+                                        <!-- /.card-body -->
+                                        <div class="card-footer text-center">
+                                            <a href="javascript::">View All Users</a>
+                                        </div>
+                                        <!-- /.card-footer -->
+                                    </div>
+                                    <!--/.card -->
+                                </div>
+                                <!-- /.col -->
+                            </div>
+                            <!-- /.row -->
+                            <!-- TABLE: LATEST ORDERS -->
+                            <div class="card">
+                                <div class="card-header border-transparent">
+                                    <h3 class="card-title">Latest Orders</h3>
+
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- /.card-header -->
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Order ID</th>
+                                                    <th>Item</th>
+                                                    <th>Status</th>
+                                                    <th>Popularity</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR9842</a></td>
+                                                    <td>Call of Duty IV</td>
+                                                    <td><span class="badge badge-success">Shipped</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#00a65a" data-height="20">
+                                                            90,80,90,-70,61,-83,63
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR1848</a></td>
+                                                    <td>Samsung Smart TV</td>
+                                                    <td><span class="badge badge-warning">Pending</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#f39c12" data-height="20">
+                                                            90,80,-90,70,61,-83,68
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR7429</a></td>
+                                                    <td>iPhone 6 Plus</td>
+                                                    <td><span class="badge badge-danger">Delivered</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#f56954" data-height="20">
+                                                            90,-80,90,70,-61,83,63
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR7429</a></td>
+                                                    <td>Samsung Smart TV</td>
+                                                    <td><span class="badge badge-info">Processing</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#00c0ef" data-height="20">
+                                                            90,80,-90,70,-61,83,63
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR1848</a></td>
+                                                    <td>Samsung Smart TV</td>
+                                                    <td><span class="badge badge-warning">Pending</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#f39c12" data-height="20">
+                                                            90,80,-90,70,61,-83,68
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR7429</a></td>
+                                                    <td>iPhone 6 Plus</td>
+                                                    <td><span class="badge badge-danger">Delivered</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#f56954" data-height="20">
+                                                            90,-80,90,70,-61,83,63
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><a href="pages/examples/invoice.html">OR9842</a></td>
+                                                    <td>Call of Duty IV</td>
+                                                    <td><span class="badge badge-success">Shipped</span></td>
+                                                    <td>
+                                                        <div class="sparkbar" data-color="#00a65a" data-height="20">
+                                                            90,80,90,-70,61,-83,63
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- /.table-responsive -->
+                                </div>
+                                <!-- /.card-body -->
+                                <div class="card-footer clearfix">
+                                    <a href="javascript:void(0)" class="btn btn-sm btn-info float-left">Place New Order</a>
+                                    <a href="javascript:void(0)" class="btn btn-sm btn-secondary float-right">View All Orders</a>
+                                </div>
+                                <!-- /.card-footer -->
+                            </div>
+                            <!-- /.card -->
+                        </div>
+                        <!-- /.col -->
+
+                        <div class="col-md-4">
+                            <!-- Info Boxes Style 2 -->
+                            <div class="info-box mb-3 bg-warning">
+                                <span class="info-box-icon"><i class="fas fa-tag"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Inventory</span>
+                                    <span class="info-box-number">5,200</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                            <div class="info-box mb-3 bg-success">
+                                <span class="info-box-icon"><i class="far fa-heart"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Mentions</span>
+                                    <span class="info-box-number">92,050</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                            <div class="info-box mb-3 bg-danger">
+                                <span class="info-box-icon"><i class="fas fa-cloud-download-alt"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Downloads</span>
+                                    <span class="info-box-number">114,381</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                            <div class="info-box mb-3 bg-info">
+                                <span class="info-box-icon"><i class="far fa-comment"></i></span>
+
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Direct Messages</span>
+                                    <span class="info-box-number">163,921</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Browser Usage</h3>
+
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- /.card-header -->
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="chart-responsive">
+                                                <canvas id="pieChart" height="150"></canvas>
+                                            </div>
+                                            <!-- ./chart-responsive -->
+                                        </div>
+                                        <!-- /.col -->
+                                        <div class="col-md-4">
+                                            <ul class="chart-legend clearfix">
+                                                <li><i class="far fa-circle text-danger"></i> Chrome</li>
+                                                <li><i class="far fa-circle text-success"></i> IE</li>
+                                                <li><i class="far fa-circle text-warning"></i> FireFox</li>
+                                                <li><i class="far fa-circle text-info"></i> Safari</li>
+                                                <li><i class="far fa-circle text-primary"></i> Opera</li>
+                                                <li><i class="far fa-circle text-secondary"></i> Navigator</li>
+                                            </ul>
+                                        </div>
+                                        <!-- /.col -->
+                                    </div>
+                                    <!-- /.row -->
+                                </div>
+                                <!-- /.card-body -->
+                                <div class="card-footer bg-white p-0">
+                                    <ul class="nav nav-pills flex-column">
+                                        <li class="nav-item">
+                                            <a href="#" class="nav-link">
+                                                United States of America
+                                                <span class="float-right text-danger">
+                                                    <i class="fas fa-arrow-down text-sm"></i>
+                                                    12%
+                                                </span>
                                             </a>
                                         </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user7-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Sarah Doe
-                                                        <small class="contacts-list-date float-right">2/23/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">I will be waiting for...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
+                                        <li class="nav-item">
+                                            <a href="#" class="nav-link">
+                                                India
+                                                <span class="float-right text-success">
+                                                    <i class="fas fa-arrow-up text-sm"></i> 4%
+                                                </span>
                                             </a>
                                         </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user3-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Nadia Jolie
-                                                        <small class="contacts-list-date float-right">2/20/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">I'll call you back at...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
+                                        <li class="nav-item">
+                                            <a href="#" class="nav-link">
+                                                China
+                                                <span class="float-right text-warning">
+                                                    <i class="fas fa-arrow-left text-sm"></i> 0%
+                                                </span>
                                             </a>
                                         </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user5-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Nora S. Vans
-                                                        <small class="contacts-list-date float-right">2/10/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">Where is your new...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user6-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        John K.
-                                                        <small class="contacts-list-date float-right">1/27/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">Can I take a look at...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user8-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Kenneth M.
-                                                        <small class="contacts-list-date float-right">1/4/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">Never mind I found...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
                                     </ul>
-                                    <!-- /.contacts-list -->
                                 </div>
-                                <!-- /.direct-chat-pane -->
+                                <!-- /.footer -->
                             </div>
-                            <!-- /.card-body -->
-                            <div class="card-footer">
-                                <form action="#" method="post">
-                                    <div class="input-group">
-                                        <input type="text" name="message" placeholder="Type Message ..."
-                                            class="form-control">
-                                        <span class="input-group-append">
-                                            <button type="button" class="btn btn-warning">Send</button>
-                                        </span>
+                            <!-- /.card -->
+                            <!-- PRODUCT LIST -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Recently Added Products</h3>
+
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                     </div>
-                                </form>
+                                </div>
+                                <!-- /.card-header -->
+                                <div class="card-body p-0">
+                                    <ul class="products-list product-list-in-card pl-2 pr-2">
+                                        <li class="item">
+                                            <div class="product-img">
+                                                <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
+                                            </div>
+                                            <div class="product-info">
+                                                <a href="javascript:void(0)" class="product-title">
+                                                    Samsung TV
+                                                    <span class="badge badge-warning float-right">$1800</span>
+                                                </a>
+                                                <span class="product-description">
+                                                    Samsung 32" 1080p 60Hz LED Smart HDTV.
+                                                </span>
+                                            </div>
+                                        </li>
+                                        <!-- /.item -->
+                                        <li class="item">
+                                            <div class="product-img">
+                                                <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
+                                            </div>
+                                            <div class="product-info">
+                                                <a href="javascript:void(0)" class="product-title">
+                                                    Bicycle
+                                                    <span class="badge badge-info float-right">$700</span>
+                                                </a>
+                                                <span class="product-description">
+                                                    26" Mongoose Dolomite Men's 7-speed, Navy Blue.
+                                                </span>
+                                            </div>
+                                        </li>
+                                        <!-- /.item -->
+                                        <li class="item">
+                                            <div class="product-img">
+                                                <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
+                                            </div>
+                                            <div class="product-info">
+                                                <a href="javascript:void(0)" class="product-title">
+                                                    Xbox One <span class="badge badge-danger float-right">
+                                                        $350
+                                                    </span>
+                                                </a>
+                                                <span class="product-description">
+                                                    Xbox One Console Bundle with Halo Master Chief Collection.
+                                                </span>
+                                            </div>
+                                        </li>
+                                        <!-- /.item -->
+                                        <li class="item">
+                                            <div class="product-img">
+                                                <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
+                                            </div>
+                                            <div class="product-info">
+                                                <a href="javascript:void(0)" class="product-title">
+                                                    PlayStation 4
+                                                    <span class="badge badge-success float-right">$399</span>
+                                                </a>
+                                                <span class="product-description">
+                                                    PlayStation 4 500GB Console (PS4)
+                                                </span>
+                                            </div>
+                                        </li>
+                                        <!-- /.item -->
+                                    </ul>
+                                </div>
+                                <!-- /.card-body -->
+                                <div class="card-footer text-center">
+                                    <a href="javascript:void(0)" class="uppercase">View All Products</a>
+                                </div>
+                                <!-- /.card-footer -->
                             </div>
-                            <!-- /.card-footer-->
+                            <!-- /.card -->
                         </div>
-                        <!--/.direct-chat -->
+                        <!-- /.col -->
                     </div>
-                    <!-- /.col -->
-
-                    <div class="col-md-6">
-                        <!-- USERS LIST -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="card-title">Latest Members</h3>
-
-                                <div class="card-tools">
-                                    <span class="badge badge-danger">8 New Members</span>
-                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- /.card-header -->
-                            <div class="card-body p-0">
-                                <ul class="users-list clearfix">
-                                    <li>
-                                        <img src="dist/img/user1-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Alexander Pierce</a>
-                                        <span class="users-list-date">Today</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user8-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Norman</a>
-                                        <span class="users-list-date">Yesterday</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user7-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Jane</a>
-                                        <span class="users-list-date">12 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user6-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">John</a>
-                                        <span class="users-list-date">12 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user2-160x160.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Alexander</a>
-                                        <span class="users-list-date">13 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user5-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Sarah</a>
-                                        <span class="users-list-date">14 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user4-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Nora</a>
-                                        <span class="users-list-date">15 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user3-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Nadia</a>
-                                        <span class="users-list-date">15 Jan</span>
-                                    </li>
-                                </ul>
-                                <!-- /.users-list -->
-                            </div>
-                            <!-- /.card-body -->
-                            <div class="card-footer text-center">
-                                <a href="javascript::">View All Users</a>
-                            </div>
-                            <!-- /.card-footer -->
-                        </div>
-                        <!--/.card -->
-                    </div>
-                    <!-- /.col -->
-                </div>
-                <!-- /.row -->
-                <!-- TABLE: LATEST ORDERS -->
-                <div class="card">
-                    <div class="card-header border-transparent">
-                        <h3 class="card-title">Latest Orders</h3>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- /.card-header -->
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table m-0">
-                                <thead>
-                                    <tr>
-                                        <th>Order ID</th>
-                                        <th>Item</th>
-                                        <th>Status</th>
-                                        <th>Popularity</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR9842</a></td>
-                                        <td>Call of Duty IV</td>
-                                        <td><span class="badge badge-success">Shipped</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00a65a" data-height="20">
-                                                90,80,90,-70,61,-83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR1848</a></td>
-                                        <td>Samsung Smart TV</td>
-                                        <td><span class="badge badge-warning">Pending</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f39c12" data-height="20">
-                                                90,80,-90,70,61,-83,68</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR7429</a></td>
-                                        <td>iPhone 6 Plus</td>
-                                        <td><span class="badge badge-danger">Delivered</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f56954" data-height="20">
-                                                90,-80,90,70,-61,83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR7429</a></td>
-                                        <td>Samsung Smart TV</td>
-                                        <td><span class="badge badge-info">Processing</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00c0ef" data-height="20">
-                                                90,80,-90,70,-61,83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR1848</a></td>
-                                        <td>Samsung Smart TV</td>
-                                        <td><span class="badge badge-warning">Pending</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f39c12" data-height="20">
-                                                90,80,-90,70,61,-83,68</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR7429</a></td>
-                                        <td>iPhone 6 Plus</td>
-                                        <td><span class="badge badge-danger">Delivered</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f56954" data-height="20">
-                                                90,-80,90,70,-61,83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR9842</a></td>
-                                        <td>Call of Duty IV</td>
-                                        <td><span class="badge badge-success">Shipped</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00a65a" data-height="20">
-                                                90,80,90,-70,61,-83,63</div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- /.table-responsive -->
-                    </div>
-                    <!-- /.card-body -->
-                    <div class="card-footer clearfix">
-                        <a href="javascript:void(0)" class="btn btn-sm btn-info float-left">Place New Order</a>
-                        <a href="javascript:void(0)" class="btn btn-sm btn-secondary float-right">View All Orders</a>
-                    </div>
-                    <!-- /.card-footer -->
-                </div>
-                <!-- /.card -->
-            </div>
-            <!-- /.col -->
-
-            <div class="col-md-4">
-                <!-- Info Boxes Style 2 -->
-                <div class="info-box mb-3 bg-warning">
-                    <span class="info-box-icon"><i class="fas fa-tag"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Inventory</span>
-                        <span class="info-box-number">5,200</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-                <div class="info-box mb-3 bg-success">
-                    <span class="info-box-icon"><i class="far fa-heart"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Mentions</span>
-                        <span class="info-box-number">92,050</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-                <div class="info-box mb-3 bg-danger">
-                    <span class="info-box-icon"><i class="fas fa-cloud-download-alt"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Downloads</span>
-                        <span class="info-box-number">114,381</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-                <div class="info-box mb-3 bg-info">
-                    <span class="info-box-icon"><i class="far fa-comment"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Direct Messages</span>
-                        <span class="info-box-number">163,921</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Browser Usage</h3>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- /.card-header -->
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="chart-responsive">
-                                    <canvas id="pieChart" height="150"></canvas>
-                                </div>
-                                <!-- ./chart-responsive -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-md-4">
-                                <ul class="chart-legend clearfix">
-                                    <li><i class="far fa-circle text-danger"></i> Chrome</li>
-                                    <li><i class="far fa-circle text-success"></i> IE</li>
-                                    <li><i class="far fa-circle text-warning"></i> FireFox</li>
-                                    <li><i class="far fa-circle text-info"></i> Safari</li>
-                                    <li><i class="far fa-circle text-primary"></i> Opera</li>
-                                    <li><i class="far fa-circle text-secondary"></i> Navigator</li>
-                                </ul>
-                            </div>
-                            <!-- /.col -->
-                        </div>
-                        <!-- /.row -->
-                    </div>
-                    <!-- /.card-body -->
-                    <div class="card-footer bg-white p-0">
-                        <ul class="nav nav-pills flex-column">
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    United States of America
-                                    <span class="float-right text-danger">
-                                        <i class="fas fa-arrow-down text-sm"></i>
-                                        12%
-                                    </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    India
-                                    <span class="float-right text-success">
-                                        <i class="fas fa-arrow-up text-sm"></i> 4%
-                                    </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    China
-                                    <span class="float-right text-warning">
-                                        <i class="fas fa-arrow-left text-sm"></i> 0%
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <!-- /.footer -->
-                </div>
-                <!-- /.card -->
-                <!-- PRODUCT LIST -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Recently Added Products</h3>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- /.card-header -->
-                    <div class="card-body p-0">
-                        <ul class="products-list product-list-in-card pl-2 pr-2">
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        Samsung TV
-                                        <span class="badge badge-warning float-right">$1800</span>
-                                    </a>
-                                    <span class="product-description">
-                                        Samsung 32" 1080p 60Hz LED Smart HDTV.
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        Bicycle
-                                        <span class="badge badge-info float-right">$700</span>
-                                    </a>
-                                    <span class="product-description">
-                                        26" Mongoose Dolomite Men's 7-speed, Navy Blue.
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        Xbox One <span class="badge badge-danger float-right">
-                                            $350
-                                        </span>
-                                    </a>
-                                    <span class="product-description">
-                                        Xbox One Console Bundle with Halo Master Chief Collection.
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        PlayStation 4
-                                        <span class="badge badge-success float-right">$399</span>
-                                    </a>
-                                    <span class="product-description">
-                                        PlayStation 4 500GB Console (PS4)
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                        </ul>
-                    </div>
-                    <!-- /.card-body -->
-                    <div class="card-footer text-center">
-                        <a href="javascript:void(0)" class="uppercase">View All Products</a>
-                    </div>
-                    <!-- /.card-footer -->
-                </div>
-                <!-- /.card -->
-            </div>
-            <!-- /.col -->
+                    <!-- /.row -->
+                </div><!--/. container-fluid -->
+            </section>
+            <!-- /.content -->
         </div>
-        <!-- /.row -->
-    </div><!--/. container-fluid -->
-</section>
-<!-- /.content -->
-</div>
-<!-- /.content-wrapper -->
-<!-- Control Sidebar -->
-<aside class="control-sidebar control-sidebar-dark">
-    <!-- Control sidebar content goes here -->
-</aside>
+        <!-- /.content-wrapper -->
+        <!-- Control Sidebar -->
+        <aside class="control-sidebar control-sidebar-dark">
+            <!-- Control sidebar content goes here -->
+        </aside>
 
-{% endblock %}
-<!-- /.control-sidebar -->
-<!-- Main Footer -->
-<!-- ./wrapper -->
+        <!--Chart JS-->
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- Chart.js CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <div class="container mt-5">
+            <h4 class="text-center">Simple Bar Chart</h4>
+            <canvas id="myBarChart" height="100"></canvas>
+        </div>
+
+        <script>
+            const ctx = document.getElementById('myBarChart').getContext('2d');
+            const myBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+                    datasets: [{
+                        label: 'Appointments',
+                        data: [12, 19, 3, 5, 7],
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        </script>
+
+
+        {% endblock %}
+        <!-- /.control-sidebar -->
+        <!-- Main Footer -->
+        <!-- ./wrapper -->
