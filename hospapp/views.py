@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -735,102 +735,73 @@ def lab_test_entry(request):
     return render(request, 'laboratory/test_entry.html')
 
 @csrf_exempt
-@login_required(login_url='home')
 def submit_lab_test(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        if not patient_id:
-            return redirect('lab_test_entry')
-        patient = get_object_or_404(Patient, pk=patient_id)
-
-        # Extract all fields
-        sperm_count = request.POST.get('sperm_count')
-        motility = request.POST.get('motility')
-
-        blood_type = request.POST.get('blood_type')
-        blood_notes = request.POST.get('blood_notes')
-
-        hormone = request.POST.get('hormone_type')
-        hormone_level = request.POST.get('hormone_level')
-
-        pregnancy_result = request.POST.get('pregnancy_result')
-
-        infection_type = request.POST.get('infection_type')
-        infection_result = request.POST.get('infection_result')
-
-        # Check if all fields are filled (you can adjust this condition as needed)
-        all_filled = all([
-            sperm_count, motility,
-            blood_type, blood_notes,
-            hormone, hormone_level,
-            pregnancy_result,
-            infection_type, infection_result,
-        ])
-
-        if all_filled:
-            # Create one combined LabTest
-            LabTest.objects.create(
-                patient=patient,
-                test_type='combined',
-                recorded_by=request.user,
-                sperm_count=sperm_count,
-                motility=motility,
-                blood_type=blood_type,
-                notes=blood_notes,
-                hormone=hormone,
-                hormone_level=hormone_level,
-                pregnancy_result=pregnancy_result,
-                infection_type=infection_type,
-                infection_result=infection_result,
-            )
-        else:
-            # Create per test_type if fields exist
-
-            if sperm_count or motility:
-                LabTest.objects.create(
-                    patient=patient,
-                    test_type='semen',
-                    recorded_by=request.user,
-                    sperm_count=sperm_count or None,
-                    motility=motility or None,
-                )
-
-            if blood_type or blood_notes:
-                LabTest.objects.create(
-                    patient=patient,
-                    test_type='blood',
-                    recorded_by=request.user,
-                    blood_type=blood_type or None,
-                    notes=blood_notes or None,
-                )
-
-            if hormone or hormone_level:
-                LabTest.objects.create(
-                    patient=patient,
-                    test_type='hormone',
-                    recorded_by=request.user,
-                    hormone=hormone or None,
-                    hormone_level=hormone_level or None,
-                )
-
-            if pregnancy_result:
-                LabTest.objects.create(
-                    patient=patient,
-                    test_type='pregnancy',
-                    recorded_by=request.user,
-                    pregnancy_result=pregnancy_result,
-                )
-
-            if infection_type or infection_result:
-                LabTest.objects.create(
-                    patient=patient,
-                    test_type='infection',
-                    recorded_by=request.user,
-                    infection_type=infection_type or None,
-                    infection_result=infection_result or None,
-                )
-
+    if request.method != "POST":
         return redirect('lab_test_entry')
+
+    try:
+        patient_id = request.POST.get("patient_id")
+        if not patient_id:
+            messages.error(request, "Patient not selected.")
+            return redirect("lab_test_entry")
+
+        patient = Patient.objects.filter(id=patient_id).first()
+        if not patient:
+            messages.error(request, "Patient not found.")
+            return redirect("lab_test_entry")
+
+        test_saved = False
+
+        # Optional: create a TestRequest to link lab tests
+        test_request = TestRequest.objects.create(
+            patient=patient,
+            requested_by=request.user,
+        )
+
+        for test_index in range(0, 100):  # Adjust limit if needed
+            prefix = f"tests[{test_index}]"
+            test_type_name = request.POST.get(f"{prefix}[type]")
+            if not test_type_name:
+                continue
+
+            test_type_obj, _ = LabTestType.objects.get_or_create(name=test_type_name)
+
+            lab_test = LabTest.objects.create(
+                patient=patient,
+                test_type=test_type_obj,
+                test_request=test_request,
+                recorded_by=request.user
+            )
+
+            field_added = False
+            for field_index in range(0, 100):
+                name_key = f"{prefix}[fields][{field_index}][name]"
+                value_key = f"{prefix}[fields][{field_index}][value]"
+
+                field_name = request.POST.get(name_key)
+                field_value = request.POST.get(value_key)
+
+                if field_name:
+                    LabTestField.objects.create(
+                        lab_test=lab_test,
+                        name=field_name,
+                        value=field_value or ""
+                    )
+                    field_added = True
+
+            if not field_added:
+                lab_test.delete()
+            else:
+                test_saved = True
+
+        if test_saved:
+            messages.success(request, "Lab tests saved successfully.")
+        else:
+            test_request.delete()  # Clean up unused request
+            messages.warning(request, "No valid test data submitted.")
+
+    except Exception as e:
+        messages.error(request, f"Error submitting lab test: {str(e)}")
 
     return redirect('lab_test_entry')
 
@@ -857,7 +828,10 @@ def patient_search(request):
 
 @login_required(login_url='home')
 def lab_result_upload(request):
-    patients = Patient.objects.all().order_by('full_name')
+    # Get only patients who have a referral
+    referred_patient_ids = Referral.objects.values_list('patient_id', flat=True).distinct()
+    patients = Patient.objects.filter(id__in=referred_patient_ids).order_by('full_name')
+    
     selected_patient = None
     lab_tests = []
     uploaded_files = []
@@ -895,38 +869,29 @@ def lab_result_upload(request):
 @login_required(login_url='home')
 def lab_internal_logs(request):
     user = request.user
-    
-    # Retrieve all lab tests, optionally filter by lab staff if needed:
-    lab_tests = LabTest.objects.select_related('patient', 'recorded_by').all().order_by('-date_recorded')
-    
+
+    # Fetch all lab tests, with related patient and user to optimize queries
+    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'test_type').order_by('-date_recorded')
+
     logs = []
     for test in lab_tests:
-        # Extract key result info based on test type, example:
-        key_results = None
-        if test.test_type == 'semen':
-            key_results = f"Sperm Count: {test.sperm_count}, Motility: {test.motility}"
-        elif test.test_type == 'blood':
-            key_results = f"Blood Type: {test.blood_type}"
-        elif test.test_type == 'hormone':
-            key_results = f"Hormone: {test.hormone}, Level: {test.hormone_level}"
-        elif test.test_type == 'pregnancy':
-            key_results = f"Result: {test.pregnancy_result}"
-        elif test.test_type == 'infection':
-            key_results = f"Infection Type: {test.infection_type}, Result: {test.infection_result}"
-        else:
-            key_results = test.notes or "N/A"
-        
+        # Gather key results dynamically from LabTestField related objects
+        fields = test.fields.all()
+
+        # Compose a summary string of all fields for display
+        key_results = ', '.join([f"{field.name}: {field.value}" for field in fields]) or "N/A"
+
         logs.append({
             'id': test.id,
             'date': test.date_recorded.date(),
             'patient_name': test.patient.full_name,
-            'test_type': test.get_test_type_display(),
+            'test_type': test.test_type.name,
             'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
             'key_results': key_results,
-            'notes': test.notes,
+            'notes': getattr(test, 'notes', ''),
             'status': 'Completed',
         })
-    
+
     context = {
         'lab_logs': logs,
     }
@@ -934,49 +899,30 @@ def lab_internal_logs(request):
 
 def lab_log_detail_ajax(request):
     log_id = request.GET.get('log_id')
-    
     if not log_id:
         return JsonResponse({"error": "Missing log ID"}, status=400)
-    
+
     try:
         lab_test = get_object_or_404(LabTest, id=log_id)
-        
-        # Return JSON data matching what the JavaScript expects
+
         data = {
             'patient': lab_test.patient.full_name,
-            'test_type': lab_test.get_test_type_display(),
+            'test_type': lab_test.test_type.name,
             'date': lab_test.date_recorded.strftime('%B %d, %Y'),
             'recorded_by': lab_test.recorded_by.get_full_name() if lab_test.recorded_by else "Unknown",
-            'notes': lab_test.notes,
+            'notes': getattr(lab_test, 'notes', ''),
+            'fields': []
         }
-        
-        # Add test-specific fields based on test type
-        if lab_test.test_type == 'semen':
-            data.update({
-                'sperm_count': lab_test.sperm_count,
-                'motility': lab_test.motility
+
+        # Add all test fields dynamically
+        for field in lab_test.fields.all():
+            data['fields'].append({
+                'name': field.name,
+                'value': field.value,
             })
-        elif lab_test.test_type == 'blood':
-            data.update({
-                'blood_type': lab_test.blood_type
-            })
-        elif lab_test.test_type == 'hormone':
-            data.update({
-                'hormone': lab_test.hormone,
-                'hormone_level': lab_test.hormone_level
-            })
-        elif lab_test.test_type == 'pregnancy':
-            data.update({
-                'pregnancy_result': lab_test.pregnancy_result
-            })
-        elif lab_test.test_type == 'infection':
-            data.update({
-                'infection_type': lab_test.infection_type,
-                'infection_result': lab_test.infection_result
-            })
-        
+
         return JsonResponse(data)
-    
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 

@@ -4,7 +4,6 @@
 {% block title %}HMS | Lab Test{% endblock %}
 
 {% block content %}
-
 <div class="content-header">
     <div class="container-fluid">
         <h1 class="m-0 text-dark">Lab Test Entry</h1>
@@ -14,51 +13,71 @@
 <section class="content">
     <div class="container-fluid">
 
-        <!-- Patient Type Toggle -->
-        <div class="card card-outline card-info mb-3">
-            <div class="card-body">
-                <div class="form-group">
-                    <label class="form-label">Select Patient Type</label>
-                    <div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="searchMode" id="referredOnly" value="referred" checked>
-                            <label class="form-check-label" for="referredOnly">Referred Patients</label>
+        <!-- Lab Test Form -->
+        <form method="post" action="{% url 'submit_lab_test' %}" onsubmit="return validateBeforeSubmit();">
+            {% csrf_token %}
+
+            <!-- Hidden input for selected patient -->
+            <input type="hidden" name="patient_id" id="form_patient">
+
+            <!-- Patient Search -->
+            <div class="card card-outline card-info mb-3">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="patient_search">Search Referred Patient</label>
+                        <input type="text" class="form-control" id="patient_search" placeholder="Start typing patient name..." autocomplete="off">
+                        <div id="patientSuggestions" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                    </div>
+                    <div id="selectedPatient" class="text-muted mt-2" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Add Test UI -->
+            <div class="card card-outline card-info mb-3">
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="col-md-4">
+                            <label>Test Type</label>
+                            <input type="text" id="testType" class="form-control" placeholder="e.g. Blood Test">
                         </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="searchMode" id="allPatients" value="all">
-                            <label class="form-check-label" for="allPatients">All Patients</label>
+                        <div class="col-md-3">
+                            <label>Field Name</label>
+                            <input type="text" id="fieldName" class="form-control" placeholder="e.g. Hemoglobin">
+                        </div>
+                        <div class="col-md-3">
+                            <label>Field Value</label>
+                            <input type="text" id="fieldValue" class="form-control" placeholder="e.g. 13.5">
+                        </div>
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <button type="button" id="addToCart" class="btn btn-success btn-block">+ Add</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Patient Search -->
-                <div class="form-group position-relative">
-                    <label for="patient_search">Search Patient</label>
-                    <input type="text" class="form-control" id="patient_search"
-                        placeholder="Start typing patient name..." autocomplete="off">
-                    <div id="patientSuggestions" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
-                </div>
-                <input type="hidden" name="patient_id" id="form_patient">
-                <div id="selectedPatient" class="text-muted mt-2" style="display: none;"></div>
             </div>
-        </div>
 
-        <!-- Lab Test Form -->
-        <form method="post" action="{% url 'submit_lab_test' %}">
-            {% csrf_token %}
-            <input type="hidden" name="patient_id" id="form_patient">
-
+            <!-- Cart Table -->
             <div class="card card-outline card-info">
-                <div class="card-header d-flex justify-content-start align-items-center">
-                    <h3 class="card-title">Lab Tests</h3>
-                    <button type="button" class="btn btn-sm btn-success mx-5" id="addTestBtn">+ Add Test</button>
+                <div class="card-header">
+                    <h3 class="card-title">Lab Test Cart</h3>
                 </div>
-                <div class="card-body" id="testsContainer">
-                    <!-- Dynamic test sections will be appended here -->
+                <div class="card-body p-0">
+                    <table class="table table-bordered mb-0" id="labCart">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Test Type</th>
+                                <th>Field Name</th>
+                                <th>Value</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody">
+                            <!-- Populated rows go here -->
+                        </tbody>
+                    </table>
                 </div>
-
-                <div class="card-footer">
-                    <button class="btn btn-primary">Submit All Available Tests</button>
+                <div class="card-footer text-right">
+                    <button class="btn btn-primary">Submit All Tests</button>
                 </div>
             </div>
         </form>
@@ -67,74 +86,68 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    let testCount = 0;
-    let searchMode = 'referred'; // default mode
-
-    const addTestBtn = document.getElementById("addTestBtn");
-    const testsContainer = document.getElementById("testsContainer");
-    const searchInput = document.getElementById('patient_search');
+    let cartIndex = 0;
+    const cartBody = document.getElementById('cartBody');
+    const patientInput = document.getElementById('patient_search');
     const suggestions = document.getElementById('patientSuggestions');
     const patientIdField = document.getElementById('form_patient');
     const display = document.getElementById('selectedPatient');
-    const modeRadios = document.querySelectorAll('input[name="searchMode"]');
 
-    // Switch between patient modes
-    modeRadios.forEach(radio => {
-        radio.addEventListener('change', function () {
-            searchMode = this.value;
-            searchInput.value = '';
-            suggestions.innerHTML = '';
-            display.style.display = 'none';
-            patientIdField.value = '';
-        });
+    // Add to cart
+    document.getElementById("addToCart").addEventListener("click", function () {
+        const testType = document.getElementById("testType").value.trim();
+        const fieldName = document.getElementById("fieldName").value.trim();
+        const fieldValue = document.getElementById("fieldValue").value.trim();
+
+        if (!testType || !fieldName || !fieldValue) {
+            alert("Please enter all fields.");
+            return;
+        }
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>
+                ${testType}
+                <input type="hidden" name="tests[${cartIndex}][type]" value="${testType}">
+            </td>
+            <td>
+                ${fieldName}
+                <input type="hidden" name="tests[${cartIndex}][fields][0][name]" value="${fieldName}">
+            </td>
+            <td>
+                ${fieldValue}
+                <input type="hidden" name="tests[${cartIndex}][fields][0][value]" value="${fieldValue}">
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger remove-row">Remove</button>
+            </td>
+        `;
+        cartBody.appendChild(row);
+
+        // Reset fields
+        document.getElementById("testType").value = '';
+        document.getElementById("fieldName").value = '';
+        document.getElementById("fieldValue").value = '';
+
+        cartIndex++;
     });
 
-    // Add New Test Block
-    addTestBtn.addEventListener("click", function () {
-        const testIndex = testCount++;
-
-        const testBlock = document.createElement("div");
-        testBlock.className = "border p-3 mb-3 rounded test-section bg-light";
-        testBlock.innerHTML = `
-            <div class="form-group">
-                <label>Test Type</label>
-                <input type="text" class="form-control" name="tests[${testIndex}][type]" placeholder="e.g. Semen Analysis">
-            </div>
-            <div class="test-fields-container" id="fields-${testIndex}"></div>
-            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addField(${testIndex})">+ Add Field</button>
-        `;
-        testsContainer.appendChild(testBlock);
+    // Remove row from cart
+    cartBody.addEventListener("click", function (e) {
+        if (e.target.classList.contains("remove-row")) {
+            e.target.closest("tr").remove();
+        }
     });
 
-    // Add Field to Specific Test
-    window.addField = function (testIndex) {
-        const fieldContainer = document.getElementById(`fields-${testIndex}`);
-        const fieldCount = fieldContainer.children.length;
-
-        const fieldHTML = `
-            <div class="form-row align-items-end mb-2">
-                <div class="col">
-                    <label>Field Name</label>
-                    <input type="text" class="form-control" name="tests[${testIndex}][fields][${fieldCount}][name]" placeholder="e.g. Sperm Count">
-                </div>
-                <div class="col">
-                    <label>Value</label>
-                    <input type="text" class="form-control" name="tests[${testIndex}][fields][${fieldCount}][value]" placeholder="e.g. 45">
-                </div>
-            </div>
-        `;
-        fieldContainer.insertAdjacentHTML("beforeend", fieldHTML);
-    };
-
-    // Patient Search with mode toggle
-    searchInput.addEventListener('keyup', function () {
+    // Patient search (referred only)
+    patientInput.addEventListener('keyup', function () {
         const query = this.value;
         if (query.length < 1) {
             suggestions.innerHTML = '';
             return;
         }
 
-        fetch(`/patient-search/?q=${encodeURIComponent(query)}&lab_mode=${searchMode === 'referred' ? 1 : 0}`)
+        fetch(`/patient-search/?q=${encodeURIComponent(query)}&lab_mode=1`)
             .then(res => res.json())
             .then(data => {
                 suggestions.innerHTML = '';
@@ -145,9 +158,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     item.href = "#";
                     item.onclick = function (e) {
                         e.preventDefault();
-                        searchInput.value = patient.full_name;
+                        patientInput.value = patient.full_name;
                         suggestions.innerHTML = '';
-                        display.textContent = `Selected Patient (${searchMode === 'referred' ? 'Referred' : 'All'}): ${patient.full_name}`;
+                        display.textContent = `Selected Patient (Referred): ${patient.full_name}`;
                         display.style.display = 'block';
                         patientIdField.value = patient.id;
                     };
@@ -156,15 +169,23 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     });
 
-    // Hide suggestions when clicking outside
+    // Hide suggestions on click outside
     document.addEventListener('click', function (e) {
-        if (!searchInput.contains(e.target)) {
+        if (!patientInput.contains(e.target)) {
             suggestions.innerHTML = '';
         }
     });
 });
-</script>
 
+function validateBeforeSubmit() {
+    const pid = document.getElementById('form_patient').value;
+    if (!pid) {
+        alert("Patient not selected.");
+        return false;
+    }
+    return true;
+}
+</script>
 {% endblock %}
 
 
