@@ -184,12 +184,20 @@
                                 <p>Patient Consultation</p>
                             </a>
                         </li>
+
                         <li class="nav-item">
                             <a href="{% url 'access_medical_records' %}" class="nav-link">
                                 <i class="nav-icon fas fa-folder-open"></i>
                                 <p>Patient Records</p>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="{% url 'requesttest' %}" class="nav-link">
+                                <i class="nav-icon fas fa-folder-open"></i>
+                                <p>Request test</p>
+                            </a>
+                        </li>
+
                         <li class="nav-item">
                             <a href="{% url 'monitoring' %}" class="nav-link">
                                 <i class="nav-icon fas fa-chart-line"></i>
@@ -202,7 +210,8 @@
                                 <p>Logout</p>
                             </a>
                         </li>
-                        {% comment %} <li class="nav-item has-treeview">
+                        {% comment %}
+                        <li class="nav-item has-treeview">
                             <a href="{% url 'patient_list' %}" class="nav-link">
                                 <i class="nav-icon fas fa-users"></i>
                                 <p>View Patient List (Today / In-Patient / Out-Patient)</p>

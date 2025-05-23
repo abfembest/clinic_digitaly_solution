@@ -1282,3 +1282,16 @@ def chart_view(request):
     context= { 'labels':['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
                'data': [12, 19, 20, 5, 7]}    
     return render(request, 'doctors/chart.html', context)   
+
+
+def requesttest(request):
+    return render(request, 'doctors/requesttest.html')
+
+
+
+#Available test views
+from .models import TestCategory
+
+def medical_test_selection(request):
+    categories = TestCategory.objects.prefetch_related('subcategories').all()
+    return render(request, 'requesttest.html', {'categories': categories})

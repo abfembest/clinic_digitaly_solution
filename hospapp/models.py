@@ -310,3 +310,20 @@ class LabResultFile(models.Model):
 
     def __str__(self):
         return f"Result for {self.patient.full_name} uploaded on {self.uploaded_at.date()}"
+
+#The available tests and test subcategories models
+from django.db import models
+
+class TestCategory(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+class TestSubcategory(models.Model):
+    category = models.ForeignKey(TestCategory, related_name='subcategories', on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+#It end here    
