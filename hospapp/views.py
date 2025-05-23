@@ -1286,3 +1286,12 @@ def chart_view(request):
 
 def requesttest(request):
     return render(request, 'doctors/requesttest.html')
+
+
+
+#Available test views
+from .models import TestCategory
+
+def medical_test_selection(request):
+    categories = TestCategory.objects.prefetch_related('subcategories').all()
+    return render(request, 'requesttest.html', {'categories': categories})

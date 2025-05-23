@@ -337,8 +337,16 @@
     </div>
 
     <script>
+        const testCategories = {};
+        {% for category in categories %}
+        testCategories["{{ category.name }}"] = [
+            {% for sub in category.subcategories.all %}
+        "{{ sub.name }}"{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+        ];
+        {% endfor %}
         // Test categories and their subcategories
-        const testCategories = {
+        /*const testCategories = {
             'Blood Test': [
                 'PCP (Primary Care Panel)',
                 'Blood group and Rh factor',
@@ -403,7 +411,7 @@
                 'Flu Test',
                 'Mono Test'
             ]
-        };
+        };*/
 
         let sectionCounter = 0;
 
