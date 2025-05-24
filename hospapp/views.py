@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory,TestSelection
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -1285,7 +1285,13 @@ def chart_view(request):
 
 
 def requesttest(request):
-    return render(request, 'doctors/requesttest.html')
+    categories = TestCategory.objects.prefetch_related('subcategories').all()
+    patients = Patient.objects.all()  # Corrected: get() -> all()
+    return render(request, 'doctors/requesttest.html', {
+        'categories': categories,
+        'patients': patients  # Include this only if needed in your template
+    })
+    
 
 
 
@@ -1295,3 +1301,48 @@ from .models import TestCategory
 def medical_test_selection(request):
     categories = TestCategory.objects.prefetch_related('subcategories').all()
     return render(request, 'requesttest.html', {'categories': categories})
+
+
+#Submitting selected tests from the doctor
+
+  # Only for simplicity; better to use CSRF token in production
+def submit_test_selection(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            patient_id = data.get('patient_id')
+            selections = data.get('selections', [])
+            print(type(patient_id))
+            print("patient id ", patient_id)
+            print("data ", selections)
+            if not patient_id or not selections:
+                return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
+            patient_id1 = int(patient_id)
+            type(patient_id1)
+            patient = Patient.objects.get(id=patient_id1)
+            print("patient ", patient)
+            for item in selections:
+                category = item['category']
+                for test in item['tests']:
+                    TestSelection.objects.create(patient_id=patient,category=category, test_name=test)
+
+            return JsonResponse({'status': 'success', 'message': 'Selections saved.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+    """if request.method == 'POST':
+        data = json.loads(request.body)
+        selections = data.get('selections', [])
+
+        for item in selections:
+            category = item.get('category')
+            tests = item.get('tests', [])
+            for test in tests:
+                TestSelection.objects.create(category=category, test_name=test)
+
+        return JsonResponse({'status': 'success', 'message': 'Selections saved.'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'}, status=400)
+"""
+
+

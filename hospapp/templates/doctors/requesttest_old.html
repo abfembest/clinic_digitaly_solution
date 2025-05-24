@@ -1,0 +1,562 @@
+{% extends "doctors/base.html" %}
+
+{% load static %}
+
+{% block title %}Doctors | Request for tests{% endblock %}
+{%block content%}
+
+
+<!-- Main content -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Test Selection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .test-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 2px solid #e8ecff;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .test-section:hover {
+            border-color: #4facfe;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.15);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .remove-section {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            margin-left: auto;
+        }
+
+        .remove-section:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .subcategories {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            margin-top: 15px;
+        }
+
+        .subcategories.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .subcategories h4 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-item:hover {
+            background: #edf2f7;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            accent-color: #4facfe;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 400;
+            color: #2d3748;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #2d3748;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            background: #f0fff4;
+            border: 2px solid #9ae6b4;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .results h3 {
+            color: #22543d;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .result-category {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .result-tests {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .checkbox-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Medical Test Selection</h1>
+            <p>Select the medical tests you need from the categories below</p>
+        </div>
+        
+        <div class="content">
+            <div id="testSections">
+                <!-- Test sections will be dynamically added here -->
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="addNewTestSection()">
+                    + Add New Test Category
+                </button>
+                <button class="btn btn-primary" onclick="submitSelection()">
+                    Submit Selection
+                </button>
+            </div>
+            
+            <div id="results" class="results">
+                <h3>Selected Tests Summary:</h3>
+                <div id="resultContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test categories and their subcategories
+        const testCategories = {
+            'Blood Test': [
+                'PCP (Primary Care Panel)',
+                'Blood group and Rh factor',
+                'Vitamin D levels',
+                'Rubella IgG',
+                'Complete Blood Count (CBC)',
+                'Basic Metabolic Panel',
+                'Lipid Panel',
+                'Liver Function Tests',
+                'Thyroid Function Tests',
+                'HbA1c (Diabetes)',
+                'Iron Studies',
+                'B12 and Folate'
+            ],
+            'Urine Test': [
+                'Urinalysis (Routine)',
+                'Urine Culture',
+                'Microalbumin',
+                '24-hour Urine Collection',
+                'Urine Pregnancy Test',
+                'Drug Screen',
+                'Urine Protein',
+                'Creatinine Clearance'
+            ],
+            'Cardiac Tests': [
+                'ECG (Electrocardiogram)',
+                'Echocardiogram',
+                'Stress Test',
+                'Holter Monitor',
+                'Cardiac Enzymes',
+                'BNP (Brain Natriuretic Peptide)',
+                'Troponin',
+                'Coronary Angiography'
+            ],
+            'Imaging Tests': [
+                'X-Ray',
+                'CT Scan',
+                'MRI',
+                'Ultrasound',
+                'Mammography',
+                'DEXA Scan (Bone Density)',
+                'PET Scan',
+                'Fluoroscopy'
+            ],
+            'Endocrine Tests': [
+                'Thyroid Panel (TSH, T3, T4)',
+                'Insulin Level',
+                'Cortisol Level',
+                'Growth Hormone',
+                'Parathyroid Hormone',
+                'Testosterone',
+                'Estrogen',
+                'Progesterone'
+            ],
+            'Infectious Disease Tests': [
+                'HIV Test',
+                'Hepatitis Panel',
+                'STD Panel',
+                'TB Test (Tuberculosis)',
+                'COVID-19 Test',
+                'Strep Test',
+                'Flu Test',
+                'Mono Test'
+            ]
+        };
+
+        let sectionCounter = 0;
+
+        // Initialize with first test section
+        document.addEventListener('DOMContentLoaded', function() {
+            addNewTestSection();
+        });
+
+        function addNewTestSection() {
+            sectionCounter++;
+            const sectionsContainer = document.getElementById('testSections');
+            
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'test-section';
+            sectionDiv.id = `section-${sectionCounter}`;
+            
+            sectionDiv.innerHTML = `
+                <div class="section-header">
+                    <h3 class="section-title">Test Category #${sectionCounter}</h3>
+                    ${sectionCounter > 1 ? `<button class="remove-section" onclick="removeSection(${sectionCounter})">Remove</button>` : ''}
+                </div>
+                
+                <div class="form-group">
+                    <label for="category-${sectionCounter}">Select Test Category:</label>
+                    <select id="category-${sectionCounter}" onchange="updateSubcategories(${sectionCounter})">
+                        <option value="">-- Choose a test category --</option>
+                        ${Object.keys(testCategories).map(category => 
+                            `<option value="${category}">${category}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                
+                <div id="subcategories-${sectionCounter}" class="subcategories">
+                    <h4>Available Tests:</h4>
+                    <div id="subcategory-list-${sectionCounter}" class="checkbox-grid">
+                        <!-- Subcategories will be populated here -->
+                    </div>
+                </div>
+            `;
+            
+            sectionsContainer.appendChild(sectionDiv);
+            
+            // Add entrance animation
+            setTimeout(() => {
+                sectionDiv.style.animation = 'slideIn 0.3s ease';
+            }, 10);
+        }
+
+        function removeSection(sectionId) {
+            const section = document.getElementById(`section-${sectionId}`);
+            if (section) {
+                section.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    section.remove();
+                }, 300);
+            }
+        }
+
+        // Add slideOut animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideOut {
+                from {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        function updateSubcategories(sectionId) {
+            const categorySelect = document.getElementById(`category-${sectionId}`);
+            const subcategoriesDiv = document.getElementById(`subcategories-${sectionId}`);
+            const subcategoryList = document.getElementById(`subcategory-list-${sectionId}`);
+            
+            const selectedCategory = categorySelect.value;
+            
+            if (selectedCategory && testCategories[selectedCategory]) {
+                // Clear previous subcategories
+                subcategoryList.innerHTML = '';
+                
+                // Add new subcategories
+                testCategories[selectedCategory].forEach((subcategory, index) => {
+                    const checkboxItem = document.createElement('div');
+                    checkboxItem.className = 'checkbox-item';
+                    
+                    checkboxItem.innerHTML = `
+                        <input type="checkbox" id="sub-${sectionId}-${index}" name="subcategory-${sectionId}" value="${subcategory}">
+                        <label for="sub-${sectionId}-${index}">${subcategory}</label>
+                    `;
+                    
+                    subcategoryList.appendChild(checkboxItem);
+                });
+                
+                // Show subcategories with animation
+                subcategoriesDiv.classList.add('show');
+            } else {
+                // Hide subcategories
+                subcategoriesDiv.classList.remove('show');
+            }
+        }
+
+        function submitSelection() {
+            const results = [];
+            const sections = document.querySelectorAll('.test-section');
+            
+            sections.forEach(section => {
+                const sectionId = section.id.split('-')[1];
+                const categorySelect = document.getElementById(`category-${sectionId}`);
+                const selectedCategory = categorySelect.value;
+                
+                if (selectedCategory) {
+                    const checkedBoxes = section.querySelectorAll('input[type="checkbox"]:checked');
+                    const selectedTests = Array.from(checkedBoxes).map(cb => cb.value);
+                    
+                    if (selectedTests.length > 0) {
+                        results.push({
+                            category: selectedCategory,
+                            tests: selectedTests
+                        });
+                    }
+                }
+            });
+            
+            displayResults(results);
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const resultContent = document.getElementById('resultContent');
+            
+            if (results.length === 0) {
+                resultContent.innerHTML = '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
+            } else {
+                resultContent.innerHTML = results.map(result => `
+                    <div class="result-item">
+                        <div class="result-category">${result.category}</div>
+                        <div class="result-tests">${result.tests.join(', ')}</div>
+                    </div>
+                `).join('');
+            }
+            
+            resultsDiv.classList.add('show');
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+            
+            // Also log to console for development/debugging
+            console.log('Selected Medical Tests:', results);
+        }
+    </script>
+</body>
+</html>
+
+    {%endblock%}

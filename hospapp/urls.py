@@ -33,6 +33,7 @@ urlpatterns = [
     path('patient/<int:patient_id>/monitor/', views.get_patient_monitor, name='patient_monitor'),
     path('d/monitoring/', views.monitoring, name='monitoring'),
     path('requesttest/', views.requesttest, name='requesttest'),
+    path('submit-selection/', views.submit_test_selection, name='submit_selection'),
     
 
     path('ae/', views.ae, name='ae'),

@@ -1,3 +1,5 @@
+from email.policy import default
+from unittest.mock import DEFAULT
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -327,3 +329,16 @@ class TestSubcategory(models.Model):
     def __str__(self):
         return self.name
 #It end here    
+#Doctor tests requested for the lab to do
+class TestSelection(models.Model):
+    def get_current_time():
+        return datetime.now().time()
+    submitted_on = models.DateField(default=date.today)
+    time = models.TimeField(default=get_current_time)
+    patient_id = models.ForeignKey(Patient, default=1, on_delete=models.CASCADE)
+    category = models.CharField(max_length=100)
+    test_name = models.CharField(max_length=100)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.category} - {self.test_name}"    
