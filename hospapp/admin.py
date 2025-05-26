@@ -3,7 +3,7 @@ from .models import (
     Admission, Appointment, Bed, CarePlan, Consultation, Department,
     EmergencyAlert, HandoverLog, LabResultFile, LabTest, LabTestType,
     MedicalRecord, NursingNote, Patient, Prescription, Profile,
-    Referral, Shift, TaskAssignment, TestRequest, Vitals, Ward, LabTestField,TestCategory,
+    Referral, Shift, TaskAssignment, TestRequest, TestSelection, Vitals, Ward, LabTestField,TestCategory,
     TestSubcategory,
 )
 
@@ -32,3 +32,4 @@ admin.site.register(Ward)
 admin.site.register(LabTestField)
 admin.site.register(TestCategory)
 admin.site.register(TestSubcategory)
+admin.site.register(TestSelection)
