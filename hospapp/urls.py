@@ -59,7 +59,10 @@ urlpatterns = [
     path('a/budget_planning', views.budget_planning, name='budget_planning'),
 
     path('hr/home', views.hr, name='hr'),
-    path('hr/staff_profile', views.staff_profiles, name='staff_profiles'),
+    path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
+    path('hr/staff-profiles', views.staff_profiles, name='staff_profiles'),
+    path('staff/<int:staff_id>/edit/', views.edit_staff_profile, name='edit_staff_profile'),
+    path('staff/<int:staff_id>/change-password/', views.change_staff_password, name='change_staff_password'),
     path('hr/staff_attendance', views.staff_attendance, name='staff_attendance_shift'),
     path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
     path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),

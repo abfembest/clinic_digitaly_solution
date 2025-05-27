@@ -240,6 +240,32 @@
             reserved.
         </footer>
 
+        <div aria-live="polite" aria-atomic="true" style="position: fixed; top: 1rem; right: 1rem; z-index: 1080;">
+            <div id="toast-container">
+                {% if messages %}
+                {% for message in messages %}
+                    <div class="toast bg-{{ message.tags|default:"info" }} text-white mb-3" role="alert" data-delay="4000" data-autohide="true">
+                    <div class="toast-header bg-{{ message.tags|default:"info" }} text-white border-0">
+                        <i class="mr-2 fas fa-{{ 
+                        "check-circle" if message.tags == "success" 
+                        else "exclamation-triangle" if message.tags == "warning" 
+                        else "times-circle" if message.tags == "error" 
+                        else "info-circle"
+                        }}"></i>
+                        <strong class="mr-auto text-capitalize">{{ message.tags }}</strong>
+                        <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="toast-body">
+                        {{ message }}
+                    </div>
+                    </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Control Sidebar -->
         <aside class="control-sidebar control-sidebar-dark">
             <!-- Control sidebar content goes here -->
@@ -256,6 +282,11 @@
     <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
     <!-- AdminLTE for demo purposes -->
     <script src="{% static 'dist/js/demo.js' %}"></script>
+    <script>
+        $(document).ready(function () {
+            $('.toast').toast('show');
+        });
+    </script>
 </body>
 
 </html>
