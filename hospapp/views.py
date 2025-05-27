@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory, TestSelection, ShiftAssignment, Attendance, Shift
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory, TestSelection, ShiftAssignment, Attendance, Shift, StaffTransition
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -1035,6 +1035,20 @@ def change_staff_password(request, staff_id):
         return JsonResponse({'success': False, 'error': 'Staff not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    
+def parse_date_to_datetime(date_str_or_obj):
+    if isinstance(date_str_or_obj, str):
+        dt = datetime.strptime(date_str_or_obj, '%Y-%m-%d')
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    elif isinstance(date_str_or_obj, datetime):
+        if timezone.is_naive(date_str_or_obj):
+            return timezone.make_aware(date_str_or_obj, timezone.get_current_timezone())
+        return date_str_or_obj
+    elif isinstance(date_str_or_obj, date) and not isinstance(date_str_or_obj, datetime):
+        dt = datetime.combine(date_str_or_obj, datetime.min.time())
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    else:
+        return timezone.now()
 
 @login_required(login_url='home')
 def staff_attendance(request):
@@ -1047,21 +1061,7 @@ def staff_attendance(request):
         return redirect('home')
 
     staff_users = User.objects.filter(profile__isnull=False).order_by('first_name', 'last_name')
-    shifts = Shift.objects.all().order_by('name')  # load shifts from DB dynamically
-
-    def parse_date_to_datetime(date_str_or_obj):
-        if isinstance(date_str_or_obj, str):
-            dt = datetime.strptime(date_str_or_obj, '%Y-%m-%d')
-            return timezone.make_aware(dt, timezone.get_current_timezone())
-        elif isinstance(date_str_or_obj, datetime):
-            if timezone.is_naive(date_str_or_obj):
-                return timezone.make_aware(date_str_or_obj, timezone.get_current_timezone())
-            return date_str_or_obj
-        elif isinstance(date_str_or_obj, date) and not isinstance(date_str_or_obj, datetime):
-            dt = datetime.combine(date_str_or_obj, datetime.min.time())
-            return timezone.make_aware(dt, timezone.get_current_timezone())
-        else:
-            return timezone.now()
+    shifts = Shift.objects.all().order_by('name')
 
     if request.method == 'POST':
         if 'record_attendance' in request.POST:
@@ -1098,32 +1098,59 @@ def staff_attendance(request):
 
             try:
                 shift = shifts.get(name=shift_name)
+                print(shift)
             except Shift.DoesNotExist:
                 messages.error(request, f"Shift '{shift_name}' not found.")
                 return redirect('staff_attendance_shift')
 
             ShiftAssignment.objects.update_or_create(
                 staff=staff_user,
-                date=date_obj,
+                date=date_obj.date(),
                 defaults={'shift': shift}
             )
             messages.success(request, "Shift assigned successfully.")
             return redirect('staff_attendance_shift')
 
-    attendance_records = Attendance.objects.select_related('staff').all()
-    shift_records = ShiftAssignment.objects.select_related('staff', 'shift').all()
+    attendance_records = Attendance.objects.select_related('staff').order_by('-date')
+    shift_records = ShiftAssignment.objects.select_related('staff', 'shift').order_by('-date')
 
     return render(request, 'hr/staff_attendance_shift.html', {
         'attendance_records': attendance_records,
         'shift_records': shift_records,
         'profile': profile,
         'staff_users': staff_users,
-        'shifts': shifts,  # pass shifts to template to dynamically render shift options
+        'shifts': shifts,
+        'today': today,
     })
 
 @login_required(login_url='home')
 def staff_transitions(request):
-    return render(request, 'hr/staff_transitions.html')
+    staff_list = Profile.objects.all().order_by('user__first_name')
+    transitions = StaffTransition.objects.all().order_by('-date', '-created_at')
+
+    if request.method == 'POST':
+        full_name = request.POST.get('full_name')
+        transition_type = request.POST.get('type')
+        date = request.POST.get('date')
+        notes = request.POST.get('notes')
+
+        if full_name and transition_type in ['onboarding', 'offboarding'] and date:
+            StaffTransition.objects.create(
+                full_name=full_name.strip(),
+                transition_type=transition_type,
+                date=date,
+                notes=notes,
+                created_by=request.user
+            )
+            messages.success(request, "Staff transition recorded successfully.")
+            return redirect('staff_transitions')
+        else:
+            messages.error(request, "Please fill all required fields correctly.")
+
+    return render(request, 'hr/staff_transitions.html', {
+        'staff_list': staff_list,
+        'transitions': transitions,
+    })
 
 @login_required(login_url='home')
 def staff_certifications(request):
