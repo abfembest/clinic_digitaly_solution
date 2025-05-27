@@ -127,23 +127,44 @@ class HandoverLog(models.Model):
     def __str__(self):
         return f"Handover: {self.patient.full_name} by {self.author}"
 
-# Shift Types
 class Shift(models.Model):
-    SHIFT_CHOICES = [('Morning', 'Morning'), ('Afternoon', 'Afternoon'), ('Night', 'Night')]
+    SHIFT_CHOICES = [
+        ('Morning', 'Morning'),
+        ('Afternoon', 'Afternoon'),
+        ('Night', 'Night'),
+    ]
     name = models.CharField(max_length=20, choices=SHIFT_CHOICES, unique=True)
 
     def __str__(self):
         return self.name
 
-# Tasks assigned per shift
-class TaskAssignment(models.Model):
-    shift = models.ForeignKey(Shift, on_delete=models.CASCADE)
-    nurse = models.ForeignKey(User, on_delete=models.CASCADE)
-    task_description = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ('Present', 'Present'),
+        ('Absent', 'Absent'),
+        ('On Leave', 'On Leave'),
+    ]
+    staff = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
+    date = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+
+    class Meta:
+        unique_together = ('staff', 'date')
+        ordering = ['-date']
 
     def __str__(self):
-        return f"{self.nurse.username} - {self.shift.name}"
+        return f"{self.staff.get_full_name() or self.staff.username} - {self.date} - {self.status}"
+
+class ShiftAssignment(models.Model):
+    staff = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shift_assignments')
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE)
+    date = models.DateField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('staff', 'date')
+
+    def __str__(self):
+        return f"{self.staff.get_full_name() or self.staff.username} - {self.shift.name} on {self.date}"
 
 # Emergency Alerts
 class EmergencyAlert(models.Model):
@@ -185,6 +206,7 @@ class Profile(models.Model):
     phone_number = models.CharField(max_length=15, blank=True)
     address = models.TextField(blank=True, null=True)
     photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     date_joined = models.DateField(default=timezone.now)
 
     def __str__(self):

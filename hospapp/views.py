@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory,TestSelection
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory, TestSelection, ShiftAssignment, Attendance, Shift
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -12,7 +12,10 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.utils.dateparse import parse_date
 from django.db.models import Q
+from django.views.decorators.http import require_GET
 import json
+from datetime import datetime, date
+from django.utils.timezone import localdate
 from django.core.serializers.json import DjangoJSONEncoder
 
 
@@ -976,11 +979,147 @@ def hr(request):
 
 @login_required(login_url='home')
 def staff_profiles(request):
-    return render(request, 'hr/staff_profiles.html')
+    staff_list = Profile.objects.select_related('user', 'department').all()
+    departments = Department.objects.all()
+    context = {
+        'staff_list': staff_list,
+        'departments': departments,
+    }
+    return render(request, 'hr/staff_profiles.html', context)
+
+@csrf_exempt
+def edit_staff_profile(request, staff_id):
+    try:
+        profile = Profile.objects.select_related('user').get(id=staff_id)
+        role = request.POST.get('role')
+        department_id = request.POST.get('department')
+        phone = request.POST.get('phone_number')
+        address = request.POST.get('address')
+
+        profile.role = role
+        profile.phone_number = phone
+        profile.address = address
+        if department_id:
+            profile.department_id = department_id
+        else:
+            profile.department = None
+        profile.save()
+
+        return JsonResponse({
+            'success': True,
+            'role': profile.get_role_display(),
+            'department': profile.department.name if profile.department else '—',
+            'phone': profile.phone_number or '—',
+            'name': f"{profile.user.first_name} {profile.user.last_name}",
+        })
+    except Profile.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Staff not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@csrf_exempt
+def change_staff_password(request, staff_id):
+    try:
+        profile = Profile.objects.select_related('user').get(id=staff_id)
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        if new_password != confirm_password:
+            return JsonResponse({'success': False, 'error': 'Passwords do not match'})
+
+        profile.user.set_password(new_password)
+        profile.user.save()
+
+        return JsonResponse({'success': True})
+    except Profile.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Staff not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required(login_url='home')
 def staff_attendance(request):
-    return render(request, 'hr/staff_attendance_shift.html')
+    today = timezone.localdate()
+
+    try:
+        profile = request.user.profile
+    except Profile.DoesNotExist:
+        messages.error(request, "Your user profile is not set up properly.")
+        return redirect('home')
+
+    staff_users = User.objects.filter(profile__isnull=False).order_by('first_name', 'last_name')
+    shifts = Shift.objects.all().order_by('name')  # load shifts from DB dynamically
+
+    def parse_date_to_datetime(date_str_or_obj):
+        if isinstance(date_str_or_obj, str):
+            dt = datetime.strptime(date_str_or_obj, '%Y-%m-%d')
+            return timezone.make_aware(dt, timezone.get_current_timezone())
+        elif isinstance(date_str_or_obj, datetime):
+            if timezone.is_naive(date_str_or_obj):
+                return timezone.make_aware(date_str_or_obj, timezone.get_current_timezone())
+            return date_str_or_obj
+        elif isinstance(date_str_or_obj, date) and not isinstance(date_str_or_obj, datetime):
+            dt = datetime.combine(date_str_or_obj, datetime.min.time())
+            return timezone.make_aware(dt, timezone.get_current_timezone())
+        else:
+            return timezone.now()
+
+    if request.method == 'POST':
+        if 'record_attendance' in request.POST:
+            staff_id = request.POST.get('staff_name')
+            date_input = request.POST.get('date') or today
+            date_obj = parse_date_to_datetime(date_input)
+            status = request.POST.get('status')
+
+            try:
+                staff_user = staff_users.get(id=staff_id)
+            except User.DoesNotExist:
+                messages.error(request, "Selected staff not found.")
+                return redirect('staff_attendance_shift')
+
+            Attendance.objects.update_or_create(
+                staff=staff_user,
+                date=date_obj,
+                defaults={'status': status}
+            )
+            messages.success(request, "Attendance recorded successfully.")
+            return redirect('staff_attendance_shift')
+
+        elif 'assign_shift' in request.POST:
+            staff_id = request.POST.get('staff_name')
+            shift_name = request.POST.get('shift')
+            date_input = request.POST.get('date') or today
+            date_obj = parse_date_to_datetime(date_input)
+
+            try:
+                staff_user = staff_users.get(id=staff_id)
+            except User.DoesNotExist:
+                messages.error(request, "Selected staff not found.")
+                return redirect('staff_attendance_shift')
+
+            try:
+                shift = shifts.get(name=shift_name)
+            except Shift.DoesNotExist:
+                messages.error(request, f"Shift '{shift_name}' not found.")
+                return redirect('staff_attendance_shift')
+
+            ShiftAssignment.objects.update_or_create(
+                staff=staff_user,
+                date=date_obj,
+                defaults={'shift': shift}
+            )
+            messages.success(request, "Shift assigned successfully.")
+            return redirect('staff_attendance_shift')
+
+    attendance_records = Attendance.objects.select_related('staff').all()
+    shift_records = ShiftAssignment.objects.select_related('staff', 'shift').all()
+
+    return render(request, 'hr/staff_attendance_shift.html', {
+        'attendance_records': attendance_records,
+        'shift_records': shift_records,
+        'profile': profile,
+        'staff_users': staff_users,
+        'shifts': shifts,  # pass shifts to template to dynamically render shift options
+    })
 
 @login_required(login_url='home')
 def staff_transitions(request):

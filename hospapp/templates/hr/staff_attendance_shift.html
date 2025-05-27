@@ -6,94 +6,188 @@
 
 <!-- Content Header (Page header) -->
 <div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Attendance & Shifts</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0 text-dark">Attendance & Shifts</h1>
+      </div>
+    </div>
+  </div>
 </div>
-<!-- /.content-header -->
 
 <section class="content">
-    <div class="container-fluid">
-      <div class="card card-outline card-success">
-        <div class="card-header">
-          <h3 class="card-title">Staff Attendance & Work Schedules</h3>
-        </div>
-        <div class="card-body">
-          <ul class="nav nav-pills mb-3">
-            <li class="nav-item">
-              <a class="nav-link active" data-toggle="tab" href="#attendance">Attendance</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" data-toggle="tab" href="#shifts">Shifts</a>
-            </li>
-          </ul>
-  
-          <div class="tab-content">
-            <!-- Attendance Tab -->
-            <div class="tab-pane fade show active" id="attendance">
-              <form method="post">
-                {% csrf_token %}
-                <div class="form-row">
-                  <div class="form-group col-md-6">
-                    <label>Staff Name</label>
-                    <input type="text" class="form-control" name="staff_name" placeholder="Search or select staff">
-                  </div>
-                  <div class="form-group col-md-3">
-                    <label>Date</label>
-                    <input type="date" class="form-control" name="date">
-                  </div>
-                  <div class="form-group col-md-3">
-                    <label>Status</label>
-                    <select class="form-control" name="status">
-                      <option>Present</option>
-                      <option>Absent</option>
-                      <option>On Leave</option>
-                    </select>
-                  </div>
+  <div class="container-fluid">
+    <div class="card card-outline card-success">
+      <div class="card-header">
+        <h3 class="card-title">Staff Attendance & Work Schedules</h3>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-pills mb-3">
+          <li class="nav-item">
+            <a class="nav-link active" data-toggle="tab" href="#attendance">Attendance</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#shifts">Shifts</a>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- Attendance Tab -->
+          <div class="tab-pane fade show active" id="attendance">
+            <form method="post" class="mb-4">
+              {% csrf_token %}
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="attendance_staff_name">Staff Name</label>
+                  <select id="attendance_staff_name" class="form-control" name="staff_name" required>
+                    <option value="" disabled selected>Select staff</option>
+                    {% for staff in staff_users %}
+                      <option value="{{ staff.id }}"
+                        {% if request.POST.staff_name|stringformat:"s" == staff.id|stringformat:"s" %}selected{% endif %}>
+                        {{ staff.get_full_name }} ({{ staff.profile.role|title }})
+                      </option>
+                    {% endfor %}
+                  </select>
                 </div>
-                <button class="btn btn-success">Record Attendance</button>
-              </form>
-            </div>
-  
-            <!-- Shifts Tab -->
-            <div class="tab-pane fade" id="shifts">
-              <form method="post">
-                {% csrf_token %}
-                <div class="form-row">
-                  <div class="form-group col-md-6">
-                    <label>Staff Name</label>
-                    <input type="text" class="form-control" name="staff_name">
-                  </div>
-                  <div class="form-group col-md-3">
-                    <label>Shift</label>
-                    <select class="form-control" name="shift">
-                      <option>Morning</option>
-                      <option>Afternoon</option>
-                      <option>Night</option>
-                    </select>
-                  </div>
-                  <div class="form-group col-md-3">
-                    <label>Date</label>
-                    <input type="date" class="form-control" name="date">
-                  </div>
+
+                {% comment %} <div class="form-group col-md-3">
+                  <label for="attendance_date">Date</label>
+                  <input id="attendance_date" type="date" class="form-control" name="date"
+                    value="{{ request.POST.date }}">
+                </div> {% endcomment %}
+                <div class="form-group col-md-3">
+                  <label for="attendance_status">Status</label>
+                  <select id="attendance_status" class="form-control" name="status">
+                    <option {% if request.POST.status == "Present" %}selected{% endif %}>Present</option>
+                    <option {% if request.POST.status == "Absent" %}selected{% endif %}>Absent</option>
+                    <option {% if request.POST.status == "On Leave" %}selected{% endif %}>On Leave</option>
+                  </select>
                 </div>
-                <button class="btn btn-info">Assign Shift</button>
-              </form>
+              </div>
+              <button type="submit" name="record_attendance" class="btn btn-success">Record Attendance</button>
+            </form>
+
+            <!-- Date Filter Input -->
+            <div class="form-group col-md-3 mb-3">
+              <label for="filter_date">Filter by Date</label>
+              <input id="filter_date" type="date" class="form-control" />
             </div>
+
+            <!-- Attendance Records Table -->
+            <table class="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>Staff Name</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="attendance_tbody">
+                {% if attendance_records %}
+                  {% for record in attendance_records %}
+                    <tr data-date="{{ record.date|date:'Y-m-d' }}">
+                      <td>{{ record.staff.get_full_name }}</td>
+                      <td>{{ record.date|date:"Y-m-d" }}</td>
+                      <td>{{ record.status }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="3" class="text-center">No attendance records found.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Shifts Tab -->
+          <div class="tab-pane fade" id="shifts">
+            <form method="post" class="mb-4">
+              {% csrf_token %}
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="shifts_staff_name">Staff Name</label>
+                  <select id="shifts_staff_name" class="form-control" name="staff_name" required>
+                    <option value="" disabled selected>Select staff</option>
+                    {% for staff in staff_users %}
+                      <option value="{{ staff.id }}"
+                        {% if request.POST.staff_name|stringformat:"s" == staff.id|stringformat:"s" %}selected{% endif %}>
+                        {{ staff.get_full_name }} ({{ staff.profile.role|title }})
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group col-md-3">
+                  <label for="shift_select">Shift</label>
+                  <select id="shift_select" class="form-control" name="shift">
+                    <option {% if request.POST.shift == "Morning" %}selected{% endif %}>Morning</option>
+                    <option {% if request.POST.shift == "Afternoon" %}selected{% endif %}>Afternoon</option>
+                    <option {% if request.POST.shift == "Night" %}selected{% endif %}>Night</option>
+                  </select>
+                </div>
+                <div class="form-group col-md-3">
+                  <label for="shift_date">Date</label>
+                  <input id="shift_date" type="date" class="form-control" name="date"
+                    value="{{ request.POST.date }}">
+                </div>
+              </div>
+              <button type="submit" name="assign_shift" class="btn btn-info">Assign Shift</button>
+            </form>
+
+            <!-- Shift Records Table -->
+            <table class="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>Staff Name</th>
+                  <th>Date</th>
+                  <th>Shift</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if shift_records %}
+                  {% for shift in shift_records %}
+                    <tr>
+                      <td>{{ shift.staff.get_full_name }}</td>
+                      <td>{{ shift.date|date:"Y-m-d" }}</td>
+                      <td>{{ shift.shift.name }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="3" class="text-center">No shift records found.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  {% endblock %}
+<!-- JS for filtering attendance table rows by date -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterDateInput = document.getElementById('filter_date');
+    const tbody = document.getElementById('attendance_tbody');
+    if (!filterDateInput || !tbody) return;
+
+    filterDateInput.addEventListener('input', () => {
+      const filterDate = filterDateInput.value; // "YYYY-MM-DD"
+      const rows = tbody.querySelectorAll('tr[data-date]');
+
+      rows.forEach(row => {
+        const rowDate = row.getAttribute('data-date');
+        if (!filterDate || rowDate === filterDate) {
+          row.style.display = '';  // show row
+        } else {
+          row.style.display = 'none'; // hide row
+        }
+      });
+    });
+  });
+</script>
+
+{% endblock %}
