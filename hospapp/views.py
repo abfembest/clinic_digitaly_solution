@@ -1309,6 +1309,7 @@ def medical_test_selection(request):
 def submit_test_selection(request):
     if request.method == 'POST':
         try:
+            print("I am connected")
             data = json.loads(request.body)
             patient_id = data.get('patient_id')
             selections = data.get('selections', [])

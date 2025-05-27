@@ -339,6 +339,5 @@ class TestSelection(models.Model):
     category = models.CharField(max_length=100)
     test_name = models.CharField(max_length=100)
     timestamp = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"{self.category} - {self.test_name}"    
