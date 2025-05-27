@@ -314,9 +314,9 @@
         <div class="content">
             <!-- Patient Selector -->
             <div class="form-group">
+                <h3 id="selectpatient"></h3>
                 <div id="results" class="results">
                     <h3>Selected Tests sent to the Lab.</h3>
-                    <h3 id="selectpatient"></h3>
                     <div id="resultContent"></div>
                 </div>
                 <label>Select Patient</label>
@@ -465,6 +465,7 @@
             const patienteror = document.getElementById('selectpatient');
             if (!patientId) {
                 patienteror.innerHTML = '<p style="color: #e53e3e; font-style: italic;">Please select at least one patient .</p>';
+                return;
             }
                 sections.forEach(section => {
                     const sectionId = section.id.split('-')[1];
@@ -485,26 +486,17 @@
                 });
 
 
-                displayResults(results);
-            }
-            function displayResults(results) {
+
+            
+            /*function displayResults(results) {
                 const resultsDiv = document.getElementById('results');
-                const resultContent = document.getElementById('resultContent');
+                const resultContent = document.getElementById('resultContent');*/
 
                 if (results.length === 0) {
                     resultContent.innerHTML = '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
-                } else {
-                    resultContent.innerHTML = results.map(result => `
-            <div class="result-item">
-                <div class="result-category">${result.category}</div>
-                <div class="result-tests">${result.tests.join(', ')}</div>
-            </div>
-        `).join('');
+                    return;
                 }
-
-                resultsDiv.classList.add('show');
-                resultsDiv.scrollIntoView({ behavior: 'smooth' });
-
+                    
 
                 function getCSRFToken() {
                     const name = 'csrftoken';
@@ -565,6 +557,8 @@
                 console.log('Selected Medical Tests:', results);
 
             }
+
+
         
 
 

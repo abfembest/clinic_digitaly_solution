@@ -555,8 +555,85 @@
             // Also log to console for development/debugging
             console.log('Selected Medical Tests:', results);
         }
+
+
+
+
+        /*function submitSelection() {
+    const results = [];
+    const sections = document.querySelectorAll('.test-section');
+    const patientId = document.getElementById('patient-select').value;
+
+    if (!patientId) {
+        alert("Please select a patient before submitting.");
+        return;
+    }
+
+    sections.forEach(section => {
+        const sectionId = section.id.split('-')[1];
+        const categorySelect = document.getElementById(`category-${sectionId}`);
+        const selectedCategory = categorySelect.value;
+
+        if (selectedCategory) {
+            const checkedBoxes = section.querySelectorAll('input[type="checkbox"]:checked');
+            const selectedTests = Array.from(checkedBoxes).map(cb => cb.value);
+
+            if (selectedTests.length > 0) {
+                results.push({
+                    category: selectedCategory,
+                    tests: selectedTests
+                });
+            }
+        }
+    });
+
+    if (results.length === 0) {
+        document.getElementById('resultContent').innerHTML =
+            '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
+        return;
+    }
+
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            if (cookie.trim().startsWith(name + '=')) {
+                return cookie.trim().substring(name.length + 1);
+            }
+        }
+        return '';
+    }
+
+    // Submit to Django
+    fetch("/submit-selection/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken(),
+        },
+        body: JSON.stringify({ patient_id: patientId, selections: results }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            displayResults(results);
+        } else {
+            alert("Submission failed.");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("An error occurred while submitting.");
+    });
+}*/
+
+
+
     </script>
 </body>
 </html>
 
     {%endblock%}
+
+
+
