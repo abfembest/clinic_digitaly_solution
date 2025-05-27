@@ -345,7 +345,7 @@
         {% for cat in categories %}
             "{{ cat.name }}": [
                 {% for sub in cat.subcategories.all %}
-                    "{{ sub.name }}"{% if not forloop.last %}, {% endif %}
+                    "{{ sub.name }}"{% if not forloop.last %},{% endif %}
                 {% endfor %}
             ]{% if not forloop.last %}, {% endif %}
         {% endfor %}

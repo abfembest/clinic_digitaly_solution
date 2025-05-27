@@ -1,0 +1,33 @@
+[33mf2cdae5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m HEAD@{0}: commit: hr update
+[33mcaf2702[m HEAD@{1}: reset: moving to HEAD
+[33mcaf2702[m HEAD@{2}: commit: user updates
+[33mba9f0e1[m HEAD@{3}: reset: moving to HEAD
+[33mba9f0e1[m HEAD@{4}: commit: s
+[33m40c41e1[m HEAD@{5}: commit (merge): s
+[33m5242e74[m HEAD@{6}: reset: moving to HEAD
+[33m5242e74[m HEAD@{7}: reset: moving to HEAD
+[33m5242e74[m HEAD@{8}: reset: moving to HEAD
+[33m5242e74[m HEAD@{9}: reset: moving to HEAD
+[33m5242e74[m HEAD@{10}: reset: moving to HEAD
+[33m5242e74[m HEAD@{11}: commit (merge): t
+[33m384792d[m HEAD@{12}: reset: moving to HEAD
+[33m384792d[m HEAD@{13}: commit (merge): db
+[33m68254e3[m HEAD@{14}: commit: db
+[33m6fb7d1d[m HEAD@{15}: commit: db
+[33mec381a4[m HEAD@{16}: checkout: moving from main to master
+[33ma335c29[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{17}: checkout: moving from master to main
+[33mec381a4[m HEAD@{18}: commit: lab update
+[33m37ee1b2[m HEAD@{19}: commit (merge): t
+[33meecaf0e[m HEAD@{20}: commit: lab update
+[33m19083eb[m HEAD@{21}: commit: user pages update
+[33md78ad39[m HEAD@{22}: commit: receptionist update
+[33me883d0f[m HEAD@{23}: commit: restart / recalibrate
+[33m28e9cd5[m HEAD@{24}: commit: lab test logs
+[33m5ab8cd1[m HEAD@{25}: commit: lab test logs
+[33m7788b2a[m HEAD@{26}: commit: Lab update
+[33m822df76[m HEAD@{27}: commit: db
+[33m8bddd60[m HEAD@{28}: commit: doctor update
+[33ma839d57[m HEAD@{29}: commit: doctor update
+[33ma0c5a92[m HEAD@{30}: commit: doctors update
+[33m7bb255c[m HEAD@{31}: commit: doctors update
+[33m57ec981[m HEAD@{32}: clone: from https://github.com/abfembest/clinic_digitaly_solution.git
