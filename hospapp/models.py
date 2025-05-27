@@ -211,6 +211,21 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.role})"
+    
+class StaffTransition(models.Model):
+    TRANSITION_CHOICES = [
+        ('onboarding', 'Onboarding'),
+        ('offboarding', 'Offboarding'),
+    ]
+    full_name = models.CharField(max_length=200)
+    transition_type = models.CharField(max_length=20, choices=TRANSITION_CHOICES)
+    date = models.DateField()
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.full_name} - {self.transition_type} on {self.date}"
 
 
 class Vitals(models.Model):
