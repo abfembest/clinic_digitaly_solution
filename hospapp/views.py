@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory, TestSelection, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, TestRequest, CarePlan, LabTest, LabResultFile, Department, LabTestField, LabTestType, TestCategory, TestSelection, ShiftAssignment, Attendance, Shift, StaffTransition
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -17,8 +17,6 @@ import json
 from datetime import datetime, date
 from django.utils.timezone import localdate
 from django.core.serializers.json import DjangoJSONEncoder
-from django.utils import timezone
-from django.db.models import Q, Count, Prefetch
 
 
 # Create your views here.
@@ -660,278 +658,158 @@ def laboratory(request):
 
 @login_required(login_url='home')
 def lab_test_entry(request):
-    """Enhanced lab test entry view with better data fetching"""
-    
-    # Get lab departments
-    lab_departments = Department.objects.filter(
-        Q(name__icontains='lab') | Q(name__icontains='laboratory')
-    )
-    
-    # Get patients with pending tests - multiple approaches
-    referrals = []
-    
-    # Method 1: Get from Referrals to lab departments
-    if lab_departments.exists():
-        db_referrals = Referral.objects.filter(
-            department__in=lab_departments
-        ).select_related('patient', 'department').annotate(
-            pending_test_count=Count(
-                'patient__test_selections',
-                filter=Q(patient__test_selections__status='pending')
-            )
-        ).filter(pending_test_count__gt=0)
-        
-        for referral in db_referrals:
-            referrals.append({
+    # Filter referrals to lab department only (assuming department named "Laboratory")
+    lab_department = Department.objects.filter(name__iexact='Laboratory').first()
+
+    # Get referrals ONLY for lab department
+    referrals = Referral.objects.filter(department=lab_department).select_related('patient')
+
+    # For each referral, count pending tests for that patient
+    referrals_with_tests = []
+    for referral in referrals:
+        pending_tests_count = TestSelection.objects.filter(
+            patient=referral.patient,
+            status='pending',
+            testcompleted=False
+        ).count()
+        if pending_tests_count > 0:
+            referrals_with_tests.append({
                 'patient': referral.patient,
-                'department': referral.department,
-                'created_at': getattr(referral, 'created_at', timezone.now()),
-                'referred_by': getattr(referral, 'referred_by', 'Unknown'),
-                'pending_tests': referral.pending_test_count,
-                'type': 'referral'
+                'type': 'referral',
+                'referred_by': referral.notes or 'Unknown',
+                'created_at': referral.patient.created_at if hasattr(referral.patient, 'created_at') else None,
+                'pending_tests': pending_tests_count,
             })
-    
-    # Method 2: Get from TestRequest
-    test_requests = TestRequest.objects.filter(
-        Q(status='pending') | Q(status='in_progress')
-    ).select_related('patient', 'requested_by').prefetch_related('tests')
-    
-    for test_request in test_requests:
-        # Check if this patient is already in referrals
-        existing = next((r for r in referrals if r['patient'].id == test_request.patient.id), None)
-        if not existing:
-            pending_count = test_request.tests.count() - test_request.lab_tests.filter(
-                result_value__isnull=False
-            ).count()
-            
-            if pending_count > 0:
-                referrals.append({
-                    'patient': test_request.patient,
-                    'department': None,
-                    'created_at': test_request.requested_at,
-                    'referred_by': test_request.requested_by.get_full_name() if test_request.requested_by else 'Unknown',
-                    'pending_tests': pending_count,
-                    'type': 'test_request'
-                })
-    
-    # Method 3: Get from TestSelection (legacy support)
-    test_selections = TestSelection.objects.filter(
-        Q(status='pending') | Q(testcompleted=False)
-    ).select_related('patient_id').values(
-        'patient_id__id', 'patient_id__full_name'
-    ).annotate(
-        pending_count=Count('id')
-    )
-    
-    for selection in test_selections:
-        # Check if this patient is already in referrals
-        existing = next((r for r in referrals if r['patient'].id == selection['patient_id__id']), None)
-        if not existing:
-            try:
-                patient = Patient.objects.get(id=selection['patient_id__id'])
-                referrals.append({
-                    'patient': patient,
-                    'department': None,
-                    'created_at': timezone.now(),
-                    'referred_by': 'System',
-                    'pending_tests': selection['pending_count'],
-                    'type': 'test_selection'
-                })
-            except Patient.DoesNotExist:
-                continue
-    
-    # Sort referrals by creation date (newest first)
-    referrals.sort(key=lambda x: x['created_at'], reverse=True)
-    
-    # Debug information
-    debug_info = {
-        'lab_departments': list(lab_departments.values_list('name', flat=True)),
-        'referral_count': len(referrals),
-        'test_requests_pending': TestRequest.objects.filter(status__in=['pending', 'in_progress']).count(),
-        'test_selections_pending': TestSelection.objects.filter(Q(status='pending') | Q(testcompleted=False)).count(),
-        'methods_used': ['referrals', 'test_requests', 'test_selections']
+
+    context = {
+        'referrals': referrals_with_tests,
+        'debug_info': {
+            'referral_count': referrals.count(),
+            'test_requests_pending': TestSelection.objects.filter(status='pending').count(),
+            'test_selections_pending': TestSelection.objects.filter(status='pending').count(),
+            'lab_departments': [lab_department.name] if lab_department else [],
+            'methods_used': [],
+        }
     }
-    
-    return render(request, 'laboratory/test_entry.html', {
-        'referrals': referrals,
-        'debug_info': debug_info
+    return render(request, 'laboratory/test_entry.html', context)
+
+@login_required(login_url='home')
+def get_patient_info(request, patient_id):
+    # AJAX endpoint to get patient info and their pending test selections
+    patient = get_object_or_404(Patient, pk=patient_id)
+
+    # Prepare patient info html snippet
+    patient_html = f"""
+        <p><strong>Name:</strong> {patient.full_name}</p>
+        <p><strong>Gender:</strong> {patient.gender}</p>
+        <p><strong>Date of Birth:</strong> {patient.date_of_birth}</p>
+        <p><strong>Contact:</strong> {patient.phone or 'N/A'}</p>
+    """
+
+    # Get pending tests for this patient
+    pending_tests = TestSelection.objects.filter(patient=patient, status='pending', testcompleted=False)
+
+    # Prepare tests html snippet for modal table rows
+    tests_html = ""
+    for test in pending_tests:
+        tests_html += f"""
+            <tr>
+                <td>{test.test_name}</td>
+                <td>{test.category}</td>
+                <td>{test.doctor_name or 'N/A'}</td>
+                <td>{test.submitted_on.strftime('%b %d, %Y')}</td>
+                <td>{test.patient.notes if hasattr(test.patient, 'notes') else ''}</td>
+                <td>
+                    <button class="btn btn-sm btn-success enter-result-btn"
+                            data-test-id="{test.id}"
+                            data-patient-id="{patient.id}"
+                            data-test-name="{test.test_name}"
+                            data-category="{test.category}"
+                            data-instructions="">
+                        Enter Result
+                    </button>
+                </td>
+            </tr>
+        """
+
+    if not tests_html:
+        tests_html = '<tr><td colspan="6" class="text-center text-muted">No pending tests.</td></tr>'
+
+    return JsonResponse({
+        'patient_html': patient_html,
+        'tests_html': tests_html,
     })
 
 @csrf_exempt
-@login_required
-def get_pending_tests(request):
-    """Get pending tests for a specific patient"""
-    patient_id = request.GET.get('patient_id')
-    
-    if not patient_id:
-        return JsonResponse({
-            'error': 'Patient ID is required',
-            'tests': []
-        })
-    
-    try:
-        patient = Patient.objects.get(id=patient_id)
-        tests = []
-        
-        # Get tests from TestRequest
-        test_requests = TestRequest.objects.filter(
-            patient=patient,
-            status__in=['pending', 'in_progress']
-        ).prefetch_related('tests', 'lab_tests')
-        
-        for test_request in test_requests:
-            for test_type in test_request.tests.all():
-                # Check if this test already has results
-                existing_result = test_request.lab_tests.filter(
-                    test_type=test_type.name
-                ).first()
-                
-                if not existing_result:
-                    tests.append({
-                        'id': f"tr_{test_request.id}_{test_type.id}",
-                        'test_name': test_type.name,
-                        'category': test_type.category or 'General',
-                        'doctor_name': test_request.requested_by.get_full_name() if test_request.requested_by else 'Unknown',
-                        'submitted_on': test_request.requested_at.date().isoformat(),
-                        'type': 'test_request',
-                        'test_request_id': test_request.id,
-                        'test_type_id': test_type.id,
-                        'instructions': test_request.instructions
-                    })
-        
-        # Get tests from TestSelection (legacy)
-        test_selections = TestSelection.objects.filter(
-            patient_id=patient,
-            status='pending'
-        ).order_by('-timestamp')
-        
-        for selection in test_selections:
-            tests.append({
-                'id': selection.id,
-                'test_name': selection.test_name,
-                'category': selection.category,
-                'doctor_name': selection.doctor_name or 'Unknown',
-                'submitted_on': selection.submitted_on.isoformat(),
-                'type': 'test_selection',
-                'test_selection_id': selection.id
-            })
-        
-        return JsonResponse({
-            'tests': tests,
-            'debug': {
-                'patient_id': patient_id,
-                'test_count': len(tests),
-                'test_requests': test_requests.count(),
-                'test_selections': test_selections.count()
-            }
-        })
-        
-    except Patient.DoesNotExist:
-        return JsonResponse({
-            'error': 'Patient not found',
-            'tests': []
-        })
-    except Exception as e:
-        return JsonResponse({
-            'error': str(e),
-            'tests': []
-        })
-
-@csrf_exempt
-@login_required
 def submit_lab_test(request):
-    """Submit lab test results with improved handling"""
     if request.method != "POST":
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+        return redirect('lab_test_entry')
 
     try:
         patient_id = request.POST.get("patient_id")
-        test_id = request.POST.get("test_id")
-        test_type = request.POST.get("test_type", "test_selection")
-        
-        if not patient_id or not test_id:
-            return JsonResponse({
-                'status': 'error', 
-                'message': "Missing patient or test information."
-            })
+        if not patient_id:
+            messages.error(request, "Patient not selected.")
+            return redirect("lab_test_entry")
 
-        patient = get_object_or_404(Patient, id=patient_id)
-        
-        # Get test result data
-        result_value = request.POST.get("result_value", "").strip()
-        normal_range = request.POST.get("normal_range", "").strip()
-        notes = request.POST.get("notes", "").strip()
-        
-        if not result_value:
-            return JsonResponse({
-                'status': 'error',
-                'message': "Result value is required."
-            })
-        
-        lab_test = None
-        test_name = ""
-        test_category = ""
-        
-        if test_type == "test_request":
-            # Handle TestRequest
-            test_request_id, test_type_id = test_id.split('_')[1], test_id.split('_')[2]
-            test_request = get_object_or_404(TestRequest, id=test_request_id)
-            test_type_obj = get_object_or_404(LabTestType, id=test_type_id)
-            
-            test_name = test_type_obj.name
-            test_category = test_type_obj.category or "General"
-            
-            # Create lab test result
+        patient = Patient.objects.filter(id=patient_id).first()
+        if not patient:
+            messages.error(request, "Patient not found.")
+            return redirect("lab_test_entry")
+
+        test_saved = False
+
+        # Optional: create a TestRequest to link lab tests
+        test_request = TestRequest.objects.create(
+            patient=patient,
+            requested_by=request.user,
+        )
+
+        for test_index in range(0, 100):  # Adjust limit if needed
+            prefix = f"tests[{test_index}]"
+            test_type_name = request.POST.get(f"{prefix}[type]")
+            if not test_type_name:
+                continue
+
+            test_type_obj, _ = LabTestType.objects.get_or_create(name=test_type_name)
+
             lab_test = LabTest.objects.create(
                 patient=patient,
+                test_type=test_type_obj,
                 test_request=test_request,
-                test_type=test_name,
-                test_category=test_category,
-                result_value=result_value,
-                normal_range=normal_range or test_type_obj.reference_range,
-                notes=notes,
-                performed_by=request.user,
                 recorded_by=request.user
             )
-            
-            # Update test request status
-            test_request.update_status()
-            
+
+            field_added = False
+            for field_index in range(0, 100):
+                name_key = f"{prefix}[fields][{field_index}][name]"
+                value_key = f"{prefix}[fields][{field_index}][value]"
+
+                field_name = request.POST.get(name_key)
+                field_value = request.POST.get(value_key)
+
+                if field_name:
+                    LabTestField.objects.create(
+                        lab_test=lab_test,
+                        name=field_name,
+                        value=field_value or ""
+                    )
+                    field_added = True
+
+            if not field_added:
+                lab_test.delete()
+            else:
+                test_saved = True
+
+        if test_saved:
+            messages.success(request, "Lab tests saved successfully.")
         else:
-            # Handle TestSelection (legacy)
-            test_selection = get_object_or_404(TestSelection, id=test_id)
-            test_name = test_selection.test_name
-            test_category = test_selection.category
-            
-            # Create lab test result
-            lab_test = LabTest.objects.create(
-                patient=patient,
-                test_selection=test_selection,
-                test_type=test_name,
-                test_category=test_category,
-                result_value=result_value,
-                normal_range=normal_range,
-                notes=notes,
-                performed_by=request.user,
-                recorded_by=request.user
-            )
-            
-            # Mark test selection as completed
-            test_selection.status = 'completed'
-            test_selection.testcompleted = True
-            test_selection.save()
-        
-        return JsonResponse({
-            'status': 'success',
-            'message': f"Test results for {test_name} saved successfully.",
-            'lab_test_id': lab_test.id
-        })
-        
+            test_request.delete()  # Clean up unused request
+            messages.warning(request, "No valid test data submitted.")
+
     except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': f"Error saving test results: {str(e)}"
-        })
+        messages.error(request, f"Error submitting lab test: {str(e)}")
+
+    return redirect('lab_test_entry')
 
 @csrf_exempt
 def patient_search(request):
@@ -1574,185 +1452,43 @@ def chart_view(request):
                'data': [12, 19, 20, 5, 7]}    
     return render(request, 'doctors/chart.html', context)   
 
-
 def requesttest(request):
     categories = TestCategory.objects.prefetch_related('subcategories').all()
-    patients = Patient.objects.all()  # Corrected: get() -> all()
+    patients = Patient.objects.all()
     return render(request, 'doctors/requesttest.html', {
         'categories': categories,
-        'patients': patients  # Include this only if needed in your template
+        'patients': patients
     })
-    
-
-
-
-#Available test views
-from .models import TestCategory
 
 def medical_test_selection(request):
     categories = TestCategory.objects.prefetch_related('subcategories').all()
     return render(request, 'requesttest.html', {'categories': categories})
 
-
-#Submitting selected tests from the doctor
-
-# Only for simplicity; better to use CSRF token in production
-@csrf_exempt
-@login_required
 def submit_test_selection(request):
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+    if request.method == 'POST':
+        try:
+            print("I am connected")
+            data = json.loads(request.body)
+            patient_id = data.get('patient_id')
+            selections = data.get('selections', [])
+            print(type(patient_id))
+            print("patient id ", patient_id)
+            print("data ", selections)
+            if not patient_id or not selections:
+                return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
+            patient_id1 = int(patient_id)
+            type(patient_id1)
+            patient = Patient.objects.get(id=patient_id1)
+            print("patient ", patient)
+            for item in selections:
+                category = item['category']
+                for test in item['tests']:
+                    TestSelection.objects.create(patient_id=patient,category=category, test_name=test)
 
-    try:
-        data = json.loads(request.body)
-        patient_id = data.get('patient_id')
-        selections = data.get('selections', [])
-
-        if not patient_id or not selections:
-            return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
-
-        patient = Patient.objects.get(id=int(patient_id))
-
-        # Create TestRequest entry
-        test_request = TestRequest.objects.create(
-            patient=patient,
-            requested_by=request.user
-        )
-
-        for item in selections:
-            category = item['category']
-            for test_name in item['tests']:
-                # Save TestSelection for traceability and status
-                TestSelection.objects.create(
-                    patient_id=patient,
-                    category=category,
-                    test_name=test_name,
-                    doctor_name=request.user.get_full_name() or request.user.username,
-                    testcompleted=False
-                )
-
-                # Also link this to the TestRequest for lab workflow
-                lab_test_type, _ = LabTestType.objects.get_or_create(name=test_name, category=category)
-                test_request.tests.add(lab_test_type)
-
-        return JsonResponse({'status': 'success', 'message': 'Selections saved and linked to test request.'})
-
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)})
-
-@login_required
-def get_pending_tests(request):
-    patient_id = request.GET.get('patient_id')
-    if not patient_id:
-        return JsonResponse({'tests': [], 'debug': {'error': 'No patient ID provided'}})
+            return JsonResponse({'status': 'success', 'message': 'Selections saved.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
     
-    try:
-        # Get all pending tests for this patient
-        pending_tests = TestSelection.objects.filter(
-            patient_id=patient_id,
-            testcompleted=False
-        )
-        
-        # If no tests found, try with a different field name
-        if not pending_tests.exists():
-            # Try with a different field name if the first attempt fails
-            # This is a fallback in case the model structure is different
-            try:
-                pending_tests = TestSelection.objects.filter(
-                    patient_id_id=patient_id,
-                    testcompleted=False
-                )
-            except:
-                # If that fails too, just keep the empty queryset
-                pass
-        
-        # Convert to list of dictionaries for JSON serialization
-        tests_data = []
-        for test in pending_tests:
-            test_data = {
-                'id': test.id,
-                'test_name': test.test_name,
-                'category': test.category,
-                'doctor_name': test.doctor_name,
-                'submitted_on': test.submitted_on.strftime('%Y-%m-%d') if hasattr(test, 'submitted_on') and test.submitted_on else None
-            }
-            tests_data.append(test_data)
-        
-        # Return the data with debug information
-        return JsonResponse({
-            'tests': tests_data,
-            'debug': {
-                'patient_id': patient_id,
-                'test_count': len(tests_data),
-                'model_fields': [f.name for f in TestSelection._meta.get_fields()]
-            }
-        })
-        
-    except Exception as e:
-        # Return error information
-        return JsonResponse({
-            'tests': [],
-            'error': str(e),
-            'debug': {
-                'patient_id': patient_id,
-                'exception': str(e),
-                'exception_type': type(e).__name__
-            }
-        })
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
-@login_required
-def get_test_requests(request):
-    patient_id = request.GET.get('patient_id')
-    if not patient_id:
-        return JsonResponse({'requests': []})
-    
-    # Get test requests for this patient
-    test_requests = TestRequest.objects.filter(patient_id=patient_id)
-    
-    requests_data = []
-    for tr in test_requests:
-        # Count tests in this request
-        test_count = tr.tests.count()
-        
-        # Get requester name
-        requested_by = tr.requested_by.get_full_name() if tr.requested_by else "Unknown"
-        
-        requests_data.append({
-            'id': tr.id,
-            'requested_at': tr.requested_at.isoformat(),
-            'requested_by': requested_by,
-            'test_count': test_count,
-            'instructions': tr.instructions
-        })
-    
-    return JsonResponse({'requests': requests_data})
 
-@login_required
-def get_tests_in_request(request):
-    request_id = request.GET.get('request_id')
-    if not request_id:
-        return JsonResponse({'tests': []})
-    
-    try:
-        test_request = TestRequest.objects.get(id=request_id)
-    except TestRequest.DoesNotExist:
-        return JsonResponse({'tests': []})
-    
-    tests_data = []
-    
-    # Get all tests in this request
-    for test_type in test_request.tests.all():
-        # Check if this test has been completed
-        completed = LabTest.objects.filter(
-            test_request=test_request,
-            test_type=test_type
-        ).exists()
-        
-        tests_data.append({
-            'id': test_type.id,
-            'name': test_type.name,
-            'category': test_type.category or 'General',
-            'completed': completed
-        })
-    
-    return JsonResponse({'tests': tests_data})

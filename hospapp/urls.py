@@ -34,16 +34,14 @@ urlpatterns = [
     path('d/monitoring/', views.monitoring, name='monitoring'),
     path('requesttest/', views.requesttest, name='requesttest'),
     path('submit-selection/', views.submit_test_selection, name='submit_selection'),
-    path('get-pending-tests/', views.get_pending_tests, name='get_pending_tests'),
     
 
     path('ae/', views.ae, name='ae'),
 
     path('l/home', views.laboratory, name='laboratory'),
-    path('laboratory/test-entry/', views.lab_test_entry, name='lab_test_entry'),
-    path('get-pending-tests/', views.get_pending_tests, name='get_pending_tests'),
-    path('submit-lab-test/', views.submit_lab_test, name='submit_lab_test'),
-    path('patient-search/', views.patient_search, name='patient_search'),
+    path('l/test_entry', views.lab_test_entry, name='lab_test_entry'),
+    path('lab/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
+    # path('patient-search/', views.patient_search, name='patient_search'),
     path('lab-test/submit/', views.submit_lab_test, name='submit_lab_test'),
     path('l/upload_result', views.lab_result_upload, name='lab_result_upload'),
     path('l/internal_logs', views.lab_internal_logs, name='lab_internal_logs'),

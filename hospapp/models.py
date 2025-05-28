@@ -85,8 +85,8 @@ class Appointment(models.Model):
         return f"{self.patient.full_name} - {self.department}"
     
 class Referral(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    patient = models.ForeignKey('Patient', on_delete=models.CASCADE)
+    department = models.ForeignKey('Department', on_delete=models.CASCADE)
     notes = models.TextField()
 
     def __str__(self):
@@ -116,8 +116,6 @@ class Admission(models.Model):
     def __str__(self):
         return f"Admission for {self.patient.full_name} - {self.status}"
 
-
-# Handover logs between staff
 class HandoverLog(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -300,9 +298,6 @@ class LabResultFile(models.Model):
     def __str__(self):
         return f"Result for {self.patient.full_name} uploaded on {self.uploaded_at.date()}"
 
-#The available tests and test subcategories models
-from django.db import models
-
 class TestCategory(models.Model):
     name = models.CharField(max_length=100)
 
@@ -315,7 +310,7 @@ class TestSubcategory(models.Model):
 
     def __str__(self):
         return self.name
-#It end here    
+
 #Doctor tests requested for the lab to do
 class TestSelection(models.Model):
     STATUS_CHOICES = [
@@ -323,20 +318,21 @@ class TestSelection(models.Model):
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
-    
+
     def get_current_time():
+        from datetime import datetime
         return datetime.now().time()
-    
-    submitted_on = models.DateField(default=date.today)
+
+    submitted_on = models.DateField(default=timezone.now)
     time = models.TimeField(default=get_current_time)
-    patient_id = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='test_selections')
+    patient_id = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='test_selections')
     category = models.CharField(max_length=100)
     test_name = models.CharField(max_length=100)
     timestamp = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    testcompleted = models.BooleanField(default=False)  # Keep for backward compatibility
+    testcompleted = models.BooleanField(default=False)
     doctor_name = models.CharField(max_length=100, blank=True)
-    
+
     def __str__(self):
         return f"{self.category} - {self.test_name} ({self.status})"
 
