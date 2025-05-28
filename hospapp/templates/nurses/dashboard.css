@@ -1,0 +1,120 @@
+{% load static %}
+<style >
+:root {
+    --primary-blue: #e3f2fd;
+    --accent-green: #4caf50;
+    --soft-blue: #2196f3;
+    --light-gray: #f8f9fa;
+}
+
+body {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #ffffff 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar {
+    background: linear-gradient(90deg, var(--soft-blue), #1976d2) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    color: white !important;
+}
+
+.function-card {
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    background: white;
+    border-radius: 15px;
+    height: 200px;
+    cursor: pointer;
+}
+
+    .function-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+.card-icon {
+    font-size: 3rem;
+    color: var(--soft-blue);
+    margin-bottom: 1rem;
+}
+
+.card-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.welcome-section {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.clock-display {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--soft-blue);
+}
+
+.patient-tag {
+    margin: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.status-critical {
+    background-color: #dc3545 !important;
+}
+
+.status-stable {
+    background-color: var(--accent-green) !important;
+}
+
+.status-moderate {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.modal-header {
+    background: linear-gradient(90deg, var(--soft-blue), #1976d2);
+    color: white;
+}
+
+.btn-primary {
+    background: var(--soft-blue);
+    border-color: var(--soft-blue);
+}
+
+    .btn-primary:hover {
+        background: #1976d2;
+        border-color: #1976d2;
+    }
+
+.btn-success {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+}
+
+@media (max-width: 768px) {
+    .function-card {
+        height: 160px;
+        margin-bottom: 1rem;
+    }
+
+    .card-icon {
+        font-size: 2.5rem;
+    }
+
+    .welcome-section {
+        padding: 1.5rem;
+    }
+}
+
+</style >
