@@ -169,7 +169,11 @@
                             alt="User Image">
                     </div>
                     <div class="info">
-                        <a href="#" class="d-block">{{ user.username }}</a>
+                        {% if user.is_authenticated %}
+                        <a href="#" class="d-block">{{ user.first_name }}</a>
+                        {% else %}
+                        {% endif %}
+
                     </div>
                 </div>
 

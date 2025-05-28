@@ -40,7 +40,10 @@
                 <div class="welcome-section">
                     <div class="row align-items-center">
                         <div class="col-md-8 align-items-center" ">
-                            <h2 class="mb-2">Welcome back, Sarah!</h2>
+                            {% if user.is_authenticated %}
+                            <h2 class="mb-2">Welcome back, {{user.first_name}}!</h2>
+                            {% else %}
+                            {% endif %}
                             <p class="text-muted mb-3">Ready to provide excellent patient care today.</p>
 
                             <!-- Patient Status Tags -->
