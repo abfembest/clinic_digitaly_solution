@@ -2,6 +2,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
                 <script>
                     // Real-time clock
+
                     function updateClock() {
                         const now = new Date();
                         const timeString = now.toLocaleTimeString('en-GB', {
@@ -43,7 +44,7 @@
                     // Add some interactive feedback
                     document.querySelectorAll('.function-card').forEach(card => {
                         card.addEventListener('mouseenter', function () {
-                            this.style.background = 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)';
+                            this.style.background = 'linear-gradient(135deg, #7CB9E8 40%, #f8f9ff 100%)';
                         });
 
                         card.addEventListener('mouseleave', function () {
