@@ -291,56 +291,6 @@ class Prescription(models.Model):
     def __str__(self):
         return f"{self.medication} for {self.patient.full_name}"
     
-class CarePlan(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    clinical_findings = models.TextField()
-    plan_of_care = models.TextField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
-    
-class LabTestType(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    category = models.CharField(max_length=100, blank=True, null=True)  # e.g., "Hormonal", "Imaging", etc.
-    units = models.CharField(max_length=50, blank=True, null=True)      # e.g., "ng/mL", "%", etc.
-    reference_range = models.CharField(max_length=100, blank=True, null=True)  # optional
-
-    def __str__(self):
-        return self.name
-
-    
-class TestRequest(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    tests = models.ManyToManyField(LabTestType)
-    instructions = models.TextField(blank=True, null=True)
-    requested_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Test Request for {self.patient.full_name} at {self.requested_at.strftime('%Y-%m-%d %H:%M')}"
-    
-    
-class LabTest(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    test_request = models.ForeignKey(TestRequest, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_tests')
-    test_type = models.ForeignKey(LabTestType, on_delete=models.CASCADE)
-    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    date_recorded = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.patient.full_name} - {self.test_type.name} ({self.date_recorded.date()})"
-    
-class LabTestField(models.Model):
-    lab_test = models.ForeignKey(LabTest, on_delete=models.CASCADE, related_name='fields')
-    name = models.CharField(max_length=100)
-    value = models.CharField(max_length=255)
-
-    def __str__(self):
-        return f"{self.name}: {self.value}"
-
-    
 class LabResultFile(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -368,6 +318,12 @@ class TestSubcategory(models.Model):
 #It end here    
 #Doctor tests requested for the lab to do
 class TestSelection(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    
     def get_current_time():
         return datetime.now().time()
     
@@ -377,8 +333,93 @@ class TestSelection(models.Model):
     category = models.CharField(max_length=100)
     test_name = models.CharField(max_length=100)
     timestamp = models.DateTimeField(auto_now_add=True)
-    testcompleted = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    testcompleted = models.BooleanField(default=False)  # Keep for backward compatibility
     doctor_name = models.CharField(max_length=100, blank=True)
     
     def __str__(self):
-        return f"{self.category} - {self.test_name}"    
+        return f"{self.category} - {self.test_name} ({self.status})"
+
+class CarePlan(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    clinical_findings = models.TextField()
+    plan_of_care = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
+    
+class LabTestType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    category = models.CharField(max_length=100, blank=True, null=True)  # e.g., "Hormonal", "Imaging", etc.
+    units = models.CharField(max_length=50, blank=True, null=True)      # e.g., "ng/mL", "%", etc.
+    reference_range = models.CharField(max_length=100, blank=True, null=True)  # optional
+
+    def __str__(self):
+        return self.name
+
+    
+class TestRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    tests = models.ManyToManyField(LabTestType)
+    instructions = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Test Request for {self.patient.full_name} - {self.status}"
+    
+    def update_status(self):
+        """Auto-update status based on test completion"""
+        total_tests = self.tests.count()
+        completed_tests = self.lab_tests.filter(result_value__isnull=False).count()
+        
+        if completed_tests == 0:
+            self.status = 'pending'
+        elif completed_tests < total_tests:
+            self.status = 'in_progress'
+            if not self.started_at:
+                self.started_at = timezone.now()
+        else:
+            self.status = 'completed'
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+        
+        self.save()
+    
+class LabTest(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    test_request = models.ForeignKey(TestRequest, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_tests')
+    test_selection = models.ForeignKey(TestSelection, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_results')
+    test_type = models.CharField(max_length=100)  # This can be the name from TestSelection
+    test_category = models.CharField(max_length=100)  # This can be the category from TestSelection
+    result_value = models.TextField()  # The actual test result
+    normal_range = models.CharField(max_length=100, blank=True, null=True)  # Reference range
+    notes = models.TextField(blank=True, null=True)  # Additional notes
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performed_tests')
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recorded_tests')
+    date_performed = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.test_type} ({self.date_performed.date()})"
+    
+class LabTestField(models.Model):
+    lab_test = models.ForeignKey(LabTest, on_delete=models.CASCADE, related_name='fields')
+    name = models.CharField(max_length=100)
+    value = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.name}: {self.value}"
+
+    

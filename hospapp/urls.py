@@ -43,7 +43,6 @@ urlpatterns = [
     path('laboratory/test-entry/', views.lab_test_entry, name='lab_test_entry'),
     path('get-pending-tests/', views.get_pending_tests, name='get_pending_tests'),
     path('submit-lab-test/', views.submit_lab_test, name='submit_lab_test'),
-    path('get-test-subcategories/', views.get_test_subcategories, name='get_test_subcategories'),
     path('patient-search/', views.patient_search, name='patient_search'),
     path('lab-test/submit/', views.submit_lab_test, name='submit_lab_test'),
     path('l/upload_result', views.lab_result_upload, name='lab_result_upload'),

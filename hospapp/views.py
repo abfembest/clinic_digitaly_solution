@@ -17,6 +17,8 @@ import json
 from datetime import datetime, date
 from django.utils.timezone import localdate
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
+from django.db.models import Q, Count, Prefetch
 
 
 # Create your views here.
@@ -658,79 +660,96 @@ def laboratory(request):
 
 @login_required(login_url='home')
 def lab_test_entry(request):
-    # Get all patients who have been referred to the lab department
-    referrals = []
+    """Enhanced lab test entry view with better data fetching"""
     
-    # Try to find the lab department by different possible names
+    # Get lab departments
     lab_departments = Department.objects.filter(
-        name__icontains='lab'
+        Q(name__icontains='lab') | Q(name__icontains='laboratory')
     )
     
-    if lab_departments.exists():
-        # Get referrals for any lab department - only select_related 'patient' and 'department'
-        # Removed created_by from select_related since it doesn't exist
-        referrals = Referral.objects.filter(
-            department__in=lab_departments
-        ).select_related('patient', 'department')
-        
-        # Add pending_tests count to each referral
-        for referral in referrals:
-            referral.pending_tests = TestSelection.objects.filter(
-                patient_id=referral.patient.id,
-                testcompleted=False
-            ).count()
-        
-        # If no referrals found, try getting all patients with pending tests
-        if not referrals.exists():
-            patients_with_tests = Patient.objects.filter(
-                id__in=TestSelection.objects.filter(testcompleted=False).values_list('patient_id', flat=True)
-            ).distinct()
-            
-            # Create synthetic referrals for these patients
-            for patient in patients_with_tests:
-                pending_tests = TestSelection.objects.filter(
-                    patient_id=patient.id,
-                    testcompleted=False
-                ).count()
-                
-                if pending_tests > 0:
-                    referral = type('obj', (object,), {
-                        'patient': patient,
-                        'created_at': timezone.now(),
-                        'referred_by': "System",
-                        'pending_tests': pending_tests
-                    })
-                    referrals.append(referral)
-    else:
-        # If no lab department exists, get all patients with pending tests
-        patients_with_tests = Patient.objects.filter(
-            id__in=TestSelection.objects.filter(testcompleted=False).values_list('patient_id', flat=True)
-        ).distinct()
-        
-        # Create synthetic referrals for these patients
-        for patient in patients_with_tests:
-            pending_tests = TestSelection.objects.filter(
-                patient_id=patient.id,
-                testcompleted=False
-            ).count()
-            
-            if pending_tests > 0:
-                referral = type('obj', (object,), {
-                    'patient': patient,
-                    'created_at': timezone.now(),
-                    'referred_by': "System",
-                    'pending_tests': pending_tests
-                })
-                referrals.append(referral)
+    # Get patients with pending tests - multiple approaches
+    referrals = []
     
-    # Add debug information
+    # Method 1: Get from Referrals to lab departments
+    if lab_departments.exists():
+        db_referrals = Referral.objects.filter(
+            department__in=lab_departments
+        ).select_related('patient', 'department').annotate(
+            pending_test_count=Count(
+                'patient__test_selections',
+                filter=Q(patient__test_selections__status='pending')
+            )
+        ).filter(pending_test_count__gt=0)
+        
+        for referral in db_referrals:
+            referrals.append({
+                'patient': referral.patient,
+                'department': referral.department,
+                'created_at': getattr(referral, 'created_at', timezone.now()),
+                'referred_by': getattr(referral, 'referred_by', 'Unknown'),
+                'pending_tests': referral.pending_test_count,
+                'type': 'referral'
+            })
+    
+    # Method 2: Get from TestRequest
+    test_requests = TestRequest.objects.filter(
+        Q(status='pending') | Q(status='in_progress')
+    ).select_related('patient', 'requested_by').prefetch_related('tests')
+    
+    for test_request in test_requests:
+        # Check if this patient is already in referrals
+        existing = next((r for r in referrals if r['patient'].id == test_request.patient.id), None)
+        if not existing:
+            pending_count = test_request.tests.count() - test_request.lab_tests.filter(
+                result_value__isnull=False
+            ).count()
+            
+            if pending_count > 0:
+                referrals.append({
+                    'patient': test_request.patient,
+                    'department': None,
+                    'created_at': test_request.requested_at,
+                    'referred_by': test_request.requested_by.get_full_name() if test_request.requested_by else 'Unknown',
+                    'pending_tests': pending_count,
+                    'type': 'test_request'
+                })
+    
+    # Method 3: Get from TestSelection (legacy support)
+    test_selections = TestSelection.objects.filter(
+        Q(status='pending') | Q(testcompleted=False)
+    ).select_related('patient_id').values(
+        'patient_id__id', 'patient_id__full_name'
+    ).annotate(
+        pending_count=Count('id')
+    )
+    
+    for selection in test_selections:
+        # Check if this patient is already in referrals
+        existing = next((r for r in referrals if r['patient'].id == selection['patient_id__id']), None)
+        if not existing:
+            try:
+                patient = Patient.objects.get(id=selection['patient_id__id'])
+                referrals.append({
+                    'patient': patient,
+                    'department': None,
+                    'created_at': timezone.now(),
+                    'referred_by': 'System',
+                    'pending_tests': selection['pending_count'],
+                    'type': 'test_selection'
+                })
+            except Patient.DoesNotExist:
+                continue
+    
+    # Sort referrals by creation date (newest first)
+    referrals.sort(key=lambda x: x['created_at'], reverse=True)
+    
+    # Debug information
     debug_info = {
         'lab_departments': list(lab_departments.values_list('name', flat=True)),
-        'referral_count': len(referrals) if isinstance(referrals, list) else referrals.count(),
-        'test_selections': TestSelection.objects.filter(testcompleted=False).count(),
-        'patients_with_tests': Patient.objects.filter(
-            id__in=TestSelection.objects.filter(testcompleted=False).values_list('patient_id', flat=True)
-        ).count()
+        'referral_count': len(referrals),
+        'test_requests_pending': TestRequest.objects.filter(status__in=['pending', 'in_progress']).count(),
+        'test_selections_pending': TestSelection.objects.filter(Q(status='pending') | Q(testcompleted=False)).count(),
+        'methods_used': ['referrals', 'test_requests', 'test_selections']
     }
     
     return render(request, 'laboratory/test_entry.html', {
@@ -739,53 +758,173 @@ def lab_test_entry(request):
     })
 
 @csrf_exempt
-def get_test_subcategories(request):
-    category_id = request.GET.get("category_id")
-    subcategories = TestSubcategory.objects.filter(category_id=category_id).values("id", "name")
-    return JsonResponse({"subcategories": list(subcategories)})
+@login_required
+def get_pending_tests(request):
+    """Get pending tests for a specific patient"""
+    patient_id = request.GET.get('patient_id')
+    
+    if not patient_id:
+        return JsonResponse({
+            'error': 'Patient ID is required',
+            'tests': []
+        })
+    
+    try:
+        patient = Patient.objects.get(id=patient_id)
+        tests = []
+        
+        # Get tests from TestRequest
+        test_requests = TestRequest.objects.filter(
+            patient=patient,
+            status__in=['pending', 'in_progress']
+        ).prefetch_related('tests', 'lab_tests')
+        
+        for test_request in test_requests:
+            for test_type in test_request.tests.all():
+                # Check if this test already has results
+                existing_result = test_request.lab_tests.filter(
+                    test_type=test_type.name
+                ).first()
+                
+                if not existing_result:
+                    tests.append({
+                        'id': f"tr_{test_request.id}_{test_type.id}",
+                        'test_name': test_type.name,
+                        'category': test_type.category or 'General',
+                        'doctor_name': test_request.requested_by.get_full_name() if test_request.requested_by else 'Unknown',
+                        'submitted_on': test_request.requested_at.date().isoformat(),
+                        'type': 'test_request',
+                        'test_request_id': test_request.id,
+                        'test_type_id': test_type.id,
+                        'instructions': test_request.instructions
+                    })
+        
+        # Get tests from TestSelection (legacy)
+        test_selections = TestSelection.objects.filter(
+            patient_id=patient,
+            status='pending'
+        ).order_by('-timestamp')
+        
+        for selection in test_selections:
+            tests.append({
+                'id': selection.id,
+                'test_name': selection.test_name,
+                'category': selection.category,
+                'doctor_name': selection.doctor_name or 'Unknown',
+                'submitted_on': selection.submitted_on.isoformat(),
+                'type': 'test_selection',
+                'test_selection_id': selection.id
+            })
+        
+        return JsonResponse({
+            'tests': tests,
+            'debug': {
+                'patient_id': patient_id,
+                'test_count': len(tests),
+                'test_requests': test_requests.count(),
+                'test_selections': test_selections.count()
+            }
+        })
+        
+    except Patient.DoesNotExist:
+        return JsonResponse({
+            'error': 'Patient not found',
+            'tests': []
+        })
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'tests': []
+        })
 
 @csrf_exempt
 @login_required
 def submit_lab_test(request):
+    """Submit lab test results with improved handling"""
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
     try:
         patient_id = request.POST.get("patient_id")
-        test_selection_id = request.POST.get("test_selection_id")
+        test_id = request.POST.get("test_id")
+        test_type = request.POST.get("test_type", "test_selection")
         
-        if not patient_id or not test_selection_id:
+        if not patient_id or not test_id:
             return JsonResponse({
                 'status': 'error', 
                 'message': "Missing patient or test information."
             })
 
         patient = get_object_or_404(Patient, id=patient_id)
-        test_selection = get_object_or_404(TestSelection, id=test_selection_id)
         
-        # Create lab test result
-        result_value = request.POST.get("result_value")
-        normal_range = request.POST.get("normal_range")
-        notes = request.POST.get("notes")
+        # Get test result data
+        result_value = request.POST.get("result_value", "").strip()
+        normal_range = request.POST.get("normal_range", "").strip()
+        notes = request.POST.get("notes", "").strip()
         
-        # Create the lab test result
-        lab_test = LabTest.objects.create(
-            patient=patient,
-            test_type=test_selection.test_name,
-            test_category=test_selection.category,
-            result_value=result_value,
-            normal_range=normal_range,
-            notes=notes,
-            performed_by=request.user
-        )
+        if not result_value:
+            return JsonResponse({
+                'status': 'error',
+                'message': "Result value is required."
+            })
         
-        # Mark the test selection as completed
-        test_selection.testcompleted = True
-        test_selection.save()
+        lab_test = None
+        test_name = ""
+        test_category = ""
+        
+        if test_type == "test_request":
+            # Handle TestRequest
+            test_request_id, test_type_id = test_id.split('_')[1], test_id.split('_')[2]
+            test_request = get_object_or_404(TestRequest, id=test_request_id)
+            test_type_obj = get_object_or_404(LabTestType, id=test_type_id)
+            
+            test_name = test_type_obj.name
+            test_category = test_type_obj.category or "General"
+            
+            # Create lab test result
+            lab_test = LabTest.objects.create(
+                patient=patient,
+                test_request=test_request,
+                test_type=test_name,
+                test_category=test_category,
+                result_value=result_value,
+                normal_range=normal_range or test_type_obj.reference_range,
+                notes=notes,
+                performed_by=request.user,
+                recorded_by=request.user
+            )
+            
+            # Update test request status
+            test_request.update_status()
+            
+        else:
+            # Handle TestSelection (legacy)
+            test_selection = get_object_or_404(TestSelection, id=test_id)
+            test_name = test_selection.test_name
+            test_category = test_selection.category
+            
+            # Create lab test result
+            lab_test = LabTest.objects.create(
+                patient=patient,
+                test_selection=test_selection,
+                test_type=test_name,
+                test_category=test_category,
+                result_value=result_value,
+                normal_range=normal_range,
+                notes=notes,
+                performed_by=request.user,
+                recorded_by=request.user
+            )
+            
+            # Mark test selection as completed
+            test_selection.status = 'completed'
+            test_selection.testcompleted = True
+            test_selection.save()
         
         return JsonResponse({
             'status': 'success',
-            'message': f"Test results for {test_selection.test_name} saved successfully."
+            'message': f"Test results for {test_name} saved successfully.",
+            'lab_test_id': lab_test.id
         })
         
     except Exception as e:
