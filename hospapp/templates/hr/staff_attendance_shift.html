@@ -49,12 +49,6 @@
                     {% endfor %}
                   </select>
                 </div>
-
-                {% comment %} <div class="form-group col-md-3">
-                  <label for="attendance_date">Date</label>
-                  <input id="attendance_date" type="date" class="form-control" name="date"
-                    value="{{ request.POST.date }}">
-                </div> {% endcomment %}
                 <div class="form-group col-md-3">
                   <label for="attendance_status">Status</label>
                   <select id="attendance_status" class="form-control" name="status">
@@ -86,7 +80,7 @@
                 {% if attendance_records %}
                   {% for record in attendance_records %}
                     <tr data-date="{{ record.date|date:'Y-m-d' }}">
-                      <td>{{ record.staff.get_full_name }}</td>
+                      <td>{{ record.staff.get_full_name }} ({{ record.staff.profile.role|title }})</td>
                       <td>{{ record.date|date:"Y-m-d" }}</td>
                       <td>{{ record.status }}</td>
                     </tr>
@@ -135,6 +129,12 @@
               <button type="submit" name="assign_shift" class="btn btn-info">Assign Shift</button>
             </form>
 
+            <!-- Date Filter Input for shifts -->
+            <div class="form-group col-md-3 mb-3">
+              <label for="filter_shift_date">Filter by Date</label>
+              <input id="filter_shift_date" type="date" class="form-control" />
+            </div>
+
             <!-- Shift Records Table -->
             <table class="table table-bordered table-striped">
               <thead>
@@ -144,10 +144,10 @@
                   <th>Shift</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="shift_tbody">
                 {% if shift_records %}
                   {% for shift in shift_records %}
-                    <tr>
+                    <tr data-date="{{ shift.date|date:'Y-m-d' }}">
                       <td>{{ shift.staff.get_full_name }}</td>
                       <td>{{ shift.date|date:"Y-m-d" }}</td>
                       <td>{{ shift.shift.name }}</td>
@@ -167,26 +167,36 @@
   </div>
 </section>
 
-<!-- JS for filtering attendance table rows by date -->
+<!-- JS for filtering attendance and shifts table rows by date -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    // Attendance date filter
     const filterDateInput = document.getElementById('filter_date');
-    const tbody = document.getElementById('attendance_tbody');
-    if (!filterDateInput || !tbody) return;
-
-    filterDateInput.addEventListener('input', () => {
-      const filterDate = filterDateInput.value; // "YYYY-MM-DD"
-      const rows = tbody.querySelectorAll('tr[data-date]');
-
-      rows.forEach(row => {
-        const rowDate = row.getAttribute('data-date');
-        if (!filterDate || rowDate === filterDate) {
-          row.style.display = '';  // show row
-        } else {
-          row.style.display = 'none'; // hide row
-        }
+    const attendanceTbody = document.getElementById('attendance_tbody');
+    if (filterDateInput && attendanceTbody) {
+      filterDateInput.addEventListener('input', () => {
+        const filterDate = filterDateInput.value; // "YYYY-MM-DD"
+        const rows = attendanceTbody.querySelectorAll('tr[data-date]');
+        rows.forEach(row => {
+          const rowDate = row.getAttribute('data-date');
+          row.style.display = (!filterDate || rowDate === filterDate) ? '' : 'none';
+        });
       });
-    });
+    }
+
+    // Shift date filter
+    const filterShiftDateInput = document.getElementById('filter_shift_date');
+    const shiftTbody = document.getElementById('shift_tbody');
+    if (filterShiftDateInput && shiftTbody) {
+      filterShiftDateInput.addEventListener('input', () => {
+        const filterDate = filterShiftDateInput.value; // "YYYY-MM-DD"
+        const rows = shiftTbody.querySelectorAll('tr[data-date]');
+        rows.forEach(row => {
+          const rowDate = row.getAttribute('data-date');
+          row.style.display = (!filterDate || rowDate === filterDate) ? '' : 'none';
+        });
+      });
+    }
   });
 </script>
 
