@@ -517,6 +517,7 @@ Mike Johnson, 8000, transfer, REF456, Surgery payment"></textarea>
                             <table class="table table-bordered">
                                 <thead class="thead-light">
                                     <tr>
+                                        <th>S/N</th>
                                         <th>Date</th>
                                         <th>Patient</th>
                                         <th>Amount</th>
@@ -529,6 +530,7 @@ Mike Johnson, 8000, transfer, REF456, Surgery payment"></textarea>
                                 <tbody>
                                     {% for payment in recent_payments %}
                                     <tr>
+                                        <td>{{payment.id}}</td>
                                         <td>{{ payment.payment_date|date:"M d, Y H:i" }}</td>
                                         <td>{{ payment.patient.full_name }}</td>
                                         <td class="text-right">₦{{ payment.amount|floatformat:2 }}</td>

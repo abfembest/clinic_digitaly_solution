@@ -91,53 +91,70 @@ def handle_traditional_bulk_payment(request):
         payments_data = []
         successful_count = 0
         errors = []
-        
-        # Extract payment data from form
+
         form_data = request.POST
         payment_indices = set()
-        
-        # Find all payment indices
+
+        # Detect all indexed payment entries
         for key in form_data.keys():
             if key.startswith('payments[') and '][' in key:
                 index = key.split('[')[1].split(']')[0]
                 payment_indices.add(int(index))
-        
-        # Process each payment
+
+        # Extract and process each entry
         for index in sorted(payment_indices):
             try:
-                payment_data = extract_payment_data(form_data, index)
-                if payment_data:
-                    payments_data.append(payment_data)
+                patient_id = form_data.get(f'payments[{index}][patient_id]')
+                patient_name = form_data.get(f'payments[{index}][patient_name]')
+                amount = form_data.get(f'payments[{index}][amount]')
+                method = form_data.get(f'payments[{index}][method]', 'cash').lower()
+                reference = form_data.get(f'payments[{index}][reference]', '')
+                notes = form_data.get(f'payments[{index}][notes]', '')
+
+                if not patient_id or not amount:
+                    raise ValueError("Missing patient or amount.")
+
+                patient = Patient.objects.get(id=patient_id)
+                amount = Decimal(amount)
+                if amount <= 0:
+                    raise ValueError("Amount must be greater than zero.")
+
+                # Save payment (no bill required)
+                Payment.objects.create(
+                    bill=None,
+                    patient=patient,
+                    amount=amount,
+                    payment_method=method,
+                    payment_reference=reference,
+                    status='completed',
+                    processed_by=request.user,
+                    notes=notes
+                )
+
+                successful_count += 1
+
+            except Patient.DoesNotExist:
+                errors.append(f"Row {index + 1}: Patient not found.")
             except Exception as e:
                 errors.append(f"Row {index + 1}: {str(e)}")
-        
-        # Save valid payments
-        for payment_data in payments_data:
-            try:
-                payment = create_payment_record(payment_data, request.user)
-                if payment:
-                    successful_count += 1
-            except Exception as e:
-                errors.append(f"Failed to save payment for {payment_data.get('patient_name', 'Unknown')}: {str(e)}")
-        
+
         if successful_count > 0:
             messages.success(request, f"Successfully recorded {successful_count} payment(s).")
-        
+
         if errors:
             messages.warning(request, f"Some payments failed: {'; '.join(errors[:3])}")
-        
+
         return JsonResponse({
             'success': True,
             'count': successful_count,
             'errors': errors
         })
-        
+
     except Exception as e:
         return JsonResponse({
             'success': False,
             'error': str(e)
         })
-
 
 @transaction.atomic
 def handle_smart_bulk_payment(request):
