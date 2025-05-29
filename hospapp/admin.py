@@ -4,7 +4,7 @@ from .models import (
     EmergencyAlert, HandoverLog, LabResultFile, LabTest, LabTestType,
     MedicalRecord, NursingNote, Patient, Prescription, Profile,
     Referral, Shift, Attendance, ShiftAssignment, TestRequest, TestSelection, Vitals, Ward, LabTestField,TestCategory,
-    TestSubcategory
+    TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload
 )
 
 admin.site.register(Admission)
@@ -34,3 +34,11 @@ admin.site.register(LabTestField)
 admin.site.register(TestCategory)
 admin.site.register(TestSubcategory)
 admin.site.register(TestSelection)
+admin.site.register(StaffTransition)
+admin.site.register(Payment)
+admin.site.register(PatientBill)
+admin.site.register(ServiceType)
+admin.site.register(ExpenseCategory)
+admin.site.register(Expense)
+admin.site.register(Budget)
+admin.site.register(PaymentUpload)

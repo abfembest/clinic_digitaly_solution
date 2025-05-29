@@ -193,6 +193,7 @@ ROLE_CHOICES = [
     ('admin', 'Administrator'),
     ('pharmacy', 'Pharmacy'),
     ('hr', 'HR'),
+    ('account', 'Account')
 ]
 
 class Profile(models.Model):
@@ -419,5 +420,187 @@ class LabTestField(models.Model):
 
     def __str__(self):
         return f"{self.name}: {self.value}"
+    
+
+# Add these models to your existing models.py file
+
+from decimal import Decimal
+from django.core.validators import MinValueValidator
+
+# Financial Models for Accounts Module
+
+class ServiceType(models.Model):
+    """Types of services offered by the hospital"""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    default_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.name
+
+class PatientBill(models.Model):
+    """Main billing record for patients"""
+    BILL_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('partial', 'Partially Paid'),
+        ('paid', 'Fully Paid'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='bills')
+    bill_number = models.CharField(max_length=20, unique=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    final_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=BILL_STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.bill_number:
+            # Generate unique bill number
+            from datetime import date
+            today = date.today()
+            count = PatientBill.objects.filter(created_at__date=today).count() + 1
+            self.bill_number = f"BILL-{today.strftime('%Y%m%d')}-{count:04d}"
+        
+        self.final_amount = self.total_amount - self.discount_amount
+        super().save(*args, **kwargs)
+    
+    def amount_paid(self):
+        return self.payments.filter(status='completed').aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0.00')
+    
+    def outstanding_amount(self):
+        return self.final_amount - self.amount_paid()
+    
+    def __str__(self):
+        return f"{self.bill_number} - {self.patient.full_name}"
+
+class BillItem(models.Model):
+    """Individual items/services in a bill"""
+    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='items')
+    service_type = models.ForeignKey(ServiceType, on_delete=models.CASCADE)
+    description = models.CharField(max_length=200)
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def save(self, *args, **kwargs):
+        self.total_price = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.description} - ₦{self.total_price}"
+
+class Payment(models.Model):
+    """Payment records"""
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('pos', 'POS'),
+        ('transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+        ('online', 'Online Payment'),
+    ]
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='payments', null=True, blank=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    payment_reference = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='completed')
+    payment_date = models.DateTimeField(auto_now_add=True)
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Payment ₦{self.amount} - {self.patient.full_name}"
+
+class ExpenseCategory(models.Model):
+    """Categories for hospital expenses"""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.name
+
+class Expense(models.Model):
+    """Hospital expenses/expenditure"""
+    EXPENSE_STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('paid', 'Paid'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    category = models.ForeignKey(ExpenseCategory, on_delete=models.CASCADE)
+    description = models.CharField(max_length=200)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    expense_date = models.DateField()
+    status = models.CharField(max_length=20, choices=EXPENSE_STATUS_CHOICES, default='pending')
+    receipt_number = models.CharField(max_length=50, blank=True, null=True)
+    vendor = models.CharField(max_length=100, blank=True, null=True)
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_expenses')
+    created_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.description} - ₦{self.amount}"
+
+class Budget(models.Model):
+    """Budget planning"""
+    category = models.ForeignKey(ExpenseCategory, on_delete=models.CASCADE)
+    year = models.PositiveIntegerField()
+    month = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], null=True, blank=True)
+    allocated_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    spent_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('category', 'year', 'month')
+    
+    def remaining_amount(self):
+        return self.allocated_amount - self.spent_amount
+    
+    def percentage_used(self):
+        if self.allocated_amount > 0:
+            return (self.spent_amount / self.allocated_amount) * 100
+        return 0
+    
+    def __str__(self):
+        period = f"{self.year}" if not self.month else f"{self.month}/{self.year}"
+        return f"{self.category.name} Budget - {period}"
+
+class PaymentUpload(models.Model):
+    """Track bulk payment uploads"""
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    file_name = models.CharField(max_length=255)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    total_records = models.PositiveIntegerField(default=0)
+    successful_records = models.PositiveIntegerField(default=0)
+    failed_records = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=[
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ], default='processing')
+    error_log = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Upload: {self.file_name} - {self.status}"
 
     

@@ -18,6 +18,8 @@
     <link href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
     <!-- Google Font: Source Sans Pro -->
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+    {% block extra_css %}
+    {% endblock %}
 </head>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -234,6 +236,32 @@
             {% endblock %}
         </div>
 
+        <div aria-live="polite" aria-atomic="true" style="position: fixed; top: 1rem; right: 1rem; z-index: 1080;">
+            <div id="toast-container">
+                {% if messages %}
+                {% for message in messages %}
+                    <div class="toast bg-{{ message.tags|default:"info" }} text-white mb-3" role="alert" data-delay="4000" data-autohide="true">
+                    <div class="toast-header bg-{{ message.tags|default:"info" }} text-white border-0">
+                        <i class="mr-2 fas fa-{{ 
+                        "check-circle" if message.tags == "success" 
+                        else "exclamation-triangle" if message.tags == "warning" 
+                        else "times-circle" if message.tags == "error" 
+                        else "info-circle"
+                        }}"></i>
+                        <strong class="mr-auto text-capitalize">{{ message.tags }}</strong>
+                        <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="toast-body">
+                        {{ message }}
+                    </div>
+                    </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
 
         <footer class="main-footer">
             <div class="float-right d-none d-sm-block">
@@ -259,6 +287,14 @@
     <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
     <!-- AdminLTE for demo purposes -->
     <script src="{% static 'dist/js/demo.js' %}"></script>
+    <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+    <script>
+        $(document).ready(function () {
+            $('.toast').toast('show');
+        });
+    </script>
+    {% block extra_js %}
+    {% endblock %}
 </body>
 
 </html>

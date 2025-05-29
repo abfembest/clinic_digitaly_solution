@@ -28,6 +28,7 @@ ROLE_DASHBOARD_PATHS = {
     'admin': 'ad/home',
     'hr': 'hr/home',
     'receptionist': 'r/home',
+    'account' : 'a/home'
 }
 
 def home(request):
