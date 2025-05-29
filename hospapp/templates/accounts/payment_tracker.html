@@ -2,110 +2,1311 @@
 
 {% block title %}HMS | Patient Payment Tracker{% endblock %}
 
+{% block extra_css %}
+<style>
+    .payment-row {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        padding: 15px;
+    }
+    .payment-row.has-error {
+        border-color: #dc3545;
+        background: #f8d7da;
+    }
+    .remove-row {
+        background: #dc3545;
+        border: none;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .add-row {
+        background: #28a745;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .bulk-actions {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .upload-zone {
+        border: 2px dashed #007bff;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s;
+    }
+    .upload-zone:hover {
+        background: #e9ecef;
+        border-color: #0056b3;
+    }
+    .upload-zone.dragover {
+        background: #cce5ff;
+        border-color: #0056b3;
+    }
+    .progress-container {
+        display: none;
+        margin-top: 15px;
+    }
+    .patient-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    .patient-suggestion {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    .patient-suggestion:hover {
+        background: #f8f9fa;
+    }
+    .patient-suggestion.selected {
+        background: #007bff;
+        color: white;
+    }
+    .form-group {
+        position: relative;
+    }
+    
+    /* New styles for bulk text input */
+    .bulk-text-area {
+        min-height: 300px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.4;
+        resize: vertical;
+    }
+    .format-guide {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .preview-table {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+    }
+    .preview-row.valid {
+        background: #d4edda;
+    }
+    .preview-row.invalid {
+        background: #f8d7da;
+    }
+    .error-message {
+        color: #dc3545;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .tab-content {
+        min-height: 500px;
+    }
+    .smart-input-container {
+        position: relative;
+    }
+    .input-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 5px 5px;
+        max-height: 150px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    .suggestion-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        font-size: 12px;
+    }
+    .suggestion-item:hover {
+        background: #f8f9fa;
+    }
+    .quick-buttons {
+        margin: 10px 0;
+    }
+    .quick-btn {
+        margin: 2px;
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 15px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<!-- Content Header (Page header) -->
+<!-- Content Header -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Financial Summary (P)</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+                <h1 class="m-0 text-dark">Patient Payment Tracker</h1>
+            </div>
+        </div>
+    </div>
 </div>
-<!-- /.content-header -->
 
 <section class="content">
     <div class="container-fluid">
-      <div class="card card-outline card-success">
-        <div class="card-header">
-          <h3 class="card-title">Patient Financial Summary</h3>
-        </div>
-        <div class="card-body">
-          <!-- Tabs -->
-          <ul class="nav nav-pills mb-3" id="accountTabs">
-            <li class="nav-item">
-              <a class="nav-link active" data-toggle="tab" href="#record">Record Payment</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" data-toggle="tab" href="#balance">View Balance</a>
-            </li>
-          </ul>
-  
-          <div class="tab-content">
-            <!-- Record Payment -->
-            <div class="tab-pane fade show active" id="record">
-              <form method="post">
-                {% csrf_token %}
-                <div class="form-row">
-                  <div class="form-group col-md-4">
-                    <label>Patient</label>
-                    <input type="text" name="patient_name" class="form-control" placeholder="Search or enter name" required>
-                  </div>
-                  <div class="form-group col-md-4">
-                    <label>Amount Paid</label>
-                    <input type="number" name="amount" class="form-control" required>
-                  </div>
-                  <div class="form-group col-md-4">
-                    <label>Payment Method</label>
-                    <select class="form-control" name="method">
-                      <option>Cash</option>
-                      <option>POS</option>
-                      <option>Transfer</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Note</label>
-                  <textarea name="note" class="form-control" rows="2"></textarea>
-                </div>
-                <button class="btn btn-success">Record Payment</button>
-              </form>
+        <div class="card card-outline card-success">
+            <div class="card-header">
+                <h3 class="card-title">Patient Financial Management</h3>
             </div>
-  
-            <!-- Balance View -->
-            <div class="tab-pane fade" id="balance">
-              <div class="table-responsive">
-                <table class="table table-bordered mt-3">
-                  <thead class="thead-light">
-                    <tr>
-                      <th>Patient</th>
-                      <th>Total Paid</th>
-                      <th>Total Billed</th>
-                      <th>Outstanding</th>
-                      <th>Refunds</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for record in balance_list %}
-                    <tr>
-                      <td>{{ record.patient.full_name }}</td>
-                      <td>₦{{ record.total_paid }}</td>
-                      <td>₦{{ record.total_billed }}</td>
-                      <td>₦{{ record.outstanding }}</td>
-                      <td>₦{{ record.refunds }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                      <td colspan="5" class="text-center text-muted">No records found.</td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-  
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+            <div class="card-body">
+                <!-- Tabs -->
+                <ul class="nav nav-pills mb-3" id="accountTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#smart-bulk">🚀 Smart Bulk Entry</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#traditional">Traditional Entry</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#upload">Excel Upload</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#balance">Patient Balances</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#recent">Recent Payments</a>
+                    </li>
+                </ul>
 
+                <div class="tab-content">
+                    <!-- Smart Bulk Entry -->
+                    <div class="tab-pane fade show active" id="smart-bulk">
+                        <div class="stats-card">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <h4 id="entries-count">0</h4>
+                                    <small>Entries</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h4 id="valid-count">0</h4>
+                                    <small>Valid</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h4 id="invalid-count">0</h4>
+                                    <small>Invalid</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <h4 id="total-amount-smart">₦0.00</h4>
+                                    <small>Total Amount</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="format-guide">
+                                    <h5><i class="fas fa-info-circle"></i> How to Use Smart Bulk Entry</h5>
+                                    <p><strong>Simply type one payment per line in any of these formats:</strong></p>
+                                    <div class="mb-2">
+                                        <code>John Doe, 5000</code> <small class="text-muted">(Name, Amount)</small><br>
+                                        <code>Jane Smith, 15000, pos</code> <small class="text-muted">(Name, Amount, Method)</small><br>
+                                        <code>Mike Johnson, 8000, transfer, REF123</code> <small class="text-muted">(Name, Amount, Method, Reference)</small><br>
+                                        <code>Sarah Connor, 12000, cash, REF456, Surgery payment</code> <small class="text-muted">(Full format)</small>
+                                    </div>
+                                    <p class="mb-0"><strong>Payment Methods:</strong> cash, pos, transfer, cheque, online</p>
+                                </div>
+
+                                <div class="smart-input-container">
+                                    <label><strong>Enter Payment Data:</strong></label>
+                                    <div class="quick-buttons">
+                                        <button type="button" class="btn btn-outline-secondary quick-btn" onclick="insertSample()">📝 Insert Sample</button>
+                                        <button type="button" class="btn btn-outline-info quick-btn" onclick="clearTextArea()">🗑️ Clear</button>
+                                        <button type="button" class="btn btn-outline-success quick-btn" onclick="parseAndPreview()">🔍 Preview</button>
+                                    </div>
+                                    <textarea id="bulk-text-input" class="form-control bulk-text-area" 
+                                            placeholder="Start typing payments here... 
+Example:
+John Doe, 5000, cash
+Jane Smith, 15000, pos, REF123
+Mike Johnson, 8000, transfer, REF456, Surgery payment"></textarea>
+                                    <div class="input-suggestions" id="input-suggestions"></div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary btn-lg" onclick="parseAndPreview()">
+                                        <i class="fas fa-eye"></i> Preview Payments
+                                    </button>
+                                    <button type="button" class="btn btn-success btn-lg" onclick="submitSmartBulkPayments()" id="submit-smart-btn" disabled>
+                                        <i class="fas fa-save"></i> Save All Payments
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <h5>Live Preview</h5>
+                                <div class="preview-table">
+                                    <table class="table table-sm mb-0" id="preview-table">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Patient</th>
+                                                <th>Amount</th>
+                                                <th>Method</th>
+                                                <th>Reference</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="preview-body">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">
+                                                    <i class="fas fa-arrow-left"></i> Start typing to see preview
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Traditional Bulk Payment Entry -->
+                    <div class="tab-pane fade" id="traditional">
+                        <div class="bulk-actions">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="button" class="add-row" onclick="addPaymentRow()">
+                                        <i class="fas fa-plus"></i> Add Payment Row
+                                    </button>
+                                    <button type="button" class="btn btn-info" onclick="clearAllRows()">
+                                        <i class="fas fa-eraser"></i> Clear All
+                                    </button>
+                                </div>
+                                <div class="col-md-6 text-right">
+                                    <span class="badge badge-primary" id="row-counter">Rows: 1</span>
+                                    <span class="badge badge-success" id="total-amount">Total: ₦0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form method="post" id="bulk-payment-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="bulk_payment">
+                            
+                            <div id="payment-rows-container">
+                                <!-- Initial payment row -->
+                                <div class="payment-row" data-row="0">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label>Patient Name *</label>
+                                                <input type="text" name="payments[0][patient_name]" class="form-control patient-search" 
+                                                       placeholder="Search patient..." required autocomplete="off">
+                                                <input type="hidden" name="payments[0][patient_id]" class="patient-id">
+                                                <div class="patient-suggestions"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Amount *</label>
+                                                <input type="number" name="payments[0][amount]" class="form-control payment-amount" 
+                                                       step="0.01" min="0.01" required placeholder="0.00">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Payment Method</label>
+                                                <select name="payments[0][method]" class="form-control">
+                                                    <option value="cash">Cash</option>
+                                                    <option value="pos">POS</option>
+                                                    <option value="transfer">Bank Transfer</option>
+                                                    <option value="cheque">Cheque</option>
+                                                    <option value="online">Online Payment</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Reference</label>
+                                                <input type="text" name="payments[0][reference]" class="form-control" 
+                                                       placeholder="Optional">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Notes</label>
+                                                <input type="text" name="payments[0][notes]" class="form-control" 
+                                                       placeholder="Optional">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <div class="form-group">
+                                                <label>&nbsp;</label>
+                                                <button type="button" class="form-control remove-row" onclick="removePaymentRow(0)" 
+                                                        title="Remove Row">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group mt-3">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-save"></i> Record All Payments
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-lg ml-2" onclick="validateAllRows()">
+                                    <i class="fas fa-check"></i> Validate All
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Excel Upload -->
+                    <div class="tab-pane fade" id="upload">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="upload-zone" id="upload-zone">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <h4>Upload Excel File</h4>
+                                    <p class="text-muted">Drag and drop your Excel file here or click to browse</p>
+                                    <input type="file" id="excel-file" accept=".xlsx,.xls" style="display: none;">
+                                    <button type="button" class="btn btn-primary" onclick="document.getElementById('excel-file').click()">
+                                        Browse Files
+                                    </button>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <div class="mt-2" id="upload-status"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5>Excel Format Guide</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p><strong>Required Columns:</strong></p>
+                                        <ul class="list-unstyled">
+                                            <li><i class="fas fa-user text-info"></i> Patient Name</li>
+                                            <li><i class="fas fa-money-bill text-success"></i> Amount</li>
+                                            <li><i class="fas fa-credit-card text-warning"></i> Payment Method</li>
+                                            <li><i class="fas fa-hashtag text-secondary"></i> Reference (Optional)</li>
+                                            <li><i class="fas fa-sticky-note text-primary"></i> Notes (Optional)</li>
+                                        </ul>
+                                        <a href="#" class="btn btn-outline-info btn-sm" onclick="downloadTemplate()">
+                                            <i class="fas fa-download"></i> Download Template
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Balances -->
+                    <div class="tab-pane fade" id="balance">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" placeholder="Search patients..." id="balance-search">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-control" id="balance-filter">
+                                    <option value="">All Patients</option>
+                                    <option value="outstanding">With Outstanding Balance</option>
+                                    <option value="overpaid">Overpaid</option>
+                                    <option value="paid">Fully Paid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary" onclick="refreshBalances()">
+                                    <i class="fas fa-sync"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Phone</th>
+                                        <th>Total Billed</th>
+                                        <th>Total Paid</th>
+                                        <th>Outstanding</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="balance-table-body">
+                                    {% for record in balance_list %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ record.patient.full_name }}</strong><br>
+                                            <small class="text-muted">ID: {{ record.patient.id }}</small>
+                                        </td>
+                                        <td>{{ record.patient.phone }}</td>
+                                        <td class="text-right">₦{{ record.total_billed|floatformat:2 }}</td>
+                                        <td class="text-right text-success">₦{{ record.total_paid|floatformat:2 }}</td>
+                                        <td class="text-right">
+                                            {% if record.outstanding > 0 %}
+                                                <span class="text-danger">₦{{ record.outstanding|floatformat:2 }}</span>
+                                            {% elif record.outstanding < 0 %}
+                                                <span class="text-info">₦{{ record.outstanding|floatformat:2 }}</span>
+                                            {% else %}
+                                                <span class="text-success">₦0.00</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.outstanding > 0 %}
+                                                <span class="badge badge-warning">Outstanding</span>
+                                            {% elif record.outstanding < 0 %}
+                                                <span class="badge badge-info">Overpaid</span>
+                                            {% else %}
+                                                <span class="badge badge-success">Paid</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="viewPatientDetails({{ record.patient.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No records found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Payments -->
+                    <div class="tab-pane fade" id="recent">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patient</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                        <th>Reference</th>
+                                        <th>Processed By</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in recent_payments %}
+                                    <tr>
+                                        <td>{{ payment.payment_date|date:"M d, Y H:i" }}</td>
+                                        <td>{{ payment.patient.full_name }}</td>
+                                        <td class="text-right">₦{{ payment.amount|floatformat:2 }}</td>
+                                        <td>
+                                            <span class="badge badge-secondary">{{ payment.get_payment_method_display }}</span>
+                                        </td>
+                                        <td>{{ payment.payment_reference|default:"-" }}</td>
+                                        <td>{{ payment.processed_by.get_full_name|default:payment.processed_by.username }}</td>
+                                        <td>
+                                            {% if payment.status == 'completed' %}
+                                                <span class="badge badge-success">{{ payment.get_status_display }}</span>
+                                            {% elif payment.status == 'pending' %}
+                                                <span class="badge badge-warning">{{ payment.get_status_display }}</span>
+                                            {% else %}
+                                                <span class="badge badge-danger">{{ payment.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No recent payments found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Patient Details Modal -->
+<div class="modal fade" id="patientDetailsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Patient Financial Details</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="patientDetailsContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Complete JavaScript functionality for Patient Payment Tracker
+
+let rowCounter = 1;
+let patients = []; // Will be populated via AJAX
+let parsedPayments = []; // For smart bulk entry
+
+// Load patients on page load
+$(document).ready(function() {
+    loadPatients();
+    setupEventListeners();
+    setupSmartBulkEntry();
+});
+
+function loadPatients() {
+    $.get('/api/patients/', function(data) {
+        patients = data;
+    }).fail(function() {
+        // Fallback if API not available
+        patients = [];
+        console.warn('Could not load patients from API');
+    });
+}
+
+// Smart Bulk Entry Functions
+function setupSmartBulkEntry() {
+    const textarea = document.getElementById('bulk-text-input');
+    
+    // Real-time parsing as user types
+    textarea.addEventListener('input', debounce(function() {
+        parseAndPreview();
+    }, 500));
+    
+    // Auto-suggest on typing
+    textarea.addEventListener('input', function() {
+        const cursorPos = this.selectionStart;
+        const textBeforeCursor = this.value.substring(0, cursorPos);
+        const currentLine = textBeforeCursor.split('\n').pop();
+        
+        if (currentLine.length > 2 && !currentLine.includes(',')) {
+            showPatientSuggestions(currentLine, cursorPos);
+        } else {
+            hidePatientSuggestions();
+        }
+    });
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function insertSample() {
+    const sampleData = `John Doe, 5000, cash
+Jane Smith, 15000, pos, REF123
+Mike Johnson, 8000, transfer
+Sarah Connor, 12000, cash, REF456, Surgery payment
+David Wilson, 6000, pos`;
+    
+    document.getElementById('bulk-text-input').value = sampleData;
+    parseAndPreview();
+}
+
+function clearTextArea() {
+    document.getElementById('bulk-text-input').value = '';
+    parsedPayments = [];
+    updatePreviewTable();
+    updateStats();
+}
+
+function parseAndPreview() {
+    const textarea = document.getElementById('bulk-text-input');
+    const lines = textarea.value.split('\n').filter(line => line.trim());
+    
+    parsedPayments = [];
+    
+    lines.forEach((line, index) => {
+        const parsed = parsePaymentLine(line.trim(), index + 1);
+        if (parsed) {
+            parsedPayments.push(parsed);
+        }
+    });
+    
+    updatePreviewTable();
+    updateStats();
+    
+    // Enable/disable submit button
+    const validCount = parsedPayments.filter(p => p.isValid).length;
+    document.getElementById('submit-smart-btn').disabled = validCount === 0;
+}
+
+function parsePaymentLine(line, lineNumber) {
+    if (!line) return null;
+    
+    const parts = line.split(',').map(part => part.trim());
+    
+    if (parts.length < 2) {
+        return {
+            lineNumber,
+            originalLine: line,
+            isValid: false,
+            error: 'Minimum format: Patient Name, Amount'
+        };
+    }
+    
+    const payment = {
+        lineNumber,
+        originalLine: line,
+        patient_name: parts[0],
+        amount: parseFloat(parts[1]) || 0,
+        method: parts[2] || 'cash',
+        reference: parts[3] || '',
+        notes: parts[4] || '',
+        isValid: true,
+        errors: []
+    };
+    
+    // Validation
+    if (!payment.patient_name) {
+        payment.errors.push('Patient name required');
+        payment.isValid = false;
+    }
+    
+    if (payment.amount <= 0) {
+        payment.errors.push('Amount must be greater than 0');
+        payment.isValid = false;
+    }
+    
+    const validMethods = ['cash', 'pos', 'transfer', 'cheque', 'online'];
+    if (payment.method && !validMethods.includes(payment.method.toLowerCase())) {
+        payment.errors.push(`Invalid payment method. Use: ${validMethods.join(', ')}`);
+        payment.isValid = false;
+    } else {
+        payment.method = payment.method.toLowerCase();
+    }
+    
+    // Find matching patient
+    const matchingPatient = patients.find(p => 
+        p.full_name.toLowerCase() === payment.patient_name.toLowerCase() ||
+        p.full_name.toLowerCase().includes(payment.patient_name.toLowerCase())
+    );
+    
+    if (matchingPatient) {
+        payment.patient_id = matchingPatient.id;
+        payment.patient_name = matchingPatient.full_name; // Use exact name
+    } else if (patients.length > 0) {
+        payment.errors.push('Patient not found in system');
+        payment.isValid = false;
+    }
+    
+    return payment;
+}
+
+function updatePreviewTable() {
+    const tbody = document.getElementById('preview-body');
+    
+    if (parsedPayments.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted">
+                    <i class="fas fa-arrow-left"></i> Start typing to see preview
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = parsedPayments.map(payment => `
+        <tr class="preview-row ${payment.isValid ? 'valid' : 'invalid'}">
+            <td>
+                ${payment.patient_name}
+                ${payment.patient_id ? '<small class="text-muted d-block">ID: ' + payment.patient_id + '</small>' : ''}
+            </td>
+            <td class="text-right">₦${payment.amount.toLocaleString('en-NG', {minimumFractionDigits: 2})}</td>
+            <td><span class="badge badge-secondary">${payment.method.toUpperCase()}</span></td>
+            <td>${payment.reference || '-'}</td>
+            <td>
+                ${payment.isValid ? 
+                    '<i class="fas fa-check-circle text-success"></i> Valid' : 
+                    '<i class="fas fa-exclamation-triangle text-danger"></i> Invalid'
+                }
+                ${payment.errors.length > 0 ? 
+                    '<div class="error-message">' + payment.errors.join('<br>') + '</div>' : 
+                    ''
+                }
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateStats() {
+    const totalEntries = parsedPayments.length;
+    const validEntries = parsedPayments.filter(p => p.isValid).length;
+    const invalidEntries = totalEntries - validEntries;
+    const totalAmount = parsedPayments
+        .filter(p => p.isValid)
+        .reduce((sum, p) => sum + p.amount, 0);
+    
+    document.getElementById('entries-count').textContent = totalEntries;
+    document.getElementById('valid-count').textContent = validEntries;
+    document.getElementById('invalid-count').textContent = invalidEntries;
+    document.getElementById('total-amount-smart').textContent = 
+        '₦' + totalAmount.toLocaleString('en-NG', {minimumFractionDigits: 2});
+}
+
+function showPatientSuggestions(query, cursorPos) {
+    const suggestions = patients.filter(p => 
+        p.full_name.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 5);
+    
+    const suggestionDiv = document.getElementById('input-suggestions');
+    
+    if (suggestions.length > 0) {
+        suggestionDiv.innerHTML = suggestions.map(patient => `
+            <div class="suggestion-item" onclick="insertPatientName('${patient.full_name}', ${cursorPos})">
+                <strong>${patient.full_name}</strong><br>
+                <small class="text-muted">ID: ${patient.id} | Phone: ${patient.phone || 'N/A'}</small>
+            </div>
+        `).join('');
+        suggestionDiv.style.display = 'block';
+    } else {
+        hidePatientSuggestions();
+    }
+}
+
+function hidePatientSuggestions() {
+    const suggestionDiv = document.getElementById('input-suggestions');
+    suggestionDiv.style.display = 'none';
+}
+
+function insertPatientName(patientName, cursorPos) {
+    const textarea = document.getElementById('bulk-text-input');
+    const value = textarea.value;
+    const beforeCursor = value.substring(0, cursorPos);
+    const afterCursor = value.substring(cursorPos);
+    const lineStart = beforeCursor.lastIndexOf('\n') + 1;
+    const currentLineBeforeCursor = beforeCursor.substring(lineStart);
+    
+    // Replace the current line's patient name part
+    const newValue = beforeCursor.substring(0, lineStart) + patientName + afterCursor;
+    textarea.value = newValue;
+    
+    // Set cursor position after the inserted name
+    const newCursorPos = lineStart + patientName.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+    
+    hidePatientSuggestions();
+    parseAndPreview();
+}
+
+function submitSmartBulkPayments() {
+    const validPayments = parsedPayments.filter(p => p.isValid);
+    
+    if (validPayments.length === 0) {
+        alert('No valid payments to submit.');
+        return;
+    }
+    
+    if (!confirm(`Submit ${validPayments.length} payment(s)?`)) {
+        return;
+    }
+    
+    const submitBtn = document.getElementById('submit-smart-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    $.ajax({
+        url: window.location.href,
+        method: 'POST',
+        data: {
+            action: 'smart_bulk_payment',
+            payments: JSON.stringify(validPayments),
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                alert(`Successfully recorded ${response.count} payment(s).`);
+                clearTextArea();
+                // Refresh recent payments tab if visible
+                if ($('#recent').hasClass('active')) {
+                    location.reload();
+                }
+            } else {
+                alert('Error: ' + (response.error || 'Unknown error occurred'));
+            }
+        },
+        error: function() {
+            alert('Network error occurred. Please try again.');
+        },
+        complete: function() {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+}
+
+// Traditional Bulk Entry Functions
+function addPaymentRow() {
+    const container = document.getElementById('payment-rows-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'payment-row';
+    newRow.setAttribute('data-row', rowCounter);
+    
+    newRow.innerHTML = `
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Patient Name *</label>
+                    <input type="text" name="payments[${rowCounter}][patient_name]" class="form-control patient-search" 
+                           placeholder="Search patient..." required autocomplete="off">
+                    <input type="hidden" name="payments[${rowCounter}][patient_id]" class="patient-id">
+                    <div class="patient-suggestions"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label>Amount *</label>
+                    <input type="number" name="payments[${rowCounter}][amount]" class="form-control payment-amount" 
+                           step="0.01" min="0.01" required placeholder="0.00">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select name="payments[${rowCounter}][method]" class="form-control">
+                        <option value="cash">Cash</option>
+                        <option value="pos">POS</option>
+                        <option value="transfer">Bank Transfer</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="online">Online Payment</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label>Reference</label>
+                    <input type="text" name="payments[${rowCounter}][reference]" class="form-control" 
+                           placeholder="Optional">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" name="payments[${rowCounter}][notes]" class="form-control" 
+                           placeholder="Optional">
+                </div>
+            </div>
+            <div class="col-md-1">
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="button" class="form-control remove-row" onclick="removePaymentRow(${rowCounter})" 
+                            title="Remove Row">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(newRow);
+    rowCounter++;
+    updateRowCounter();
+    setupPatientSearch();
+}
+
+function removePaymentRow(rowId) {
+    const row = document.querySelector(`[data-row="${rowId}"]`);
+    if (row) {
+        row.remove();
+        updateRowCounter();
+        calculateTotal();
+    }
+}
+
+function clearAllRows() {
+    if (!confirm('Clear all payment rows?')) return;
+    
+    const container = document.getElementById('payment-rows-container');
+    container.innerHTML = '';
+    rowCounter = 0;
+    addPaymentRow(); // Add one initial row
+    updateRowCounter();
+    calculateTotal();
+}
+
+function updateRowCounter() {
+    const rows = document.querySelectorAll('.payment-row').length;
+    document.getElementById('row-counter').textContent = `Rows: ${rows}`;
+}
+
+function calculateTotal() {
+    let total = 0;
+    document.querySelectorAll('.payment-amount').forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+    
+    document.getElementById('total-amount').textContent = 
+        `Total: ₦${total.toLocaleString('en-NG', {minimumFractionDigits: 2})}`;
+}
+
+function validateAllRows() {
+    let hasErrors = false;
+    document.querySelectorAll('.payment-row').forEach(row => {
+        const patientInput = row.querySelector('.patient-search');
+        const amountInput = row.querySelector('.payment-amount');
+        
+        // Remove existing error styles
+        row.classList.remove('has-error');
+        
+        // Validate patient name
+        if (!patientInput.value.trim()) {
+            row.classList.add('has-error');
+            hasErrors = true;
+        }
+        
+        // Validate amount
+        if (!amountInput.value || parseFloat(amountInput.value) <= 0) {
+            row.classList.add('has-error');
+            hasErrors = true;
+        }
+    });
+    
+    if (hasErrors) {
+        alert('Please fix the highlighted errors before proceeding.');
+    } else {
+        alert('All rows validated successfully!');
+    }
+}
+
+function setupEventListeners() {
+    // Amount input listeners for total calculation
+    $(document).on('input', '.payment-amount', calculateTotal);
+    
+    // Patient search setup
+    setupPatientSearch();
+    
+    // Excel upload setup
+    setupExcelUpload();
+}
+
+function setupPatientSearch() {
+    $(document).off('input', '.patient-search').on('input', '.patient-search', function() {
+        const input = this;
+        const query = input.value.toLowerCase();
+        const suggestionsDiv = input.parentElement.querySelector('.patient-suggestions');
+        
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        const matches = patients.filter(p => 
+            p.full_name.toLowerCase().includes(query) ||
+            (p.phone && p.phone.includes(query))
+        ).slice(0, 5);
+        
+        if (matches.length > 0) {
+            suggestionsDiv.innerHTML = matches.map(patient => `
+                <div class="patient-suggestion" onclick="selectPatient(this, ${patient.id}, '${patient.full_name}')">
+                    <strong>${patient.full_name}</strong><br>
+                    <small>ID: ${patient.id} | Phone: ${patient.phone || 'N/A'}</small>
+                </div>
+            `).join('');
+            suggestionsDiv.style.display = 'block';
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+    
+    // Hide suggestions when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.form-group').length) {
+            $('.patient-suggestions').hide();
+        }
+    });
+}
+
+function selectPatient(element, patientId, patientName) {
+    const formGroup = element.closest('.form-group');
+    const nameInput = formGroup.querySelector('.patient-search');
+    const idInput = formGroup.querySelector('.patient-id');
+    const suggestionsDiv = formGroup.querySelector('.patient-suggestions');
+    
+    nameInput.value = patientName;
+    idInput.value = patientId;
+    suggestionsDiv.style.display = 'none';
+}
+
+// Excel Upload Functions
+function setupExcelUpload() {
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('excel-file');
+    
+    // Drag and drop handlers
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+    
+    // File input change handler
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            handleFileUpload(this.files[0]);
+        }
+    });
+    
+    // Click to browse
+    uploadZone.addEventListener('click', function() {
+        fileInput.click();
+    });
+}
+
+function handleFileUpload(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/)) {
+        alert('Please select a valid Excel file (.xlsx or .xls)');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('excel_file', file);
+    formData.append('action', 'excel_upload');
+    formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+    
+    showUploadProgress();
+    
+    $.ajax({
+        url: window.location.href,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        xhr: function() {
+            const xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    updateUploadProgress(percentComplete);
+                }
+            });
+            return xhr;
+        },
+        success: function(response) {
+            if (response.success) {
+                alert(`Successfully imported ${response.count} payment(s).`);
+                hideUploadProgress();
+                // Refresh page to show new data
+                location.reload();
+            } else {
+                alert('Error: ' + (response.error || 'Unknown error occurred'));
+                hideUploadProgress();
+            }
+        },
+        error: function() {
+            alert('Upload failed. Please try again.');
+            hideUploadProgress();
+        }
+    });
+}
+
+function showUploadProgress() {
+    document.querySelector('.progress-container').style.display = 'block';
+    document.getElementById('upload-status').textContent = 'Uploading...';
+}
+
+function updateUploadProgress(percent) {
+    const progressBar = document.querySelector('.progress-bar');
+    progressBar.style.width = percent + '%';
+    progressBar.textContent = Math.round(percent) + '%';
+}
+
+function hideUploadProgress() {
+    document.querySelector('.progress-container').style.display = 'none';
+    document.querySelector('.progress-bar').style.width = '0%';
+}
+
+function downloadTemplate() {
+    // Create a simple CSV template
+    const csvContent = "data:text/csv;charset=utf-8," + 
+        "Patient Name,Amount,Payment Method,Reference,Notes\n" +
+        "John Doe,5000,cash,REF001,Consultation fee\n" +
+        "Jane Smith,15000,pos,REF002,Surgery payment";
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "payment_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Patient Balance Functions
+function refreshBalances() {
+    const searchTerm = document.getElementById('balance-search').value;
+    const filter = document.getElementById('balance-filter').value;
+    
+    // In a real implementation, this would make an AJAX call
+    // For now, we'll just reload the page with parameters
+    const params = new URLSearchParams();
+    if (searchTerm) params.append('search', searchTerm);
+    if (filter) params.append('filter', filter);
+    
+    const url = window.location.pathname + '?' + params.toString();
+    window.location.href = url;
+}
+
+function viewPatientDetails(patientId) {
+    // Load patient details via AJAX
+    $.get(`/api/patients/${patientId}/financial-details/`, function(data) {
+        document.getElementById('patientDetailsContent').innerHTML = data;
+        $('#patientDetailsModal').modal('show');
+    }).fail(function() {
+        alert('Could not load patient details.');
+    });
+}
+
+// Form submission handler for traditional bulk payment
+$(document).on('submit', '#bulk-payment-form', function(e) {
+    e.preventDefault();
+    
+    // Validate all rows first
+    let hasErrors = false;
+    const payments = [];
+    
+    document.querySelectorAll('.payment-row').forEach((row, index) => {
+        const patientName = row.querySelector('.patient-search').value.trim();
+        const patientId = row.querySelector('.patient-id').value;
+        const amount = parseFloat(row.querySelector('.payment-amount').value) || 0;
+        const method = row.querySelector('select').value;
+        const reference = row.querySelector('input[name*="reference"]').value;
+        const notes = row.querySelector('input[name*="notes"]').value;
+        
+        if (!patientName || amount <= 0) {
+            row.classList.add('has-error');
+            hasErrors = true;
+        } else {
+            row.classList.remove('has-error');
+            payments.push({
+                patient_name: patientName,
+                patient_id: patientId,
+                amount: amount,
+                method: method,
+                reference: reference,
+                notes: notes
+            });
+        }
+    });
+    
+    if (hasErrors) {
+        alert('Please fix the highlighted errors before submitting.');
+        return;
+    }
+    
+    if (payments.length === 0) {
+        alert('No payments to submit.');
+        return;
+    }
+    
+    if (!confirm(`Submit ${payments.length} payment(s)?`)) {
+        return;
+    }
+    
+    // Submit the form
+    const formData = new FormData(this);
+    
+    $.ajax({
+        url: window.location.href,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                alert(`Successfully recorded ${response.count} payment(s).`);
+                // Clear the form
+                clearAllRows();
+            } else {
+                alert('Error: ' + (response.error || 'Unknown error occurred'));
+            }
+        },
+        error: function() {
+            alert('Submission failed. Please try again.');
+        }
+    });
+});
+
+// Initialize everything when DOM is ready
+$(document).ready(function() {
+    // Calculate initial total
+    calculateTotal();
+    
+    // Set up balance search
+    $('#balance-search').on('input', debounce(function() {
+        // In a real app, this would trigger live search
+        console.log('Searching balances for:', this.value);
+    }, 300));
+    
+    $('#balance-filter').on('change', function() {
+        // In a real app, this would trigger filtering
+        console.log('Filtering balances by:', this.value);
+    });
+});
+</script>
 {% endblock %}

@@ -2,946 +2,687 @@
 
 {% block title %}HMS | Accounts Home{% endblock %}
 
-{% block content %}
+{% block extra_css %}
+<!-- Additional CSS for better styling -->
+<style>
+    .small-box {
+        transition: all 0.3s ease;
+    }
+    .small-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .progress-group {
+        margin-bottom: 15px;
+    }
+    #revenueChart, #paymentStatusChart {
+        max-height: 300px;
+    }
+    .menu-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .menu-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    .menu-card .card-body {
+        padding: 2rem 1.5rem;
+    }
+    .menu-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
 
+{% block content %}
 <!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Dashboard</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
+                <h1 class="m-0">Finance Dashboard</h1>
+            </div>
+            <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
                     <li class="breadcrumb-item active">Dashboard</li>
                 </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
-</div>
-<!-- /.content-header -->
-
-<!-- 🌟 Accounting Dashboard Icons -->
-<section class="dashboard-icons py-4 bg-light rounded">
-    <div class="container">
-      <div class="d-flex flex-wrap justify-content-center">
-  
-        <!-- Home -->
-        <div class="p-2">
-          <a href="{% url 'accounts' %}"
-            class="bg-primary text-white text-center d-flex flex-column align-items-center justify-content-center p-4"
-            style="width: 160px; height: 160px; border-radius: 30px;">
-            <i class="bi bi-house-door display-4 mb-2"></i>
-            <span class="text-nowrap">Home</span>
-          </a>
+            </div>
         </div>
-  
-        <!-- Payments & Balances -->
-        <div class="p-2">
-          <a href="{% url 'patient_payment_tracker' %}"
-            class="bg-success text-white text-center d-flex flex-column align-items-center justify-content-center p-4"
-            style="width: 160px; height: 160px; border-radius: 30px;">
-            <i class="bi bi-cash-coin display-4 mb-2"></i>
-            <span class="text-nowrap">Payments</span>
-          </a>
-        </div>
-  
-        <!-- Income & Expenses -->
-        <div class="p-2">
-          <a href="{% url 'institution_financials' %}"
-            class="bg-warning text-white text-center d-flex flex-column align-items-center justify-content-center p-4"
-            style="width: 160px; height: 160px; border-radius: 30px;">
-            <i class="bi bi-bank display-4 mb-2"></i>
-            <span class="text-nowrap">Income/Expense</span>
-          </a>
-        </div>
-  
-        <!-- Reports -->
-        <div class="p-2">
-          <a href="{% url 'financial_reports' %}"
-            class="bg-info text-white text-center d-flex flex-column align-items-center justify-content-center p-4"
-            style="width: 160px; height: 160px; border-radius: 30px;">
-            <i class="bi bi-graph-up display-4 mb-2"></i>
-            <span class="text-nowrap">Reports</span>
-          </a>
-        </div>
-  
-        <!-- Budget Planning -->
-        <div class="p-2">
-          <a href="{% url 'budget_planning' %}"
-            class="bg-danger text-white text-center d-flex flex-column align-items-center justify-content-center p-4"
-            style="width: 160px; height: 160px; border-radius: 30px;">
-            <i class="bi bi-piggy-bank display-4 mb-2"></i>
-            <span class="text-nowrap">Budget</span>
-          </a>
-        </div>
-  
-      </div>
     </div>
-  </section>
-  
+</div>
 
 <!-- Main content -->
 <section class="content">
     <div class="container-fluid">
-        <!-- Info boxes -->
-        <div class="row">
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box">
-                    <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">CPU Traffic</span>
-                        <span class="info-box-number">
-                            10
-                            <small>%</small>
-                        </span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box mb-3">
-                    <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-thumbs-up"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Likes</span>
-                        <span class="info-box-number">41,410</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
-            <!-- fix for small devices only -->
-            <div class="clearfix hidden-md-up"></div>
-
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box mb-3">
-                    <span class="info-box-icon bg-success elevation-1"><i class="fas fa-shopping-cart"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Sales</span>
-                        <span class="info-box-number">760</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
-            <div class="col-12 col-sm-6 col-md-3">
-                <div class="info-box mb-3">
-                    <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-users"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">New Members</span>
-                        <span class="info-box-number">2,000</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-            </div>
-            <!-- /.col -->
-        </div>
-        <!-- /.row -->
-
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title">Monthly Recap Report</h5>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-tool dropdown-toggle" data-toggle="dropdown">
-                                    <i class="fas fa-wrench"></i>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-right" role="menu">
-                                    <a href="#" class="dropdown-item">Action</a>
-                                    <a href="#" class="dropdown-item">Another action</a>
-                                    <a href="#" class="dropdown-item">Something else here</a>
-                                    <a class="dropdown-divider"></a>
-                                    <a href="#" class="dropdown-item">Separated link</a>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- /.card-header -->
+        
+        <!-- Dashboard Header Info -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card card-outline card-primary">
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row align-items-center">
                             <div class="col-md-8">
-                                <p class="text-center">
-                                    <strong>Sales: 1 Jan, 2014 - 30 Jul, 2014</strong>
-                                </p>
-
-                                <div class="chart">
-                                    <!-- Sales Chart Canvas -->
-                                    <canvas id="salesChart" height="180" style="height: 180px;"></canvas>
-                                </div>
-                                <!-- /.chart-responsive -->
+                                <h4 class="mb-1"><i class="fas fa-heartbeat text-danger mr-2"></i>Fertility Clinic Financial System</h4>
+                                <p class="text-muted mb-0">Comprehensive financial management and analytics</p>
                             </div>
-                            <!-- /.col -->
-                            <div class="col-md-4">
-                                <p class="text-center">
-                                    <strong>Goal Completion</strong>
-                                </p>
-
-                                <div class="progress-group">
-                                    Add Products to Cart
-                                    <span class="float-right"><b>160</b>/200</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-primary" style="width: 80%"></div>
-                                    </div>
-                                </div>
-                                <!-- /.progress-group -->
-
-                                <div class="progress-group">
-                                    Complete Purchase
-                                    <span class="float-right"><b>310</b>/400</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-danger" style="width: 75%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- /.progress-group -->
-                                <div class="progress-group">
-                                    <span class="progress-text">Visit Premium Page</span>
-                                    <span class="float-right"><b>480</b>/800</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-success" style="width: 60%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- /.progress-group -->
-                                <div class="progress-group">
-                                    Send Inquiries
-                                    <span class="float-right"><b>250</b>/500</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-warning" style="width: 50%"></div>
-                                    </div>
-                                </div>
-                                <!-- /.progress-group -->
-                            </div>
-                            <!-- /.col -->
-                        </div>
-                        <!-- /.row -->
-                    </div>
-                    <!-- ./card-body -->
-                    <div class="card-footer">
-                        <div class="row">
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                    <span class="description-percentage text-success"><i class="fas fa-caret-up"></i>
-                                        17%</span>
-                                    <h5 class="description-header">$35,210.43</h5>
-                                    <span class="description-text">TOTAL REVENUE</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                    <span class="description-percentage text-warning"><i class="fas fa-caret-left"></i>
-                                        0%</span>
-                                    <h5 class="description-header">$10,390.90</h5>
-                                    <span class="description-text">TOTAL COST</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block border-right">
-                                    <span class="description-percentage text-success"><i class="fas fa-caret-up"></i>
-                                        20%</span>
-                                    <h5 class="description-header">$24,813.53</h5>
-                                    <span class="description-text">TOTAL PROFIT</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-sm-3 col-6">
-                                <div class="description-block">
-                                    <span class="description-percentage text-danger"><i class="fas fa-caret-down"></i>
-                                        18%</span>
-                                    <h5 class="description-header">1200</h5>
-                                    <span class="description-text">GOAL COMPLETIONS</span>
-                                </div>
-                                <!-- /.description-block -->
+                            <div class="col-md-4 text-right">
+                                <p class="mb-1"><i class="far fa-calendar-alt mr-1"></i><span id="currentDate">Loading...</span></p>
+                                <p class="mb-1"><i class="far fa-clock mr-1"></i><span id="currentTime" class="font-weight-bold">Loading...</span></p>
+                                <p class="mb-0"><i class="fas fa-user-circle mr-1"></i>Welcome back, <strong class="text-capitalize">{{user.username}}</strong></p>
                             </div>
                         </div>
-                        <!-- /.row -->
                     </div>
-                    <!-- /.card-footer -->
                 </div>
-                <!-- /.card -->
             </div>
-            <!-- /.col -->
         </div>
-        <!-- /.row -->
-        <!-- Main row -->
+
+        <!-- Small boxes (Stat box) -->
         <div class="row">
-            <!-- Left col -->
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="totalRevenue">₦2.5M</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="monthlyIncome">₦480K</h3>
+                        <p>Monthly Income</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="pendingPayments">15</h3>
+                        <p>Pending Payments</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="outstandingBalance">₦125K</h3>
+                        <p>Outstanding Balance</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <!-- Revenue Chart -->
             <div class="col-md-8">
-                <!-- MAP & BOX PANE -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">US-Visitors Report</h3>
-
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-area mr-1"></i>
+                            Revenue Trends (Last 6 Months)
+                        </h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
                         </div>
                     </div>
-                    <!-- /.card-header -->
-                    <div class="card-body p-0">
-                        <div class="d-md-flex">
-                            <div class="p-1 flex-fill" style="overflow: hidden">
-                                <!-- Map will be created here -->
-                                <div id="world-map-markers" style="height: 325px; overflow: hidden">
-                                    <div class="map"></div>
-                                </div>
-                            </div>
-                            <div class="card-pane-right bg-success pt-2 pb-2 pl-4 pr-4">
-                                <div class="description-block mb-4">
-                                    <div class="sparkbar pad" data-color="#fff">90,70,90,70,75,80,70</div>
-                                    <h5 class="description-header">8390</h5>
-                                    <span class="description-text">Visits</span>
-                                </div>
-                                <!-- /.description-block -->
-                                <div class="description-block mb-4">
-                                    <div class="sparkbar pad" data-color="#fff">90,50,90,70,61,83,63</div>
-                                    <h5 class="description-header">30%</h5>
-                                    <span class="description-text">Referrals</span>
-                                </div>
-                                <!-- /.description-block -->
-                                <div class="description-block">
-                                    <div class="sparkbar pad" data-color="#fff">90,50,90,70,61,83,63</div>
-                                    <h5 class="description-header">70%</h5>
-                                    <span class="description-text">Organic</span>
-                                </div>
-                                <!-- /.description-block -->
-                            </div><!-- /.card-pane-right -->
-                        </div><!-- /.d-md-flex -->
-                    </div>
-                    <!-- /.card-body -->
-                </div>
-                <!-- /.card -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <!-- DIRECT CHAT -->
-                        <div class="card direct-chat direct-chat-warning">
-                            <div class="card-header">
-                                <h3 class="card-title">Direct Chat</h3>
-
-                                <div class="card-tools">
-                                    <span data-toggle="tooltip" title="3 New Messages"
-                                        class="badge badge-warning">3</span>
-                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" data-toggle="tooltip" title="Contacts"
-                                        data-widget="chat-pane-toggle">
-                                        <i class="fas fa-comments"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- /.card-header -->
-                            <div class="card-body">
-                                <!-- Conversations are loaded here -->
-                                <div class="direct-chat-messages">
-                                    <!-- Message. Default to the left -->
-                                    <div class="direct-chat-msg">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-left">Alexander Pierce</span>
-                                            <span class="direct-chat-timestamp float-right">23 Jan 2:00 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user1-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            Is this template really for free? That's unbelievable!
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-                                    <!-- Message to the right -->
-                                    <div class="direct-chat-msg right">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-right">Sarah Bullock</span>
-                                            <span class="direct-chat-timestamp float-left">23 Jan 2:05 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user3-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            You better believe it!
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-                                    <!-- Message. Default to the left -->
-                                    <div class="direct-chat-msg">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-left">Alexander Pierce</span>
-                                            <span class="direct-chat-timestamp float-right">23 Jan 5:37 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user1-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            Working with AdminLTE on a great new app! Wanna join?
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-                                    <!-- Message to the right -->
-                                    <div class="direct-chat-msg right">
-                                        <div class="direct-chat-infos clearfix">
-                                            <span class="direct-chat-name float-right">Sarah Bullock</span>
-                                            <span class="direct-chat-timestamp float-left">23 Jan 6:10 pm</span>
-                                        </div>
-                                        <!-- /.direct-chat-infos -->
-                                        <img class="direct-chat-img" src="dist/img/user3-128x128.jpg"
-                                            alt="message user image">
-                                        <!-- /.direct-chat-img -->
-                                        <div class="direct-chat-text">
-                                            I would love to.
-                                        </div>
-                                        <!-- /.direct-chat-text -->
-                                    </div>
-                                    <!-- /.direct-chat-msg -->
-
-                                </div>
-                                <!--/.direct-chat-messages-->
-                                <!-- Contacts are loaded here -->
-                                <div class="direct-chat-contacts">
-                                    <ul class="contacts-list">
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user1-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Count Dracula
-                                                        <small class="contacts-list-date float-right">2/28/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">How have you been? I was...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user7-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Sarah Doe
-                                                        <small class="contacts-list-date float-right">2/23/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">I will be waiting for...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user3-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Nadia Jolie
-                                                        <small class="contacts-list-date float-right">2/20/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">I'll call you back at...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user5-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Nora S. Vans
-                                                        <small class="contacts-list-date float-right">2/10/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">Where is your new...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user6-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        John K.
-                                                        <small class="contacts-list-date float-right">1/27/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">Can I take a look at...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                        <li>
-                                            <a href="#">
-                                                <img class="contacts-list-img" src="dist/img/user8-128x128.jpg">
-
-                                                <div class="contacts-list-info">
-                                                    <span class="contacts-list-name">
-                                                        Kenneth M.
-                                                        <small class="contacts-list-date float-right">1/4/2015</small>
-                                                    </span>
-                                                    <span class="contacts-list-msg">Never mind I found...</span>
-                                                </div>
-                                                <!-- /.contacts-list-info -->
-                                            </a>
-                                        </li>
-                                        <!-- End Contact Item -->
-                                    </ul>
-                                    <!-- /.contacts-list -->
-                                </div>
-                                <!-- /.direct-chat-pane -->
-                            </div>
-                            <!-- /.card-body -->
-                            <div class="card-footer">
-                                <form action="#" method="post">
-                                    <div class="input-group">
-                                        <input type="text" name="message" placeholder="Type Message ..."
-                                            class="form-control">
-                                        <span class="input-group-append">
-                                            <button type="button" class="btn btn-warning">Send</button>
-                                        </span>
-                                    </div>
-                                </form>
-                            </div>
-                            <!-- /.card-footer-->
-                        </div>
-                        <!--/.direct-chat -->
-                    </div>
-                    <!-- /.col -->
-
-                    <div class="col-md-6">
-                        <!-- USERS LIST -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="card-title">Latest Members</h3>
-
-                                <div class="card-tools">
-                                    <span class="badge badge-danger">8 New Members</span>
-                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- /.card-header -->
-                            <div class="card-body p-0">
-                                <ul class="users-list clearfix">
-                                    <li>
-                                        <img src="dist/img/user1-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Alexander Pierce</a>
-                                        <span class="users-list-date">Today</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user8-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Norman</a>
-                                        <span class="users-list-date">Yesterday</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user7-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Jane</a>
-                                        <span class="users-list-date">12 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user6-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">John</a>
-                                        <span class="users-list-date">12 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user2-160x160.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Alexander</a>
-                                        <span class="users-list-date">13 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user5-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Sarah</a>
-                                        <span class="users-list-date">14 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user4-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Nora</a>
-                                        <span class="users-list-date">15 Jan</span>
-                                    </li>
-                                    <li>
-                                        <img src="dist/img/user3-128x128.jpg" alt="User Image">
-                                        <a class="users-list-name" href="#">Nadia</a>
-                                        <span class="users-list-date">15 Jan</span>
-                                    </li>
-                                </ul>
-                                <!-- /.users-list -->
-                            </div>
-                            <!-- /.card-body -->
-                            <div class="card-footer text-center">
-                                <a href="javascript::">View All Users</a>
-                            </div>
-                            <!-- /.card-footer -->
-                        </div>
-                        <!--/.card -->
-                    </div>
-                    <!-- /.col -->
-                </div>
-                <!-- /.row -->
-                <!-- TABLE: LATEST ORDERS -->
-                <div class="card">
-                    <div class="card-header border-transparent">
-                        <h3 class="card-title">Latest Orders</h3>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- /.card-header -->
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table m-0">
-                                <thead>
-                                    <tr>
-                                        <th>Order ID</th>
-                                        <th>Item</th>
-                                        <th>Status</th>
-                                        <th>Popularity</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR9842</a></td>
-                                        <td>Call of Duty IV</td>
-                                        <td><span class="badge badge-success">Shipped</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00a65a" data-height="20">
-                                                90,80,90,-70,61,-83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR1848</a></td>
-                                        <td>Samsung Smart TV</td>
-                                        <td><span class="badge badge-warning">Pending</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f39c12" data-height="20">
-                                                90,80,-90,70,61,-83,68</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR7429</a></td>
-                                        <td>iPhone 6 Plus</td>
-                                        <td><span class="badge badge-danger">Delivered</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f56954" data-height="20">
-                                                90,-80,90,70,-61,83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR7429</a></td>
-                                        <td>Samsung Smart TV</td>
-                                        <td><span class="badge badge-info">Processing</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00c0ef" data-height="20">
-                                                90,80,-90,70,-61,83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR1848</a></td>
-                                        <td>Samsung Smart TV</td>
-                                        <td><span class="badge badge-warning">Pending</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f39c12" data-height="20">
-                                                90,80,-90,70,61,-83,68</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR7429</a></td>
-                                        <td>iPhone 6 Plus</td>
-                                        <td><span class="badge badge-danger">Delivered</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#f56954" data-height="20">
-                                                90,-80,90,70,-61,83,63</div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="pages/examples/invoice.html">OR9842</a></td>
-                                        <td>Call of Duty IV</td>
-                                        <td><span class="badge badge-success">Shipped</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00a65a" data-height="20">
-                                                90,80,90,-70,61,-83,63</div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- /.table-responsive -->
-                    </div>
-                    <!-- /.card-body -->
-                    <div class="card-footer clearfix">
-                        <a href="javascript:void(0)" class="btn btn-sm btn-info float-left">Place New Order</a>
-                        <a href="javascript:void(0)" class="btn btn-sm btn-secondary float-right">View All Orders</a>
-                    </div>
-                    <!-- /.card-footer -->
-                </div>
-                <!-- /.card -->
-            </div>
-            <!-- /.col -->
-
-            <div class="col-md-4">
-                <!-- Info Boxes Style 2 -->
-                <div class="info-box mb-3 bg-warning">
-                    <span class="info-box-icon"><i class="fas fa-tag"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Inventory</span>
-                        <span class="info-box-number">5,200</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-                <div class="info-box mb-3 bg-success">
-                    <span class="info-box-icon"><i class="far fa-heart"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Mentions</span>
-                        <span class="info-box-number">92,050</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-                <div class="info-box mb-3 bg-danger">
-                    <span class="info-box-icon"><i class="fas fa-cloud-download-alt"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Downloads</span>
-                        <span class="info-box-number">114,381</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-                <div class="info-box mb-3 bg-info">
-                    <span class="info-box-icon"><i class="far fa-comment"></i></span>
-
-                    <div class="info-box-content">
-                        <span class="info-box-text">Direct Messages</span>
-                        <span class="info-box-number">163,921</span>
-                    </div>
-                    <!-- /.info-box-content -->
-                </div>
-                <!-- /.info-box -->
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Browser Usage</h3>
-
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- /.card-header -->
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="chart-responsive">
-                                    <canvas id="pieChart" height="150"></canvas>
-                                </div>
-                                <!-- ./chart-responsive -->
-                            </div>
-                            <!-- /.col -->
-                            <div class="col-md-4">
-                                <ul class="chart-legend clearfix">
-                                    <li><i class="far fa-circle text-danger"></i> Chrome</li>
-                                    <li><i class="far fa-circle text-success"></i> IE</li>
-                                    <li><i class="far fa-circle text-warning"></i> FireFox</li>
-                                    <li><i class="far fa-circle text-info"></i> Safari</li>
-                                    <li><i class="far fa-circle text-primary"></i> Opera</li>
-                                    <li><i class="far fa-circle text-secondary"></i> Navigator</li>
-                                </ul>
-                            </div>
-                            <!-- /.col -->
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="revenueChart"></canvas>
                         </div>
-                        <!-- /.row -->
                     </div>
-                    <!-- /.card-body -->
-                    <div class="card-footer bg-white p-0">
-                        <ul class="nav nav-pills flex-column">
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    United States of America
-                                    <span class="float-right text-danger">
-                                        <i class="fas fa-arrow-down text-sm"></i>
-                                        12%
-                                    </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    India
-                                    <span class="float-right text-success">
-                                        <i class="fas fa-arrow-up text-sm"></i> 4%
-                                    </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    China
-                                    <span class="float-right text-warning">
-                                        <i class="fas fa-arrow-left text-sm"></i> 0%
-                                    </span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <!-- /.footer -->
                 </div>
-                <!-- /.card -->
-                <!-- PRODUCT LIST -->
+            </div>
+
+            <!-- Payment Status Pie Chart -->
+            <div class="col-md-4">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Recently Added Products</h3>
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>
+                            Payment Status
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="paymentStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
+        <!-- Dynamic Menu Cards Based on Sidebar -->
+        <div class="row">
+            <div class="col-12">
+                <h4 class="mb-3"><i class="fas fa-th-large mr-2"></i>System Modules</h4>
+            </div>
+        </div>
+        <div class="row" id="menuCards">
+            <!-- Payments & Balances -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card menu-card card-outline card-success h-100" onclick="location.href='{% url 'patient_payment_tracker' %}'">
+                    <div class="card-body text-center">
+                        <div class="menu-icon text-success">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <h5 class="card-title font-weight-bold">Payments & Balances</h5>
+                        <p class="card-text text-muted">Track patient payments, receipts, and outstanding balances</p>
+                        <div class="mt-3">
+                            <span class="badge badge-success px-3 py-2">
+                                <i class="fas fa-arrow-right mr-1"></i>Access Module
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Income & Expenditure -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card menu-card card-outline card-warning h-100" onclick="location.href='{% url 'institution_financials' %}'">
+                    <div class="card-body text-center">
+                        <div class="menu-icon text-warning">
+                            <i class="fas fa-landmark"></i>
+                        </div>
+                        <h5 class="card-title font-weight-bold">Income & Expenditure</h5>
+                        <p class="card-text text-muted">Manage institutional inflows, expenses, and financial transactions</p>
+                        <div class="mt-3">
+                            <span class="badge badge-warning px-3 py-2">
+                                <i class="fas fa-arrow-right mr-1"></i>Access Module
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports & Summaries -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card menu-card card-outline card-primary h-100" onclick="location.href='{% url 'financial_reports' %}'">
+                    <div class="card-body text-center">
+                        <div class="menu-icon text-primary">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5 class="card-title font-weight-bold">Reports & Summaries</h5>
+                        <p class="card-text text-muted">Generate financial reports, analytics, and performance summaries</p>
+                        <div class="mt-3">
+                            <span class="badge badge-primary px-3 py-2">
+                                <i class="fas fa-arrow-right mr-1"></i>Access Module
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Planning -->
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card menu-card card-outline card-info h-100" onclick="location.href='{% url 'budget_planning' %}'">
+                    <div class="card-body text-center">
+                        <div class="menu-icon text-info">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <h5 class="card-title font-weight-bold">Budget Planning</h5>
+                        <p class="card-text text-muted">Plan budgets, set financial targets, and monitor spending limits</p>
+                        <div class="mt-3">
+                            <span class="badge badge-info px-3 py-2">
+                                <i class="fas fa-arrow-right mr-1"></i>Access Module
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Quick Actions Row -->
+        <div class="row">
+            <!-- Recent Transactions -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-history mr-1"></i>
+                            Recent Transactions
+                        </h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Patient</th>
+                                    <th>Service</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentTransactions">
+                                <tr>
+                                    <td>2025-05-29</td>
+                                    <td>Mrs. Johnson</td>
+                                    <td>IVF Consultation</td>
+                                    <td class="text-success">₦25,000</td>
+                                    <td><span class="badge badge-success">Paid</span></td>
+                                </tr>
+                                <tr>
+                                    <td>2025-05-28</td>
+                                    <td>Ms. Adams</td>
+                                    <td>Fertility Testing</td>
+                                    <td class="text-warning">₦15,000</td>
+                                    <td><span class="badge badge-warning">Pending</span></td>
+                                </tr>
+                                <tr>
+                                    <td>2025-05-28</td>
+                                    <td>Dr. Brown</td>
+                                    <td>Hormone Therapy</td>
+                                    <td class="text-success">₦35,000</td>
+                                    <td><span class="badge badge-success">Paid</span></td>
+                                </tr>
+                                <tr>
+                                    <td>2025-05-27</td>
+                                    <td>Mrs. Wilson</td>
+                                    <td>Ultrasound Scan</td>
+                                    <td class="text-danger">₦8,000</td>
+                                    <td><span class="badge badge-danger">Overdue</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Budget -->
+            <div class="col-md-4">
+                <!-- Quick Actions -->
+                <div class="card card-secondary">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-bolt mr-1"></i>
+                            Quick Actions
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm mb-2" onclick="location.href='{% url 'patient_payment_tracker' %}'">
+                                <i class="fas fa-plus mr-1"></i>Record Payment
                             </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="remove">
-                                <i class="fas fa-times"></i>
+                            <button class="btn btn-outline-success btn-sm mb-2" onclick="location.href='{% url 'patient_payment_tracker' %}'">
+                                <i class="fas fa-file-alt mr-1"></i>Generate Invoice
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm mb-2" onclick="location.href='{% url 'financial_reports' %}'">
+                                <i class="fas fa-download mr-1"></i>Export Report
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="location.href='{% url 'budget_planning' %}'">
+                                <i class="fas fa-calculator mr-1"></i>Budget Calculator
                             </button>
                         </div>
                     </div>
-                    <!-- /.card-header -->
-                    <div class="card-body p-0">
-                        <ul class="products-list product-list-in-card pl-2 pr-2">
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        Samsung TV
-                                        <span class="badge badge-warning float-right">$1800</span>
-                                    </a>
-                                    <span class="product-description">
-                                        Samsung 32" 1080p 60Hz LED Smart HDTV.
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        Bicycle
-                                        <span class="badge badge-info float-right">$700</span>
-                                    </a>
-                                    <span class="product-description">
-                                        26" Mongoose Dolomite Men's 7-speed, Navy Blue.
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        Xbox One <span class="badge badge-danger float-right">
-                                            $350
-                                        </span>
-                                    </a>
-                                    <span class="product-description">
-                                        Xbox One Console Bundle with Halo Master Chief Collection.
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                            <li class="item">
-                                <div class="product-img">
-                                    <img src="dist/img/default-150x150.png" alt="Product Image" class="img-size-50">
-                                </div>
-                                <div class="product-info">
-                                    <a href="javascript:void(0)" class="product-title">
-                                        PlayStation 4
-                                        <span class="badge badge-success float-right">$399</span>
-                                    </a>
-                                    <span class="product-description">
-                                        PlayStation 4 500GB Console (PS4)
-                                    </span>
-                                </div>
-                            </li>
-                            <!-- /.item -->
-                        </ul>
-                    </div>
-                    <!-- /.card-body -->
-                    <div class="card-footer text-center">
-                        <a href="javascript:void(0)" class="uppercase">View All Products</a>
-                    </div>
-                    <!-- /.card-footer -->
                 </div>
-                <!-- /.card -->
-            </div>
-            <!-- /.col -->
-        </div>
-        <!-- /.row -->
-    </div><!--/. container-fluid -->
-</section>
-<!-- /.content -->
-</div>
-<!-- /.content-wrapper -->
-<!-- Control Sidebar -->
-<aside class="control-sidebar control-sidebar-dark">
-    <!-- Control sidebar content goes here -->
-</aside>
 
+                <!-- Budget Overview -->
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-balance-scale mr-1"></i>
+                            Monthly Budget
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress-group">
+                            <span class="progress-text">Revenue Target</span>
+                            <span class="float-right"><b>₦480K</b>/₦500K</span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-success" style="width: 96%"></div>
+                            </div>
+                        </div>
+                        <div class="progress-group">
+                            <span class="progress-text">Operating Expenses</span>
+                            <span class="float-right"><b>₦180K</b>/₦200K</span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-warning" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div class="progress-group">
+                            <span class="progress-text">Equipment Budget</span>
+                            <span class="float-right"><b>₦45K</b>/₦100K</span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-info" style="width: 45%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'budget_planning' %}" class="btn btn-sm btn-info">
+                            <i class="fas fa-arrow-circle-right mr-1"></i>Plan Budget
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Cards -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-outline card-danger">
+                    <div class="card-body text-center">
+                        <i class="fas fa-sign-out-alt fa-3x text-danger mb-3"></i>
+                        <h5>End Session</h5>
+                        <p class="text-muted">Securely logout and end your current session</p>
+                        <a href="{% url 'logout' %}" class="btn btn-danger">
+                            <i class="fas fa-lock mr-1"></i>Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-outline card-info">
+                    <div class="card-body text-center">
+                        <i class="fas fa-cog fa-3x text-info mb-3"></i>
+                        <h5>System Settings</h5>
+                        <p class="text-muted">Configure system preferences and user settings</p>
+                        <button class="btn btn-info">
+                            <i class="fas fa-tools mr-1"></i>Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
 {% endblock %}
-<!-- /.control-sidebar -->
-<!-- Main Footer -->
-<!-- ./wrapper -->
+
+{% block extra_js %}
+<script>
+// Ensure DOM is ready and all scripts are loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing dashboard...');
+    
+    // Function to update date and time
+    function updateDateTime() {
+        try {
+            var now = new Date();
+            
+            // Update date
+            var dateElement = document.getElementById('currentDate');
+            if (dateElement) {
+                dateElement.textContent = now.toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+            
+            // Update time
+            var timeElement = document.getElementById('currentTime');
+            if (timeElement) {
+                timeElement.textContent = now.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+            }
+        } catch (error) {
+            console.error('Error updating date/time:', error);
+        }
+    }
+    
+    // Update immediately
+    updateDateTime();
+    
+    // Update every second
+    setInterval(updateDateTime, 1000);
+
+    // Initialize charts after a small delay to ensure everything is loaded
+    setTimeout(function() {
+        initializeCharts();
+    }, 500);
+
+    // Initialize hover effects
+    initializeHoverEffects();
+});
+
+function initializeCharts() {
+    console.log('Initializing charts...');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded. Please ensure Chart.js is included in your static files.');
+        return;
+    }
+
+    // Revenue Chart
+    var revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+        try {
+            var revenueChart = new Chart(revenueCtx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['December', 'January', 'February', 'March', 'April', 'May'],
+                    datasets: [{
+                        label: 'Revenue (₦)',
+                        data: [350000, 420000, 380000, 450000, 480000, 520000],
+                        borderColor: '#3c8dbc',
+                        backgroundColor: 'rgba(60, 141, 188, 0.1)',
+                        tension: 0.1,
+                        fill: true,
+                        pointBackgroundColor: '#3c8dbc',
+                        pointBorderColor: '#3c8dbc',
+                        pointRadius: 4
+                    }, {
+                        label: 'Expenses (₦)',
+                        data: [180000, 200000, 185000, 195000, 210000, 205000],
+                        borderColor: '#f56954',
+                        backgroundColor: 'rgba(245, 105, 84, 0.1)',
+                        tension: 0.1,
+                        fill: true,
+                        pointBackgroundColor: '#f56954',
+                        pointBorderColor: '#f56954',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + (value/1000) + 'K';
+                                }
+                            },
+                            grid: {
+                                borderColor: '#e9ecef',
+                                color: '#f8f9fa'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                borderColor: '#e9ecef',
+                                color: '#f8f9fa'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#fff',
+                            borderWidth: 1,
+                            cornerRadius: 6,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ₦' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            console.log('Revenue chart initialized successfully');
+        } catch (error) {
+            console.error('Error creating revenue chart:', error);
+        }
+    } else {
+        console.error('Revenue chart canvas not found');
+    }
+
+    // Payment Status Pie Chart
+    var paymentCtx = document.getElementById('paymentStatusChart');
+    if (paymentCtx) {
+        try {
+            var paymentChart = new Chart(paymentCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Paid', 'Pending', 'Overdue'],
+                    datasets: [{
+                        data: [65, 25, 10],
+                        backgroundColor: [
+                            '#28a745',
+                            '#ffc107',
+                            '#dc3545'
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#fff',
+                        hoverBorderWidth: 4,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#fff',
+                            borderWidth: 1,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed + '%';
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        animateScale: true,
+                        duration: 1000
+                    }
+                }
+            });
+            console.log('Payment status chart initialized successfully');
+        } catch (error) {
+            console.error('Error creating payment status chart:', error);
+        }
+    } else {
+        console.error('Payment status chart canvas not found');
+    }
+}
+
+function initializeHoverEffects() {
+    // Animate stat boxes on hover
+    var smallBoxes = document.querySelectorAll('.small-box');
+    smallBoxes.forEach(function(box) {
+        box.addEventListener('mouseenter', function() {
+            this.classList.add('elevation-3');
+        });
+        
+        box.addEventListener('mouseleave', function() {
+            this.classList.remove('elevation-3');
+        });
+    });
+
+    // Animate menu cards on hover
+    var menuCards = document.querySelectorAll('.menu-card');
+    menuCards.forEach(function(card) {
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('elevation-4');
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('elevation-4');
+        });
+    });
+    
+    console.log('Hover effects initialized for', smallBoxes.length, 'small boxes and', menuCards.length, 'menu cards');
+}
+
+// Fallback for jQuery if it's available
+if (typeof $ !== 'undefined') {
+    $(document).ready(function() {
+        console.log('jQuery available, adding additional enhancements...');
+        
+        // Additional jQuery-based enhancements
+        $('.small-box').hover(
+            function() {
+                $(this).addClass('elevation-3');
+            },
+            function() {
+                $(this).removeClass('elevation-3');
+            }
+        );
+
+        $('.menu-card').hover(
+            function() {
+                $(this).addClass('elevation-4');
+            },
+            function() {
+                $(this).removeClass('elevation-4');
+            }
+        );
+    });
+}
+</script>
+{% endblock %}
