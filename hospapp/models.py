@@ -514,7 +514,7 @@ class Payment(models.Model):
         ('cancelled', 'Cancelled'),
     ]
     
-    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='payments')
+    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='payments', null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)

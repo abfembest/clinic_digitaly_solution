@@ -583,72 +583,106 @@ Mike Johnson, 8000, transfer, REF456, Surgery payment"></textarea>
 
 {% block extra_js %}
 <script>
-// Complete JavaScript functionality for Patient Payment Tracker
-
 let rowCounter = 1;
-let patients = []; // Will be populated via AJAX
-let parsedPayments = []; // For smart bulk entry
+let patients = [];
+let parsedPayments = [];
 
-// Load patients on page load
-$(document).ready(function() {
+$(document).ready(function () {
     loadPatients();
     setupEventListeners();
     setupSmartBulkEntry();
+    calculateTotal();
 });
 
 function loadPatients() {
-    $.get('/api/patients/', function(data) {
+    $.get('/api/patients/', function (data) {
         patients = data;
-    }).fail(function() {
-        // Fallback if API not available
+        showAllPatientSuggestions(); // show immediately on load
+    }).fail(function () {
         patients = [];
         console.warn('Could not load patients from API');
     });
 }
 
-// Smart Bulk Entry Functions
-function setupSmartBulkEntry() {
-    const textarea = document.getElementById('bulk-text-input');
-    
-    // Real-time parsing as user types
-    textarea.addEventListener('input', debounce(function() {
-        parseAndPreview();
-    }, 500));
-    
-    // Auto-suggest on typing
-    textarea.addEventListener('input', function() {
-        const cursorPos = this.selectionStart;
-        const textBeforeCursor = this.value.substring(0, cursorPos);
-        const currentLine = textBeforeCursor.split('\n').pop();
-        
-        if (currentLine.length > 2 && !currentLine.includes(',')) {
-            showPatientSuggestions(currentLine, cursorPos);
-        } else {
-            hidePatientSuggestions();
+function showAllPatientSuggestions() {
+    document.querySelectorAll('.patient-search').forEach(input => {
+        const container = input.parentElement.querySelector('.patient-suggestions');
+        if (container) showPatientSuggestionsList(input, container, patients.slice(0, 10));
+    });
+}
+
+function setupPatientSearch() {
+    $(document).off('input', '.patient-search').on('input', '.patient-search', function () {
+        const input = this;
+        const query = input.value.toLowerCase();
+        const container = input.parentElement.querySelector('.patient-suggestions');
+
+        const matches = query.length < 1
+            ? patients.slice(0, 10)
+            : patients.filter(p =>
+                p.full_name.toLowerCase().includes(query) ||
+                (p.phone && p.phone.includes(query))
+            ).slice(0, 10);
+
+        showPatientSuggestionsList(input, container, matches);
+    });
+
+    $(document).off('focus', '.patient-search').on('focus', '.patient-search', function () {
+        const input = this;
+        const container = input.parentElement.querySelector('.patient-suggestions');
+        showPatientSuggestionsList(input, container, patients.slice(0, 10));
+    });
+
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('.form-group').length) {
+            $('.patient-suggestions').hide();
         }
     });
 }
 
+function showPatientSuggestionsList(input, container, suggestions) {
+    if (!container) return;
+    if (suggestions.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = suggestions.map(p => `
+        <div class="patient-suggestion" onclick="selectPatient(this, ${p.id}, '${p.full_name}')">
+            <strong>${p.full_name}</strong><br><small>ID: ${p.id} | Phone: ${p.phone || 'N/A'}</small>
+        </div>
+    `).join('');
+    container.style.display = 'block';
+}
+
+function selectPatient(element, patientId, patientName) {
+    const formGroup = element.closest('.form-group');
+    const nameInput = formGroup.querySelector('.patient-search');
+    const idInput = formGroup.querySelector('.patient-id');
+    nameInput.value = patientName;
+    idInput.value = patientId;
+    formGroup.querySelector('.patient-suggestions').style.display = 'none';
+}
+
+// Smart Bulk Entry logic
+function setupSmartBulkEntry() {
+    const textarea = document.getElementById('bulk-text-input');
+    textarea.addEventListener('input', debounce(function () {
+        parseAndPreview();
+    }, 500));
+}
+
 function debounce(func, wait) {
     let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
 function insertSample() {
-    const sampleData = `John Doe, 5000, cash
-Jane Smith, 15000, pos, REF123
-Mike Johnson, 8000, transfer
-Sarah Connor, 12000, cash, REF456, Surgery payment
-David Wilson, 6000, pos`;
-    
-    document.getElementById('bulk-text-input').value = sampleData;
+    document.getElementById('bulk-text-input').value =
+        `John Doe, 5000, cash\nJane Smith, 15000, pos, REF123\nMike Johnson, 8000, transfer\nSarah Connor, 12000, cash, REF456, Surgery payment\nDavid Wilson, 6000, pos`;
     parseAndPreview();
 }
 
@@ -660,203 +694,90 @@ function clearTextArea() {
 }
 
 function parseAndPreview() {
-    const textarea = document.getElementById('bulk-text-input');
-    const lines = textarea.value.split('\n').filter(line => line.trim());
-    
-    parsedPayments = [];
-    
-    lines.forEach((line, index) => {
-        const parsed = parsePaymentLine(line.trim(), index + 1);
-        if (parsed) {
-            parsedPayments.push(parsed);
-        }
-    });
-    
+    const lines = document.getElementById('bulk-text-input').value.split('\n').filter(line => line.trim());
+    parsedPayments = lines.map((line, index) => parsePaymentLine(line.trim(), index + 1)).filter(p => p);
     updatePreviewTable();
     updateStats();
-    
-    // Enable/disable submit button
-    const validCount = parsedPayments.filter(p => p.isValid).length;
-    document.getElementById('submit-smart-btn').disabled = validCount === 0;
+    document.getElementById('submit-smart-btn').disabled = parsedPayments.filter(p => p.isValid).length === 0;
 }
 
 function parsePaymentLine(line, lineNumber) {
-    if (!line) return null;
-    
-    const parts = line.split(',').map(part => part.trim());
-    
-    if (parts.length < 2) {
-        return {
-            lineNumber,
-            originalLine: line,
-            isValid: false,
-            error: 'Minimum format: Patient Name, Amount'
-        };
-    }
-    
-    const payment = {
+    const parts = line.split(',').map(p => p.trim());
+    if (parts.length < 2) return { isValid: false, lineNumber, originalLine: line, errors: ['Patient and amount required'] };
+
+    let [name, amount, method = 'cash', reference = '', notes = ''] = parts;
+    let errors = [];
+
+    const parsed = {
         lineNumber,
         originalLine: line,
-        patient_name: parts[0],
-        amount: parseFloat(parts[1]) || 0,
-        method: parts[2] || 'cash',
-        reference: parts[3] || '',
-        notes: parts[4] || '',
+        patient_name: name,
+        amount: parseFloat(amount),
+        method: method.toLowerCase(),
+        reference,
+        notes,
         isValid: true,
         errors: []
     };
-    
-    // Validation
-    if (!payment.patient_name) {
-        payment.errors.push('Patient name required');
-        payment.isValid = false;
-    }
-    
-    if (payment.amount <= 0) {
-        payment.errors.push('Amount must be greater than 0');
-        payment.isValid = false;
-    }
-    
+
+    if (!name) errors.push('Name required');
+    if (!parsed.amount || parsed.amount <= 0) errors.push('Invalid amount');
+
     const validMethods = ['cash', 'pos', 'transfer', 'cheque', 'online'];
-    if (payment.method && !validMethods.includes(payment.method.toLowerCase())) {
-        payment.errors.push(`Invalid payment method. Use: ${validMethods.join(', ')}`);
-        payment.isValid = false;
+    if (!validMethods.includes(parsed.method)) {
+        errors.push('Invalid method');
+    }
+
+    const match = patients.find(p => p.full_name.toLowerCase() === name.toLowerCase() || p.full_name.toLowerCase().includes(name.toLowerCase()));
+    if (match) {
+        parsed.patient_id = match.id;
+        parsed.patient_name = match.full_name;
     } else {
-        payment.method = payment.method.toLowerCase();
+        errors.push('Patient not found');
     }
-    
-    // Find matching patient
-    const matchingPatient = patients.find(p => 
-        p.full_name.toLowerCase() === payment.patient_name.toLowerCase() ||
-        p.full_name.toLowerCase().includes(payment.patient_name.toLowerCase())
-    );
-    
-    if (matchingPatient) {
-        payment.patient_id = matchingPatient.id;
-        payment.patient_name = matchingPatient.full_name; // Use exact name
-    } else if (patients.length > 0) {
-        payment.errors.push('Patient not found in system');
-        payment.isValid = false;
-    }
-    
-    return payment;
+
+    parsed.isValid = errors.length === 0;
+    parsed.errors = errors;
+    return parsed;
 }
 
 function updatePreviewTable() {
     const tbody = document.getElementById('preview-body');
-    
     if (parsedPayments.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center text-muted">
-                    <i class="fas fa-arrow-left"></i> Start typing to see preview
-                </td>
-            </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted"><i class="fas fa-arrow-left"></i> Start typing to see preview</td></tr>`;
         return;
     }
-    
-    tbody.innerHTML = parsedPayments.map(payment => `
-        <tr class="preview-row ${payment.isValid ? 'valid' : 'invalid'}">
-            <td>
-                ${payment.patient_name}
-                ${payment.patient_id ? '<small class="text-muted d-block">ID: ' + payment.patient_id + '</small>' : ''}
-            </td>
-            <td class="text-right">₦${payment.amount.toLocaleString('en-NG', {minimumFractionDigits: 2})}</td>
-            <td><span class="badge badge-secondary">${payment.method.toUpperCase()}</span></td>
-            <td>${payment.reference || '-'}</td>
-            <td>
-                ${payment.isValid ? 
-                    '<i class="fas fa-check-circle text-success"></i> Valid' : 
-                    '<i class="fas fa-exclamation-triangle text-danger"></i> Invalid'
-                }
-                ${payment.errors.length > 0 ? 
-                    '<div class="error-message">' + payment.errors.join('<br>') + '</div>' : 
-                    ''
-                }
-            </td>
+
+    tbody.innerHTML = parsedPayments.map(p => `
+        <tr class="preview-row ${p.isValid ? 'valid' : 'invalid'}">
+            <td>${p.patient_name}${p.patient_id ? `<small class="text-muted d-block">ID: ${p.patient_id}</small>` : ''}</td>
+            <td class="text-right">₦${p.amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</td>
+            <td><span class="badge badge-secondary">${p.method.toUpperCase()}</span></td>
+            <td>${p.reference || '-'}</td>
+            <td>${p.isValid ? '<i class="fas fa-check-circle text-success"></i> Valid' : '<i class="fas fa-exclamation-triangle text-danger"></i> Invalid'}${p.errors.length ? `<div class="error-message">${p.errors.join('<br>')}</div>` : ''}</td>
         </tr>
     `).join('');
 }
 
 function updateStats() {
-    const totalEntries = parsedPayments.length;
-    const validEntries = parsedPayments.filter(p => p.isValid).length;
-    const invalidEntries = totalEntries - validEntries;
-    const totalAmount = parsedPayments
-        .filter(p => p.isValid)
-        .reduce((sum, p) => sum + p.amount, 0);
-    
-    document.getElementById('entries-count').textContent = totalEntries;
-    document.getElementById('valid-count').textContent = validEntries;
-    document.getElementById('invalid-count').textContent = invalidEntries;
-    document.getElementById('total-amount-smart').textContent = 
-        '₦' + totalAmount.toLocaleString('en-NG', {minimumFractionDigits: 2});
-}
-
-function showPatientSuggestions(query, cursorPos) {
-    const suggestions = patients.filter(p => 
-        p.full_name.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 5);
-    
-    const suggestionDiv = document.getElementById('input-suggestions');
-    
-    if (suggestions.length > 0) {
-        suggestionDiv.innerHTML = suggestions.map(patient => `
-            <div class="suggestion-item" onclick="insertPatientName('${patient.full_name}', ${cursorPos})">
-                <strong>${patient.full_name}</strong><br>
-                <small class="text-muted">ID: ${patient.id} | Phone: ${patient.phone || 'N/A'}</small>
-            </div>
-        `).join('');
-        suggestionDiv.style.display = 'block';
-    } else {
-        hidePatientSuggestions();
-    }
-}
-
-function hidePatientSuggestions() {
-    const suggestionDiv = document.getElementById('input-suggestions');
-    suggestionDiv.style.display = 'none';
-}
-
-function insertPatientName(patientName, cursorPos) {
-    const textarea = document.getElementById('bulk-text-input');
-    const value = textarea.value;
-    const beforeCursor = value.substring(0, cursorPos);
-    const afterCursor = value.substring(cursorPos);
-    const lineStart = beforeCursor.lastIndexOf('\n') + 1;
-    const currentLineBeforeCursor = beforeCursor.substring(lineStart);
-    
-    // Replace the current line's patient name part
-    const newValue = beforeCursor.substring(0, lineStart) + patientName + afterCursor;
-    textarea.value = newValue;
-    
-    // Set cursor position after the inserted name
-    const newCursorPos = lineStart + patientName.length;
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-    textarea.focus();
-    
-    hidePatientSuggestions();
-    parseAndPreview();
+    const valid = parsedPayments.filter(p => p.isValid);
+    const total = valid.reduce((sum, p) => sum + p.amount, 0);
+    document.getElementById('entries-count').textContent = parsedPayments.length;
+    document.getElementById('valid-count').textContent = valid.length;
+    document.getElementById('invalid-count').textContent = parsedPayments.length - valid.length;
+    document.getElementById('total-amount-smart').textContent = '₦' + total.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 }
 
 function submitSmartBulkPayments() {
     const validPayments = parsedPayments.filter(p => p.isValid);
-    
-    if (validPayments.length === 0) {
-        alert('No valid payments to submit.');
-        return;
-    }
-    
-    if (!confirm(`Submit ${validPayments.length} payment(s)?`)) {
-        return;
-    }
-    
-    const submitBtn = document.getElementById('submit-smart-btn');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-    submitBtn.disabled = true;
-    
+    if (!validPayments.length) return alert('No valid payments to submit.');
+    if (!confirm(`Submit ${validPayments.length} payment(s)?`)) return;
+
+    const btn = document.getElementById('submit-smart-btn');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    btn.disabled = true;
+
     $.ajax({
         url: window.location.href,
         method: 'POST',
@@ -865,24 +786,25 @@ function submitSmartBulkPayments() {
             payments: JSON.stringify(validPayments),
             csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
         },
-        success: function(response) {
-            if (response.success) {
-                alert(`Successfully recorded ${response.count} payment(s).`);
-                clearTextArea();
-                // Refresh recent payments tab if visible
-                if ($('#recent').hasClass('active')) {
-                    location.reload();
+        success: function (res) {
+            if (res.success) {
+                let message = `Successfully recorded ${res.count} payment(s).`;
+                if (res.errors && res.errors.length > 0) {
+                    message += `\n\nHowever, the following errors occurred:\n- ${res.errors.join('\n- ')}`;
                 }
+                alert(message);
+                clearTextArea();
+                if ($('#recent').hasClass('active')) location.reload();
             } else {
-                alert('Error: ' + (response.error || 'Unknown error occurred'));
+                alert('Submission failed: ' + (res.error || 'Unknown error.'));
             }
         },
-        error: function() {
-            alert('Network error occurred. Please try again.');
+        error: function (xhr, status, error) {
+            alert(`Network or server error: ${error || status}`);
         },
-        complete: function() {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+        complete: function () {
+            btn.innerHTML = original;
+            btn.disabled = false;
         }
     });
 }
