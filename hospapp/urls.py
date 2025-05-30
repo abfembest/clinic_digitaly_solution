@@ -24,6 +24,7 @@ urlpatterns = [
     path('d/home', views.doctors, name='doctors'),
     path('d/home', views.chart_view, name='chart_view'),
     path('d/consultations', views.doctor_consultation, name='doctor_consultation'),
+    path('d/chart2', views.admissions_data, name='admissions_data'),
     path('save-consultations', views.save_consultation, name='save_consultation'),
     path('patient-history/<int:patient_id>/', views.patient_history_ajax, name='patient_history_ajax'),
     path('add-prescription/', views.add_prescription, name='add_prescription'),
@@ -93,5 +94,9 @@ urlpatterns = [
     
     path('chart', views.chart_view, name='chart_view'),
 
+
+    #graph
+    path('mainchart', views.chart2, name='chart2'),
+    
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

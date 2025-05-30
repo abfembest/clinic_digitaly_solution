@@ -604,3 +604,9 @@ class PaymentUpload(models.Model):
         return f"Upload: {self.file_name} - {self.status}"
 
     
+
+    # Example model to track admissions on graph
+
+class PatientAdmission(models.Model):
+    admission_date = models.DateField()
+    patient_name = models.CharField(max_length=255)

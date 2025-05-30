@@ -1492,4 +1492,70 @@ def submit_test_selection(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+#graph 2
+from django.http import JsonResponse
+from django.db.models import Count
+from .models import PatientAdmission
+from django.utils import timezone
+from datetime import timedelta
+
+
+def chart2(request):
+    return render(request, "doctors/graph.html")
+
+
+"""def admissions_data(request):
+    today = timezone.now().date()
+    last_week = today - timedelta(days=6)
+    
+    data = (
+        TestSelection.objects.filter(submitted_on__range=[last_week, today])
+        .values('submitted_on')
+        .annotate(count=Count('id'))
+        .order_by('submitted_on')
+    )
+    
+    labels = [entry['submitted_on'].strftime('%b %d') for entry in data]
+    counts = [entry['count'] for entry in data]
+    
+    return JsonResponse({'labels': labels, 'counts': counts})    
+"""
+
+def admissions_data(request):
+    today = timezone.now().date()
+    last_week = today - timedelta(days=6)
+
+    # All test requests
+    all_tests = (
+        TestSelection.objects.filter(submitted_on__range=[last_week, today])
+        .values('submitted_on')
+        .annotate(count=Count('id'))
+        .order_by('submitted_on')
+    )
+
+    # Completed tests (adjust filter condition as needed)
+    completed_tests = (
+        TestSelection.objects.filter(
+            submitted_on__range=[last_week, today],
+            testcompleted = True  # Change this to your actual model's field/value
+        )
+        .values('submitted_on')
+        .annotate(count=Count('id'))
+        .order_by('submitted_on')
+    )
+    
+    print(completed_tests)
+
+    def format_data(queryset):
+        return {
+            'labels': [entry['submitted_on'].strftime('%b %d') for entry in queryset],
+            'counts': [entry['count'] for entry in queryset]
+        }
+
+    return JsonResponse({
+        'requested': format_data(all_tests),
+        'completed': format_data(completed_tests),
+    })
+
+
 
