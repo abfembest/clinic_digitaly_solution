@@ -64,7 +64,10 @@ urlpatterns = [
     # path('a/payment_tracker', views.patient_payment_tracker, name='patient_payment_tracker'),
     # path('a/financials', views.institution_financials, name='institution_financials'),
     path('a/financial_reports', accts.financial_reports, name='financial_reports'),
-    path('a/budget_planning', views.budget_planning, name='budget_planning'),
+    path('a/budget-planning/', accts.budget_planning, name='budget_planning'),
+    path('budget-analytics/', accts.budget_analytics, name='budget_analytics'),
+    path('budget/delete/<int:budget_id>/', accts.delete_budget, name='delete_budget'),
+    # path('a/budget_planning', views.budget_planning, name='budget_planning'),
 
     path('hr/home', views.hr, name='hr'),
     path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
