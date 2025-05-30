@@ -10,7 +10,15 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Sum, Q
 from datetime import datetime, date
-from io import BytesIO
+from django.shortcuts import render
+from django.db.models import Sum, Q
+from django.utils.timezone import now
+from datetime import timedelta
+from collections import OrderedDict
+from decimal import Decimal
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+
 
 # Import your models (adjust the import path as needed)
 from .models import (
@@ -619,6 +627,69 @@ def income_expenditure_view(request):
 
     transactions.sort(key=lambda x: x['date'], reverse=True)
 
-    return render(request, 'accounts/financials.html', {
-        'transactions': transactions[:50],  # latest 50
-    })
+    # Pagination - 10 transactions per page
+    paginator = Paginator(transactions, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'transactions': page_obj.object_list,
+    }
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Render only the transactions table + pagination part
+        html = render_to_string('accounts/financials.html', context, request=request, using=None)
+        # We want to extract only the relevant block to send back — we can use a dedicated block for this (see next)
+        return JsonResponse({'html': html})
+
+    return render(request, 'accounts/financials.html', context)
+
+def financial_reports(request):
+    # Define date range (last 30 days)
+    end_date = now().date()
+    start_date = end_date - timedelta(days=29)
+
+    # Total income: sum of completed payments
+    total_income_agg = Payment.objects.filter(
+        status='completed',
+        payment_date__date__range=(start_date, end_date)
+    ).aggregate(total=Sum('amount'))
+    total_income = total_income_agg['total'] or Decimal('0.00')
+
+    # Total expenditure: sum of approved or paid expenses
+    total_expenditure_agg = Expense.objects.filter(
+        status__in=['approved', 'paid'],
+        expense_date__range=(start_date, end_date)
+    ).aggregate(total=Sum('amount'))
+    total_expenditure = total_expenditure_agg['total'] or Decimal('0.00')
+
+    # Net balance
+    net_balance = total_income - total_expenditure
+
+    # Prepare daily income chart data
+    # Initialize dict with last 30 days as keys and 0 as initial values
+    date_labels = [(start_date + timedelta(days=i)) for i in range(30)]
+    daily_income_dict = OrderedDict((d.strftime('%Y-%m-%d'), 0) for d in date_labels)
+
+    # Aggregate income grouped by day
+    daily_income_qs = Payment.objects.filter(
+        status='completed',
+        payment_date__date__range=(start_date, end_date)
+    ).values('payment_date__date').annotate(
+        day_total=Sum('amount')
+    ).order_by('payment_date__date')
+
+    for entry in daily_income_qs:
+        day_str = entry['payment_date__date'].strftime('%Y-%m-%d')
+        daily_income_dict[day_str] = float(entry['day_total'])  # float for JSON serialization
+
+    context = {
+        'total_income': total_income,
+        'total_expenditure': total_expenditure,
+        'net_balance': net_balance,
+        'chart_labels': list(daily_income_dict.keys()),
+        'chart_data': list(daily_income_dict.values()),
+    }
+
+    return render(request, 'accounts/financial_reports.html', context)
