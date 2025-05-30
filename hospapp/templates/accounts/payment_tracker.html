@@ -496,7 +496,7 @@ Mike Johnson, 8000, transfer, REF456, Surgery payment"></textarea>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary" onclick="viewPatientDetails({{ record.patient.id }})">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="loadPatientFinancialDetails({{ record.patient.id }})">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                         </td>
@@ -566,16 +566,217 @@ Mike Johnson, 8000, transfer, REF456, Surgery payment"></textarea>
 
 <!-- Patient Details Modal -->
 <div class="modal fade" id="patientDetailsModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Patient Financial Details</h5>
-                <button type="button" class="close" data-dismiss="modal">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-circle"></i> Patient Financial Details
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
             <div class="modal-body" id="patientDetailsContent">
-                <!-- Content loaded via AJAX -->
+                <!-- Loading content -->
+                <div class="text-center py-5" id="modalLoading">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <p>Loading patient details...</p>
+                </div>
+                
+                <!-- Main content structure (will be populated by AJAX) -->
+                <div id="modalMainContent" style="display: none;">
+                    <!-- Patient Info Card -->
+                    <div class="card border-primary mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-user"></i> Patient Information
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="patientInfo">
+                                <!-- Patient details will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary Cards -->
+                    <div class="row mb-4" id="financialSummary">
+                        <div class="col-md-3">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-file-invoice-dollar fa-2x text-info mb-2"></i>
+                                    <h4 class="text-info" id="modalTotalBilled">₦0.00</h4>
+                                    <small class="text-muted">Total Billed</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                                    <h4 class="text-success" id="modalTotalPaid">₦0.00</h4>
+                                    <small class="text-muted">Total Paid</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-warning">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                                    <h4 class="text-warning" id="modalOutstanding">₦0.00</h4>
+                                    <small class="text-muted">Outstanding</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card border-secondary">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-percentage fa-2x text-secondary mb-2"></i>
+                                    <h4 class="text-secondary" id="modalPaymentPercent">0%</h4>
+                                    <small class="text-muted">Paid Percentage</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs for Bills and Payments -->
+                    <ul class="nav nav-tabs" id="detailTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#billsTab">
+                                <i class="fas fa-file-invoice"></i> Bills (<span id="billsCount">0</span>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#paymentsTab">
+                                <i class="fas fa-credit-card"></i> Payments (<span id="paymentsCount">0</span>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#quickActionsTab">
+                                <i class="fas fa-tools"></i> Quick Actions
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content mt-3">
+                        <!-- Bills Tab -->
+                        <div class="tab-pane fade show active" id="billsTab">
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-striped table-hover">
+                                    <thead class="thead-light sticky-top">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Bill ID</th>
+                                            <th>Description</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="billsTableBody">
+                                        <!-- Bills will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Payments Tab -->
+                        <div class="tab-pane fade" id="paymentsTab">
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-striped table-hover">
+                                    <thead class="thead-light sticky-top">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Payment ID</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Reference</th>
+                                            <th>Status</th>
+                                            <th>Processed By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="paymentsTableBody">
+                                        <!-- Payments will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Tab -->
+                        <div class="tab-pane fade" id="quickActionsTab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="card-title">Record New Payment</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <form id="quickPaymentForm">
+                                                <div class="form-group">
+                                                    <label>Amount *</label>
+                                                    <input type="number" class="form-control" id="quickAmount" 
+                                                           step="0.01" min="0.01" required>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Payment Method</label>
+                                                    <select class="form-control" id="quickMethod">
+                                                        <option value="cash">Cash</option>
+                                                        <option value="pos">POS</option>
+                                                        <option value="transfer">Bank Transfer</option>
+                                                        <option value="cheque">Cheque</option>
+                                                        <option value="online">Online Payment</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Reference</label>
+                                                    <input type="text" class="form-control" id="quickReference">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Notes</label>
+                                                    <textarea class="form-control" id="quickNotes" rows="2"></textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="fas fa-save"></i> Record Payment
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="card-title">Other Actions</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-outline-primary btn-block mb-2" onclick="printPatientStatement()">
+                                                    <i class="fas fa-print"></i> Print Statement
+                                                </button>
+                                                <button class="btn btn-outline-info btn-block mb-2" onclick="emailPatientStatement()">
+                                                    <i class="fas fa-envelope"></i> Email Statement
+                                                </button>
+                                                <button class="btn btn-outline-warning btn-block mb-2" onclick="sendPaymentReminder()">
+                                                    <i class="fas fa-bell"></i> Send Payment Reminder
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-block" onclick="exportPatientData()">
+                                                    <i class="fas fa-download"></i> Export Data
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="refreshPatientDetails()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
             </div>
         </div>
     </div>
@@ -605,6 +806,79 @@ function loadPatients() {
         console.warn('Could not load patients from API');
     });
 }
+
+function loadPatientFinancialDetails(patientId) {
+    $('#patientDetailsModal').modal('show');
+    $('#modalMainContent').hide();
+    $('#modalLoading').show();
+
+    $.ajax({
+        url: `/api/patients/${patientId}/financial-details/`,
+        method: 'GET',
+        success: function(data) {
+            // Fill in patient info
+            $('#patientInfo').html(`
+                <div class="col-md-4"><strong>Name:</strong> ${data.patient.full_name}</div>
+                <div class="col-md-4"><strong>Phone:</strong> ${data.patient.phone}</div>
+                <div class="col-md-4"><strong>Email:</strong> ${data.patient.email}</div>
+                <div class="col-md-4"><strong>DOB:</strong> ${data.patient.date_of_birth}</div>
+                <div class="col-md-4"><strong>Gender:</strong> ${data.patient.gender}</div>
+            `);
+
+            // Totals
+            $('#modalTotalBilled').text(`₦${data.total_billed}`);
+            $('#modalTotalPaid').text(`₦${data.total_paid}`);
+            $('#modalOutstanding').text(`₦${data.outstanding}`);
+
+            const paidPercent = parseFloat(data.total_paid) && parseFloat(data.total_billed)
+                ? Math.round((parseFloat(data.total_paid) / parseFloat(data.total_billed)) * 100)
+                : 0;
+            $('#modalPaymentPercent').text(`${paidPercent}%`);
+
+            // Bills Table
+            $('#billsTableBody').empty();
+            data.bills.forEach(bill => {
+                $('#billsTableBody').append(`
+                    <tr>
+                        <td>${new Date(bill.created_at).toLocaleDateString()}</td>
+                        <td>#${bill.id}</td>
+                        <td>${bill.description}</td>
+                        <td>₦${bill.final_amount}</td>
+                        <td>${bill.status}</td>
+                        <td><button class="btn btn-sm btn-primary">View</button></td>
+                    </tr>
+                `);
+            });
+            $('#billsCount').text(data.bills.length);
+
+            // Payments Table
+            $('#paymentsTableBody').empty();
+            data.payments.forEach(payment => {
+                $('#paymentsTableBody').append(`
+                    <tr>
+                        <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
+                        <td>#${payment.id}</td>
+                        <td>₦${payment.amount}</td>
+                        <td>${payment.payment_method}</td>
+                        <td>${payment.payment_reference}</td>
+                        <td>${payment.status}</td>
+                        <td>${payment.processed_by}</td>
+                    </tr>
+                `);
+            });
+            $('#paymentsCount').text(data.payments.length);
+
+            $('#modalLoading').hide();
+            $('#modalMainContent').show();
+        },
+        error: function(err) {
+            console.error(err);
+            $('#patientInfo').html(`<div class="alert alert-danger">Failed to load data.</div>`);
+            $('#modalLoading').hide();
+        }
+    });
+}
+
 
 function showAllPatientSuggestions() {
     document.querySelectorAll('.patient-search').forEach(input => {
@@ -1136,7 +1410,7 @@ function refreshBalances() {
     window.location.href = url;
 }
 
-function viewPatientDetails(patientId) {
+{% comment %} function viewPatientDetails(patientId) {
     // Load patient details via AJAX
     $.get(`/api/patients/${patientId}/financial-details/`, function(data) {
         document.getElementById('patientDetailsContent').innerHTML = data;
@@ -1144,7 +1418,7 @@ function viewPatientDetails(patientId) {
     }).fail(function() {
         alert('Could not load patient details.');
     });
-}
+} {% endcomment %}
 
 // Form submission handler for traditional bulk payment
 $(document).on('submit', '#bulk-payment-form', function(e) {
