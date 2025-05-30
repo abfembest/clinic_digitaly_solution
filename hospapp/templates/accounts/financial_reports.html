@@ -11,12 +11,6 @@
             <div class="col-sm-6">
                 <h1 class="m-0 text-dark">Financial Reports</h1>
             </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
         </div><!-- /.row -->
     </div><!-- /.container-fluid -->
 </div>
@@ -33,54 +27,101 @@
             <div class="col-md-4">
               <div class="p-3 bg-light rounded shadow-sm">
                 <h6>Total Income</h6>
-                <h3 class="text-success">₦{{ total_income }}</h3>
+                <h3 class="text-success">₦{{ total_income|floatformat:2 }}</h3>
               </div>
             </div>
             <div class="col-md-4">
               <div class="p-3 bg-light rounded shadow-sm">
                 <h6>Total Expenditure</h6>
-                <h3 class="text-danger">₦{{ total_expenditure }}</h3>
+                <h3 class="text-danger">₦{{ total_expenditure|floatformat:2 }}</h3>
               </div>
             </div>
             <div class="col-md-4">
               <div class="p-3 bg-light rounded shadow-sm">
                 <h6>Net Balance</h6>
-                <h3 class="text-primary">₦{{ net_balance }}</h3>
+                <h3 class="{% if net_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                  ₦{{ net_balance|floatformat:2 }}
+                </h3>
               </div>
             </div>
           </div>
   
           <hr class="my-4">
   
-          <h5 class="mb-3">Daily Income Chart</h5>
-          <canvas id="incomeChart" height="100"></canvas>
+          <h5 class="mb-3">Daily Financial Overview</h5>
+          <canvas id="financialChart" height="100"></canvas>
         </div>
       </div>
     </div>
   </section>
   
   <!-- Chart Script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      var ctx = document.getElementById('incomeChart').getContext('2d');
+      var ctx = document.getElementById('financialChart').getContext('2d');
       new Chart(ctx, {
         type: 'line',
         data: {
           labels: {{ chart_labels|safe }},
-          datasets: [{
-            label: 'Income',
-            data: {{ chart_data|safe }},
-            backgroundColor: 'rgba(0,123,255,0.2)',
-            borderColor: '#007bff',
-            borderWidth: 2
-          }]
+          datasets: [
+            {
+              label: 'Income',
+              data: {{ chart_data|safe }},
+              backgroundColor: 'rgba(40, 167, 69, 0.2)',
+              borderColor: '#28a745',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1
+            },
+            {
+              label: 'Expenditure',
+              data: {{ expenditure_data|safe }},
+              backgroundColor: 'rgba(220, 53, 69, 0.2)',
+              borderColor: '#dc3545',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1
+            }
+          ]
         },
         options: {
           responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Daily Income vs Expenditure (Last 30 Days)'
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
           scales: {
-            yAxes: [{
-              ticks: { beginAtZero: true }
-            }]
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value, index, values) {
+                  return '₦' + value.toLocaleString();
+                }
+              }
+            },
+            x: {
+              ticks: {
+                maxTicksLimit: 10
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': ₦' + context.parsed.y.toLocaleString();
+              }
+            }
           }
         }
       });
