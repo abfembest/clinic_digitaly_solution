@@ -964,9 +964,9 @@ def accounts(request):
 def patient_payment_tracker(request):
     return render(request, 'accounts/payment_tracker.html')
 
-@login_required(login_url='home')
-def institution_financials(request):
-    return render(request, 'accounts/financials.html')
+# @login_required(login_url='home')
+# def institution_financials(request):
+#     return render(request, 'accounts/financials.html')
 
 @login_required(login_url='home')
 def financial_reports(request):

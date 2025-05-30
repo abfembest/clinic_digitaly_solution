@@ -559,3 +559,66 @@ def get_patient_financial_details(request, patient_id):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+    
+
+def income_expenditure_view(request):
+    if request.method == 'POST':
+        transaction_type = request.POST.get('type')
+        amount = request.POST.get('amount')
+        date = request.POST.get('date')
+        description = request.POST.get('description')
+
+        try:
+            amount = Decimal(amount)
+            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+
+            # Only allow Expenditure input from the form
+            if transaction_type == 'Expenditure':
+                category, _ = ExpenseCategory.objects.get_or_create(name="General")
+                Expense.objects.create(
+                    category=category,
+                    description=description,
+                    amount=amount,
+                    expense_date=date_obj,
+                    status='paid',
+                    requested_by=request.user,
+                    approved_by=request.user
+                )
+                messages.success(request, 'Expenditure transaction saved successfully.')
+            else:
+                messages.error(request, 'Only expenditure can be recorded through this form.')
+
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+
+    # Get all income payments and expenditure expenses
+    payments = Payment.objects.filter(status='completed').values(
+        'payment_date', 'amount', 'notes'
+    )
+    expenses = Expense.objects.filter(status='paid').values(
+        'expense_date', 'amount', 'description'
+    )
+
+    transactions = []
+
+    for p in payments:
+        transactions.append({
+            'date': p['payment_date'].date(),
+            'type': 'Income',
+            'description': p['notes'] or '',
+            'amount': p['amount']
+        })
+
+    for e in expenses:
+        transactions.append({
+            'date': e['expense_date'],
+            'type': 'Expenditure',
+            'description': e['description'],
+            'amount': e['amount']
+        })
+
+    transactions.sort(key=lambda x: x['date'], reverse=True)
+
+    return render(request, 'accounts/financials.html', {
+        'transactions': transactions[:50],  # latest 50
+    })

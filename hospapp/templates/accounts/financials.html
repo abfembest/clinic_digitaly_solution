@@ -1,47 +1,34 @@
 {% extends "accounts/base.html" %}
 
-{% block title %}HMS | Income / Expenditure{% endblock %}
+{% block title %}HMS | Expenditure{% endblock %}
 
 {% block content %}
-
-<!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Income & Expenditure</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+                <h1 class="m-0 text-dark">Expenditure</h1>
+            </div>
+        </div>
+    </div>
 </div>
-<!-- /.content-header -->
 
 <section class="content">
     <div class="container-fluid">
       <div class="card card-outline card-secondary">
         <div class="card-header">
-          <h3 class="card-title">Institution Income & Expenditure</h3>
+          <h3 class="card-title">Record Institution Expenditure</h3>
         </div>
         <div class="card-body">
-          <form method="post">
+          <form method="post" novalidate>
             {% csrf_token %}
+            <!-- Hidden fixed transaction type -->
+            <input type="hidden" name="type" value="Expenditure">
+
             <div class="form-row">
               <div class="form-group col-md-4">
-                <label>Transaction Type</label>
-                <select class="form-control" name="type">
-                  <option>Income</option>
-                  <option>Expenditure</option>
-                </select>
-              </div>
-              <div class="form-group col-md-4">
                 <label>Amount</label>
-                <input type="number" name="amount" class="form-control" required>
+                <input type="number" name="amount" class="form-control" step="0.01" min="0" required>
               </div>
               <div class="form-group col-md-4">
                 <label>Date</label>
@@ -52,14 +39,25 @@
               <label>Description</label>
               <textarea name="description" class="form-control" rows="2"></textarea>
             </div>
-            <button class="btn btn-secondary">Save Transaction</button>
+            <button class="btn btn-secondary">Save Expenditure</button>
           </form>
-  
+
           <hr class="my-4">
-  
+
           <h5 class="mb-3">Recent Transactions</h5>
+
+          <!-- Filter dropdown -->
+          <div class="form-group">
+            <label for="transaction-filter">Filter by Type:</label>
+            <select id="transaction-filter" class="form-control" style="max-width: 200px;">
+              <option value="All" selected>All</option>
+              <option value="Income">Income</option>
+              <option value="Expenditure">Expenditure</option>
+            </select>
+          </div>
+
           <div class="table-responsive">
-            <table class="table table-bordered">
+            <table class="table table-bordered" id="transactions-table">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -70,7 +68,7 @@
               </thead>
               <tbody>
                 {% for tx in transactions %}
-                <tr>
+                <tr data-type="{{ tx.type }}">
                   <td>{{ tx.date }}</td>
                   <td>{{ tx.type }}</td>
                   <td>{{ tx.description }}</td>
@@ -87,5 +85,20 @@
         </div>
       </div>
     </div>
-  </section>
-  {% endblock %}
+</section>
+
+<script>
+  document.getElementById('transaction-filter').addEventListener('change', function() {
+    const filterValue = this.value;
+    const rows = document.querySelectorAll('#transactions-table tbody tr');
+
+    rows.forEach(row => {
+      if (filterValue === 'All') {
+        row.style.display = '';
+      } else {
+        row.style.display = (row.dataset.type === filterValue) ? '' : 'none';
+      }
+    });
+  });
+</script>
+{% endblock %}

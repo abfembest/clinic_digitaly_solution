@@ -58,9 +58,10 @@ urlpatterns = [
     path('a/payment_tracker', accts.payment_tracker_view, name="patient_payment_tracker"),
     path('api/patients/', accts.patient_list_api, name='patient_list_api'),
     path('api/patients/<int:patient_id>/financial-details/', accts.get_patient_financial_details, name='patient_financial_details'),
+    path('accounts/income-expenditure/', accts.income_expenditure_view, name='institution_financials'),
 
     # path('a/payment_tracker', views.patient_payment_tracker, name='patient_payment_tracker'),
-    path('a/financials', views.institution_financials, name='institution_financials'),
+    # path('a/financials', views.institution_financials, name='institution_financials'),
     path('a/financial_reports', views.financial_reports, name='financial_reports'),
     path('a/budget_planning', views.budget_planning, name='budget_planning'),
 
