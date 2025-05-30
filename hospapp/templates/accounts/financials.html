@@ -4,87 +4,132 @@
 
 {% block content %}
 <div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Expenditure</h1>
-            </div>
-        </div>
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0 text-dark">Expenditure</h1>
+      </div>
     </div>
+  </div>
 </div>
 
 <section class="content">
-    <div class="container-fluid">
-      <div class="card card-outline card-secondary">
-        <div class="card-header">
-          <h3 class="card-title">Record Institution Expenditure</h3>
-        </div>
-        <div class="card-body">
-          <form method="post" novalidate>
-            {% csrf_token %}
-            <!-- Hidden fixed transaction type -->
-            <input type="hidden" name="type" value="Expenditure">
+  <div class="container-fluid">
+    <div class="card card-outline card-secondary shadow-sm">
+      <div class="card-header bg-secondary text-white">
+        <h3 class="card-title font-weight-bold">Record Institution Expenditure</h3>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="type" value="Expenditure">
 
-            <div class="form-row">
-              <div class="form-group col-md-4">
-                <label>Amount</label>
-                <input type="number" name="amount" class="form-control" step="0.01" min="0" required>
-              </div>
-              <div class="form-group col-md-4">
-                <label>Date</label>
-                <input type="date" name="date" class="form-control" required>
-              </div>
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="amount">Amount</label>
+              <input type="number" id="amount" name="amount" class="form-control" step="0.01" min="0" required placeholder="₦0.00">
             </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea name="description" class="form-control" rows="2"></textarea>
+            <div class="form-group col-md-4">
+              <label for="date">Date</label>
+              <input type="date" id="date" name="date" class="form-control" required>
             </div>
-            <button class="btn btn-secondary">Save Expenditure</button>
-          </form>
+          </div>
 
-          <hr class="my-4">
-
-          <h5 class="mb-3">Recent Transactions</h5>
-
-          <!-- Filter dropdown -->
           <div class="form-group">
-            <label for="transaction-filter">Filter by Type:</label>
-            <select id="transaction-filter" class="form-control" style="max-width: 200px;">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Optional description"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-secondary font-weight-bold">Save Expenditure</button>
+        </form>
+
+        <hr class="my-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0 font-weight-bold">Recent Transactions</h5>
+
+          <div>
+            <label for="transaction-filter" class="mr-2 font-weight-normal mb-0">Filter:</label>
+            <select id="transaction-filter" class="form-control form-control-sm d-inline-block" style="width: auto;">
               <option value="All" selected>All</option>
               <option value="Income">Income</option>
               <option value="Expenditure">Expenditure</option>
             </select>
           </div>
-
-          <div class="table-responsive">
-            <table class="table table-bordered" id="transactions-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                  <th>Amount (₦)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for tx in transactions %}
-                <tr data-type="{{ tx.type }}">
-                  <td>{{ tx.date }}</td>
-                  <td>{{ tx.type }}</td>
-                  <td>{{ tx.description }}</td>
-                  <td>{{ tx.amount }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="4" class="text-center text-muted">No records yet.</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
         </div>
+
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover table-striped" id="transactions-table">
+  <thead class="thead-dark">
+    <tr>
+      <th style="width:15%;">Date</th>
+      <th style="width:15%;">Type</th>
+      <th style="width:45%;">Description</th>
+      <th style="width:25%;" class="text-right">Amount (₦)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tx in transactions %}
+    <tr data-type="{{ tx.type }}">
+      <td style="width:15%;">{{ tx.date|date:"M d, Y" }}</td>
+      <td style="width:15%;">
+        {% if tx.type == "Income" %}
+          <span class="badge badge-success px-2 py-1">{{ tx.type }}</span>
+        {% else %}
+          <span class="badge badge-danger px-2 py-1">{{ tx.type }}</span>
+        {% endif %}
+      </td>
+      <td style="width:45%;">{{ tx.description|default:"-" }}</td>
+      <td style="width:25%;" class="text-right font-weight-bold">
+        {{ tx.amount|floatformat:2 }}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="4" class="text-center text-muted">No records yet.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Pagination controls -->
+<nav aria-label="Transaction pagination">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+        &laquo; Prev
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+        Next &raquo;
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+    {% endif %}
+  </ul>
+</nav>
+
+        </div>
+
       </div>
     </div>
+  </div>
 </section>
 
 <script>
@@ -101,4 +146,5 @@
     });
   });
 </script>
+
 {% endblock %}
