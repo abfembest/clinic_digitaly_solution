@@ -862,7 +862,7 @@ def lab_result_upload(request):
     selected_patient_id = request.GET.get('patient_id')
     if selected_patient_id:
         selected_patient = get_object_or_404(Patient, id=selected_patient_id)
-        lab_tests = LabTest.objects.filter(patient=selected_patient).order_by('-date_recorded')
+        lab_tests = LabTest.objects.filter(patient=selected_patient).order_by('-date_performed')
         uploaded_files = LabResultFile.objects.filter(patient=selected_patient).order_by('-uploaded_at')
 
     context = {
@@ -878,7 +878,7 @@ def lab_internal_logs(request):
     user = request.user
 
     # Fetch all lab tests, with related patient and user to optimize queries
-    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'test_type').order_by('-date_recorded')
+    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'test_type').order_by('-date_performed')
 
     logs = []
     for test in lab_tests:
@@ -890,7 +890,7 @@ def lab_internal_logs(request):
 
         logs.append({
             'id': test.id,
-            'date': test.date_recorded.date(),
+            'date': test.date_performed.date(),
             'patient_name': test.patient.full_name,
             'test_type': test.test_type.name,
             'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
