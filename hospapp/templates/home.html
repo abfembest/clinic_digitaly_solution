@@ -1,17 +1,17 @@
-{% load static%}
+{%load static%}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AdminLTE 3 | Log in</title>
+    <title>{% block title %}HMS | Home{% endblock %}</title>
 
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
- 
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+
     <!-- icheck bootstrap -->
     <link rel="stylesheet" href="{% static 'plugins/icheck-bootstrap/icheck-bootstrap.min.css'%}">
-    <!-- Theme style -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
     <!-- Ionicons -->
@@ -19,95 +19,653 @@
     <!-- Theme style -->
     <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
     <link href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
-    <!-- Google Font: Source Sans Pro -->
+
+    <style>
+   
+
+        /* Video Background */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 123, 191, 0.85) 0%, rgba(0, 150, 136, 0.80) 50%, rgba(46, 125, 50, 0.75) 100%);
+            z-index: -1;
+        }
+
+        .login-container {
+           
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+            }
+
+        .card-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            padding: 2rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .card-header::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+                animation: shimmer 3s ease-in-out infinite;
+            }
+
+        @keyframes shimmer {
+            0%, 100% {
+                transform: rotate(0deg);
+            }
+
+            50% {
+                transform: rotate(180deg);
+            }
+        }
+
+
+        .card-body {
+            padding: 1rem 1rem;
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .login-box-msg {
+            font-size: 1.0rem;
+            font-weight: 500;
+            
+        }
+
+        .form-control {
+            border: 2px solid #e3f2fd;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+            .form-control:focus {
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+                background: white;
+                transform: translateY(-2px);
+            }
+
+        .input-group {
+            margin-bottom: 1.0rem;
+            position: relative;
+        }
+
+        .input-group-text {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: 2px solid #007bff;
+            border-left: none;
+            color: white;
+            border-radius: 0 12px 12px 0;
+            transition: all 0.3s ease;
+        }
+
+        .input-group:focus-within .input-group-text {
+            background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+            transform: scale(1.05);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .btn-primary::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: left 0.5s;
+            }
+
+            .btn-primary:hover::before {
+                left: 100%;
+            }
+
+            .btn-primary:hover {
+                background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+            }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+            .btn-danger:hover {
+                background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
+            }
+
+        .rounded-circle {
+            transition: all 0.3s ease;
+            border: 4px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+            .rounded-circle:hover {
+                transform: scale(1.1) rotate(5deg);
+                border-color: #007bff;
+            }
+
+        .icheck-primary input:checked ~ label::before {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .social-auth-links {
+            position: relative;
+        }
+
+            .social-auth-links::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 50px;
+                height: 2px;
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+                border-radius: 2px;
+            }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+            a:hover {
+                color: #0056b3;
+                text-decoration: none;
+                transform: translateX(5px);
+            }
+
+        /* Floating medical icons */
+        .floating-icon {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.1);
+            animation: float 6s ease-in-out infinite;
+            z-index: 0;
+        }
+
+            .floating-icon:nth-child(1) {
+                top: 10%;
+                left: 10%;
+                animation-delay: 0s;
+            }
+
+            .floating-icon:nth-child(2) {
+                top: 20%;
+                right: 15%;
+                animation-delay: 1s;
+            }
+
+            .floating-icon:nth-child(3) {
+                bottom: 30%;
+                left: 8%;
+                animation-delay: 2s;
+            }
+
+            .floating-icon:nth-child(4) {
+                bottom: 10%;
+                right: 10%;
+                animation-delay: 3s;
+            }
+
+        /* Medical Animation Background Fallback */
+        .medical-animation-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70%;
+            z-index: -1;
+            background: linear-gradient(135deg, #0077be 0%, #00a0b0 25%, #6bb6ff 50%, #b3d9ff 75%, #e6f3ff 100%);
+            background-size: 100% 100%;
+            animation: medicalGradient 15s ease infinite;
+        }
+
+        @keyframes medicalGradient {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .pulse-circle {
+            position: absolute;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            animation: medicalPulse 4s ease-in-out infinite;
+        }
+
+        .pulse-1 {
+            width: 200px;
+            height: 200px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .pulse-2 {
+            width: 150px;
+            height: 150px;
+            top: 60%;
+            right: 20%;
+            animation-delay: 1.5s;
+        }
+
+        .pulse-3 {
+            width: 100px;
+            height: 100px;
+            bottom: 30%;
+            left: 60%;
+            animation-delay: 3s;
+        }
+
+        @keyframes medicalPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0.1;
+            }
+        }
+
+        .medical-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: float 8s linear infinite;
+        }
+
+            .particle:nth-child(1) {
+                left: 10%;
+                animation-delay: 0s;
+            }
+
+            .particle:nth-child(2) {
+                left: 30%;
+                animation-delay: 2s;
+            }
+
+            .particle:nth-child(3) {
+                left: 50%;
+                animation-delay: 4s;
+            }
+
+            .particle:nth-child(4) {
+                left: 70%;
+                animation-delay: 6s;
+            }
+
+            .particle:nth-child(5) {
+                left: 90%;
+                animation-delay: 8s;
+            }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Pulse animation for remember me */
+        .icheck-primary label {
+            transition: all 0.3s ease;
+        }
+
+            .icheck-primary label:hover {
+                color: #007bff;
+                transform: translateX(3px);
+            }
+
+        /* Mobile responsiveness */
+        @media (max-width: 576px) {
+            .login-box {
+                max-width: 100%;
+                margin: 0 10px;
+            }
+
+            .card-body {
+                padding: 2rem 1.5rem;
+            }
+
+        }
+    </style>
 </head>
-<body class="hold-transition login-page" style=" background-image: url('static/dist/img/ayomide1.jpg'); background-repeat: repeat;">
- {% include 'flash.html'%}
+<body class="hold-transition">
 
-<div class="login-box">
-    <!-- /.login-logo -->
-    <div class="card card-outline card-primary">
-        <div class="card-header text-center">
-            <a href="{% url 'home' %}" class="h1"><b>AYO</b>MIDE</a>
+    {% include 'flash.html'%}
+    <!-- Video Background -->
+    <video autoplay muted loop class="video-background" id="backgroundVideo" playsinline>
+        <!-- Publicly available medical/healthcare related videos -->
+      
+        <source src="https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4" type="video/mp4">
+        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+    </video>
+
+    <!-- Animated Medical Background Fallback -->
+    <div class="medical-animation-bg" id="animatedBg" style="display: none;">
+        <div class="pulse-circle pulse-1"></div>
+        <div class="pulse-circle pulse-2"></div>
+        <div class="pulse-circle pulse-3"></div>
+        <div class="medical-particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
         </div>
-        <div class="card-body">
-            {% if messages %}
-            {% for message in messages %}
-            <h2 class="login-box-msg text-center text-danger">{{ message }}</h2>
-            {% endfor %}
-            {% else %}
-            <h2 class="login-box-msg text-center text-secondary">Please sign in</h2>
-            {% endif %}
-
-
-            <form action="{% url 'home' %}" method="post">
-                {% csrf_token %}
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" name="username" placeholder="Username">
-                    <div class="input-group-append">
-                        <div class="input-group-text">
-                            <span class="fas fa-user"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="input-group mb-3">
-                    <input type="password" class="form-control" name="password" placeholder="Password">
-                    <div class="input-group-append">
-                        <div class="input-group-text">
-                            <span class="fas fa-lock"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-8">
-                        <div class="icheck-primary">
-                            <input type="checkbox" id="remember">
-                            <label for="remember">
-                                Remember Me
-                            </label>
-                        </div>
-                    </div>
-                    <!-- /.col -->
-                    <div class="col-4">
-                        <button type="submit" name="submit"class="btn btn-primary btn-block">Sign In</button>
-                    </div>
-                    <!-- /.col -->
-                </div>
-            </form>
-
-
-            <div class="social-auth-links text-center mt-2 mb-3">
-                <img src="{% static 'dist/img/ayologo.jpg' %}"
-                     class="rounded-circle mb-3"
-                     style="width: 100px; height: 100px" />
-
-                <!-- <a href="#" class="btn btn-block btn-primary">
-            <i class="fab fa-facebook mr-2"></i> Sign in using Facebook
-        </a>-->
-                <a href="#" class="btn btn-block btn-danger">
-                    <i class="fab fa-google-plus mr-2"></i> Sign in using Google+
-                </a>
-            </div>
-            <!-- /.social-auth-links -->
-
-            <p class="mb-1">
-                <a href="#">I forgot my password</a>
-            </p>
-            <p class="mb-0">
-                <a href="{% url 'register' %}" class="text-center">Register a new membership</a>
-            </p>
-        </div>
-        <!-- /.card-body -->
     </div>
-    <!-- /.card -->
-</div>
-<!-- /.login-box -->
-<!-- /.login-box -->
-<!-- jQuery -->
-<script src="../../plugins/jquery/jquery.min.js"></script>
-<!-- Bootstrap 4 -->
-<script src="../../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<!-- AdminLTE App -->
-<script src="../../dist/js/adminlte.min.js"></script>
+    <div class="video-overlay"></div>
+
+    <!-- Floating Medical Icons -->
+    <div class="floating-icon"><i class="fas fa-heartbeat fa-3x"></i></div>
+    <div class="floating-icon"><i class="fas fa-stethoscope fa-2x"></i></div>
+    <div class="floating-icon"><i class="fas fa-user-md fa-3x"></i></div>
+    <div class="floating-icon"><i class="fas fa-hospital fa-2x"></i></div>
+
+
+    <div class="login-container">
+        <div class="login-box">
+            <div class="card card-outline">
+                <div class="card-header text-center">
+                    <a href="{% url 'home' %}" class="h1"><b>AYO</b>MIDE</a>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    {% for message in messages %}
+                    <h2 class="login-box-msg text-center text-danger">{{ message }}</h2>
+                    {% endfor %}
+                    {% else %}
+                    <h2 class="login-box-msg text-center text-secondary">Please sign in</h2>
+                    {% endif %}
+
+                    <form action="{% url 'home' %}" method="post">
+                        {% csrf_token %}
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" name="username" placeholder="Username" required>
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-user"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="password" class="form-control" name="password" placeholder="Password" required>
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-lock"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <div class="icheck-primary">
+                                    <input type="checkbox" id="remember">
+                                    <label for="remember">
+                                        Remember Me
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <button type="submit" name="submit" class="btn btn-primary btn-block">Sign In</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="social-auth-links text-center mt-4 mb-3">
+                        <img src="{% static 'dist/img/ayologo.jpg' %}"
+                             class="rounded-circle mb-3"
+                             style="width: 100px; height: 100px" />
+
+                        <a href="#" class="btn btn-block btn-danger mb-2">
+                            <i class="fab fa-google-plus mr-2"></i> Sign in using Google+
+                        </a>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <p class="mb-2">
+                            <a href="#" class="text-muted">I forgot my password</a>
+                        </p>
+                        <p class="mb-0">
+                            <a href="{% url 'register' %}" class="text-primary font-weight-medium">Register a new membership</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+
+    <script>
+        // Add smooth animations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('backgroundVideo');
+            const animatedBg = document.getElementById('animatedBg');
+            let videoLoadAttempts = 0;
+            const maxAttempts = 3;
+
+            function showAnimatedBackground() {
+                video.style.display = 'none';
+                animatedBg.style.display = 'block';
+                console.log('Switched to animated medical background');
+            }
+
+            // Handle video loading errors
+            video.addEventListener('error', function(e) {
+                console.log('Video load error:', e);
+                videoLoadAttempts++;
+                if (videoLoadAttempts >= maxAttempts) {
+                    showAnimatedBackground();
+                }
+            });
+
+            // If video doesn't start playing within 5 seconds, show animated background
+            setTimeout(function() {
+                if (video.currentTime === 0 && video.paused) {
+                    showAnimatedBackground();
+                }
+            }, 5000);
+
+            // Ensure video is muted and plays automatically (required for autoplay in many browsers)
+            video.addEventListener('loadeddata', function() {
+                video.muted = true;
+                video.play().catch(function(error) {
+                    console.log('Video autoplay failed:', error);
+                    showAnimatedBackground();
+                });
+            });
+
+            // Add focus effects to form controls
+            const inputs = document.querySelectorAll('.form-control');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.classList.add('focused');
+                });
+                input.addEventListener('blur', function() {
+                    this.parentElement.classList.remove('focused');
+                });
+            });
+
+            // Add ripple click effect to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    let ripple = document.createElement('span');
+                    let rect = this.getBoundingClientRect();
+                    let size = Math.max(rect.width, rect.height);
+                    let x = e.clientX - rect.left - size / 2;
+                    let y = e.clientY - rect.top - size / 2;
+
+                    ripple.style.cssText = `
+                        position: absolute;
+                        width: ${size}px;
+                        height: ${size}px;
+                        left: ${x}px;
+                        top: ${y}px;
+                        background: rgba(255, 255, 255, 0.5);
+                        border-radius: 50%;
+                        transform: scale(0);
+                        animation: ripple 0.6s linear;
+                        pointer-events: none;
+                    `;
+
+                    // Add ripple animation styles if not already present
+                    if (!document.querySelector('#ripple-styles')) {
+                        const style = document.createElement('style');
+                        style.id = 'ripple-styles';
+                        style.textContent = `
+                            @keyframes ripple {
+                                to {
+                                    transform: scale(4);
+                                    opacity: 0;
+                                }
+                            }
+                            .btn {
+                                position: relative;
+                                overflow: hidden;
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+
+                    this.appendChild(ripple);
+
+                    setTimeout(() => {
+                        if (ripple.parentNode) {
+                            ripple.remove();
+                        }
+                    }, 600);
+                });
+            });
+
+            // Add smooth scroll behavior for any anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

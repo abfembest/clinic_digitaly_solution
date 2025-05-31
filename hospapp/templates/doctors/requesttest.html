@@ -7,9 +7,6 @@
 
 
 <!-- Main content -->
-
-
-    <title>Medical Test Selection</title>
     <style>
         * {
             margin: 0;
@@ -25,8 +22,8 @@
         }*/
 
         .container {
-            max-width: 900px;
-            margin: 2px auto;
+            max-width: 800px;
+            margin: 1px auto;
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
@@ -36,31 +33,31 @@
         .header {
             
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            padding: 10px;
+            padding: 5px;
             text-align: center;
             color: white;
         }
 
             .header h1 {
                 font-size: 2.5rem;
-                margin-bottom: 10px;
+                margin-bottom: 5px;
                 font-weight: 300;
             }
 
             .header p {
                 opacity: 0.9;
-                font-size: 1.1rem;
+                font-size: 1.0rem;
             }
 
         .content {
-            padding: 40px;
+            padding: 10px;
         }
 
         .test-section {
             background: #f8f9ff;
             border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
+            padding: 10px;
+            margin-bottom: 5px;
             border: 2px solid #e8ecff;
             transition: all 0.3s ease;
             position: relative;
@@ -76,13 +73,13 @@
             display: flex;
             justify-content: between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .section-title {
             font-size: 1.3rem;
             color: #2d3748;
-            font-weight: 600;
+            font-weight: 400;
         }
 
         .remove-section {
@@ -103,7 +100,7 @@
             }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         label {
@@ -132,10 +129,10 @@
         .subcategories {
             display: none;
             background: white;
-            padding: 20px;
+            padding: 10px;
             border-radius: 10px;
             border: 1px solid #e2e8f0;
-            margin-top: 15px;
+            margin-top: 2px;
         }
 
             .subcategories.show {
@@ -157,14 +154,14 @@
 
         .subcategories h4 {
             color: #2d3748;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
             font-size: 1.1rem;
         }
 
         .checkbox-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 12px;
+            gap: 7px;
         }
 
         .checkbox-item {
@@ -181,7 +178,7 @@
             }
 
             .checkbox-item input[type="checkbox"] {
-                margin-right: 12px;
+                margin-right: 6px;
                 width: 18px;
                 height: 18px;
                 accent-color: #4facfe;
@@ -198,7 +195,7 @@
             display: flex;
             gap: 15px;
             justify-content: center;
-            margin-top: 30px;
+            margin-top: 10px;
             flex-wrap: wrap;
         }
 
@@ -238,7 +235,7 @@
             border: 2px solid #9ae6b4;
             border-radius: 15px;
             padding: 25px;
-            margin-top: 30px;
+            margin-top: 10px;
             display: none;
         }
 
@@ -256,19 +253,19 @@
             background: white;
             padding: 15px;
             border-radius: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 7px;
             border-left: 4px solid #4facfe;
         }
 
         .result-category {
-            font-weight: 600;
+            font-weight: 300;
             color: #2d3748;
-            margin-bottom: 8px;
+            margin-bottom: 2px;
         }
 
         .result-tests {
             color: #4a5568;
-            line-height: 1.6;
+            line-height: 1.0;
         }
 
         @media (max-width: 768px) {
