@@ -24,77 +24,101 @@
 
   <!-- Main Content -->
   <section class="content">
-    <div class="container-fluid py-3">
+      <div class="container-fluid py-3">
 
-      <!-- Feature Cards Row -->
-      <div class="row">
-        <!-- Test Entry Card -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card card-feature h-100">
-            <div class="card-body d-flex flex-column justify-content-between py-4">
-              <div>
-                <div class="icon-container bg-primary mb-3">
-                  <i class="bi bi-vial"></i>
-                </div>
-                <h5 class="card-title">Lab Test Entry</h5>
-                <p class="card-text">Manually record and track test data results submitted by lab staff.</p>
+
+
+
+          {%if pending %}
+          <div class="row" style="text-align:center">
+                  <div class="col-lg-4 col-6 align-items-center">
+                      <!-- small card -->
+                      <div class="small-box bg-warning">
+                          <div class="inner">
+                              <h3>{{pending}}</h3>
+
+                              <h3>New tests ordered</h3>
+                          </div>
+                          <div class="icon">
+                              <i class="fas fa-shopping-cart"></i>
+                          </div>
+                          <a href="#" class="small-box-footer">
+                              View Tests <i class="fas fa-arrow-circle-right"></i>
+                          </a>
+                      </div>
+                  </div>
+                  {%endif%}
+                  <!-- ./col -->
               </div>
-            </div>
-            <div class="card-footer py-3">
-              <a href="{% url 'lab_test_entry' %}" class="action-link">Enter Tests <i class="bi bi-arrow-right"></i></a>
-            </div>
-          </div>
-        </div>
+              <!-- Feature Cards Row -->
+              <div class="row">
+                  <!-- Test Entry Card -->
+                  <div class="col-md-6 col-lg-4">
+                      <div class="card card-feature h-100">
+                          <div class="card-body d-flex flex-column justify-content-between py-4">
+                              <div>
+                                  <div class="icon-container bg-primary mb-3">
+                                      <i class="bi bi-vial"></i>
+                                  </div>
+                                  <h5 class="card-title">Lab Test Entry</h5>
+                                  <p class="card-text">Manually record and track test data results submitted by lab staff.</p>
+                              </div>
+                          </div>
+                          <div class="card-footer py-3">
+                              <a href="{% url 'lab_test_entry' %}" class="action-link">Enter Tests <i class="bi bi-arrow-right"></i></a>
+                          </div>
+                      </div>
+                  </div>
 
-        <!-- Upload Results Card -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card card-feature h-100">
-            <div class="card-body d-flex flex-column justify-content-between py-4">
-              <div>
-                <div class="icon-container bg-success mb-3">
-                  <i class="bi bi-upload"></i>
-                </div>
-                <h5 class="card-title">Upload Lab Results</h5>
-                <p class="card-text">Upload scanned or digital reports for completed lab tests.</p>
+                  <!-- Upload Results Card -->
+                  <div class="col-md-6 col-lg-4">
+                      <div class="card card-feature h-100">
+                          <div class="card-body d-flex flex-column justify-content-between py-4">
+                              <div>
+                                  <div class="icon-container bg-success mb-3">
+                                      <i class="bi bi-upload"></i>
+                                  </div>
+                                  <h5 class="card-title">Upload Lab Results</h5>
+                                  <p class="card-text">Upload scanned or digital reports for completed lab tests.</p>
+                              </div>
+                          </div>
+                          <div class="card-footer py-3">
+                              <a href="{% url 'lab_result_upload' %}" class="action-link">Upload Results <i class="bi bi-arrow-right"></i></a>
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Internal Logs Card -->
+                  <div class="col-md-6 col-lg-4">
+                      <div class="card card-feature h-100">
+                          <div class="card-body d-flex flex-column justify-content-between py-4">
+                              <div>
+                                  <div class="icon-container bg-info mb-3">
+                                      <i class="bi bi-clock-history"></i>
+                                  </div>
+                                  <h5 class="card-title">Test Logs</h5>
+                                  <p class="card-text">View all completed and pending lab tests for internal record-keeping.</p>
+                              </div>
+                          </div>
+                          <div class="card-footer py-3">
+                              <a href="{% url 'lab_internal_logs' %}" class="action-link">View Logs <i class="bi bi-arrow-right"></i></a>
+                          </div>
+                      </div>
+                  </div>
               </div>
-            </div>
-            <div class="card-footer py-3">
-              <a href="{% url 'lab_result_upload' %}" class="action-link">Upload Results <i class="bi bi-arrow-right"></i></a>
-            </div>
-          </div>
-        </div>
 
-        <!-- Internal Logs Card -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card card-feature h-100">
-            <div class="card-body d-flex flex-column justify-content-between py-4">
-              <div>
-                <div class="icon-container bg-info mb-3">
-                  <i class="bi bi-clock-history"></i>
-                </div>
-                <h5 class="card-title">Test Logs</h5>
-                <p class="card-text">View all completed and pending lab tests for internal record-keeping.</p>
+              <!-- Activity Chart Card -->
+              <div class="card mt-4">
+                  <div class="card-header">
+                      <h3 class="card-title text-center w-100">Lab Activity Chart</h3>
+                  </div>
+                  <div class="card-body">
+                      <canvas id="labChart" style="max-height:300px; width:100%;"></canvas>
+                  </div>
               </div>
-            </div>
-            <div class="card-footer py-3">
-              <a href="{% url 'lab_internal_logs' %}" class="action-link">View Logs <i class="bi bi-arrow-right"></i></a>
-            </div>
+
           </div>
-        </div>
-      </div>
-
-      <!-- Activity Chart Card -->
-      <div class="card mt-4">
-        <div class="card-header">
-          <h3 class="card-title text-center w-100">Lab Activity Chart</h3>
-        </div>
-        <div class="card-body">
-          <canvas id="labChart" style="max-height:300px; width:100%;"></canvas>
-        </div>
-      </div>
-
-    </div>
-  </section>
+</section>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -655,7 +655,8 @@ def ae(request):
 # Lab views
 @login_required(login_url='home')                        
 def laboratory(request):
-    return render(request, 'laboratory/index.html')
+    pending_test = TestSelection.objects.filter(status='pending').count()
+    return render(request, 'laboratory/index.html', {'pending':pending_test})
 
 @login_required(login_url='home')
 def lab_test_entry(request):
