@@ -654,6 +654,7 @@ def ae(request):
 # Lab views
 @login_required(login_url='home')                        
 def laboratory(request):
+<<<<<<< HEAD
     labtest = LabTest.objects.all()
     pending_count = LabTest.objects.filter(status='pending').count()
     completed_count = LabTest.objects.filter(status='completed').count()
@@ -671,6 +672,10 @@ def laboratory(request):
         'uploaded_results' : uploaded_results
         }
     return render(request, 'laboratory/index.html', context)
+=======
+    pending_test = TestSelection.objects.filter(status='pending').count()
+    return render(request, 'laboratory/index.html', {'pending':pending_test})
+>>>>>>> 147fff9fea6d37c4a2da970ae257baafa80892ea
 
 @login_required(login_url='home')
 def lab_test_entry(request):

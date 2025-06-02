@@ -387,6 +387,7 @@ class StaffTransition(models.Model):
     transition_type = models.CharField(max_length=20, choices=TRANSITION_CHOICES)
 
     def __str__(self):
+<<<<<<< HEAD
         return f"{self.full_name} - {self.transition_type} on {self.date}"
 
 # =============================================================================
@@ -398,6 +399,42 @@ class EmergencyAlert(models.Model):
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
     triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='alerts_triggered')
+=======
+        return f"Test Request for {self.patient.full_name} - {self.status}"
+    
+    def update_status(self):
+        """Auto-update status based on test completion"""
+        total_tests = self.tests.count()
+        completed_tests = self.lab_tests.filter(result_value__isnull=False).count()
+        
+        if completed_tests == 0:
+            self.status = 'pending'
+        elif completed_tests < total_tests:
+            self.status = 'in_progress'
+            if not self.started_at:
+                self.started_at = timezone.now()
+        else:
+            self.status = 'completed'
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+        
+        self.save()
+    
+class LabTest(models.Model):
+    
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    test_request = models.ForeignKey(TestRequest, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_tests')
+    test_selection = models.ForeignKey(TestSelection, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_results')
+    test_type = models.CharField(max_length=100, default="typeoftest")  # This can be the name from TestSelection
+    test_category = models.CharField(max_length=100, default ="empty")  # This can be the category from TestSelection
+    result_value = models.TextField(default ="positive")  # The actual test result
+    normal_range = models.CharField(max_length=100, blank=True, null=True)  # Reference range
+    notes = models.TextField(blank=True, null=True)  # Additional notes
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performed_tests')
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recorded_tests')
+    date_performed = models.DateTimeField(default=timezone.now)
+    date_recorded = models.DateTimeField(default=timezone.now)
+>>>>>>> 147fff9fea6d37c4a2da970ae257baafa80892ea
 
     def __str__(self):
         return f"Alert: {self.message[:30]}..."
