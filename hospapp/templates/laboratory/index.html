@@ -3,27 +3,357 @@
 {% block title %}HMS | Lab Dashboard{% endblock %}
 
 {% block content %}
-
-{% include 'dashboardstyle.css' %}
-  
-  <!-- Content Header -->
-  <section class="content-header py-3">
+  <!-- Content Header (Page header) -->
+  <div class="content-header">
     <div class="container-fluid">
-      <div class="row mb-2 align-items-center">
+      <div class="row mb-2">
         <div class="col-sm-6">
-          <h1>Lab Dashboard</h1>
-          <p class="mb-0 opacity-75">Fertility Clinic Management System</p>
+          <h1 class="m-0">Lab Dashboard</h1>
+          <p class="text-muted">Fertility Clinic Management System</p>
         </div>
-        <div class="col-sm-6 text-sm-right">
-          <p class="mb-0"><i class="bi bi-calendar3"></i> {% now "l, F j, Y" %}</p>
-          <p class="mb-0"><i class="bi bi-person-circle"></i> Lab Staff: {{ user.username }}</p>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-right">
+            <li class="breadcrumb-item"><a href="#">Home</a></li>
+            <li class="breadcrumb-item active">Lab Dashboard</li>
+          </ol>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Main Content -->
+  <!-- Main content -->
   <section class="content">
+<<<<<<< HEAD
+    <div class="container-fluid">
+      
+      <!-- Top Alert Cards for Notifications -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Pending Tests:</strong> You have <span class="badge badge-warning">{{ pending_count|default:0 }}</span> tests awaiting completion.
+            <button type="button" class="close" data-dismiss="alert">
+              <span>&times;</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="row">
+        <!-- Total Tests Today -->
+        <div class="col-lg-3 col-6">
+          <div class="small-box bg-info">
+            <div class="inner">
+              <h3>{{ test_today|default:0 }}</h3>
+              <p>Tests Today</p>
+            </div>
+            <div class="icon">
+              <i class="fas fa-vial"></i>
+            </div>
+            <a href="{% url 'lab_internal_logs' %}" class="small-box-footer">
+              More info <i class="fas fa-arrow-circle-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Pending Tests -->
+        <div class="col-lg-3 col-6">
+          <div class="small-box bg-warning">
+            <div class="inner">
+              <h3>{{ pending_count|default:0 }}</h3>
+              <p>Pending Tests</p>
+            </div>
+            <div class="icon">
+              <i class="fas fa-clock"></i>
+            </div>
+            <a href="{% url 'lab_internal_logs' %}?status=pending" class="small-box-footer">
+              View Pending <i class="fas fa-arrow-circle-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Completed Tests -->
+        <div class="col-lg-3 col-6">
+          <div class="small-box bg-success">
+            <div class="inner">
+              <h3>{{ completed_count|default:0 }}</h3>
+              <p>Completed Tests</p>
+            </div>
+            <div class="icon">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <a href="{% url 'lab_internal_logs' %}?status=completed" class="small-box-footer">
+              View Completed <i class="fas fa-arrow-circle-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Uploaded Results -->
+        <div class="col-lg-3 col-6">
+          <div class="small-box bg-primary">
+            <div class="inner">
+              <h3>{{ uploaded_results|default:0 }}</h3>
+              <p>Results Uploaded</p>
+            </div>
+            <div class="icon">
+              <i class="fas fa-upload"></i>
+            </div>
+            <a href="{% url 'lab_result_upload' %}" class="small-box-footer">
+              Upload More <i class="fas fa-arrow-circle-right"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Action Cards Row -->
+      <div class="row">
+        <!-- Test Entry Card -->
+        <div class="col-md-4">
+          <div class="card card-primary card-outline">
+            <div class="card-body box-profile">
+              <div class="text-center">
+                <div class="profile-user-img img-fluid img-circle d-inline-flex align-items-center justify-content-center bg-primary text-white" style="width: 80px; height: 80px; font-size: 2rem;">
+                  <i class="fas fa-flask"></i>
+                </div>
+              </div>
+              <h3 class="profile-username text-center">Lab Test Entry</h3>
+              <p class="text-muted text-center">Manually record and track test data results submitted by lab staff.</p>
+              <ul class="list-group list-group-unbordered mb-3">
+                <li class="list-group-item">
+                  <b>Quick Entry</b> <span class="float-right text-muted">Available</span>
+                </li>
+                <li class="list-group-item">
+                  <b>Batch Entry</b> <span class="float-right text-muted">Available</span>
+                </li>
+              </ul>
+              <a href="{% url 'lab_test_entry' %}" class="btn btn-primary btn-block">
+                <i class="fas fa-plus mr-2"></i>Enter New Test
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Results Card -->
+        <div class="col-md-4">
+          <div class="card card-success card-outline">
+            <div class="card-body box-profile">
+              <div class="text-center">
+                <div class="profile-user-img img-fluid img-circle d-inline-flex align-items-center justify-content-center bg-success text-white" style="width: 80px; height: 80px; font-size: 2rem;">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+              </div>
+              <h3 class="profile-username text-center">Upload Lab Results</h3>
+              <p class="text-muted text-center">Upload scanned or digital reports for completed lab tests.</p>
+              <ul class="list-group list-group-unbordered mb-3">
+                <li class="list-group-item">
+                  <b>File Types</b> <span class="float-right text-muted">PDF, JPG, PNG</span>
+                </li>
+                <li class="list-group-item">
+                  <b>Max Size</b> <span class="float-right text-muted">10MB</span>
+                </li>
+              </ul>
+              <a href="{% url 'lab_result_upload' %}" class="btn btn-success btn-block">
+                <i class="fas fa-upload mr-2"></i>Upload Results
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test Logs Card -->
+        <div class="col-md-4">
+          <div class="card card-info card-outline">
+            <div class="card-body box-profile">
+              <div class="text-center">
+                <div class="profile-user-img img-fluid img-circle d-inline-flex align-items-center justify-content-center bg-info text-white" style="width: 80px; height: 80px; font-size: 2rem;">
+                  <i class="fas fa-history"></i>
+                </div>
+              </div>
+              <h3 class="profile-username text-center">Test Logs</h3>
+              <p class="text-muted text-center">View all completed and pending lab tests for internal record-keeping.</p>
+              <ul class="list-group list-group-unbordered mb-3">
+                <li class="list-group-item">
+                  <b>Filter Options</b> <span class="float-right text-muted">Available</span>
+                </li>
+                <li class="list-group-item">
+                  <b>Export Data</b> <span class="float-right text-muted">CSV, PDF</span>
+                </li>
+              </ul>
+              <a href="{% url 'lab_internal_logs' %}" class="btn btn-info btn-block">
+                <i class="fas fa-list mr-2"></i>View Logs
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts and Tables Row -->
+      <div class="row">
+        <!-- Lab Activity Chart -->
+        <div class="col-md-8">
+          <div class="card card-primary">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fas fa-chart-bar mr-1"></i>
+                Lab Activity This Week
+              </h3>
+              <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                  <i class="fas fa-minus"></i>
+                </button>
+                <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart">
+                <canvas id="labActivityChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-md-4">
+          <div class="card card-warning">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fas fa-bell mr-1"></i>
+                Recent Activity
+              </h3>
+              <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                  <i class="fas fa-minus"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="timeline">
+                <div class="time-label">
+                  <span class="bg-red">Today</span>
+                </div>
+                <div>
+                  <i class="fas fa-vial bg-blue"></i>
+                  <div class="timeline-item">
+                    <span class="time"><i class="fas fa-clock"></i> 2 mins ago</span>
+                    <h3 class="timeline-header no-border">Blood Test completed for Patient #001</h3>
+                  </div>
+                </div>
+                <div>
+                  <i class="fas fa-upload bg-green"></i>
+                  <div class="timeline-item">
+                    <span class="time"><i class="fas fa-clock"></i> 15 mins ago</span>
+                    <h3 class="timeline-header no-border">Lab results uploaded for Patient #002</h3>
+                  </div>
+                </div>
+                <div>
+                  <i class="fas fa-clock bg-yellow"></i>
+                  <div class="timeline-item">
+                    <span class="time"><i class="fas fa-clock"></i> 1 hour ago</span>
+                    <h3 class="timeline-header no-border">Test pending: Hormone Panel - Patient #003</h3>
+                  </div>
+                </div>
+                <div>
+                  <i class="fas fa-clock-o bg-gray"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions and Status Table -->
+      <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-md-4">
+          <div class="card card-secondary">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fas fa-bolt mr-1"></i>
+                Quick Actions
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="btn-group-vertical w-100" role="group">
+                <a href="{% url 'lab_test_entry' %}" class="btn btn-outline-primary mb-2">
+                  <i class="fas fa-plus mr-2"></i>Quick Test Entry
+                </a>
+                <a href="{% url 'lab_result_upload' %}" class="btn btn-outline-success mb-2">
+                  <i class="fas fa-upload mr-2"></i>Bulk Upload
+                </a>
+                <a href="{% url 'lab_internal_logs' %}" class="btn btn-outline-info mb-2">
+                  <i class="fas fa-search mr-2"></i>Search Tests
+                </a>
+                <button class="btn btn-outline-warning" onclick="showPendingTests()">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>View Pending
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test Status Table -->
+        <div class="col-md-8">
+          <div class="card card-info">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fas fa-table mr-1"></i>
+                Today's Test Status
+              </h3>
+              <div class="card-tools">
+                <button type="button" class="btn btn-sm btn-tool" onclick="refreshTestStatus()">
+                  <i class="fas fa-sync"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+              <table class="table table-hover text-nowrap">
+                <thead>
+                  <tr>
+                    <th>Test ID</th>
+                    <th>Patient</th>
+                    <th>Test Type</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>LAB001</td>
+                    <td>Patient #001</td>
+                    <td>Blood Test</td>
+                    <td><span class="badge badge-success">Completed</span></td>
+                    <td><span class="badge badge-info">Normal</span></td>
+                    <td><button class="btn btn-sm btn-primary">View</button></td>
+                  </tr>
+                  <tr>
+                    <td>LAB002</td>
+                    <td>Patient #002</td>
+                    <td>Hormone Panel</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                    <td><span class="badge badge-danger">High</span></td>
+                    <td><button class="btn btn-sm btn-warning">Process</button></td>
+                  </tr>
+                  <tr>
+                    <td>LAB003</td>
+                    <td>Patient #003</td>
+                    <td>Fertility Test</td>
+                    <td><span class="badge badge-info">In Progress</span></td>
+                    <td><span class="badge badge-info">Normal</span></td>
+                    <td><button class="btn btn-sm btn-info">Update</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+=======
       <div class="container-fluid py-3">
 
 
@@ -139,32 +469,90 @@
 
           </div>
 </section>
+>>>>>>> 147fff9fea6d37c4a2da970ae257baafa80892ea
 
-<!-- Chart.js -->
+<!-- JavaScript for Charts and Interactions -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const ctx = document.getElementById('labChart').getContext('2d');
-  const labChart = new Chart(ctx, {
-    type: 'bar',
+// Lab Activity Chart
+$(document).ready(function() {
+  const ctx = document.getElementById('labActivityChart').getContext('2d');
+  const labActivityChart = new Chart(ctx, {
+    type: 'line',
     data: {
-      labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
       datasets: [{
         label: 'Tests Processed',
-        data: [12, 19, 7, 14, 10],
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-        borderColor: 'rgba(75, 192, 192, 1)',
-        borderWidth: 1,
-        borderRadius: 4
+        data: [12, 19, 7, 14, 10, 8, 15],
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1,
+        fill: true
+      }, {
+        label: 'Tests Pending',
+        data: [3, 5, 2, 8, 4, 2, 5],
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        tension: 0.1,
+        fill: true
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+      },
       scales: {
-        y: { beginAtZero: true }
+        y: {
+          beginAtZero: true
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: 'Weekly Lab Activity Overview'
+        }
       }
     }
   });
+});
+
+// Quick Actions Functions
+function showPendingTests() {
+  // Show toast notification about pending tests
+  $(document).Toasts('create', {
+    class: 'bg-warning',
+    title: 'Pending Tests',
+    subtitle: 'Notification',
+    body: 'You have {{ pending_tests_count|default:5 }} tests pending completion. <a href="{% url "lab_internal_logs" %}?status=pending">View them now</a>',
+    autohide: true,
+    delay: 5000,
+    icon: 'fas fa-exclamation-triangle'
+  });
+}
+
+function refreshTestStatus() {
+  // Simulate refreshing test status
+  $(document).Toasts('create', {
+    class: 'bg-info',
+    title: 'Status Updated',
+    subtitle: 'System',
+    body: 'Test status has been refreshed successfully.',
+    autohide: true,
+    delay: 3000,
+    icon: 'fas fa-sync'
+  });
+}
+
+// Auto-refresh notifications every 5 minutes
+setInterval(function() {
+  // You can add AJAX call here to check for new notifications
+  console.log('Checking for new notifications...');
+}, 300000);
 </script>
 
 {% endblock %}

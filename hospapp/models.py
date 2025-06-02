@@ -1,26 +1,67 @@
-from email.policy import default
-from unittest.mock import DEFAULT
+from decimal import Decimal
+from datetime import date, datetime
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth.models import User
-from datetime import date, datetime
 
-# Wards and Beds
+# =============================================================================
+# CORE SYSTEM MODELS (Alphabetical)
+# =============================================================================
+
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Profile(models.Model):
+    ROLE_CHOICES = [
+        ('account', 'Account'),
+        ('admin', 'Administrator'),
+        ('doctor', 'Doctor'),
+        ('hr', 'HR'),
+        ('lab', 'Lab Technician'),
+        ('nurse', 'Nurse'),
+        ('pharmacy', 'Pharmacy'),
+        ('receptionist', 'Receptionist'),
+    ]
+    GENDER_CHOICES = [('M', 'Male'), ('F', 'Female')]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    address = models.TextField(blank=True, null=True)
+    date_joined = models.DateField(default=timezone.now)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='M')
+    phone_number = models.CharField(max_length=15, blank=True)
+    photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name} ({self.role})"
+
+# =============================================================================
+# WARD & BED MANAGEMENT (Alphabetical)
+# =============================================================================
+
+class Bed(models.Model):
+    is_occupied = models.BooleanField(default=False)
+    number = models.CharField(max_length=20)
+    ward = models.ForeignKey('Ward', on_delete=models.CASCADE, related_name='beds')
+
+    def __str__(self):
+        return f"{self.ward.name} - Bed {self.number}"
+
 class Ward(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
 
-class Bed(models.Model):
-    ward = models.ForeignKey(Ward, on_delete=models.CASCADE, related_name='beds')
-    number = models.CharField(max_length=20)
-    is_occupied = models.BooleanField(default=False)
+# =============================================================================
+# PATIENT CORE MODELS (Alphabetical)
+# =============================================================================
 
-    def __str__(self):
-        return f"{self.ward.name} - Bed {self.number}"
-
-# Patient Model
 class Patient(models.Model):
     BLOOD_GROUP_CHOICES = [
         ('A+', 'A+'), ('A-', 'A-'),
@@ -29,278 +70,242 @@ class Patient(models.Model):
         ('O+', 'O+'), ('O-', 'O-'),
     ]
     STATUS_CHOICES = [
-        ('stable', 'Stable'),
         ('critical', 'Critical'),
         ('recovered', 'Recovered'),
+        ('stable', 'Stable'),
     ]
 
-    # Core info
-    full_name = models.CharField(max_length=200)
-    gender = models.CharField()
-    date_of_birth = models.DateField()
-    phone = models.CharField(max_length=15)
-    email = models.EmailField(blank=True, null=True)
+    # Core Demographics
     address = models.TextField()
+    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES, default='O+')
+    date_of_birth = models.DateField()
+    date_registered = models.DateTimeField(auto_now_add=True)
+    email = models.EmailField(blank=True, null=True)
+    first_time = models.CharField(max_length=20, blank=True)
+    full_name = models.CharField(max_length=200)
+    gender = models.CharField(max_length=10)  # Added max_length
+    id_number = models.CharField(max_length=100, blank=True)
+    id_type = models.CharField(max_length=20, blank=True)
     marital_status = models.CharField(max_length=20)
     nationality = models.CharField(max_length=50)
+    phone = models.CharField(max_length=15)
+    photo = models.ImageField(upload_to='patient_photos/', blank=True, null=True)
     state_of_origin = models.CharField(max_length=50, blank=True)
-    id_type = models.CharField(max_length=20, blank=True)
-    id_number = models.CharField(max_length=100, blank=True)
 
     # Next of Kin
     next_of_kin_name = models.CharField(max_length=100)
     next_of_kin_phone = models.CharField(max_length=15)
 
-    # Medical and system data
-    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES, default='O+')
-    is_inpatient = models.BooleanField(default=False)
-    ward = models.ForeignKey(Ward, null=True, blank=True, on_delete=models.SET_NULL)
+    # Medical Status
     bed = models.ForeignKey(Bed, null=True, blank=True, on_delete=models.SET_NULL)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
     diagnosis = models.TextField(blank=True, null=True)
+    is_inpatient = models.BooleanField(default=False)
     medication = models.TextField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
-
-    # Admin fields
     referred_by = models.CharField(max_length=100, blank=True, null=True)
-    first_time = models.CharField(max_length=20, blank=True)
-    photo = models.ImageField(upload_to='patient_photos/', blank=True, null=True)
-    date_registered = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
+    ward = models.ForeignKey(Ward, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return f"{self.full_name}"
 
-class Department(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+# =============================================================================
+# APPOINTMENT & REFERRAL MODELS (Alphabetical)
+# =============================================================================
 
-    def __str__(self):
-        return self.name
-    
 class Appointment(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     scheduled_time = models.DateTimeField()
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department}"
-    
+
 class Referral(models.Model):
-    patient = models.ForeignKey('Patient', on_delete=models.CASCADE)
-    department = models.ForeignKey('Department', on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE)
     notes = models.TextField()
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department.name}"
 
-# Admission by Nurse
+# =============================================================================
+# ADMISSION MODELS (Alphabetical)
+# =============================================================================
+
 class Admission(models.Model):
     STATUS_CHOICES = [
         ('Admitted', 'Admitted'),
         ('Discharged', 'Discharged'),
     ]
-    def get_current_time():
-        return datetime.now().time()
-    admitted_on = models.DateField(default=date.today)
-    time = models.TimeField(default=get_current_time)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+
     admission_date = models.DateField(default=timezone.now)
-    ward = models.ForeignKey(Ward, on_delete=models.SET_NULL, null=True)
+    admitted_by = models.CharField(max_length=100, blank=True, null=True)
+    admitted_on = models.DateField(default=date.today)
     bed = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True)
-    doctor_assigned = models.CharField(max_length=100)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Admitted')
     discharge_date = models.DateField(blank=True, null=True)
     discharge_notes = models.TextField(blank=True, null=True)
-    admitted_by = models.CharField(max_length=100, blank=True, null=True)
     discharged_by = models.CharField(max_length=100, blank=True, null=True)
+    doctor_assigned = models.CharField(max_length=100)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Admitted')
+    time = models.TimeField(auto_now_add=True)
+    ward = models.ForeignKey(Ward, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"Admission for {self.patient.full_name} - {self.status}"
 
-class HandoverLog(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    notes = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+# Note: Removed redundant PatientAdmission model as it duplicates Admission functionality
 
-    def __str__(self):
-        return f"Handover: {self.patient.full_name} by {self.author}"
+# =============================================================================
+# MEDICAL CARE MODELS (Alphabetical)
+# =============================================================================
 
-class Shift(models.Model):
-    SHIFT_CHOICES = [
-        ('Morning', 'Morning'),
-        ('Afternoon', 'Afternoon'),
-        ('Night', 'Night'),
-    ]
-    name = models.CharField(max_length=20, choices=SHIFT_CHOICES, unique=True)
-
-    def __str__(self):
-        return self.name
-
-class Attendance(models.Model):
-    STATUS_CHOICES = [
-        ('Present', 'Present'),
-        ('Absent', 'Absent'),
-        ('On Leave', 'On Leave'),
-    ]
-    staff = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
-    date = models.DateTimeField(default=timezone.now)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
-
-    class Meta:
-        unique_together = ('staff', 'date')
-        ordering = ['-date']
-
-    def __str__(self):
-        return f"{self.staff.get_full_name() or self.staff.username} - {self.date} - {self.status}"
-
-class ShiftAssignment(models.Model):
-    staff = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shift_assignments')
-    shift = models.ForeignKey(Shift, on_delete=models.CASCADE)
-    date = models.DateField(default=timezone.now)
-
-    class Meta:
-        unique_together = ('staff', 'date')
-
-    def __str__(self):
-        return f"{self.staff.get_full_name() or self.staff.username} - {self.shift.name} on {self.date}"
-
-# Emergency Alerts
-class EmergencyAlert(models.Model):
-    message = models.TextField()
-    triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='alerts_triggered')
-    acknowledged_by = models.ManyToManyField(User, blank=True, related_name='alerts_acknowledged')
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Alert: {self.message[:30]}..."
-
-# Medical Records
-class MedicalRecord(models.Model):
-    patient = models.ForeignKey(Patient, related_name='medical_records', on_delete=models.CASCADE)
-    record_date = models.DateField(auto_now_add=True)
-    description = models.TextField()
-    created_by = models.CharField(max_length=100)  # Consider FK to User in future
-
-    def __str__(self):
-        return f"Medical Record - {self.patient.full_name} ({self.record_date})"
-
-# Role-based User Profiles
-ROLE_CHOICES = [
-    ('receptionist', 'Receptionist'),
-    ('nurse', 'Nurse'),
-    ('doctor', 'Doctor'),
-    ('lab', 'Lab Technician'),
-    ('admin', 'Administrator'),
-    ('pharmacy', 'Pharmacy'),
-    ('hr', 'HR'),
-    ('account', 'Account')
-]
-
-class Profile(models.Model):
-    GENDER_CHOICES = [('M', 'Male'), ('F', 'Female')]
-
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='M')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    phone_number = models.CharField(max_length=15, blank=True)
-    address = models.TextField(blank=True, null=True)
-    photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
-    date_joined = models.DateField(default=timezone.now)
-
-    def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name} ({self.role})"
-    
-class StaffTransition(models.Model):
-    TRANSITION_CHOICES = [
-        ('onboarding', 'Onboarding'),
-        ('offboarding', 'Offboarding'),
-    ]
-    full_name = models.CharField(max_length=200)
-    transition_type = models.CharField(max_length=20, choices=TRANSITION_CHOICES)
-    date = models.DateField()
-    notes = models.TextField(blank=True, null=True)
+class CarePlan(models.Model):
+    clinical_findings = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.full_name} - {self.transition_type} on {self.date}"
-
-
-class Vitals(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    recorded_at = models.DateTimeField()
-    temperature = models.FloatField(null=True, blank=True)
-    blood_pressure = models.CharField(max_length=20, null=True, blank=True)
-    pulse = models.IntegerField(null=True, blank=True)
-    respiratory_rate = models.IntegerField(null=True, blank=True)
-    weight = models.FloatField(null=True, blank=True)
-    height = models.FloatField(null=True, blank=True)
-    bmi = models.FloatField(null=True, blank=True)  # ✅ Add this field
-    notes = models.TextField(blank=True, null=True)
-    recorded_by = models.CharField(max_length=100)
+    plan_of_care = models.TextField()
 
     def __str__(self):
-        return f"{self.patient.full_name} Vitals @ {self.recorded_at}"
-    
-class NursingNote(models.Model):
-    NOTE_TYPE_CHOICES = [
-        ('observation', 'Observation'),
-        ('medication', 'Medication Administered'),
-        ('response', 'Patient Response'),
-        ('care_plan', 'Care Plan Update'),
-        ('other', 'Other'),
-    ]
+        return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
 
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='nursing_notes')
-    note_datetime = models.DateTimeField(default=timezone.now)
-    note_type = models.CharField(max_length=50, choices=NOTE_TYPE_CHOICES)
-    nurse = models.CharField(max_length=100)  # or ForeignKey to User if desired
-    patient_status = models.CharField(max_length=50, blank=True, null=True)
-    notes = models.TextField()
-    follow_up = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Nursing Note for {self.patient.full_name} on {self.note_datetime.strftime('%Y-%m-%d %H:%M')}"
-    
 class Consultation(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='consultations')
     admission = models.ForeignKey(Admission, null=True, blank=True, on_delete=models.SET_NULL)
-    # test = models.ForeignKey(LabTest, null=True, blank=True, on_delete=models.SET_NULL)
-    
-    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    symptoms = models.TextField()  # New field for symptoms
-    diagnosis_summary = models.TextField()
     advice = models.TextField()
-    
     created_at = models.DateTimeField(auto_now_add=True)
+    diagnosis_summary = models.TextField()
+    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='consultations')
+    symptoms = models.TextField()
 
     def __str__(self):
         return f"Consultation for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
 
-class Prescription(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='prescriptions')
-    medication = models.CharField(max_length=200)
-    instructions = models.TextField()
-    start_date = models.DateField()
-    prescribed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+class MedicalRecord(models.Model):
+    created_by = models.CharField(max_length=100)  # Consider FK to User in future
+    description = models.TextField()
+    patient = models.ForeignKey(Patient, related_name='medical_records', on_delete=models.CASCADE)
+    record_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Medical Record - {self.patient.full_name} ({self.record_date})"
+
+class NursingNote(models.Model):
+    NOTE_TYPE_CHOICES = [
+        ('care_plan', 'Care Plan Update'),
+        ('medication', 'Medication Administered'),
+        ('observation', 'Observation'),
+        ('other', 'Other'),
+        ('response', 'Patient Response'),
+    ]
+
     created_at = models.DateTimeField(auto_now_add=True)
+    follow_up = models.TextField(blank=True, null=True)
+    note_datetime = models.DateTimeField(default=timezone.now)
+    note_type = models.CharField(max_length=50, choices=NOTE_TYPE_CHOICES)
+    notes = models.TextField()
+    nurse = models.CharField(max_length=100)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='nursing_notes')
+    patient_status = models.CharField(max_length=50, blank=True, null=True)
+
+    def __str__(self):
+        return f"Nursing Note for {self.patient.full_name} on {self.note_datetime.strftime('%Y-%m-%d %H:%M')}"
+
+class Prescription(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    instructions = models.TextField()
+    medication = models.CharField(max_length=200)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='prescriptions')
+    prescribed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    start_date = models.DateField()
 
     def __str__(self):
         return f"{self.medication} for {self.patient.full_name}"
-    
+
+class Vitals(models.Model):
+    bmi = models.FloatField(null=True, blank=True)
+    blood_pressure = models.CharField(max_length=20, null=True, blank=True)
+    height = models.FloatField(null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    pulse = models.IntegerField(null=True, blank=True)
+    recorded_at = models.DateTimeField()
+    recorded_by = models.CharField(max_length=100)
+    respiratory_rate = models.IntegerField(null=True, blank=True)
+    temperature = models.FloatField(null=True, blank=True)
+    weight = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.patient.full_name} Vitals @ {self.recorded_at}"
+
+# =============================================================================
+# LABORATORY MODELS (Consolidated & Alphabetical)
+# =============================================================================
+
 class LabResultFile(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     result_file = models.FileField(upload_to='lab_results/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"Result for {self.patient.full_name} uploaded on {self.uploaded_at.date()}"
 
-class TestCategory(models.Model):
+class LabTest(models.Model):
+    """Main lab test model - consolidated from multiple test models"""
+    STATUS_CHOICES = [
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
+        ('in_progress', 'In Progress'),
+        ('pending', 'Pending'),
+    ]
+
+    # Test identification
+    category = models.ForeignKey('TestCategory', on_delete=models.CASCADE, related_name='test_category')
+    normal_range = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='lab_tests')
+    result_value = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    test_name = models.CharField(max_length=100)
+
+    # Timing
+    date_performed = models.DateTimeField(null=True, blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    submitted_on = models.DateField(default=timezone.now)
+    time = models.TimeField(auto_now_add=True)
+
+    # Personnel
+    doctor_name = models.CharField(max_length=100, blank=True)
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performed_tests')
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recorded_tests')
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_tests')
+
+    # Additional fields for complex tests
+    instructions = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.test_name} ({self.status})"
+
+class LabTestField(models.Model):
+    """Additional fields for complex lab tests"""
+    lab_test = models.ForeignKey(LabTest, on_delete=models.CASCADE, related_name='fields')
     name = models.CharField(max_length=100)
+    value = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.name}: {self.value}"
+
+class TestCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Test Categories"
 
     def __str__(self):
         return self.name
@@ -309,159 +314,200 @@ class TestSubcategory(models.Model):
     category = models.ForeignKey(TestCategory, related_name='subcategories', on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        verbose_name_plural = "Test Subcategories"
 
-#Doctor tests requested for the lab to do
-class TestSelection(models.Model):
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+# =============================================================================
+# STAFF MANAGEMENT MODELS (Alphabetical)
+# =============================================================================
+
+class Attendance(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
+        ('Absent', 'Absent'),
+        ('On Leave', 'On Leave'),
+        ('Present', 'Present'),
     ]
 
-    def get_current_time():
-        from datetime import datetime
-        return datetime.now().time()
+    date = models.DateTimeField(default=timezone.now)
+    staff = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendances')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
 
-    submitted_on = models.DateField(default=timezone.now)
-    time = models.TimeField(default=get_current_time)
-    patient_id = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='test_selections')
-    category = models.CharField(max_length=100)
-    test_name = models.CharField(max_length=100)
+    class Meta:
+        ordering = ['-date']
+        unique_together = ('staff', 'date')
+
+    def __str__(self):
+        return f"{self.staff.get_full_name() or self.staff.username} - {self.date} - {self.status}"
+
+class HandoverLog(models.Model):
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    notes = models.TextField()
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    testcompleted = models.BooleanField(default=False)
-    doctor_name = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
-        return f"{self.category} - {self.test_name} ({self.status})"
+        return f"Handover: {self.patient.full_name} by {self.author}"
 
-class CarePlan(models.Model):
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    clinical_findings = models.TextField()
-    plan_of_care = models.TextField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Care Plan for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
-    
-class LabTestType(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    category = models.CharField(max_length=100, blank=True, null=True)  # e.g., "Hormonal", "Imaging", etc.
-    units = models.CharField(max_length=50, blank=True, null=True)      # e.g., "ng/mL", "%", etc.
-    reference_range = models.CharField(max_length=100, blank=True, null=True)  # optional
+class Shift(models.Model):
+    SHIFT_CHOICES = [
+        ('Afternoon', 'Afternoon'),
+        ('Morning', 'Morning'),
+        ('Night', 'Night'),
+    ]
+    name = models.CharField(max_length=20, choices=SHIFT_CHOICES, unique=True)
 
     def __str__(self):
         return self.name
 
-    
-class TestRequest(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
+class ShiftAssignment(models.Model):
+    date = models.DateField(default=timezone.now)
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE)
+    staff = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shift_assignments')
+
+    class Meta:
+        unique_together = ('staff', 'date')
+
+    def __str__(self):
+        return f"{self.staff.get_full_name() or self.staff.username} - {self.shift.name} on {self.date}"
+
+class StaffTransition(models.Model):
+    TRANSITION_CHOICES = [
+        ('offboarding', 'Offboarding'),
+        ('onboarding', 'Onboarding'),
     ]
-    
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    tests = models.ManyToManyField(LabTestType)
-    instructions = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    requested_at = models.DateTimeField(auto_now_add=True)
-    started_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField()
+    full_name = models.CharField(max_length=200)
+    notes = models.TextField(blank=True, null=True)
+    transition_type = models.CharField(max_length=20, choices=TRANSITION_CHOICES)
 
     def __str__(self):
-        return f"Test Request for {self.patient.full_name} - {self.status}"
-    
-    def update_status(self):
-        """Auto-update status based on test completion"""
-        total_tests = self.tests.count()
-        completed_tests = self.lab_tests.filter(result_value__isnull=False).count()
-        
-        if completed_tests == 0:
-            self.status = 'pending'
-        elif completed_tests < total_tests:
-            self.status = 'in_progress'
-            if not self.started_at:
-                self.started_at = timezone.now()
-        else:
-            self.status = 'completed'
-            if not self.completed_at:
-                self.completed_at = timezone.now()
-        
-        self.save()
-    
-class LabTest(models.Model):
-    
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    test_request = models.ForeignKey(TestRequest, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_tests')
-    test_selection = models.ForeignKey(TestSelection, on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_results')
-    test_type = models.CharField(max_length=100, default="typeoftest")  # This can be the name from TestSelection
-    test_category = models.CharField(max_length=100, default ="empty")  # This can be the category from TestSelection
-    result_value = models.TextField(default ="positive")  # The actual test result
-    normal_range = models.CharField(max_length=100, blank=True, null=True)  # Reference range
-    notes = models.TextField(blank=True, null=True)  # Additional notes
-    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performed_tests')
-    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recorded_tests')
-    date_performed = models.DateTimeField(default=timezone.now)
-    date_recorded = models.DateTimeField(default=timezone.now)
+        return f"{self.full_name} - {self.transition_type} on {self.date}"
+
+# =============================================================================
+# EMERGENCY & ALERTS (Alphabetical)
+# =============================================================================
+
+class EmergencyAlert(models.Model):
+    acknowledged_by = models.ManyToManyField(User, blank=True, related_name='alerts_acknowledged')
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='alerts_triggered')
 
     def __str__(self):
-        return f"{self.patient.full_name} - {self.test_type} ({self.date_performed.date()})"
-    
-class LabTestField(models.Model):
-    lab_test = models.ForeignKey(LabTest, on_delete=models.CASCADE, related_name='fields')
-    name = models.CharField(max_length=100)
-    value = models.CharField(max_length=255)
+        return f"Alert: {self.message[:30]}..."
+
+# =============================================================================
+# FINANCIAL MODELS (Alphabetical)
+# =============================================================================
+
+class Budget(models.Model):
+    allocated_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    category = models.ForeignKey('ExpenseCategory', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    month = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], null=True, blank=True)
+    spent_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    year = models.PositiveIntegerField()
+
+    class Meta:
+        unique_together = ('category', 'year', 'month')
+
+    def percentage_used(self):
+        if self.allocated_amount > 0:
+            return (self.spent_amount / self.allocated_amount) * 100
+        return 0
+
+    def remaining_amount(self):
+        return self.allocated_amount - self.spent_amount
 
     def __str__(self):
-        return f"{self.name}: {self.value}"
-    
+        period = f"{self.year}" if not self.month else f"{self.month}/{self.year}"
+        return f"{self.category.name} Budget - {period}"
 
-# Add these models to your existing models.py file
+class BillItem(models.Model):
+    bill = models.ForeignKey('PatientBill', on_delete=models.CASCADE, related_name='items')
+    description = models.CharField(max_length=200)
+    quantity = models.PositiveIntegerField(default=1)
+    service_type = models.ForeignKey('ServiceType', on_delete=models.CASCADE)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
 
-from decimal import Decimal
-from django.core.validators import MinValueValidator
+    def save(self, *args, **kwargs):
+        self.total_price = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
 
-# Financial Models for Accounts Module
+    def __str__(self):
+        return f"{self.description} - ₦{self.total_price}"
 
-class ServiceType(models.Model):
-    """Types of services offered by the hospital"""
-    name = models.CharField(max_length=100, unique=True)
+class Expense(models.Model):
+    EXPENSE_STATUS_CHOICES = [
+        ('approved', 'Approved'),
+        ('paid', 'Paid'),
+        ('pending', 'Pending Approval'),
+        ('rejected', 'Rejected'),
+    ]
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_expenses')
+    category = models.ForeignKey('ExpenseCategory', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=200)
+    expense_date = models.DateField()
+    notes = models.TextField(blank=True, null=True)
+    receipt_number = models.CharField(max_length=50, blank=True, null=True)
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')
+    status = models.CharField(max_length=20, choices=EXPENSE_STATUS_CHOICES, default='pending')
+    vendor = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.description} - ₦{self.amount}"
+
+class ExpenseCategory(models.Model):
     description = models.TextField(blank=True, null=True)
-    default_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
-    
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        verbose_name_plural = "Expense Categories"
+
     def __str__(self):
         return self.name
 
 class PatientBill(models.Model):
-    """Main billing record for patients"""
     BILL_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('partial', 'Partially Paid'),
-        ('paid', 'Fully Paid'),
         ('cancelled', 'Cancelled'),
+        ('paid', 'Fully Paid'),
+        ('partial', 'Partially Paid'),
+        ('pending', 'Pending'),
         ('refunded', 'Refunded'),
     ]
-    
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='bills')
+
     bill_number = models.CharField(max_length=20, unique=True)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
-    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    final_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=BILL_STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    final_amount = models.DecimalField(max_digits=10, decimal_places=2)
     notes = models.TextField(blank=True, null=True)
-    
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='bills')
+    status = models.CharField(max_length=20, choices=BILL_STATUS_CHOICES, default='pending')
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+
+    def amount_paid(self):
+        return self.payments.filter(status='completed').aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0.00')
+
+    def outstanding_amount(self):
+        return self.final_amount - self.amount_paid()
+
     def save(self, *args, **kwargs):
         if not self.bill_number:
-            # Generate unique bill number
             from datetime import date
             today = date.today()
             count = PatientBill.objects.filter(created_at__date=today).count() + 1
@@ -469,144 +515,62 @@ class PatientBill(models.Model):
         
         self.final_amount = self.total_amount - self.discount_amount
         super().save(*args, **kwargs)
-    
-    def amount_paid(self):
-        return self.payments.filter(status='completed').aggregate(
-            total=models.Sum('amount')
-        )['total'] or Decimal('0.00')
-    
-    def outstanding_amount(self):
-        return self.final_amount - self.amount_paid()
-    
+
     def __str__(self):
         return f"{self.bill_number} - {self.patient.full_name}"
 
-class BillItem(models.Model):
-    """Individual items/services in a bill"""
-    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='items')
-    service_type = models.ForeignKey(ServiceType, on_delete=models.CASCADE)
-    description = models.CharField(max_length=200)
-    quantity = models.PositiveIntegerField(default=1)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    
-    def save(self, *args, **kwargs):
-        self.total_price = self.quantity * self.unit_price
-        super().save(*args, **kwargs)
-    
-    def __str__(self):
-        return f"{self.description} - ₦{self.total_price}"
-
 class Payment(models.Model):
-    """Payment records"""
     PAYMENT_METHOD_CHOICES = [
         ('cash', 'Cash'),
-        ('pos', 'POS'),
-        ('transfer', 'Bank Transfer'),
         ('cheque', 'Cheque'),
         ('online', 'Online Payment'),
+        ('pos', 'POS'),
+        ('transfer', 'Bank Transfer'),
     ]
-    
     PAYMENT_STATUS_CHOICES = [
-        ('pending', 'Pending'),
+        ('cancelled', 'Cancelled'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
-        ('cancelled', 'Cancelled'),
+        ('pending', 'Pending'),
     ]
-    
-    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='payments', null=True, blank=True)
-    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='payments')
+
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    bill = models.ForeignKey(PatientBill, on_delete=models.CASCADE, related_name='payments', null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='payments')
+    payment_date = models.DateTimeField(auto_now_add=True)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     payment_reference = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='completed')
-    payment_date = models.DateTimeField(auto_now_add=True)
     processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    notes = models.TextField(blank=True, null=True)
-    
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='completed')
+
     def __str__(self):
         return f"Payment ₦{self.amount} - {self.patient.full_name}"
 
-class ExpenseCategory(models.Model):
-    """Categories for hospital expenses"""
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    
-    def __str__(self):
-        return self.name
-
-class Expense(models.Model):
-    """Hospital expenses/expenditure"""
-    EXPENSE_STATUS_CHOICES = [
-        ('pending', 'Pending Approval'),
-        ('approved', 'Approved'),
-        ('paid', 'Paid'),
-        ('rejected', 'Rejected'),
-    ]
-    
-    category = models.ForeignKey(ExpenseCategory, on_delete=models.CASCADE)
-    description = models.CharField(max_length=200)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
-    expense_date = models.DateField()
-    status = models.CharField(max_length=20, choices=EXPENSE_STATUS_CHOICES, default='pending')
-    receipt_number = models.CharField(max_length=50, blank=True, null=True)
-    vendor = models.CharField(max_length=100, blank=True, null=True)
-    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_expenses')
-    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_expenses')
-    created_at = models.DateTimeField(auto_now_add=True)
-    notes = models.TextField(blank=True, null=True)
-    
-    def __str__(self):
-        return f"{self.description} - ₦{self.amount}"
-
-class Budget(models.Model):
-    """Budget planning"""
-    category = models.ForeignKey(ExpenseCategory, on_delete=models.CASCADE)
-    year = models.PositiveIntegerField()
-    month = models.PositiveIntegerField(choices=[(i, i) for i in range(1, 13)], null=True, blank=True)
-    allocated_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    spent_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        unique_together = ('category', 'year', 'month')
-    
-    def remaining_amount(self):
-        return self.allocated_amount - self.spent_amount
-    
-    def percentage_used(self):
-        if self.allocated_amount > 0:
-            return (self.spent_amount / self.allocated_amount) * 100
-        return 0
-    
-    def __str__(self):
-        period = f"{self.year}" if not self.month else f"{self.month}/{self.year}"
-        return f"{self.category.name} Budget - {period}"
-
 class PaymentUpload(models.Model):
-    """Track bulk payment uploads"""
-    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    file_name = models.CharField(max_length=255)
-    upload_date = models.DateTimeField(auto_now_add=True)
-    total_records = models.PositiveIntegerField(default=0)
-    successful_records = models.PositiveIntegerField(default=0)
-    failed_records = models.PositiveIntegerField(default=0)
-    status = models.CharField(max_length=20, choices=[
-        ('processing', 'Processing'),
+    STATUS_CHOICES = [
         ('completed', 'Completed'),
         ('failed', 'Failed'),
-    ], default='processing')
+        ('processing', 'Processing'),
+    ]
+
     error_log = models.TextField(blank=True, null=True)
-    
+    failed_records = models.PositiveIntegerField(default=0)
+    file_name = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing')
+    successful_records = models.PositiveIntegerField(default=0)
+    total_records = models.PositiveIntegerField(default=0)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
     def __str__(self):
         return f"Upload: {self.file_name} - {self.status}"
 
-    
+class ServiceType(models.Model):
+    default_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    name = models.CharField(max_length=100, unique=True)
 
-    # Example model to track admissions on graph
-
-class PatientAdmission(models.Model):
-    admission_date = models.DateField()
-    patient_name = models.CharField(max_length=255)
+    def __str__(self):
+        return self.name
