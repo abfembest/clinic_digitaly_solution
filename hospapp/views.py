@@ -655,7 +655,7 @@ def ae(request):
 # Lab views
 @login_required(login_url='home')                        
 def laboratory(request):
-    pending_test = TestSelection.objects.filter(status='pending').count()
+    pending_test = TestSelection.objects.filter(status='pending').select_related('patient_id')
     return render(request, 'laboratory/index.html', {'pending':pending_test})
 
 @login_required(login_url='home')
