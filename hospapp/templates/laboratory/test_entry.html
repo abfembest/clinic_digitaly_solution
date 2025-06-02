@@ -41,8 +41,8 @@
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-info">
                     <div class="inner">
-                        <h3>{{ referrals|length }}</h3>
-                        <p>Patients with Pending Tests</p>
+                        <h3>{{ stats.total_patients }}</h3>
+                        <p>Total Patients</p>
                     </div>
                     <div class="icon">
                         <i class="fas fa-users"></i>
@@ -52,8 +52,8 @@
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-warning">
                     <div class="inner">
-                        <h3>{{ debug_info.test_requests_pending }}</h3>
-                        <p>Test Requests</p>
+                        <h3>{{ stats.total_pending_tests }}</h3>
+                        <p>Pending Tests</p>
                     </div>
                     <div class="icon">
                         <i class="fas fa-file-medical"></i>
@@ -63,8 +63,8 @@
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-success">
                     <div class="inner">
-                        <h3 id="completedToday">0</h3>
-                        <p>Tests Completed Today</p>
+                        <h3>{{ stats.total_completed_today }}</h3>
+                        <p>Completed Today</p>
                     </div>
                     <div class="icon">
                         <i class="fas fa-check-circle"></i>
@@ -72,10 +72,10 @@
                 </div>
             </div>
             <div class="col-lg-3 col-6">
-                <div class="small-box bg-danger">
+                <div class="small-box bg-secondary">
                     <div class="inner">
-                        <h3>{{ debug_info.test_selections_pending }}</h3>
-                        <p>Pending Test Selections</p>
+                        <h3>{{ stats.total_in_progress }}</h3>
+                        <p>In Progress</p>
                     </div>
                     <div class="icon">
                         <i class="fas fa-flask"></i>
@@ -84,38 +84,11 @@
             </div>
         </div>
         
-        <!-- Debug Info (development only) -->
-        {% if debug_info and user.is_superuser %}
-        <div class="card card-outline card-warning mb-3">
-            <div class="card-header">
-                <h3 class="card-title">Debug Information</h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Lab Departments:</strong> {{ debug_info.lab_departments|join:", "|default:"None" }}</p>
-                        <p><strong>Methods Used:</strong> {{ debug_info.methods_used|join:", " }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Total Referrals:</strong> {{ debug_info.referral_count }}</p>
-                        <p><strong>Test Requests Pending:</strong> {{ debug_info.test_requests_pending }}</p>
-                        <p><strong>Test Selections Pending:</strong> {{ debug_info.test_selections_pending }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Patients with Pending Tests -->
+        <!-- All Patients Table -->
         <div class="card card-outline card-primary">
             <div class="card-header">
                 <h3 class="card-title">
-                    <i class="fas fa-flask"></i> Patients with Pending Lab Tests
+                    <i class="fas fa-users"></i> All Patients - Lab Test Management
                 </h3>
                 <div class="card-tools">
                     <div class="input-group input-group-sm" style="width: 300px;">
@@ -134,49 +107,95 @@
                         <thead class="thead-light">
                             <tr>
                                 <th>Patient ID</th>
-                                <th>Patient Name</th>
-                                <th>Source</th>
-                                <th>Referred By</th>
-                                <th>Date</th>
-                                <th>Pending Tests</th>
+                                <th>Patient Info</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Test Summary</th>
+                                <th>Last Test</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="patientsTableBody">
-                            {% for referral in referrals %}
-                            <tr data-patient-name="{{ referral.patient.full_name|lower }}">
+                            {% for patient_data in patients_data %}
+                            <tr data-patient-name="{{ patient_data.patient.full_name|lower }}">
                                 <td>
-                                    <span class="badge badge-secondary">{{ referral.patient.id }}</span>
+                                    <span class="badge badge-secondary">{{ patient_data.patient.id }}</span>
                                 </td>
                                 <td>
-                                    <strong>{{ referral.patient.full_name }}</strong>
-                                    <br>
-                                    <small class="text-muted">{{ referral.patient.gender }} - {{ referral.patient.date_of_birth }}</small>
+                                    <div>
+                                        <strong>{{ patient_data.patient.full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ patient_data.patient.gender }} • 
+                                            {{ patient_data.patient.date_of_birth|date:"M d, Y" }} •
+                                            {{ patient_data.patient.blood_group }}
+                                        </small>
+                                        {% if patient_data.patient.is_inpatient %}
+                                            <br><span class="badge badge-info">Inpatient</span>
+                                            {% if patient_data.patient.ward %}
+                                                <small class="text-muted">{{ patient_data.patient.ward.name }}</small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
-                                    {% if referral.type == 'referral' %}
-                                        <span class="badge badge-info">Referral</span>
-                                    {% elif referral.type == 'test_request' %}
-                                        <span class="badge badge-success">Test Request</span>
+                                    <small>
+                                        <i class="fas fa-phone"></i> {{ patient_data.patient.phone|default:"N/A" }}
+                                        <br>
+                                        <i class="fas fa-map-marker-alt"></i> {{ patient_data.patient.address|truncatechars:30 }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-{% if patient_data.patient.status == 'critical' %}danger{% elif patient_data.patient.status == 'stable' %}success{% else %}warning{% endif %}">
+                                        {{ patient_data.patient.status|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        {% if patient_data.pending_tests > 0 %}
+                                            <span class="badge badge-warning mb-1">{{ patient_data.pending_tests }} Pending</span>
+                                        {% endif %}
+                                        {% if patient_data.in_progress_tests > 0 %}
+                                            <span class="badge badge-info mb-1">{{ patient_data.in_progress_tests }} In Progress</span>
+                                        {% endif %}
+                                        {% if patient_data.completed_tests > 0 %}
+                                            <span class="badge badge-success mb-1">{{ patient_data.completed_tests }} Completed</span>
+                                        {% endif %}
+                                        {% if patient_data.total_tests == 0 %}
+                                            <span class="text-muted">No tests</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if patient_data.last_test_date %}
+                                        <small>{{ patient_data.last_test_date.requested_at|date:"M d, Y" }}</small>
                                     {% else %}
-                                        <span class="badge badge-warning">Test Selection</span>
+                                        <small class="text-muted">Never</small>
                                     {% endif %}
                                 </td>
-                                <td>{{ referral.referred_by|default:"Unknown" }}</td>
                                 <td>
-                                    <small>{{ referral.created_at|date:"M d, Y" }}</small>
-                                    <br>
-                                    <small class="text-muted">{{ referral.created_at|time:"H:i" }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge badge-danger">{{ referral.pending_tests }} test{{ referral.pending_tests|pluralize }}</span>
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary view-tests" 
-                                            data-patient-id="{{ referral.patient.id }}"
-                                            data-patient-name="{{ referral.patient.full_name }}">
-                                        <i class="fas fa-eye"></i> View Tests
-                                    </button>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-primary view-tests" 
+                                                data-patient-id="{{ patient_data.patient.id }}"
+                                                data-patient-name="{{ patient_data.patient.full_name }}"
+                                                title="View All Tests">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-success create-test" 
+                                                data-patient-id="{{ patient_data.patient.id }}"
+                                                data-patient-name="{{ patient_data.patient.full_name }}"
+                                                title="Create New Test">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        {% if patient_data.pending_tests > 0 %}
+                                        <button class="btn btn-warning quick-complete" 
+                                                data-patient-id="{{ patient_data.patient.id }}"
+                                                data-patient-name="{{ patient_data.patient.full_name }}"
+                                                title="Complete Pending Tests">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% empty %}
@@ -185,7 +204,7 @@
                                     <div class="text-muted">
                                         <i class="fas fa-info-circle fa-2x mb-2"></i>
                                         <br>
-                                        No patients with pending lab tests found
+                                        No patients found
                                     </div>
                                 </td>
                             </tr>
@@ -209,8 +228,14 @@
                         </button>
                     </div>
                     <div class="modal-body">
+                        <!-- Loading spinner -->
+                        <div id="loading" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p>Loading patient data...</p>
+                        </div>
+                        
                         <!-- Patient Info -->
-                        <div class="row mb-3">
+                        <div class="row mb-3" id="patientInfoSection" style="display: none;">
                             <div class="col-md-12">
                                 <div class="card card-outline card-info">
                                     <div class="card-header">
@@ -223,23 +248,20 @@
                             </div>
                         </div>
                         
-                        <!-- Debug Info -->
-                        <div id="debugInfo" class="alert alert-info mb-3" style="display: none;"></div>
-                        
                         <!-- Pending Tests -->
-                        <div id="pendingTestsContainer">
-                            <h6 class="text-primary mb-3">
+                        <div id="pendingTestsContainer" style="display: none;">
+                            <h6 class="text-warning mb-3">
                                 <i class="fas fa-hourglass-half"></i> Pending Tests
                             </h6>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-sm table-striped">
-                                    <thead class="thead-dark">
+                                    <thead class="thead-warning">
                                         <tr>
                                             <th>Test Name</th>
-                                            <th>Department</th>
-                                            <th>Method</th>
+                                            <th>Category</th>
                                             <th>Requested By</th>
                                             <th>Date Requested</th>
+                                            <th>Status</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -251,20 +273,20 @@
                         </div>
                         
                         <!-- Completed Tests -->
-                        <div id="completedTestsContainer" class="mt-4">
+                        <div id="completedTestsContainer" class="mt-4" style="display: none;">
                             <h6 class="text-success mb-3">
                                 <i class="fas fa-check-circle"></i> Completed Tests
                             </h6>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-sm table-striped">
-                                    <thead class="thead-light">
+                                    <thead class="thead-success">
                                         <tr>
                                             <th>Test Name</th>
-                                            <th>Department</th>
-                                            <th>Method</th>
+                                            <th>Category</th>
                                             <th>Completed By</th>
                                             <th>Date Completed</th>
                                             <th>Result Summary</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="completedTestsBody">
@@ -276,6 +298,9 @@
                     </div>
                     
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-success" id="createTestBtn">
+                            <i class="fas fa-plus"></i> Create New Test
+                        </button>
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">
                             <i class="fas fa-times"></i> Close
                         </button>
@@ -284,13 +309,130 @@
             </div>
         </div>
 
+        <!-- Create Test Modal -->
+        <div class="modal fade" id="createTestModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-success">
+                        <h5 class="modal-title text-white">
+                            <i class="fas fa-plus"></i> Create New Lab Test
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <form id="createTestForm">
+                        <div class="modal-body">
+                            <input type="hidden" id="createTestPatientId" name="patient_id">
+                            
+                            <div class="form-group">
+                                <label>Patient</label>
+                                <input type="text" class="form-control" id="createTestPatientName" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="testName">Test Name *</label>
+                                <input type="text" class="form-control" id="testName" name="test_name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="testCategory">Category</label>
+                                <select class="form-control" id="testCategory" name="category_id">
+                                    <option value="">Select Category</option>
+                                    {% for category in test_categories %}
+                                        <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="normalRange">Normal Range</label>
+                                <input type="text" class="form-control" id="normalRange" name="normal_range" placeholder="e.g., 70-100 mg/dL">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="testInstructions">Instructions</label>
+                                <textarea class="form-control" id="testInstructions" name="instructions" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Create Test
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complete Test Modal -->
+        <div class="modal fade" id="completeTestModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title">
+                            <i class="fas fa-check"></i> Complete Lab Test
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <form id="completeTestForm">
+                        <div class="modal-body">
+                            <input type="hidden" id="completeTestId" name="test_id">
+                            
+                            <div class="form-group">
+                                <label>Test Name</label>
+                                <input type="text" class="form-control" id="completeTestName" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="testResult">Test Result *</label>
+                                <textarea class="form-control" id="testResult" name="result_value" rows="4" required placeholder="Enter test results..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="testNotes">Additional Notes</label>
+                                <textarea class="form-control" id="testNotes" name="notes" rows="2" placeholder="Optional notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-check"></i> Complete Test
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </div>
 </section>
+{% endblock %}
 
 <!-- Scripts -->
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // CSRF Token setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
     // Patient Search Filter
     const searchInput = document.getElementById('patientSearch');
     const tableBody = document.getElementById('patientsTableBody');
@@ -304,113 +446,436 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Modal references
-    const modal = $('#patientTestsModal');
-    const patientNameSpan = document.getElementById('patientName');
-    const patientInfoDiv = document.getElementById('patientInfo');
-    const pendingTestsBody = document.getElementById('pendingTestsBody');
-    const completedTestsBody = document.getElementById('completedTestsBody');
-    const debugInfoDiv = document.getElementById('debugInfo');
+    const testModal = $('#patientTestsModal');
+    const createModal = $('#createTestModal');
+    const completeModal = $('#completeTestModal');
+    
+    let currentPatientId = null;
 
-    // Function to fetch patient test data via AJAX
+    // Function to fetch patient tests via AJAX
     function fetchPatientTests(patientId) {
-        // Clear previous data
-        patientInfoDiv.innerHTML = '';
-        pendingTestsBody.innerHTML = '';
-        completedTestsBody.innerHTML = '';
-        debugInfoDiv.style.display = 'none';
-        debugInfoDiv.textContent = '';
+        currentPatientId = patientId;
+        
+        // Show loading, hide content
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('patientInfoSection').style.display = 'none';
+        document.getElementById('pendingTestsContainer').style.display = 'none';
+        document.getElementById('completedTestsContainer').style.display = 'none';
 
-        // Example AJAX call to fetch patient test data
-        // Replace URL with your actual endpoint
-        fetch(`/laboratory/patient_tests/${patientId}/`)
-            .then(response => response.json())
-            .then(data => {
-                if(data.error) {
-                    alert(data.error);
-                    return;
-                }
+        fetch(`/laboratory/patient_tests/${patientId}/`, {
+            headers: {
+                'X-CSRFToken': csrftoken,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            // Update patient info section
+            const patientInfo = document.getElementById('patientInfo');
+            patientInfo.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Name:</strong> ${data.patient.full_name}<br>
+                        <strong>ID:</strong> ${data.patient.id}<br>
+                        <strong>Gender:</strong> ${data.patient.gender}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>DOB:</strong> ${data.patient.date_of_birth}<br>
+                        <strong>Blood Group:</strong> ${data.patient.blood_group}<br>
+                        <strong>Phone:</strong> ${data.patient.phone || 'N/A'}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Status:</strong> <span class="badge badge-${data.patient.status === 'critical' ? 'danger' : data.patient.status === 'stable' ? 'success' : 'warning'}">${data.patient.status}</span><br>
+                        <strong>Address:</strong> ${data.patient.address || 'N/A'}<br>
+                        ${data.patient.is_inpatient ? `<strong>Ward:</strong> ${data.patient.ward || 'N/A'}` : ''}
+                    </div>
+                </div>
+            `;
+            document.getElementById('patientInfoSection').style.display = 'block';
 
-                // Display patient info
-                patientInfoDiv.innerHTML = `
-                    <p><strong>Full Name:</strong> ${data.patient.full_name}</p>
-                    <p><strong>Gender:</strong> ${data.patient.gender}</p>
-                    <p><strong>Date of Birth:</strong> ${data.patient.date_of_birth}</p>
-                    <p><strong>Address:</strong> ${data.patient.address || 'N/A'}</p>
-                    <p><strong>Phone:</strong> ${data.patient.phone || 'N/A'}</p>
-                `;
+            // Update pending tests
+            const pendingTestsBody = document.getElementById('pendingTestsBody');
+            if (data.pending_tests.length > 0) {
+                pendingTestsBody.innerHTML = data.pending_tests.map(test => `
+                    <tr>
+                        <td>${test.test_name}</td>
+                        <td>${test.category || 'N/A'}</td>
+                        <td>${test.requested_by || 'N/A'}</td>
+                        <td>${test.requested_at}</td>
+                        <td><span class="badge badge-warning">Pending</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-warning complete-test-btn" data-test-id="${test.id}" data-test-name="${test.test_name}">
+                                <i class="fas fa-check"></i> Complete
+                            </button>
+                            <button class="btn btn-sm btn-info view-test-btn" data-test-id="${test.id}">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                document.getElementById('pendingTestsContainer').style.display = 'block';
+            }
 
-                // Display pending tests
-                if(data.pending_tests.length > 0) {
-                    data.pending_tests.forEach(test => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${test.name}</td>
-                            <td>${test.department}</td>
-                            <td>${test.method}</td>
-                            <td>${test.requested_by}</td>
-                            <td>${test.requested_date}</td>
-                            <td>
-                                <button class="btn btn-sm btn-success complete-test" data-test-id="${test.id}">Complete</button>
-                            </td>
-                        `;
-                        pendingTestsBody.appendChild(row);
-                    });
-                } else {
-                    pendingTestsBody.innerHTML = `
-                        <tr><td colspan="6" class="text-center text-muted">No pending tests</td></tr>
-                    `;
-                }
+            // Update completed tests
+            const completedTestsBody = document.getElementById('completedTestsBody');
+            if (data.completed_tests.length > 0) {
+                completedTestsBody.innerHTML = data.completed_tests.map(test => `
+                    <tr>
+                        <td>${test.test_name}</td>
+                        <td>${test.category || 'N/A'}</td>
+                        <td>${test.completed_by || 'N/A'}</td>
+                        <td>${test.completed_at}</td>
+                        <td>${test.result_value ? test.result_value.substring(0, 50) + (test.result_value.length > 50 ? '...' : '') : 'N/A'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-success view-result-btn" data-test-id="${test.id}">
+                                <i class="fas fa-file-alt"></i> View Result
+                            </button>
+                            <button class="btn btn-sm btn-primary print-result-btn" data-test-id="${test.id}">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                document.getElementById('completedTestsContainer').style.display = 'block';
+            }
 
-                // Display completed tests
-                if(data.completed_tests.length > 0) {
-                    data.completed_tests.forEach(test => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${test.name}</td>
-                            <td>${test.department}</td>
-                            <td>${test.method}</td>
-                            <td>${test.completed_by}</td>
-                            <td>${test.completed_date}</td>
-                            <td>${test.result_summary}</td>
-                        `;
-                        completedTestsBody.appendChild(row);
-                    });
-                } else {
-                    completedTestsBody.innerHTML = `
-                        <tr><td colspan="6" class="text-center text-muted">No completed tests</td></tr>
-                    `;
-                }
-
-                // Optionally display debug info if available
-                if(data.debug_info) {
-                    debugInfoDiv.style.display = 'block';
-                    debugInfoDiv.textContent = data.debug_info;
-                }
-            })
-            .catch(error => {
-                alert('Error fetching patient test data.');
-                console.error(error);
+            // Add event listeners for complete test buttons
+            document.querySelectorAll('.complete-test-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const testId = this.getAttribute('data-test-id');
+                    const testName = this.getAttribute('data-test-name');
+                    openCompleteTestModal(testId, testName);
+                });
             });
+
+            // Add event listeners for view result buttons
+            document.querySelectorAll('.view-result-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const testId = this.getAttribute('data-test-id');
+                    viewTestResult(testId);
+                });
+            });
+
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('loading').style.display = 'none';
+            alert('Error loading patient data. Please try again.');
+        });
     }
 
-    // Click handler to open modal and fetch data
-    document.querySelectorAll('.view-tests').forEach(button => {
-        button.addEventListener('click', function() {
+    // View Tests button click handler
+    document.querySelectorAll('.view-tests').forEach(btn => {
+        btn.addEventListener('click', function() {
             const patientId = this.getAttribute('data-patient-id');
             const patientName = this.getAttribute('data-patient-name');
-            patientNameSpan.textContent = patientName;
-            modal.modal('show');
+            
+            document.getElementById('patientName').textContent = patientName;
+            testModal.modal('show');
             fetchPatientTests(patientId);
         });
     });
 
-    // Handle complete test button clicks (delegated event)
-    $('#pendingTestsBody').on('click', '.complete-test', function() {
-        const testId = this.getAttribute('data-test-id');
-        // Implement completion logic, e.g., open a form or AJAX call
-        alert('Complete test ID: ' + testId);
+    // Create Test button click handlers
+    function openCreateTestModal(patientId, patientName) {
+        document.getElementById('createTestPatientId').value = patientId;
+        document.getElementById('createTestPatientName').value = patientName;
+        document.getElementById('createTestForm').reset();
+        document.getElementById('createTestPatientId').value = patientId;
+        document.getElementById('createTestPatientName').value = patientName;
+        createModal.modal('show');
+    }
+
+    // Create test buttons in main table
+    document.querySelectorAll('.create-test').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const patientId = this.getAttribute('data-patient-id');
+            const patientName = this.getAttribute('data-patient-name');
+            openCreateTestModal(patientId, patientName);
+        });
     });
+
+    // Create test button in modal
+    document.getElementById('createTestBtn').addEventListener('click', function() {
+        if (currentPatientId) {
+            const patientName = document.getElementById('patientName').textContent;
+            openCreateTestModal(currentPatientId, patientName);
+        }
+    });
+
+    // Create Test Form Submission
+    document.getElementById('createTestForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        submitBtn.disabled = true;
+
+        fetch('/laboratory/create_test/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                createModal.modal('hide');
+                // Show success message
+                showAlert('success', 'Test created successfully!');
+                
+                // Refresh patient tests if modal is open
+                if (currentPatientId) {
+                    fetchPatientTests(currentPatientId);
+                }
+                
+                // Refresh main table by reloading page
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('error', data.message || 'Error creating test. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Error creating test. Please try again.');
+        })
+        .finally(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    });
+
+    // Complete Test Modal
+    function openCompleteTestModal(testId, testName) {
+        document.getElementById('completeTestId').value = testId;
+        document.getElementById('completeTestName').value = testName;
+        document.getElementById('completeTestForm').reset();
+        document.getElementById('completeTestId').value = testId;
+        document.getElementById('completeTestName').value = testName;
+        completeModal.modal('show');
+    }
+
+    // Quick Complete buttons in main table
+    document.querySelectorAll('.quick-complete').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const patientId = this.getAttribute('data-patient-id');
+            const patientName = this.getAttribute('data-patient-name');
+            
+            if (confirm(`Complete all pending tests for ${patientName}?`)) {
+                quickCompleteTests(patientId);
+            }
+        });
+    });
+
+    // Complete Test Form Submission
+    document.getElementById('completeTestForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Completing...';
+        submitBtn.disabled = true;
+
+        fetch('/laboratory/complete_test/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                completeModal.modal('hide');
+                showAlert('success', 'Test completed successfully!');
+                
+                // Refresh patient tests if modal is open
+                if (currentPatientId) {
+                    fetchPatientTests(currentPatientId);
+                }
+                
+                // Refresh main table
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('error', data.message || 'Error completing test. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Error completing test. Please try again.');
+        })
+        .finally(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    });
+
+    // Quick complete all pending tests for a patient
+    function quickCompleteTests(patientId) {
+        fetch('/laboratory/quick_complete_tests/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                'patient_id': patientId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', `${data.completed_count} test(s) marked as completed!`);
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('error', data.message || 'Error completing tests.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Error completing tests. Please try again.');
+        });
+    }
+
+    // View test result function
+    function viewTestResult(testId) {
+        fetch(`/laboratory/test_result/${testId}/`, {
+            headers: {
+                'X-CSRFToken': csrftoken,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Create and show result modal
+                const resultModal = $(`
+                    <div class="modal fade" id="resultModal" tabindex="-1" role="dialog">
+                        <div class="modal-dialog modal-lg" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header bg-info">
+                                    <h5 class="modal-title text-white">
+                                        <i class="fas fa-file-medical"></i> Test Result: ${data.test.test_name}
+                                    </h5>
+                                    <button type="button" class="close text-white" data-dismiss="modal">
+                                        <span>&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <strong>Patient:</strong> ${data.test.patient_name}<br>
+                                            <strong>Test Name:</strong> ${data.test.test_name}<br>
+                                            <strong>Category:</strong> ${data.test.category || 'N/A'}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Completed By:</strong> ${data.test.completed_by || 'N/A'}<br>
+                                            <strong>Date Completed:</strong> ${data.test.completed_at}<br>
+                                            <strong>Normal Range:</strong> ${data.test.normal_range || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><strong>Test Result:</strong></label>
+                                        <div class="border p-3 bg-light">
+                                            ${data.test.result_value.replace(/\n/g, '<br>')}
+                                        </div>
+                                    </div>
+                                    ${data.test.notes ? `
+                                        <div class="form-group">
+                                            <label><strong>Notes:</strong></label>
+                                            <div class="border p-3 bg-light">
+                                                ${data.test.notes.replace(/\n/g, '<br>')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" onclick="printTestResult(${testId})">
+                                        <i class="fas fa-print"></i> Print Result
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                
+                // Remove existing result modal if any
+                $('#resultModal').remove();
+                
+                // Add to body and show
+                $('body').append(resultModal);
+                resultModal.modal('show');
+                
+                // Remove modal from DOM when hidden
+                resultModal.on('hidden.bs.modal', function () {
+                    $(this).remove();
+                });
+            } else {
+                showAlert('error', 'Error loading test result.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Error loading test result.');
+        });
+    }
+
+    // Print test result function
+    window.printTestResult = function(testId) {
+        window.open(`/laboratory/print_test_result/${testId}/`, '_blank');
+    };
+
+    // Show alert function
+    function showAlert(type, message) {
+        const alertClass = type === 'error' ? 'danger' : type;
+        const alertHtml = `
+            <div class="alert alert-${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        
+        // Insert at the top of the content section
+        const contentSection = document.querySelector('.content .container-fluid');
+        contentSection.insertAdjacentHTML('afterbegin', alertHtml);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            const alert = contentSection.querySelector('.alert');
+            if (alert) {
+                $(alert).alert('close');
+            }
+        }, 5000);
+    }
+
+    // Print result buttons in table
+    $(document).on('click', '.print-result-btn', function() {
+        const testId = $(this).attr('data-test-id');
+        printTestResult(testId);
+    });
+
+    // Auto-refresh functionality (optional)
+    setInterval(() => {
+        // Update timestamp or refresh specific data if needed
+        const lastUpdate = document.querySelector('#lastUpdate');
+        if (lastUpdate) {
+            lastUpdate.textContent = new Date().toLocaleTimeString();
+        }
+    }, 60000); // Update every minute
 });
 </script>
-{% endblock %}
 {% endblock %}

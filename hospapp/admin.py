@@ -1,11 +1,10 @@
 from django.contrib import admin
 from .models import (
     Admission, Appointment, Bed, CarePlan, Consultation, Department,
-    EmergencyAlert, HandoverLog, LabResultFile, LabTest, LabTestType,
+    EmergencyAlert, HandoverLog, LabResultFile, LabTest,
     MedicalRecord, NursingNote, Patient, Prescription, Profile,
-    Referral, Shift, Attendance, ShiftAssignment, TestRequest, TestSelection, Vitals, Ward, LabTestField,TestCategory,
-    TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload,PatientAdmission,
-    
+    Referral, Shift, Attendance, ShiftAssignment, Vitals, Ward, LabTestField,TestCategory,
+    TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload
 )
 
 admin.site.register(Admission)
@@ -18,7 +17,6 @@ admin.site.register(EmergencyAlert)
 admin.site.register(HandoverLog)
 admin.site.register(LabResultFile)
 admin.site.register(LabTest)
-admin.site.register(LabTestType)
 admin.site.register(MedicalRecord)
 admin.site.register(NursingNote)
 admin.site.register(Patient)
@@ -28,13 +26,11 @@ admin.site.register(Referral)
 admin.site.register(Shift)
 admin.site.register(ShiftAssignment)
 admin.site.register(Attendance)
-admin.site.register(TestRequest)
 admin.site.register(Vitals)
 admin.site.register(Ward)
 admin.site.register(LabTestField)
 admin.site.register(TestCategory)
 admin.site.register(TestSubcategory)
-admin.site.register(TestSelection)
 admin.site.register(StaffTransition)
 admin.site.register(Payment)
 admin.site.register(PatientBill)
@@ -43,4 +39,3 @@ admin.site.register(ExpenseCategory)
 admin.site.register(Expense)
 admin.site.register(Budget)
 admin.site.register(PaymentUpload)
-admin.site.register(PatientAdmission)
