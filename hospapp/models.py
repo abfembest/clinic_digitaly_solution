@@ -105,7 +105,6 @@ class Patient(models.Model):
     referred_by = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
     ward = models.ForeignKey(Ward, null=True, blank=True, on_delete=models.SET_NULL)
-
     def __str__(self):
         return f"{self.full_name}"
 
@@ -263,13 +262,13 @@ class LabTest(models.Model):
     ]
 
     # Test identification
-    category = models.ForeignKey('TestCategory', on_delete=models.CASCADE, related_name='test_category')
-    normal_range = models.CharField(max_length=100, blank=True, null=True)
-    notes = models.TextField(blank=True, null=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='lab_tests')
+    category = models.ForeignKey('TestCategory', on_delete=models.CASCADE, related_name='test_category')
+    test_name = models.CharField(max_length=100)
+    normal_range = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)    
     result_value = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    test_name = models.CharField(max_length=100)
 
     # Timing
     date_performed = models.DateTimeField(null=True, blank=True)
@@ -279,9 +278,9 @@ class LabTest(models.Model):
 
     # Personnel
     doctor_name = models.CharField(max_length=100, blank=True)
-    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='performed_tests')
-    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recorded_tests')
-    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_tests')
+    performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='performed_tests')
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='recorded_tests')
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='requested_tests')
 
     # Additional fields for complex tests
     instructions = models.TextField(blank=True, null=True)

@@ -17,6 +17,11 @@ import json
 from datetime import datetime, date
 from django.utils.timezone import localdate, now
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Count
+from .models import Admission
+from django.utils import timezone
+from datetime import timedelta
+from django.db import IntegrityError, DatabaseError
 
 # Create your views here.
 ROLE_DASHBOARD_PATHS = {
@@ -654,9 +659,7 @@ def ae(request):
 # Lab views
 @login_required(login_url='home')                        
 def laboratory(request):
-<<<<<<< HEAD
-    pending_test = TestSelection.objects.filter(status='pending').select_related('patient_id')
-=======
+    #pending_test = TestSelection.objects.filter(status='pending').select_related('patient_id')
     labtest = LabTest.objects.all()
     pending_count = LabTest.objects.filter(status='pending').count()
     completed_count = LabTest.objects.filter(status='completed').count()
@@ -676,7 +679,6 @@ def laboratory(request):
     return render(request, 'laboratory/index.html', context)
 
     pending_test = TestSelection.objects.filter(status='pending').count()
->>>>>>> b6b32c30e3c1eca5f3feeadf385bf605245d02d5
     return render(request, 'laboratory/index.html', {'pending':pending_test})
 
 @login_required(login_url='home')
@@ -1704,37 +1706,30 @@ def medical_test_selection(request):
 def submit_test_selection(request):
     if request.method == 'POST':
         try:
-            print("I am connected")
             data = json.loads(request.body)
             patient_id = data.get('patient_id')
             selections = data.get('selections', [])
-            print(type(patient_id))
-            print("patient id ", patient_id)
-            print("data ", selections)
+            patient_id1 = int(patient_id)
             if not patient_id or not selections:
                 return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
-            patient_id1 = int(patient_id)
-            type(patient_id1)
-            patient = Patient.objects.get(id=patient_id1)
-            print("patient ", patient)
+            patient = Patient.objects.get(id=patient_id1)            
             for item in selections:
-                category = item['category']
-                for test in item['tests']:
-                    LabTest.objects.create(patient_id=patient,category=category, test_name=test)
-
+                category = item.get('category')
+                tests = item.get('tests', [])
+                for test in tests:
+                    category_name = TestCategory.objects.get(name=category)
+                    print(category,  test)
+                    LabTest.objects.create(patient=patient, category=category_name, test_name=test)
+                    
             return JsonResponse({'status': 'success', 'message': 'Selections saved.'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
+        except DatabaseError as e:
+            print("Database error:", str(e))  # Generic DB errors
+    return JsonResponse({'status': 'error', 'message': 'Database error: ' + str(e)})
+       
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 #graph 2
-from django.http import JsonResponse
-from django.db.models import Count
-from .models import Admission
-from django.utils import timezone
-from datetime import timedelta
-
 
 def chart2(request):
     return render(request, "doctors/graph.html")
