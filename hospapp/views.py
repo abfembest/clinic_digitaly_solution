@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, LabTest, ShiftAssignment, Attendance, Shift, StaffTransition, LabTest, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
+from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -1850,7 +1850,7 @@ def chart2(request):
     return JsonResponse({'labels': labels, 'counts': counts})    
 """
 
-def admissions_data(request):
+def admissions_dataold(request):
     today = timezone.now().date()
     last_week = today - timedelta(days=6)
 
@@ -1887,4 +1887,41 @@ def admissions_data(request):
     })
 
 
+def admissions_data(request):
+    today = timezone.now().date()
+    last_week = today - timedelta(days=6)
 
+    # All test requests
+    all_tests = (
+        LabTest.objects.filter(submitted_on__range=[last_week, today])
+        .values('submitted_on')
+        .annotate(count=Count('id'))
+        .order_by('submitted_on')
+    )
+
+    # Completed tests (ensure correct field name: testcompleted=True)
+    completed_tests = (
+        LabTest.objects.filter(
+            submitted_on__range=[last_week, today],
+            testcompleted=True  # Make sure this field exists and is Boolean
+            )
+        .values('submitted_on')
+        .annotate(count=Count('id'))
+        .order_by('submitted_on')
+    )
+
+    def format_data(queryset):
+        labels = []
+        counts = []
+        for entry in queryset:
+            date_obj = entry['submitted_on']
+            if isinstance(date_obj, str):  # just in case it's stringified
+                date_obj = timezone.datetime.strptime(date_obj, "%Y-%m-%d").date()
+            labels.append(date_obj.strftime('%b %d'))
+            counts.append(entry['count'])
+        return {'labels': labels, 'counts': counts}
+
+    return JsonResponse({
+        'requested': format_data(all_tests),
+        'completed': format_data(completed_tests),
+    })

@@ -1,5 +1,7 @@
 from decimal import Decimal
 from datetime import date, datetime
+from email.policy import default
+from xmlrpc.client import boolean
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -269,6 +271,7 @@ class LabTest(models.Model):
     notes = models.TextField(blank=True, null=True)    
     result_value = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    testcompleted = models.BooleanField(default=0)
 
     # Timing
     date_performed = models.DateTimeField(null=True, blank=True)
