@@ -36,6 +36,8 @@ urlpatterns = [
     path('d/monitoring/', views.monitoring, name='monitoring'),
     path('requesttest/', views.requesttest, name='requesttest'),
     path('submit-selection/', views.submit_test_selection, name='submit_selection'),
+    path('notifications/data/', views.notification_data, name='notification_data'),
+   
     
 
     path('ae/', views.ae, name='ae'),

@@ -49,102 +49,7 @@
 
             <!-- Right navbar links -->
             <ul class="navbar-nav ml-auto">
-                <!-- Messages Dropdown -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link" data-toggle="dropdown" href="#">
-                        <i class="far fa-comments"></i>
-                        <span class="badge badge-danger navbar-badge">3</span>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                        <!-- Message 1 -->
-                        <a href="#" class="dropdown-item">
-                            <div class="media">
-                                <img src="{% static 'dist/img/user1-128x128.jpg' %}" alt="User Avatar"
-                                     class="img-size-50 img-circle mr-3">
-                                <div class="media-body">
-                                    <h3 class="dropdown-item-title">
-                                        Brad Diesel
-                                        <span class="float-right text-sm text-danger"><i class="fas fa-star"></i></span>
-                                    </h3>
-                                    <p class="text-sm">Call me whenever you can...</p>
-                                    <p class="text-sm text-muted"><i class="far fa-clock mr-1"></i> 4 Hours Ago</p>
-                                </div>
-                            </div>
-                        </a>
-                        <div class="dropdown-divider"></div>
-
-                        <!-- Message 2 -->
-                        <a href="#" class="dropdown-item">
-                            <div class="media">
-                                <img src="{% static 'dist/img/user8-128x128.jpg' %}" alt="User Avatar"
-                                     class="img-size-50 img-circle mr-3">
-                                <div class="media-body">
-                                    <h3 class="dropdown-item-title">
-                                        John Pierce
-                                        <span class="float-right text-sm text-muted"><i class="fas fa-star"></i></span>
-                                    </h3>
-                                    <p class="text-sm">I got your message bro</p>
-                                    <p class="text-sm text-muted"><i class="far fa-clock mr-1"></i> 4 Hours Ago</p>
-                                </div>
-                            </div>
-                        </a>
-                        <div class="dropdown-divider"></div>
-
-                        <!-- Message 3 -->
-                        <a href="#" class="dropdown-item">
-                            <div class="media">
-                                <img src="{% static 'dist/img/user3-128x128.jpg' %}" alt="User Avatar"
-                                     class="img-size-50 img-circle mr-3">
-                                <div class="media-body">
-                                    <h3 class="dropdown-item-title">
-                                        Nora Silvester
-                                        <span class="float-right text-sm text-warning"><i class="fas fa-star"></i></span>
-                                    </h3>
-                                    <p class="text-sm">The subject goes here</p>
-                                    <p class="text-sm text-muted"><i class="far fa-clock mr-1"></i> 4 Hours Ago</p>
-                                </div>
-                            </div>
-                        </a>
-
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item dropdown-footer">See All Messages</a>
-                    </div>
-                </li>
-
-                <!-- Notifications Dropdown -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link" data-toggle="dropdown" href="#">
-                        <i class="far fa-bell"></i>
-                        <span class="badge badge-warning navbar-badge">15</span>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                        <span class="dropdown-item dropdown-header">15 Notifications</span>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item">
-                            <i class="fas fa-envelope mr-2"></i> 4 new messages
-                            <span class="float-right text-muted text-sm">3 mins</span>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item">
-                            <i class="fas fa-users mr-2"></i> 8 friend requests
-                            <span class="float-right text-muted text-sm">12 hours</span>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item">
-                            <i class="fas fa-file mr-2"></i> 3 new reports
-                            <span class="float-right text-muted text-sm">2 days</span>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
-                    </div>
-                </li>
-
-                <!-- Control Sidebar Toggle -->
-                <li class="nav-item">
-                    <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
-                        <i class="fas fa-th-large"></i>
-                    </a>
-                </li>
+               
             </ul>
         </nav>
 
@@ -290,6 +195,76 @@
          {% endif %}
      });
     </script>
+
+
+    <!-- Notification Bell Icon (initially hidden) -->
+    <div id="notification-bell" style="position: fixed; top: 50%; right: 0; z-index: 1050; display: none;">
+        <button class="btn btn-warning rounded-circle p-3 shadow" id="toggleNotifications">
+            <i class="fas fa-bell"></i>
+        </button>
+    </div>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="card shadow-sm" style="position: fixed; top: 50%; right: 70px; transform: translateY(-50%); width: 300px; display: none; z-index: 1040;">
+        <div class="card-header bg-primary text-white">
+            Notifications
+        </div>
+        <ul class="list-group list-group-flush" id="notificationList">
+            <!-- Dynamic items go here -->
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const toggleBtn = document.getElementById("toggleNotifications");
+            const panel = document.getElementById("notification-panel");
+            const list = document.getElementById("notificationList");
+            const bell = document.getElementById("notification-bell");
+
+            // Function to fetch and update notifications
+            function loadNotifications() {
+                fetch('/notifications/data/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const notifications = data.notifications;
+                        const hasNotifications = notifications.some(item => item.count > 0);
+
+                        // Show bell icon only if any notification count > 0
+                        bell.style.display = hasNotifications ? "block" : "none";
+
+                        // Populate panel (so it's ready even before click)
+                        list.innerHTML = "";
+                        notifications.forEach(item => {
+                            const li = document.createElement("li");
+                            li.className = "list-group-item d-flex justify-content-between align-items-center";
+                            li.innerHTML = `
+                            <span>${item.title}</span>
+                            <span class="badge badge-primary badge-pill">${item.count}</span>
+                        `;
+                            li.style.cursor = "pointer";
+                            li.onclick = () => window.location.href = item.url;
+                            list.appendChild(li);
+                        });
+                    })
+                    .catch(err => {
+                        console.error("Notification fetch error:", err);
+                    });
+            }
+
+            // Initial fetch
+            loadNotifications();
+
+            // Optional: Refresh every 60 seconds
+            setInterval(loadNotifications, 10000);
+
+            // Toggle panel visibility
+            toggleBtn.addEventListener("click", () => {
+                panel.style.display = panel.style.display === "none" ? "block" : "none";
+            });
+        });
+    </script>
+
+    
 </body>
 
 </html>

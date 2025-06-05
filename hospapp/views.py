@@ -17,6 +17,8 @@ import json
 from datetime import datetime, date
 from django.db.models import Sum
 from django.utils.timezone import localdate, now
+from django.utils import timezone
+from django.db.models.functions import TruncDate
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count
 from .models import Admission
@@ -25,6 +27,7 @@ from datetime import timedelta
 from django.db import IntegrityError, DatabaseError
 from decimal import Decimal
 from dateutil.relativedelta import relativedelta
+today = timezone.now().date()
 
 # Create your views here.
 ROLE_DASHBOARD_PATHS = {
@@ -435,6 +438,9 @@ def save_nursing_note(request):
 
     return redirect('nursing_notes')
 
+
+
+
 """ Doctors Views"""
 @login_required(login_url='home')
 def doctors(request):
@@ -605,6 +611,33 @@ def get_patient_overview(request, patient_id):
         return JsonResponse({"error": "Patient not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
+
+
+    #notification icon 
+
+def notification_data(request):
+    return JsonResponse({
+        "notifications": [
+            {
+                "title": "Test Outstanding",
+                "count": LabTest.objects.filter(testcompleted=False).count(),
+                "url": "/tests/pending/"
+            },
+         
+            {
+                "title": "Appointments Available",
+                "count": Appointment.objects.filter(scheduled_time=today).count(),
+                "url": "/results/available/"
+            },
+            {
+                "title": "Available Test results",
+                "count": LabTest.objects.filter(testcompleted=True).count(),
+                "url": "/bookings/"
+            },
+        ]
+    })
+
 
 @login_required(login_url='home')
 def get_patient_monitor(request, patient_id):
