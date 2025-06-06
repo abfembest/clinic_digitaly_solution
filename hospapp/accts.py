@@ -581,77 +581,129 @@ def get_patient_financial_details(request, patient_id):
 
 def income_expenditure_view(request):
     if request.method == 'POST':
+        # Handle expense approval/rejection/payment
+        action = request.POST.get('action')
+        if action in ['approve', 'reject', 'mark_paid']:
+            expense_id = request.POST.get('expense_id')
+            try:
+                expense = Expense.objects.get(id=expense_id)
+                
+                # Only admins can approve/reject/mark as paid
+                if hasattr(request.user, 'profile') and request.user.profile.role == 'admin':
+                    if action == 'approve':
+                        expense.status = 'approved'
+                        expense.approved_by = request.user
+                        expense.approved_at = timezone.now()
+                        expense.save()
+                        messages.success(request, f'Expense request #{expense_id} has been approved.')
+                    elif action == 'reject':
+                        expense.status = 'rejected'
+                        expense.approved_by = request.user
+                        expense.approved_at = timezone.now()
+                        expense.save()
+                        messages.success(request, f'Expense request #{expense_id} has been rejected.')
+                    elif action == 'mark_paid':
+                        # Check if expense is in approved status
+                        if expense.status != 'approved':
+                            messages.error(request, f'Expense request #{expense_id} must be approved before it can be marked as paid.')
+                        else:
+                            expense.status = 'paid'
+                            expense.paid_at = timezone.now()
+                            expense.save()
+                            messages.success(request, f'Expense request #{expense_id} has been marked as paid.')
+                else:
+                    messages.error(request, 'Only administrators can perform actions on expense requests.')
+            except Expense.DoesNotExist:
+                messages.error(request, f'Expense with ID {expense_id} not found.')
+            except Exception as e:
+                messages.error(request, f"Error processing request: {str(e)}")
+            
+            return redirect('income_expenditure')
+        
+        # Handle new expense request submission
         transaction_type = request.POST.get('type')
         amount = request.POST.get('amount')
-        date = request.POST.get('date')
         description = request.POST.get('description')
 
         try:
             amount = Decimal(amount)
-            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+            if amount <= 0:
+                messages.error(request, 'Amount must be greater than zero.')
+                return redirect('income_expenditure')
+                
+            # Validate description
+            if not description or not description.strip():
+                messages.error(request, 'Description is required.')
+                return redirect('income_expenditure')
 
             # Only allow Expenditure input from the form
             if transaction_type == 'Expenditure':
                 category, _ = ExpenseCategory.objects.get_or_create(name="General")
                 Expense.objects.create(
                     category=category,
-                    description=description,
+                    description=description.strip(),
                     amount=amount,
-                    expense_date=date_obj,
-                    status='paid',
+                    expense_date=timezone.now().date(),
+                    status='pending',
                     requested_by=request.user,
-                    approved_by=request.user
+                    created_at=timezone.now()
                 )
-                messages.success(request, 'Expenditure transaction saved successfully.')
+                messages.success(request, 'Expense request submitted successfully and is pending approval.')
             else:
-                messages.error(request, 'Only expenditure can be recorded through this form.')
+                messages.error(request, 'Only expenditure can be requested through this form.')
 
+        except (ValueError, TypeError):
+            messages.error(request, 'Please enter a valid amount.')
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            messages.error(request, f"Error submitting request: {str(e)}")
 
-    # Get all income payments and expenditure expenses
-    payments = Payment.objects.filter(status='completed').values(
-        'payment_date', 'amount', 'notes'
-    )
-    expenses = Expense.objects.filter(status='paid').values(
-        'expense_date', 'amount', 'description'
-    )
+        return redirect('income_expenditure')
 
-    transactions = []
+    # Get expense records with proper ordering (newest first)
+    expenses_queryset = Expense.objects.select_related('requested_by', 'approved_by').order_by('-created_at', '-id')
+    
+    # Calculate summary statistics
+    total_pending = expenses_queryset.filter(status='pending').aggregate(
+        total=Sum('amount'))['total'] or 0
+    total_approved = expenses_queryset.filter(status='approved').aggregate(
+        total=Sum('amount'))['total'] or 0
+    total_paid = expenses_queryset.filter(status='paid').aggregate(
+        total=Sum('amount'))['total'] or 0
+    rejected_count = expenses_queryset.filter(status='rejected').count()
 
-    for p in payments:
-        transactions.append({
-            'date': p['payment_date'].date(),
-            'type': 'Income',
-            'description': p['notes'] or '',
-            'amount': p['amount']
-        })
-
-    for e in expenses:
-        transactions.append({
-            'date': e['expense_date'],
-            'type': 'Expenditure',
-            'description': e['description'],
-            'amount': e['amount']
-        })
-
-    transactions.sort(key=lambda x: x['date'], reverse=True)
-
-    # Pagination - 10 transactions per page
-    paginator = Paginator(transactions, 20)
+    # Pagination - 15 expenses per page
+    paginator = Paginator(expenses_queryset, 15)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # Format transactions for template compatibility
+    transactions = []
+    for expense in page_obj:
+        transactions.append({
+            'id': expense.id,
+            'date': expense.expense_date,
+            'created_at': expense.created_at,
+            'description': expense.description,
+            'amount': expense.amount,
+            'status': expense.status,
+            'requested_by': expense.requested_by,
+            'approved_by': expense.approved_by,
+        })
+
     context = {
         'page_obj': page_obj,
-        'transactions': page_obj.object_list,
+        'transactions': transactions,
+        'total_pending': total_pending,
+        'total_approved': total_approved,
+        'total_paid': total_paid,
+        'rejected_count': rejected_count,
     }
 
+    # Handle AJAX requests
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        # Render only the transactions table + pagination part
-        html = render_to_string('accounts/financials.html', context, request=request, using=None)
-        # We want to extract only the relevant block to send back — we can use a dedicated block for this (see next)
-        return JsonResponse({'html': html})
+        # Return only the table section for AJAX updates
+        html = render_to_string('accounts/expense_table_partial.html', context, request=request)
+        return JsonResponse({'html': html, 'success': True})
 
     return render(request, 'accounts/financials.html', context)
 
