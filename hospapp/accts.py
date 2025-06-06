@@ -628,7 +628,7 @@ def income_expenditure_view(request):
     transactions.sort(key=lambda x: x['date'], reverse=True)
 
     # Pagination - 10 transactions per page
-    paginator = Paginator(transactions, 10)
+    paginator = Paginator(transactions, 20)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
@@ -650,114 +650,35 @@ def financial_reports(request):
     end_date = now().date()
     start_date = end_date - timedelta(days=29)
 
-    print("="*50)
-    print("FINANCIAL REPORTS DEBUG")
-    print("="*50)
-    print(f"Date range: {start_date} to {end_date}")
-
-    # ===== EXPENSE DEBUGGING =====
-    print("\n--- EXPENSE ANALYSIS ---")
-    
-    # 1. Check total expenses in database
-    total_expenses_count = Expense.objects.count()
-    print(f"Total expenses in database: {total_expenses_count}")
-    
-    if total_expenses_count == 0:
-        print("❌ NO EXPENSES FOUND IN DATABASE!")
-        total_expenditure = Decimal('0.00')
-    else:
-        # 2. Check all unique status values
-        print("\nExpense status distribution:")
-        status_counts = Expense.objects.values('status').annotate(count=Count('id'))
-        for item in status_counts:
-            print(f"  - Status '{item['status']}': {item['count']} records")
-        
-        # 3. Check expenses by date (all statuses)
-        all_expenses_in_range = Expense.objects.filter(
-            expense_date__range=(start_date, end_date)
-        )
-        print(f"\nExpenses in date range ({start_date} to {end_date}): {all_expenses_in_range.count()}")
-        
-        # 4. Show sample expense data
-        print("\nSample expense records:")
-        sample_expenses = Expense.objects.all()[:5]
-        for expense in sample_expenses:
-            print(f"  - {expense.description}: ₦{expense.amount}, Status: '{expense.status}', Date: {expense.expense_date}")
-        
-        # 5. Calculate different expenditure scenarios
-        print("\n--- EXPENDITURE CALCULATIONS ---")
-        
-        # Scenario 1: Original filter (approved + paid)
-        exp_approved_paid = Expense.objects.filter(
-            status__in=['approved', 'paid'],
-            expense_date__range=(start_date, end_date)
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        print(f"Expenditure (approved + paid): ₦{exp_approved_paid}")
-        
-        # Scenario 2: All expenses in date range
-        exp_all_in_range = Expense.objects.filter(
-            expense_date__range=(start_date, end_date)
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        print(f"Expenditure (all in date range): ₦{exp_all_in_range}")
-        
-        # Scenario 3: All expenses regardless of date
-        exp_all_time = Expense.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        print(f"Expenditure (all time): ₦{exp_all_time}")
-        
-        # Scenario 4: Different status combinations
-        for status_combo in [['pending'], ['approved'], ['paid'], ['pending', 'approved'], ['pending', 'paid']]:
-            exp_combo = Expense.objects.filter(
-                status__in=status_combo,
-                expense_date__range=(start_date, end_date)
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-            print(f"Expenditure ({'+'.join(status_combo)}): ₦{exp_combo}")
-        
-        # Decide which expenditure to use
-        if exp_approved_paid > 0:
-            total_expenditure = exp_approved_paid
-            print(f"\n✅ Using approved + paid expenditure: ₦{total_expenditure}")
-        elif exp_all_in_range > 0:
-            total_expenditure = exp_all_in_range
-            print(f"\n⚠️  Using all expenses in range: ₦{total_expenditure}")
-        else:
-            total_expenditure = Decimal('0.00')
-            print(f"\n❌ No expenses found - using ₦0.00")
-
     # ===== INCOME CALCULATION =====
-    print("\n--- INCOME ANALYSIS ---")
-    
-    payment_count = Payment.objects.filter(
+    total_income = Payment.objects.filter(
         status='completed',
         payment_date__date__range=(start_date, end_date)
-    ).count()
-    print(f"Completed payments in range: {payment_count}")
-    
-    total_income_agg = Payment.objects.filter(
-        status='completed',
-        payment_date__date__range=(start_date, end_date)
-    ).aggregate(total=Sum('amount'))
-    total_income = total_income_agg['total'] or Decimal('0.00')
-    print(f"Total income: ₦{total_income}")
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-    # ===== FINAL CALCULATIONS =====
+    # ===== EXPENDITURE CALCULATION =====
+    # Calculate all expenses regardless of status (all firm expenditures)
+    total_expenditure = Expense.objects.filter(
+        expense_date__range=(start_date, end_date)
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    # ===== NET BALANCE =====
     net_balance = total_income - total_expenditure
-    
-    print("\n--- FINAL SUMMARY ---")
-    print(f"Total Income: ₦{total_income}")
-    print(f"Total Expenditure: ₦{total_expenditure}")
-    print(f"Net Balance: ₦{net_balance}")
-    
-    if total_income == net_balance and total_expenditure == 0:
-        print("❌ WARNING: Expenditure is zero - this suggests a data or filter issue!")
-    
-    print("="*50)
 
-    # ===== CHART DATA =====
-    # Prepare daily income chart data
+    # ===== CHART DATA PREPARATION =====
+    # Create date range for chart
     date_labels = [(start_date + timedelta(days=i)) for i in range(30)]
-    daily_income_dict = OrderedDict((d.strftime('%Y-%m-%d'), 0) for d in date_labels)
+    
+    # Initialize daily dictionaries
+    daily_income_dict = OrderedDict()
+    daily_expenditure_dict = OrderedDict()
+    
+    for date_obj in date_labels:
+        date_str = date_obj.strftime('%Y-%m-%d')
+        daily_income_dict[date_str] = 0
+        daily_expenditure_dict[date_str] = 0
 
-    # Aggregate income grouped by day
+    # Get daily income data
     daily_income_qs = Payment.objects.filter(
         status='completed',
         payment_date__date__range=(start_date, end_date)
@@ -767,41 +688,31 @@ def financial_reports(request):
 
     for entry in daily_income_qs:
         day_str = entry['payment_date__date'].strftime('%Y-%m-%d')
-        daily_income_dict[day_str] = float(entry['day_total'])
+        if day_str in daily_income_dict:
+            daily_income_dict[day_str] = float(entry['day_total'])
 
-    # Prepare daily expenditure chart data
-    daily_expenditure_dict = OrderedDict((d.strftime('%Y-%m-%d'), 0) for d in date_labels)
-    
-    # Use broader filter for expenditure if needed
-    if total_expenditure > 0:
-        if exp_approved_paid > 0:
-            expense_filter = {'status__in': ['approved', 'paid'], 'expense_date__range': (start_date, end_date)}
-        else:
-            expense_filter = {'expense_date__range': (start_date, end_date)}
-        
-        daily_expenditure_qs = Expense.objects.filter(
-            **expense_filter
-        ).values('expense_date').annotate(
-            day_total=Sum('amount')
-        ).order_by('expense_date')
+    # Get daily expenditure data (all expenses)
+    daily_expenditure_qs = Expense.objects.filter(
+        expense_date__range=(start_date, end_date)
+    ).values('expense_date').annotate(
+        day_total=Sum('amount')
+    ).order_by('expense_date')
 
-        for entry in daily_expenditure_qs:
-            day_str = entry['expense_date'].strftime('%Y-%m-%d')
+    for entry in daily_expenditure_qs:
+        day_str = entry['expense_date'].strftime('%Y-%m-%d')
+        if day_str in daily_expenditure_dict:
             daily_expenditure_dict[day_str] = float(entry['day_total'])
+
+    # Prepare chart labels (format dates for display)
+    chart_labels = [date_obj.strftime('%m-%d') for date_obj in date_labels]
 
     context = {
         'total_income': total_income,
         'total_expenditure': total_expenditure,
         'net_balance': net_balance,
-        'chart_labels': list(daily_income_dict.keys()),
-        'chart_data': list(daily_income_dict.values()),
-        'expenditure_data': list(daily_expenditure_dict.values()),
-        # Add debug info to template if needed
-        'debug_info': {
-            'total_expenses_in_db': total_expenses_count,
-            'expenses_in_date_range': all_expenses_in_range.count() if total_expenses_count > 0 else 0,
-            'date_range': f"{start_date} to {end_date}"
-        }
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(list(daily_income_dict.values())),
+        'expenditure_data': json.dumps(list(daily_expenditure_dict.values())),
     }
 
     return render(request, 'accounts/financial_reports.html', context)
