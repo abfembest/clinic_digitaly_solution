@@ -347,8 +347,8 @@
                                 <tr>
                                     <td>{{ transaction.payment_date|date:"M d, Y" }}</td>
                                     <td>
-                                        {% if transaction.patient.first_name %}
-                                            {{ transaction.patient.first_name }} {{ transaction.patient.last_name }}
+                                        {% if transaction.patient.full_name %}
+                                            {{ transaction.patient.full_name }}
                                         {% else %}
                                             {{ transaction.patient.username }}
                                         {% endif %}

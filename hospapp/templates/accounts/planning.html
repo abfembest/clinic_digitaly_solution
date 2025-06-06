@@ -1,16 +1,15 @@
 {% extends "accounts/base.html" %}
 {% load humanize %}
 
-{% block title %}HMS | Budget Planning {% endblock %}
+{% block title %}HMS | Budget Planning{% endblock %}
 
 {% block content %}
-
-<!-- Content Header (Page header) -->
+<!-- Content Header -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Budget Planning</h1>
+                <h1 class="m-0"><i class="fas fa-chart-line text-primary"></i> Budget Planning</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
@@ -28,59 +27,66 @@
         
         <!-- Budget Overview Cards -->
         <div class="row mb-4">
-            <div class="col-lg-3 col-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="small-box bg-info">
                     <div class="inner">
                         <h3>₦{{ total_allocated|floatformat:0|intcomma }}</h3>
                         <p>Total Allocated</p>
                     </div>
-                    <div class="icon">
-                        <i class="fas fa-wallet"></i>
+                    <div class="icon"><i class="fas fa-wallet"></i></div>
+                    <div class="small-box-footer">
+                        <span class="badge badge-light">{{ budget_count }} Budget{{ budget_count|pluralize }}</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="small-box bg-warning">
                     <div class="inner">
                         <h3>₦{{ total_spent|floatformat:0|intcomma }}</h3>
                         <p>Total Spent</p>
                     </div>
-                    <div class="icon">
-                        <i class="fas fa-credit-card"></i>
+                    <div class="icon"><i class="fas fa-credit-card"></i></div>
+                    <div class="small-box-footer">
+                        {% widthratio total_spent total_allocated 100 as usage_percent %}
+                        <span class="badge badge-light">{{ usage_percent|default:0 }}% Used</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="small-box bg-success">
                     <div class="inner">
                         <h3>₦{{ total_remaining|floatformat:0|intcomma }}</h3>
                         <p>Total Remaining</p>
                     </div>
-                    <div class="icon">
-                        <i class="fas fa-piggy-bank"></i>
+                    <div class="icon"><i class="fas fa-piggy-bank"></i></div>
+                    <div class="small-box-footer">
+                        <span class="badge badge-light">Available</span>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="small-box bg-primary">
                     <div class="inner">
-                        <h3>{{ budgets|length }}</h3>
-                        <p>Active Budgets</p>
+                        <h3>{{ current_month|stringformat:"02d" }}/{{ current_year }}</h3>
+                        <p>Current Period</p>
                     </div>
-                    <div class="icon">
-                        <i class="fas fa-chart-pie"></i>
+                    <div class="icon"><i class="fas fa-calendar"></i></div>
+                    <div class="small-box-footer">
+                        <a href="{% url 'budget_analytics' %}" class="text-white">View Analytics <i class="fas fa-arrow-circle-right"></i></a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Budget Creation Form -->
-        <div class="card card-outline card-warning">
+        <!-- Budget Form -->
+        <div class="card card-warning">
             <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-plus-circle"></i>
-                    Create/Update Budget
-                </h3>
+                <h3 class="card-title"><i class="fas fa-plus-circle"></i> Create/Update Budget</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <form method="post" id="budgetForm">
@@ -89,19 +95,14 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="category">Budget Category <span class="text-danger">*</span></label>
-                                <input type="text" 
-                                       name="category" 
-                                       id="category"
-                                       class="form-control" 
-                                       placeholder="e.g. Salaries, Equipment, Utilities" 
-                                       required
-                                       list="categoryList">
+                                <input type="text" name="category" id="category" class="form-control" 
+                                       placeholder="e.g. Salaries, Equipment, Utilities" required maxlength="100" list="categoryList">
                                 <datalist id="categoryList">
-                                    {% for budget in budgets %}
-                                        <option value="{{ budget.category.name }}">
+                                    {% for cat in categories %}
+                                        <option value="{{ cat }}">
                                     {% endfor %}
                                 </datalist>
-                                <small class="form-text text-muted">Enter a new category or select from existing ones</small>
+                                <small class="form-text text-muted">Enter new or select existing category</small>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -111,27 +112,17 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text">₦</span>
                                     </div>
-                                    <input type="number" 
-                                           name="amount" 
-                                           id="amount"
-                                           class="form-control" 
-                                           min="0.01" 
-                                           step="0.01"
-                                           placeholder="0.00"
-                                           required>
+                                    <input type="number" name="amount" id="amount" class="form-control" 
+                                           min="0.01" max="999999999.99" step="0.01" placeholder="0.00" required>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="period">Budget Period <span class="text-danger">*</span></label>
-                                <input type="month" 
-                                       name="period" 
-                                       id="period"
-                                       class="form-control" 
-                                       value="{{ current_year }}-{{ current_month|stringformat:"02d" }}"
-                                       required>
-                                <small class="form-text text-muted">Select year and month for this budget</small>
+                                <input type="month" name="period" id="period" class="form-control" 
+                                       value="{{ current_year }}-{{ current_month|stringformat:"02d" }}" required>
+                                <small class="form-text text-muted">Select year and month</small>
                             </div>
                         </div>
                     </div>
@@ -143,19 +134,19 @@
                             <button type="reset" class="btn btn-secondary ml-2">
                                 <i class="fas fa-undo"></i> Reset
                             </button>
+                            <a href="{% url 'export_budget_data' %}" class="btn btn-info ml-2">
+                                <i class="fas fa-download"></i> Export CSV
+                            </a>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Existing Budgets -->
-        <div class="card card-outline card-primary">
+        <!-- Budget Overview Table -->
+        <div class="card">
             <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-list"></i>
-                    Budget Overview
-                </h3>
+                <h3 class="card-title"><i class="fas fa-list"></i> Budget Overview</h3>
                 <div class="card-tools">
                     <button type="button" class="btn btn-tool" data-card-widget="collapse">
                         <i class="fas fa-minus"></i>
@@ -165,32 +156,30 @@
             <div class="card-body">
                 {% if budgets %}
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped" id="budgetTable">
-                            <thead class="thead-light">
+                        <table class="table table-hover" id="budgetTable">
+                            <thead>
                                 <tr>
                                     <th>Category</th>
                                     <th>Period</th>
-                                    <th>Allocated Amount</th>
-                                    <th>Spent Amount</th>
-                                    <th>Remaining</th>
-                                    <th>Usage %</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
+                                    <th class="text-right">Allocated</th>
+                                    <th class="text-right">Spent</th>
+                                    <th class="text-right">Remaining</th>
+                                    <th>Progress</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for budget in budgets %}
+                                {% with percentage=budget.percentage_used remaining=budget.remaining_amount %}
                                 <tr>
                                     <td>
                                         <strong>{{ budget.category.name }}</strong>
-                                    </td>
-                                    <td>
-                                        {% if budget.month %}
-                                            {{ budget.month|stringformat:"02d" }}/{{ budget.year }}
-                                        {% else %}
-                                            {{ budget.year }}
+                                        {% if budget.category.description %}
+                                            <br><small class="text-muted">{{ budget.category.description|truncatechars:40 }}</small>
                                         {% endif %}
                                     </td>
+                                    <td>{{ budget.month|stringformat:"02d" }}/{{ budget.year }}</td>
                                     <td class="text-right">
                                         <span class="badge badge-info">₦{{ budget.allocated_amount|floatformat:0|intcomma }}</span>
                                     </td>
@@ -198,138 +187,143 @@
                                         <span class="badge badge-warning">₦{{ budget.spent_amount|floatformat:0|intcomma }}</span>
                                     </td>
                                     <td class="text-right">
-                                        {% with remaining=budget.remaining_amount %}
-                                            <span class="badge {% if remaining < 0 %}badge-danger{% else %}badge-success{% endif %}">
-                                                ₦{{ remaining|floatformat:0|intcomma }}
-                                            </span>
-                                        {% endwith %}
+                                        <span class="badge {% if remaining < 0 %}badge-danger{% else %}badge-success{% endif %}">
+                                            ₦{{ remaining|floatformat:0|intcomma }}
+                                        </span>
                                     </td>
-                                    <td class="text-center">
-                                        {% with percentage=budget.percentage_used %}
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar 
-                                                    {% if percentage < 50 %}bg-success
-                                                    {% elif percentage < 80 %}bg-warning
-                                                    {% else %}bg-danger
-                                                    {% endif %}" 
-                                                    role="progressbar" 
-                                                    style="width: {% if percentage > 100 %}100{% else %}{{ percentage|floatformat:0 }}{% endif %}%">
-                                                    {{ percentage|floatformat:1 }}%
-                                                </div>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar 
+                                                {% if percentage < 50 %}bg-success
+                                                {% elif percentage < 80 %}bg-warning
+                                                {% else %}bg-danger{% endif %}" 
+                                                style="width: {% if percentage > 100 %}100{% else %}{{ percentage|floatformat:0 }}{% endif %}%">
+                                                {{ percentage|floatformat:1 }}%
                                             </div>
-                                        {% endwith %}
+                                        </div>
                                     </td>
                                     <td class="text-center">
-                                        {% with percentage=budget.percentage_used %}
-                                            {% if percentage < 50 %}
-                                                <span class="badge badge-success">Good</span>
-                                            {% elif percentage < 80 %}
-                                                <span class="badge badge-warning">Caution</span>
-                                            {% elif percentage < 100 %}
-                                                <span class="badge badge-danger">High Usage</span>
-                                            {% else %}
-                                                <span class="badge badge-danger">Over Budget</span>
-                                            {% endif %}
-                                        {% endwith %}
+                                        {% if percentage < 50 %}
+                                            <span class="badge badge-success"><i class="fas fa-check-circle"></i> Good</span>
+                                        {% elif percentage < 80 %}
+                                            <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Caution</span>
+                                        {% elif percentage < 100 %}
+                                            <span class="badge badge-danger"><i class="fas fa-fire"></i> High</span>
+                                        {% else %}
+                                            <span class="badge badge-danger"><i class="fas fa-ban"></i> Over</span>
+                                        {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-info edit-budget"
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-info edit-budget"
                                                     data-category="{{ budget.category.name }}"
                                                     data-amount="{{ budget.allocated_amount }}"
                                                     data-period="{{ budget.year }}-{{ budget.month|stringformat:"02d" }}"
-                                                    title="Edit Budget">
+                                                    title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <form method="post" 
-                                                  action="{% url 'delete_budget' budget.id %}" 
-                                                  style="display: inline;"
-                                                  onsubmit="return confirm('Are you sure you want to delete this budget?')">
-                                                {% csrf_token %}
-                                                <button type="submit" 
-                                                        class="btn btn-sm btn-danger"
-                                                        title="Delete Budget">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-danger delete-budget"
+                                                    data-budget-id="{{ budget.id }}"
+                                                    data-category="{{ budget.category.name }}"
+                                                    data-period="{{ budget.month|stringformat:"02d" }}/{{ budget.year }}"
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
+                                {% endwith %}
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 {% else %}
                     <div class="text-center py-5">
-                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No budgets defined yet</h5>
+                        <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No budgets created yet</h5>
                         <p class="text-muted">Create your first budget using the form above.</p>
                     </div>
                 {% endif %}
             </div>
         </div>
-
     </div>
 </section>
 
-<!-- JavaScript -->
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Delete budget for <strong id="deleteCategoryName"></strong> (<span id="deletePeriod"></span>)?</p>
+                <p class="text-warning"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Initialize DataTable
+    // DataTable initialization
     $('#budgetTable').DataTable({
-        "responsive": true,
-        "autoWidth": false,
-        "order": [[1, "desc"]], // Sort by period descending
-        "pageLength": 25,
-        "language": {
-            "search": "Search budgets:",
-            "lengthMenu": "Show _MENU_ budgets per page",
-            "info": "Showing _START_ to _END_ of _TOTAL_ budgets",
-            "infoEmpty": "No budgets to show",
-            "infoFiltered": "(filtered from _MAX_ total budgets)"
+        responsive: true,
+        order: [[1, "desc"]],
+        pageLength: 25,
+        language: {
+            search: "Search budgets:",
+            lengthMenu: "Show _MENU_ budgets",
+            info: "Showing _START_ to _END_ of _TOTAL_ budgets"
         }
     });
 
-    // Edit budget functionality
+    // Edit budget
     $('.edit-budget').on('click', function() {
-        var category = $(this).data('category');
-        var amount = $(this).data('amount');
-        var period = $(this).data('period');
-        
-        // Fill the form with existing data
-        $('#category').val(category);
-        $('#amount').val(parseFloat(amount));
-        $('#period').val(period);
-        
-        // Scroll to form
-        $('html, body').animate({
-            scrollTop: $("#budgetForm").offset().top - 100
-        }, 1000);
-        
-        // Highlight the form
-        $('.card-outline.card-warning').addClass('border-info').removeClass('card-warning');
-        setTimeout(function() {
-            $('.card-outline').removeClass('border-info').addClass('card-warning');
-        }, 3000);
+        $('#category').val($(this).data('category'));
+        $('#amount').val(parseFloat($(this).data('amount')));
+        $('#period').val($(this).data('period'));
+        $('html, body').animate({scrollTop: $("#budgetForm").offset().top - 100}, 500);
+        $('.card-warning').addClass('shadow-lg');
+        setTimeout(() => $('.card-warning').removeClass('shadow-lg'), 2000);
+    });
+
+    // Delete budget
+    $('.delete-budget').on('click', function() {
+        const budgetId = $(this).data('budget-id');
+        $('#deleteCategoryName').text($(this).data('category'));
+        $('#deletePeriod').text($(this).data('period'));
+        $('#deleteForm').attr('action', `/budget/delete/${budgetId}/`);
+        $('#deleteModal').modal('show');
     });
 
     // Form validation
     $('#budgetForm').on('submit', function(e) {
-        var amount = parseFloat($('#amount').val());
+        const amount = parseFloat($('#amount').val());
         if (amount <= 0) {
             e.preventDefault();
             alert('Please enter a valid amount greater than zero.');
             $('#amount').focus();
-            return false;
         }
     });
 
     // Auto-dismiss alerts
-    setTimeout(function() {
-        $('.alert').fadeOut('slow');
-    }, 5000);
+    setTimeout(() => $('.alert').fadeOut(), 5000);
 });
 </script>
-
 {% endblock %}

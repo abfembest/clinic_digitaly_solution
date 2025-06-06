@@ -20,6 +20,16 @@ from collections import OrderedDict
 from decimal import Decimal
 from django.template.loader import render_to_string
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Sum, Q, F, Case, When, DecimalField
+from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
+from datetime import datetime, date
+import csv
+from decimal import Decimal
+
 # Import your models (adjust the import path as needed)
 from .models import (
     Patient, PatientBill, Payment, ServiceType, 
@@ -571,397 +581,530 @@ def get_patient_financial_details(request, patient_id):
 
 def income_expenditure_view(request):
     if request.method == 'POST':
+        # Handle expense approval/rejection/payment
+        action = request.POST.get('action')
+        if action in ['approve', 'reject', 'mark_paid']:
+            expense_id = request.POST.get('expense_id')
+            try:
+                expense = Expense.objects.get(id=expense_id)
+                
+                # Only admins can approve/reject/mark as paid
+                if hasattr(request.user, 'profile') and request.user.profile.role == 'admin':
+                    if action == 'approve':
+                        expense.status = 'approved'
+                        expense.approved_by = request.user
+                        expense.approved_at = timezone.now()
+                        expense.save()
+                        messages.success(request, f'Expense request #{expense_id} has been approved.')
+                    elif action == 'reject':
+                        expense.status = 'rejected'
+                        expense.approved_by = request.user
+                        expense.approved_at = timezone.now()
+                        expense.save()
+                        messages.success(request, f'Expense request #{expense_id} has been rejected.')
+                    elif action == 'mark_paid':
+                        # Check if expense is in approved status
+                        if expense.status != 'approved':
+                            messages.error(request, f'Expense request #{expense_id} must be approved before it can be marked as paid.')
+                        else:
+                            expense.status = 'paid'
+                            expense.paid_at = timezone.now()
+                            expense.save()
+                            messages.success(request, f'Expense request #{expense_id} has been marked as paid.')
+                else:
+                    messages.error(request, 'Only administrators can perform actions on expense requests.')
+            except Expense.DoesNotExist:
+                messages.error(request, f'Expense with ID {expense_id} not found.')
+            except Exception as e:
+                messages.error(request, f"Error processing request: {str(e)}")
+            
+            return redirect('income_expenditure')
+        
+        # Handle new expense request submission
         transaction_type = request.POST.get('type')
         amount = request.POST.get('amount')
-        date = request.POST.get('date')
         description = request.POST.get('description')
 
         try:
             amount = Decimal(amount)
-            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+            if amount <= 0:
+                messages.error(request, 'Amount must be greater than zero.')
+                return redirect('income_expenditure')
+                
+            # Validate description
+            if not description or not description.strip():
+                messages.error(request, 'Description is required.')
+                return redirect('income_expenditure')
 
             # Only allow Expenditure input from the form
             if transaction_type == 'Expenditure':
                 category, _ = ExpenseCategory.objects.get_or_create(name="General")
                 Expense.objects.create(
                     category=category,
-                    description=description,
+                    description=description.strip(),
                     amount=amount,
-                    expense_date=date_obj,
-                    status='paid',
+                    expense_date=timezone.now().date(),
+                    status='pending',
                     requested_by=request.user,
-                    approved_by=request.user
+                    created_at=timezone.now()
                 )
-                messages.success(request, 'Expenditure transaction saved successfully.')
+                messages.success(request, 'Expense request submitted successfully and is pending approval.')
             else:
-                messages.error(request, 'Only expenditure can be recorded through this form.')
+                messages.error(request, 'Only expenditure can be requested through this form.')
 
+        except (ValueError, TypeError):
+            messages.error(request, 'Please enter a valid amount.')
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            messages.error(request, f"Error submitting request: {str(e)}")
 
-    # Get all income payments and expenditure expenses
-    payments = Payment.objects.filter(status='completed').values(
-        'payment_date', 'amount', 'notes'
-    )
-    expenses = Expense.objects.filter(status='paid').values(
-        'expense_date', 'amount', 'description'
-    )
+        return redirect('income_expenditure')
 
-    transactions = []
+    # Get expense records with proper ordering (newest first)
+    expenses_queryset = Expense.objects.select_related('requested_by', 'approved_by').order_by('-created_at', '-id')
+    
+    # Calculate summary statistics
+    total_pending = expenses_queryset.filter(status='pending').aggregate(
+        total=Sum('amount'))['total'] or 0
+    total_approved = expenses_queryset.filter(status='approved').aggregate(
+        total=Sum('amount'))['total'] or 0
+    total_paid = expenses_queryset.filter(status='paid').aggregate(
+        total=Sum('amount'))['total'] or 0
+    rejected_count = expenses_queryset.filter(status='rejected').count()
 
-    for p in payments:
-        transactions.append({
-            'date': p['payment_date'].date(),
-            'type': 'Income',
-            'description': p['notes'] or '',
-            'amount': p['amount']
-        })
-
-    for e in expenses:
-        transactions.append({
-            'date': e['expense_date'],
-            'type': 'Expenditure',
-            'description': e['description'],
-            'amount': e['amount']
-        })
-
-    transactions.sort(key=lambda x: x['date'], reverse=True)
-
-    # Pagination - 10 transactions per page
-    paginator = Paginator(transactions, 10)
+    # Pagination - 15 expenses per page
+    paginator = Paginator(expenses_queryset, 15)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # Format transactions for template compatibility
+    transactions = []
+    for expense in page_obj:
+        transactions.append({
+            'id': expense.id,
+            'date': expense.expense_date,
+            'created_at': expense.created_at,
+            'description': expense.description,
+            'amount': expense.amount,
+            'status': expense.status,
+            'requested_by': expense.requested_by,
+            'approved_by': expense.approved_by,
+        })
+
     context = {
         'page_obj': page_obj,
-        'transactions': page_obj.object_list,
+        'transactions': transactions,
+        'total_pending': total_pending,
+        'total_approved': total_approved,
+        'total_paid': total_paid,
+        'rejected_count': rejected_count,
     }
 
+    # Handle AJAX requests
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        # Render only the transactions table + pagination part
-        html = render_to_string('accounts/financials.html', context, request=request, using=None)
-        # We want to extract only the relevant block to send back — we can use a dedicated block for this (see next)
-        return JsonResponse({'html': html})
+        # Return only the table section for AJAX updates
+        html = render_to_string('accounts/expense_table_partial.html', context, request=request)
+        return JsonResponse({'html': html, 'success': True})
 
     return render(request, 'accounts/financials.html', context)
 
 def financial_reports(request):
-    # Define date range (last 30 days)
-    end_date = now().date()
-    start_date = end_date - timedelta(days=29)
-
-    print("="*50)
-    print("FINANCIAL REPORTS DEBUG")
-    print("="*50)
-    print(f"Date range: {start_date} to {end_date}")
-
-    # ===== EXPENSE DEBUGGING =====
-    print("\n--- EXPENSE ANALYSIS ---")
+    # Define date ranges
+    today = now().date()
+    last_30_days_start = today - timedelta(days=29)
+    last_7_days_start = today - timedelta(days=6)
+    current_month_start = today.replace(day=1)
+    current_year_start = today.replace(month=1, day=1)
     
-    # 1. Check total expenses in database
-    total_expenses_count = Expense.objects.count()
-    print(f"Total expenses in database: {total_expenses_count}")
-    
-    if total_expenses_count == 0:
-        print("❌ NO EXPENSES FOUND IN DATABASE!")
-        total_expenditure = Decimal('0.00')
-    else:
-        # 2. Check all unique status values
-        print("\nExpense status distribution:")
-        status_counts = Expense.objects.values('status').annotate(count=Count('id'))
-        for item in status_counts:
-            print(f"  - Status '{item['status']}': {item['count']} records")
-        
-        # 3. Check expenses by date (all statuses)
-        all_expenses_in_range = Expense.objects.filter(
-            expense_date__range=(start_date, end_date)
-        )
-        print(f"\nExpenses in date range ({start_date} to {end_date}): {all_expenses_in_range.count()}")
-        
-        # 4. Show sample expense data
-        print("\nSample expense records:")
-        sample_expenses = Expense.objects.all()[:5]
-        for expense in sample_expenses:
-            print(f"  - {expense.description}: ₦{expense.amount}, Status: '{expense.status}', Date: {expense.expense_date}")
-        
-        # 5. Calculate different expenditure scenarios
-        print("\n--- EXPENDITURE CALCULATIONS ---")
-        
-        # Scenario 1: Original filter (approved + paid)
-        exp_approved_paid = Expense.objects.filter(
-            status__in=['approved', 'paid'],
-            expense_date__range=(start_date, end_date)
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        print(f"Expenditure (approved + paid): ₦{exp_approved_paid}")
-        
-        # Scenario 2: All expenses in date range
-        exp_all_in_range = Expense.objects.filter(
-            expense_date__range=(start_date, end_date)
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        print(f"Expenditure (all in date range): ₦{exp_all_in_range}")
-        
-        # Scenario 3: All expenses regardless of date
-        exp_all_time = Expense.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        print(f"Expenditure (all time): ₦{exp_all_time}")
-        
-        # Scenario 4: Different status combinations
-        for status_combo in [['pending'], ['approved'], ['paid'], ['pending', 'approved'], ['pending', 'paid']]:
-            exp_combo = Expense.objects.filter(
-                status__in=status_combo,
-                expense_date__range=(start_date, end_date)
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-            print(f"Expenditure ({'+'.join(status_combo)}): ₦{exp_combo}")
-        
-        # Decide which expenditure to use
-        if exp_approved_paid > 0:
-            total_expenditure = exp_approved_paid
-            print(f"\n✅ Using approved + paid expenditure: ₦{total_expenditure}")
-        elif exp_all_in_range > 0:
-            total_expenditure = exp_all_in_range
-            print(f"\n⚠️  Using all expenses in range: ₦{total_expenditure}")
-        else:
-            total_expenditure = Decimal('0.00')
-            print(f"\n❌ No expenses found - using ₦0.00")
-
-    # ===== INCOME CALCULATION =====
-    print("\n--- INCOME ANALYSIS ---")
-    
-    payment_count = Payment.objects.filter(
+    # ===== INCOME CALCULATIONS =====
+    # Last 30 days income
+    income_30_days = Payment.objects.filter(
         status='completed',
-        payment_date__date__range=(start_date, end_date)
-    ).count()
-    print(f"Completed payments in range: {payment_count}")
+        payment_date__date__range=(last_30_days_start, today)
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    total_income_agg = Payment.objects.filter(
+    # Current month income
+    income_current_month = Payment.objects.filter(
         status='completed',
-        payment_date__date__range=(start_date, end_date)
-    ).aggregate(total=Sum('amount'))
-    total_income = total_income_agg['total'] or Decimal('0.00')
-    print(f"Total income: ₦{total_income}")
-
-    # ===== FINAL CALCULATIONS =====
-    net_balance = total_income - total_expenditure
+        payment_date__date__gte=current_month_start
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    print("\n--- FINAL SUMMARY ---")
-    print(f"Total Income: ₦{total_income}")
-    print(f"Total Expenditure: ₦{total_expenditure}")
-    print(f"Net Balance: ₦{net_balance}")
+    # Current year income
+    income_current_year = Payment.objects.filter(
+        status='completed',
+        payment_date__date__gte=current_year_start
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    if total_income == net_balance and total_expenditure == 0:
-        print("❌ WARNING: Expenditure is zero - this suggests a data or filter issue!")
+    # Today's income
+    income_today = Payment.objects.filter(
+        status='completed',
+        payment_date__date=today
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    # ===== EXPENDITURE CALCULATIONS =====
+    # Last 30 days expenditure
+    expenditure_30_days = Expense.objects.filter(
+        expense_date__range=(last_30_days_start, today)
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
-    print("="*50)
+    # Current month expenditure
+    expenditure_current_month = Expense.objects.filter(
+        expense_date__gte=current_month_start
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    # Current year expenditure
+    expenditure_current_year = Expense.objects.filter(
+        expense_date__gte=current_year_start
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    # Today's expenditure
+    expenditure_today = Expense.objects.filter(
+        expense_date=today
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-    # ===== CHART DATA =====
-    # Prepare daily income chart data
-    date_labels = [(start_date + timedelta(days=i)) for i in range(30)]
-    daily_income_dict = OrderedDict((d.strftime('%Y-%m-%d'), 0) for d in date_labels)
+    # ===== NET CALCULATIONS =====
+    net_30_days = income_30_days - expenditure_30_days
+    net_current_month = income_current_month - expenditure_current_month
+    net_current_year = income_current_year - expenditure_current_year
+    net_today = income_today - expenditure_today
 
-    # Aggregate income grouped by day
+    # ===== DAILY BREAKDOWN (Last 30 Days) =====
+    date_labels = [(last_30_days_start + timedelta(days=i)) for i in range(30)]
+    
+    # Initialize daily data
+    daily_income_dict = OrderedDict()
+    daily_expenditure_dict = OrderedDict()
+    daily_net_dict = OrderedDict()
+    
+    for date_obj in date_labels:
+        date_str = date_obj.strftime('%Y-%m-%d')
+        daily_income_dict[date_str] = 0
+        daily_expenditure_dict[date_str] = 0
+        daily_net_dict[date_str] = 0
+
+    # Get daily income
     daily_income_qs = Payment.objects.filter(
         status='completed',
-        payment_date__date__range=(start_date, end_date)
+        payment_date__date__range=(last_30_days_start, today)
     ).values('payment_date__date').annotate(
         day_total=Sum('amount')
     ).order_by('payment_date__date')
 
     for entry in daily_income_qs:
         day_str = entry['payment_date__date'].strftime('%Y-%m-%d')
-        daily_income_dict[day_str] = float(entry['day_total'])
+        if day_str in daily_income_dict:
+            daily_income_dict[day_str] = float(entry['day_total'])
 
-    # Prepare daily expenditure chart data
-    daily_expenditure_dict = OrderedDict((d.strftime('%Y-%m-%d'), 0) for d in date_labels)
-    
-    # Use broader filter for expenditure if needed
-    if total_expenditure > 0:
-        if exp_approved_paid > 0:
-            expense_filter = {'status__in': ['approved', 'paid'], 'expense_date__range': (start_date, end_date)}
-        else:
-            expense_filter = {'expense_date__range': (start_date, end_date)}
-        
-        daily_expenditure_qs = Expense.objects.filter(
-            **expense_filter
-        ).values('expense_date').annotate(
-            day_total=Sum('amount')
-        ).order_by('expense_date')
+    # Get daily expenditure
+    daily_expenditure_qs = Expense.objects.filter(
+        expense_date__range=(last_30_days_start, today)
+    ).values('expense_date').annotate(
+        day_total=Sum('amount')
+    ).order_by('expense_date')
 
-        for entry in daily_expenditure_qs:
-            day_str = entry['expense_date'].strftime('%Y-%m-%d')
+    for entry in daily_expenditure_qs:
+        day_str = entry['expense_date'].strftime('%Y-%m-%d')
+        if day_str in daily_expenditure_dict:
             daily_expenditure_dict[day_str] = float(entry['day_total'])
 
+    # Calculate daily net
+    for date_str in daily_income_dict.keys():
+        daily_net_dict[date_str] = daily_income_dict[date_str] - daily_expenditure_dict[date_str]
+
+    # ===== TOP EXPENSE CATEGORIES (Current Month) =====
+    top_expense_categories = Expense.objects.filter(
+        expense_date__gte=current_month_start
+    ).values('category__name').annotate(
+        total_amount=Sum('amount'),
+        expense_count=Count('id')
+    ).order_by('-total_amount')[:5]
+
+    # ===== RECENT TRANSACTIONS =====
+    recent_income = Payment.objects.filter(
+        status='completed'
+    ).select_related('patient').order_by('-payment_date')[:5]
+    
+    recent_expenses = Expense.objects.select_related('category').order_by('-expense_date')[:5]
+
+    # ===== MONTHLY COMPARISON (Last 6 Months) =====
+    monthly_data = []
+    for i in range(6):
+        month_start = (today.replace(day=1) - timedelta(days=32*i)).replace(day=1)
+        next_month = (month_start + timedelta(days=32)).replace(day=1)
+        
+        month_income = Payment.objects.filter(
+            status='completed',
+            payment_date__date__gte=month_start,
+            payment_date__date__lt=next_month
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        month_expenditure = Expense.objects.filter(
+            expense_date__gte=month_start,
+            expense_date__lt=next_month
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        monthly_data.insert(0, {
+            'month': month_start.strftime('%b %Y'),
+            'income': float(month_income),
+            'expenditure': float(month_expenditure),
+            'net': float(month_income - month_expenditure)
+        })
+
+    # Format chart labels
+    chart_labels = [date_obj.strftime('%m-%d') for date_obj in date_labels]
+    
     context = {
-        'total_income': total_income,
-        'total_expenditure': total_expenditure,
-        'net_balance': net_balance,
-        'chart_labels': list(daily_income_dict.keys()),
-        'chart_data': list(daily_income_dict.values()),
-        'expenditure_data': list(daily_expenditure_dict.values()),
-        # Add debug info to template if needed
-        'debug_info': {
-            'total_expenses_in_db': total_expenses_count,
-            'expenses_in_date_range': all_expenses_in_range.count() if total_expenses_count > 0 else 0,
-            'date_range': f"{start_date} to {end_date}"
-        }
+        # Summary totals
+        'income_30_days': income_30_days,
+        'expenditure_30_days': expenditure_30_days,
+        'net_30_days': net_30_days,
+        'income_current_month': income_current_month,
+        'expenditure_current_month': expenditure_current_month,
+        'net_current_month': net_current_month,
+        'income_current_year': income_current_year,
+        'expenditure_current_year': expenditure_current_year,
+        'net_current_year': net_current_year,
+        'income_today': income_today,
+        'expenditure_today': expenditure_today,
+        'net_today': net_today,
+        
+        # Chart data
+        'chart_labels': json.dumps(chart_labels),
+        'daily_income_data': json.dumps(list(daily_income_dict.values())),
+        'daily_expenditure_data': json.dumps(list(daily_expenditure_dict.values())),
+        'daily_net_data': json.dumps(list(daily_net_dict.values())),
+        
+        # Monthly comparison
+        'monthly_labels': json.dumps([item['month'] for item in monthly_data]),
+        'monthly_income': json.dumps([item['income'] for item in monthly_data]),
+        'monthly_expenditure': json.dumps([item['expenditure'] for item in monthly_data]),
+        'monthly_net': json.dumps([item['net'] for item in monthly_data]),
+        
+        # Additional data
+        'top_expense_categories': top_expense_categories,
+        'recent_income': recent_income,
+        'recent_expenses': recent_expenses,
+        'date_range': f"{last_30_days_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}",
     }
 
     return render(request, 'accounts/financial_reports.html', context)
 
+@login_required
 def budget_planning(request):
-    """
-    Handle budget planning - display existing budgets and create new ones
-    """
+    """Enhanced budget planning with proper calculations and error handling"""
+    
     if request.method == 'POST':
-        try:
-            # Get form data
-            category_name = request.POST.get('category', '').strip()
-            amount = request.POST.get('amount')
-            period = request.POST.get('period')  # Format: YYYY-MM
-            
-            # Validate required fields
-            if not category_name or not amount or not period:
-                messages.error(request, 'All fields are required.')
-                return redirect('budget_planning')
-            
-            # Parse period (YYYY-MM)
-            try:
-                year, month = map(int, period.split('-'))
-            except ValueError:
-                messages.error(request, 'Invalid period format.')
-                return redirect('budget_planning')
-            
-            # Validate amount
-            try:
-                amount = float(amount)
-                if amount <= 0:
-                    messages.error(request, 'Amount must be greater than zero.')
-                    return redirect('budget_planning')
-            except ValueError:
-                messages.error(request, 'Invalid amount format.')
-                return redirect('budget_planning')
-            
-            # Get or create expense category
-            expense_category, created = ExpenseCategory.objects.get_or_create(
-                name=category_name,
-                defaults={'description': f'Budget category for {category_name}'}
+        return handle_budget_creation(request)
+    
+    # Get current period for filtering
+    current_year = timezone.now().year
+    current_month = timezone.now().month
+    
+    # Fetch budgets with related data and computed fields
+    budgets = Budget.objects.select_related('category', 'created_by').annotate(
+        # Calculate spent amount directly in query
+        actual_spent=Sum(
+            Case(
+                When(
+                    Q(category__expense__expense_date__year=F('year')) &
+                    Q(category__expense__expense_date__month=F('month')) &
+                    Q(category__expense__status='paid'),
+                    then='category__expense__amount'
+                ),
+                default=0,
+                output_field=DecimalField(max_digits=12, decimal_places=2)
             )
-            
-            # Check if budget already exists for this category and period
-            existing_budget = Budget.objects.filter(
-                category=expense_category,
-                year=year,
-                month=month
-            ).first()
-            
-            if existing_budget:
-                # Update existing budget
-                existing_budget.allocated_amount = amount
-                existing_budget.save()
-                messages.success(request, f'Budget for {category_name} updated successfully!')
-            else:
-                # Create new budget
-                Budget.objects.create(
-                    category=expense_category,
-                    year=year,
-                    month=month,
-                    allocated_amount=amount,
-                    created_by=request.user
-                )
-                messages.success(request, f'Budget for {category_name} created successfully!')
-            
-        except Exception as e:
-            messages.error(request, f'Error creating budget: {str(e)}')
-        
-        return redirect('budget_planning')
+        ),
+        # Calculate percentage and remaining
+        usage_percentage=Case(
+            When(allocated_amount__gt=0, 
+                 then=(F('actual_spent') * 100.0) / F('allocated_amount')),
+            default=0,
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        ),
+        remaining=F('allocated_amount') - F('actual_spent')
+    ).order_by('-year', '-month', 'category__name')
     
-    # GET request - display budgets
-    budgets = Budget.objects.select_related('category').order_by('-year', '-month', 'category__name')
-    
-    # Calculate spent amounts for each budget
+    # Update spent amounts in bulk
+    budget_updates = []
     for budget in budgets:
-        # Calculate spent amount based on expenses in the same period
-        spent_amount = Expense.objects.filter(
-            category=budget.category,
-            expense_date__year=budget.year,
-            expense_date__month=budget.month if budget.month else None,
-            status='paid'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Update the budget's spent amount
-        budget.spent_amount = spent_amount
-        budget.save()
+        if budget.spent_amount != (budget.actual_spent or 0):
+            budget.spent_amount = budget.actual_spent or 0
+            budget_updates.append(budget)
     
-    # Add budget statistics
-    total_allocated = budgets.aggregate(total=Sum('allocated_amount'))['total'] or 0
-    total_spent = budgets.aggregate(total=Sum('spent_amount'))['total'] or 0
+    if budget_updates:
+        Budget.objects.bulk_update(budget_updates, ['spent_amount'])
+    
+    # Calculate totals efficiently
+    totals = budgets.aggregate(
+        total_allocated=Sum('allocated_amount'),
+        total_spent=Sum('actual_spent')
+    )
+    
+    # Get category suggestions for datalist
+    categories = ExpenseCategory.objects.filter(is_active=True).values_list('name', flat=True)
     
     context = {
         'budgets': budgets,
-        'total_allocated': total_allocated,
-        'total_spent': total_spent,
-        'total_remaining': total_allocated - total_spent,
-        'current_year': datetime.now().year,
-        'current_month': datetime.now().month,
+        'total_allocated': totals['total_allocated'] or 0,
+        'total_spent': totals['total_spent'] or 0,
+        'total_remaining': (totals['total_allocated'] or 0) - (totals['total_spent'] or 0),
+        'current_year': current_year,
+        'current_month': current_month,
+        'categories': categories,
+        'budget_count': budgets.count(),
     }
     
     return render(request, 'accounts/planning.html', context)
 
+def handle_budget_creation(request):
+    """Handle budget creation/update with proper validation"""
+    try:
+        # Extract and validate form data
+        category_name = request.POST.get('category', '').strip()
+        amount_str = request.POST.get('amount', '').strip()
+        period_str = request.POST.get('period', '').strip()
+        
+        # Validation
+        if not all([category_name, amount_str, period_str]):
+            messages.error(request, 'All fields are required.')
+            return redirect('budget_planning')
+        
+        # Validate and parse amount
+        try:
+            amount = Decimal(amount_str)
+            if amount <= 0:
+                messages.error(request, 'Amount must be greater than zero.')
+                return redirect('budget_planning')
+        except (ValueError, TypeError):
+            messages.error(request, 'Please enter a valid amount.')
+            return redirect('budget_planning')
+        
+        # Validate and parse period
+        try:
+            year, month = map(int, period_str.split('-'))
+            if not (1 <= month <= 12) or year < 2020 or year > 2030:
+                raise ValueError("Invalid date range")
+        except (ValueError, TypeError):
+            messages.error(request, 'Please select a valid period.')
+            return redirect('budget_planning')
+        
+        # Get or create category
+        category, created = ExpenseCategory.objects.get_or_create(
+            name=category_name,
+            defaults={
+                'description': f'Budget category for {category_name}',
+                'is_active': True
+            }
+        )
+        
+        # Create or update budget
+        budget, budget_created = Budget.objects.update_or_create(
+            category=category,
+            year=year,
+            month=month,
+            defaults={
+                'allocated_amount': amount,
+                'created_by': request.user
+            }
+        )
+        
+        action = 'created' if budget_created else 'updated'
+        messages.success(request, f'Budget for {category_name} ({month:02d}/{year}) {action} successfully!')
+        
+    except Exception as e:
+        messages.error(request, f'Error processing budget: {str(e)}')
+    
+    return redirect('budget_planning')
+
+@login_required
+def delete_budget(request, budget_id):
+    """Delete budget with proper error handling"""
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('budget_planning')
+    
+    try:
+        budget = get_object_or_404(Budget, id=budget_id)
+        category_name = budget.category.name
+        period = f"{budget.month:02d}/{budget.year}"
+        budget.delete()
+        messages.success(request, f'Budget for {category_name} ({period}) deleted successfully!')
+    except Exception as e:
+        messages.error(request, f'Error deleting budget: {str(e)}')
+    
+    return redirect('budget_planning')
+
 @login_required
 def budget_analytics(request):
-    """
-    Provide budget analytics data for charts/graphs
-    """
-    # Monthly budget overview for current year
-    current_year = datetime.now().year
-    monthly_data = []
+    """Provide budget analytics data"""
+    current_year = timezone.now().year
     
+    # Monthly overview
+    monthly_data = []
     for month in range(1, 13):
         month_budgets = Budget.objects.filter(year=current_year, month=month)
-        allocated = month_budgets.aggregate(total=Sum('allocated_amount'))['total'] or 0
-        spent = month_budgets.aggregate(total=Sum('spent_amount'))['total'] or 0
+        allocated = month_budgets.aggregate(Sum('allocated_amount'))['allocated_amount__sum'] or 0
+        spent = month_budgets.aggregate(Sum('spent_amount'))['spent_amount__sum'] or 0
         
         monthly_data.append({
             'month': month,
+            'month_name': date(current_year, month, 1).strftime('%b'),
             'allocated': float(allocated),
             'spent': float(spent),
-            'remaining': float(allocated - spent)
+            'remaining': float(allocated - spent),
+            'usage_percent': round((float(spent) / float(allocated) * 100) if allocated > 0 else 0, 1)
         })
     
-    # Category-wise budget breakdown
-    category_data = []
-    categories = ExpenseCategory.objects.filter(budget__year=current_year).distinct()
+    # Category breakdown
+    category_data = Budget.objects.filter(year=current_year)\
+        .values('category__name')\
+        .annotate(
+            allocated=Sum('allocated_amount'),
+            spent=Sum('spent_amount')
+        )\
+        .order_by('-allocated')
     
-    for category in categories:
-        category_budgets = Budget.objects.filter(category=category, year=current_year)
-        allocated = category_budgets.aggregate(total=Sum('allocated_amount'))['total'] or 0
-        spent = category_budgets.aggregate(total=Sum('spent_amount'))['total'] or 0
-        
-        category_data.append({
-            'category': category.name,
-            'allocated': float(allocated),
-            'spent': float(spent),
-            'percentage_used': (float(spent) / float(allocated) * 100) if allocated > 0 else 0
+    category_list = []
+    for item in category_data:
+        allocated = float(item['allocated'])
+        spent = float(item['spent'])
+        category_list.append({
+            'category': item['category__name'],
+            'allocated': allocated,
+            'spent': spent,
+            'remaining': allocated - spent,
+            'usage_percent': round((spent / allocated * 100) if allocated > 0 else 0, 1)
         })
     
     return JsonResponse({
         'monthly_data': monthly_data,
-        'category_data': category_data
+        'category_data': category_list,
+        'year': current_year
     })
 
 @login_required
-def delete_budget(request, budget_id):
-    """
-    Delete a specific budget
-    """
-    if request.method == 'POST':
-        try:
-            budget = Budget.objects.get(id=budget_id)
-            category_name = budget.category.name
-            period = f"{budget.month}/{budget.year}" if budget.month else str(budget.year)
-            budget.delete()
-            messages.success(request, f'Budget for {category_name} ({period}) deleted successfully!')
-        except Budget.DoesNotExist:
-            messages.error(request, 'Budget not found.')
-        except Exception as e:
-            messages.error(request, f'Error deleting budget: {str(e)}')
+def export_budget_data(request):
+    """Export budget data to CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="budget_data_{timezone.now().strftime("%Y%m%d")}.csv"'
     
-    return redirect('budget_planning')
+    writer = csv.writer(response)
+    writer.writerow(['Category', 'Period', 'Allocated Amount', 'Spent Amount', 'Remaining', 'Usage %', 'Status'])
+    
+    budgets = Budget.objects.select_related('category').order_by('-year', '-month', 'category__name')
+    
+    for budget in budgets:
+        usage_percent = budget.percentage_used()
+        status = 'Over Budget' if usage_percent > 100 else 'High Usage' if usage_percent > 80 else 'Caution' if usage_percent > 50 else 'Good'
+        
+        writer.writerow([
+            budget.category.name,
+            f"{budget.month:02d}/{budget.year}",
+            float(budget.allocated_amount),
+            float(budget.spent_amount),
+            float(budget.remaining_amount()),
+            f"{usage_percent:.1f}%",
+            status
+        ])
+    
+    return response

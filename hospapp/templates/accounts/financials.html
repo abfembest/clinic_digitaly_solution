@@ -1,150 +1,269 @@
 {% extends "accounts/base.html" %}
 
-{% block title %}HMS | Expenditure{% endblock %}
+{% block title %}HMS | Expense Management{% endblock %}
 
 {% block content %}
+<!-- Content Header -->
 <div class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
       <div class="col-sm-6">
-        <h1 class="m-0 text-dark">Expenditure</h1>
+        <h1 class="m-0"><i class="fas fa-wallet text-primary"></i> Expense Management</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="#">Home</a></li>
+          <li class="breadcrumb-item active">Expenses</li>
+        </ol>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Main content -->
 <section class="content">
   <div class="container-fluid">
-    <div class="card card-outline card-secondary shadow-sm">
-      <div class="card-header bg-secondary text-white">
-        <h3 class="card-title font-weight-bold">Record Institution Expenditure</h3>
+    
+    <!-- Stats Cards -->
+    <div class="row">
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+          <div class="inner">
+            <h3>₦{{ total_pending|default:"0"|floatformat:0 }}</h3>
+            <p>Pending</p>
+          </div>
+          <div class="icon"><i class="fas fa-clock"></i></div>
+        </div>
       </div>
-      <div class="card-body">
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <input type="hidden" name="type" value="Expenditure">
-
-          <div class="form-row">
-            <div class="form-group col-md-4">
-              <label for="amount">Amount</label>
-              <input type="number" id="amount" name="amount" class="form-control" step="0.01" min="0" required placeholder="₦0.00">
-            </div>
-            <div class="form-group col-md-4">
-              <label for="date">Date</label>
-              <input type="date" id="date" name="date" class="form-control" required>
-            </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+          <div class="inner">
+            <h3>₦{{ total_approved|default:"0"|floatformat:0 }}</h3>
+            <p>Approved</p>
           </div>
-
-          <div class="form-group">
-            <label for="description">Description</label>
-            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Optional description"></textarea>
-          </div>
-
-          <button type="submit" class="btn btn-secondary font-weight-bold">Save Expenditure</button>
-        </form>
-
-        <hr class="my-4">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0 font-weight-bold">Recent Transactions</h5>
-
-          <div>
-            <label for="transaction-filter" class="mr-2 font-weight-normal mb-0">Filter:</label>
-            <select id="transaction-filter" class="form-control form-control-sm d-inline-block" style="width: auto;">
-              <option value="All" selected>All</option>
-              <option value="Income">Income</option>
-              <option value="Expenditure">Expenditure</option>
-            </select>
-          </div>
+          <div class="icon"><i class="fas fa-check"></i></div>
         </div>
-
-        <div class="table-responsive">
-          <table class="table table-bordered table-hover table-striped" id="transactions-table">
-  <thead class="thead-dark">
-    <tr>
-      <th style="width:15%;">Date</th>
-      <th style="width:15%;">Type</th>
-      <th style="width:45%;">Description</th>
-      <th style="width:25%;" class="text-right">Amount (₦)</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for tx in transactions %}
-    <tr data-type="{{ tx.type }}">
-      <td style="width:15%;">{{ tx.date|date:"M d, Y" }}</td>
-      <td style="width:15%;">
-        {% if tx.type == "Income" %}
-          <span class="badge badge-success px-2 py-1">{{ tx.type }}</span>
-        {% else %}
-          <span class="badge badge-danger px-2 py-1">{{ tx.type }}</span>
-        {% endif %}
-      </td>
-      <td style="width:45%;">{{ tx.description|default:"-" }}</td>
-      <td style="width:25%;" class="text-right font-weight-bold">
-        {{ tx.amount|floatformat:2 }}
-      </td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td colspan="4" class="text-center text-muted">No records yet.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<!-- Pagination controls -->
-<nav aria-label="Transaction pagination">
-  <ul class="pagination justify-content-center">
-    {% if page_obj.has_previous %}
-    <li class="page-item">
-      <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
-        &laquo; Prev
-      </a>
-    </li>
-    {% else %}
-    <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
-    {% endif %}
-
-    {% for num in page_obj.paginator.page_range %}
-      {% if page_obj.number == num %}
-        <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
-      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-      {% endif %}
-    {% endfor %}
-
-    {% if page_obj.has_next %}
-    <li class="page-item">
-      <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
-        Next &raquo;
-      </a>
-    </li>
-    {% else %}
-    <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
-    {% endif %}
-  </ul>
-</nav>
-
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+          <div class="inner">
+            <h3>₦{{ total_paid|default:"0"|floatformat:0 }}</h3>
+            <p>Paid Out</p>
+          </div>
+          <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
         </div>
-
+      </div>
+      <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+          <div class="inner">
+            <h3>{{ rejected_count|default:"0" }}</h3>
+            <p>Rejected</p>
+          </div>
+          <div class="icon"><i class="fas fa-times"></i></div>
+        </div>
       </div>
     </div>
+
+    <!-- New Expense Form -->
+    <div class="card card-primary">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-plus mr-2"></i>New Expense Request</h3>
+      </div>
+      <form method="post" id="expense-form">
+        <div class="card-body">
+          {% csrf_token %}
+          <input type="hidden" name="type" value="Expenditure">
+          
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="amount">Amount (₦) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text">₦</span>
+                  </div>
+                  <input type="number" id="amount" name="amount" class="form-control" 
+                         step="0.01" min="0" required placeholder="0.00">
+                </div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="form-group">
+                <label for="description">Description <span class="text-danger">*</span></label>
+                <input type="text" id="description" name="description" class="form-control" 
+                       required placeholder="Brief description of expense purpose" maxlength="200">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane mr-1"></i>Submit Request
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Expense History -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Expense History</h3>
+        <div class="card-tools">
+          <div class="input-group input-group-sm" style="width: 200px;">
+            <input type="text" class="form-control" placeholder="Search..." id="table-search">
+            <div class="input-group-append">
+              <div class="input-group-text"><i class="fas fa-search"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card-body p-0">
+        <table class="table table-striped" id="expenses-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Description</th>
+              <th class="text-right">Amount</th>
+              {% if user.profile.role == "admin" %}
+              <th class="text-center">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in transactions %}
+            <tr>
+              <td>
+                <span class="text-muted">{{ tx.date|date:"M d, Y" }}</span>
+                {% if tx.created_at %}<br><small class="text-muted">{{ tx.created_at|date:"g:i A" }}</small>{% endif %}
+              </td>
+              <td>
+                {% if tx.status == "pending" %}
+                  <span class="badge badge-warning">Pending</span>
+                {% elif tx.status == "approved" %}
+                  <span class="badge badge-info">Approved</span>
+                {% elif tx.status == "rejected" %}
+                  <span class="badge badge-danger">Rejected</span>
+                {% elif tx.status == "paid" %}
+                  <span class="badge badge-success">Paid</span>
+                {% endif %}
+              </td>
+              <td>{{ tx.description|default:"-"|truncatechars:60 }}</td>
+              <td class="text-right font-weight-bold">₦{{ tx.amount|floatformat:2 }}</td>
+              {% if user.profile.role == "admin" %}
+              <td class="text-center">
+                {% if tx.status == "pending" %}
+                  <div class="btn-group btn-group-sm">
+                    <form method="post" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="approve">
+                      <input type="hidden" name="expense_id" value="{{ tx.id }}">
+                      <button type="submit" class="btn btn-success btn-sm" title="Approve">
+                        <i class="fas fa-check"></i>
+                      </button>
+                    </form>
+                    <form method="post" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="reject">
+                      <input type="hidden" name="expense_id" value="{{ tx.id }}">
+                      <button type="submit" class="btn btn-danger btn-sm" title="Reject">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </form>
+                  </div>
+                {% elif tx.status == "approved" %}
+                  <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="mark_paid">
+                    <input type="hidden" name="expense_id" value="{{ tx.id }}">
+                    <button type="submit" class="btn btn-primary btn-sm" title="Mark Paid">
+                      <i class="fas fa-money-bill"></i>
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="text-muted"><i class="fas fa-check-circle"></i></span>
+                {% endif %}
+              </td>
+              {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="{% if user.profile.role == 'admin' %}5{% else %}4{% endif %}" class="text-center py-4">
+                <div class="text-muted">
+                  <i class="fas fa-inbox fa-2x mb-2"></i>
+                  <p class="mb-0">No expense requests found</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination -->
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div class="card-footer clearfix">
+        <ul class="pagination pagination-sm m-0 float-right">
+          {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>
+          {% endif %}
+          
+          <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+          
+          {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
   </div>
 </section>
 
-<script>
-  document.getElementById('transaction-filter').addEventListener('change', function() {
-    const filterValue = this.value;
-    const rows = document.querySelectorAll('#transactions-table tbody tr');
+<style>
+.small-box { transition: transform 0.2s; }
+.small-box:hover { transform: translateY(-2px); }
+.table th { border-top: none; font-weight: 600; }
+.badge { font-size: 0.75em; }
+.btn-group .btn { margin-right: 2px; }
+.card { box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2); }
+</style>
 
-    rows.forEach(row => {
-      if (filterValue === 'All') {
-        row.style.display = '';
-      } else {
-        row.style.display = (row.dataset.type === filterValue) ? '' : 'none';
-      }
+<script>
+$(document).ready(function() {
+  // Form validation
+  $('#expense-form').on('submit', function(e) {
+    if (!$('#amount').val() || $('#amount').val() <= 0) {
+      e.preventDefault();
+      alert('Please enter a valid amount');
+      return false;
+    }
+    if (!$('#description').val().trim()) {
+      e.preventDefault();
+      alert('Please provide a description');
+      return false;
+    }
+  });
+  
+  // Search functionality
+  $('#table-search').on('keyup', function() {
+    const value = $(this).val().toLowerCase();
+    $('#expenses-table tbody tr').filter(function() {
+      $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
     });
   });
+  
+  // Confirm admin actions
+  $('button[title="Approve"], button[title="Reject"], button[title="Mark Paid"]').click(function(e) {
+    if (!confirm('Are you sure?')) {
+      e.preventDefault();
+    }
+  });
+});
 </script>
 
 {% endblock %}

@@ -1371,13 +1371,13 @@ def patient_payment_tracker(request):
 # def institution_financials(request):
 #     return render(request, 'accounts/financials.html')
 
-@login_required(login_url='home')
-def financial_reports(request):
-    return render(request, 'accounts/financial_reports.html')
+# @login_required(login_url='home')
+# def financial_reports(request):
+#     return render(request, 'accounts/financial_reports.html')
 
-@login_required(login_url='home')
-def budget_planning(request):
-    return render(request, 'accounts/planning.html')
+# @login_required(login_url='home')
+# def budget_planning(request):
+#     return render(request, 'accounts/planning.html')
 
 # HR Views
 @login_required(login_url='home')
