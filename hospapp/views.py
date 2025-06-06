@@ -616,7 +616,41 @@ def get_patient_overview(request, patient_id):
 
     #notification icon 
 
+
 def notification_data(request):
+    today = date.today()
+    notifications = []
+
+    test_outstanding = LabTest.objects.filter(testcompleted=False).count()
+    if test_outstanding > 0:
+        notifications.append({
+            "title": "Test Outstanding",
+            "count": test_outstanding,
+            "url": "/tests/pending/"
+        })
+
+    appointments_today = Appointment.objects.filter(scheduled_time=today).count()
+    if appointments_today > 0:
+        notifications.append({
+            "title": "Appointments Available",
+            "count": appointments_today,
+            "url": "/results/available/"
+        })
+
+    test_results = LabTest.objects.filter(testcompleted=True).count()
+    if test_results > 0:
+        notifications.append({
+            "title": "Available Test Results",
+            "count": test_results,
+            "url": "/bookings/"
+        })
+
+    return JsonResponse({
+        "notifications": notifications
+    })
+
+
+"""def notification_data(request):
     return JsonResponse({
         "notifications": [
             {
@@ -636,7 +670,7 @@ def notification_data(request):
                 "url": "/bookings/"
             },
         ]
-    })
+    })"""
 
 
 @login_required(login_url='home')
@@ -1958,3 +1992,9 @@ def admissions_data(request):
         'requested': format_data(all_tests),
         'completed': format_data(completed_tests),
     })
+
+
+#Waiting List
+
+def waitinglist(request):
+    return render(request, 'doctors/waitinglist.html')
