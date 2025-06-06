@@ -69,7 +69,7 @@ urlpatterns = [
     path('a/budget-planning/', accts.budget_planning, name='budget_planning'),
     path('budget-analytics/', accts.budget_analytics, name='budget_analytics'),
     path('budget/delete/<int:budget_id>/', accts.delete_budget, name='delete_budget'),
-    # path('a/budget_planning', views.budget_planning, name='budget_planning'),
+    path('export_budget_data', accts.export_budget_data, name='export_budget_data'),
 
     path('hr/home', views.hr, name='hr'),
     path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
