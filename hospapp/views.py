@@ -714,17 +714,16 @@ def laboratory(request):
         }
     return render(request, 'laboratory/index.html', context)
 
-    pending_test = TestSelection.objects.filter(status='pending').count()
-    return render(request, 'laboratory/index.html', {'pending':pending_test})
-
 @login_required(login_url='home')
 def lab_test_entry(request):
     """
-    Fetch all patients and display them in a table for lab test entry
+    Display only patients who have at least one lab test requested (i.e., exist in LabTest),
+    with all relevant patient and test summary data for the lab test entry page.
     """
-    # Get all patients
-    patients = Patient.objects.all().select_related('ward', 'bed').order_by('-date_registered')
-    
+    # Get only patients who have at least one LabTest entry
+    patient_ids_with_tests = LabTest.objects.values_list('patient', flat=True).distinct()
+    patients = Patient.objects.filter(id__in=patient_ids_with_tests).select_related('ward', 'bed').order_by('-date_registered')
+
     # Prepare patient data with test counts and additional info
     patients_data = []
     for patient in patients:
@@ -733,23 +732,19 @@ def lab_test_entry(request):
             patient=patient,
             status='pending'
         ).count()
-        
         # Count completed tests for this patient
         completed_tests_count = LabTest.objects.filter(
             patient=patient,
             status='completed'
         ).count()
-        
         # Count in progress tests
         in_progress_tests_count = LabTest.objects.filter(
             patient=patient,
             status='in_progress'
         ).count()
-        
         # Get latest consultation or referral info
         latest_referral = Referral.objects.filter(patient=patient).order_by('-id').first()
         referred_by = latest_referral.notes if latest_referral else patient.referred_by
-        
         patients_data.append({
             'patient': patient,
             'pending_tests': pending_tests_count,
@@ -759,7 +754,7 @@ def lab_test_entry(request):
             'referred_by': referred_by or 'Walk-in',
             'last_test_date': LabTest.objects.filter(patient=patient).order_by('-requested_at').first(),
         })
-    
+
     # Calculate summary statistics
     total_patients = patients.count()
     patients_with_pending_tests = len([p for p in patients_data if p['pending_tests'] > 0])
@@ -769,10 +764,10 @@ def lab_test_entry(request):
         date_performed__date=timezone.now().date()
     ).count()
     total_in_progress = LabTest.objects.filter(status='in_progress').count()
-    
+
     # Get available test categories for quick test creation
     test_categories = TestCategory.objects.all().order_by('name')
-    
+
     context = {
         'patients_data': patients_data,
         'test_categories': test_categories,
@@ -786,10 +781,9 @@ def lab_test_entry(request):
         'debug_info': {
             'total_patients_fetched': len(patients_data),
             'test_categories_count': test_categories.count(),
-            'methods_used': ['Patient.objects.all()', 'LabTest filtering'],
+            'methods_used': ['Patient.objects.filter(id__in=LabTest)', 'LabTest filtering'],
         } if request.user.is_superuser else None
     }
-    
     return render(request, 'laboratory/test_entry.html', context)
 
 @login_required(login_url='home')
@@ -1917,7 +1911,25 @@ def admissions_dataold(request):
     return JsonResponse({
         'requested': format_data(all_tests),
         'completed': format_data(completed_tests),
-    })
+    })  
+
+from hospapp.models import LabTest, Patient
+
+@login_required(login_url='home')
+def lab_entry(request):
+    pending_tests = LabTest.objects.select_related('patient').filter(testcompleted=False).order_by('-submitted_on')
+    if request.method == 'POST':
+        test_id = request.POST.get('test_id')
+        result = request.POST.get('result')
+        try:
+            test = LabTest.objects.get(id=test_id, testcompleted=False)
+            test.result = result
+            test.testcompleted = True
+            test.save()
+            messages.success(request, f"Test {test.test_name} for {test.patient.full_name} completed.")
+        except LabTest.DoesNotExist:
+            messages.error(request, "Invalid test entry.")
+    return render(request, 'laboratory/test_entry.html', {'tests': pending_tests})
 
 
 def admissions_data(request):
