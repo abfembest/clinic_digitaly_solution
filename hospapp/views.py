@@ -26,6 +26,10 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import IntegrityError, DatabaseError
 from decimal import Decimal
+from django.utils import timezone
+from django.db.models import Q, Count
+from collections import defaultdict, OrderedDict
+from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 today = timezone.now().date()
 
@@ -717,145 +721,239 @@ def laboratory(request):
 @login_required(login_url='home')
 def lab_test_entry(request):
     """
-    Display only patients who have at least one lab test requested (i.e., exist in LabTest),
-    with all relevant patient and test summary data for the lab test entry page.
+    Enhanced view that handles lab test result entries with proper date grouping
+    Groups tests by requested dates and performed dates for better organization
     """
-    # Get only patients who have at least one LabTest entry
-    patient_ids_with_tests = LabTest.objects.values_list('patient', flat=True).distinct()
-    patients = Patient.objects.filter(id__in=patient_ids_with_tests).select_related('ward', 'bed').order_by('-date_registered')
-
-    # Prepare patient data with test counts and additional info
+    
+    # Handle POST request for test result submission
+    if request.method == 'POST':
+        test_id = request.POST.get('test_id')
+        result_value = request.POST.get('result_value')
+        notes = request.POST.get('notes', '')
+        
+        try:
+            test = LabTest.objects.select_related('patient', 'category').get(
+                id=test_id, 
+                status='pending'
+            )
+            test.result_value = result_value
+            test.notes = notes
+            test.status = 'completed'
+            test.testcompleted = True
+            test.date_performed = timezone.now()
+            test.performed_by = request.user
+            test.save()
+            
+            messages.success(
+                request, 
+                f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully."
+            )
+        except LabTest.DoesNotExist:
+            messages.error(request, "Invalid test entry or test already completed.")
+        
+        return redirect('lab_test_entry')
+    
+    # Get all lab tests with related data
+    all_tests = LabTest.objects.select_related(
+        'patient', 'category', 'performed_by', 'requested_by'
+    ).prefetch_related(
+        'category__subcategories'
+    ).order_by('-requested_at')
+    
+    # Group tests by requested dates
+    tests_by_requested_date = defaultdict(lambda: {
+        'pending': [],
+        'completed': [],
+        'in_progress': [],
+        'cancelled': [],
+        'total_count': 0,
+        'patients': set()
+    })
+    
+    # Group tests by performed dates (for completed tests)
+    tests_by_performed_date = defaultdict(lambda: {
+        'tests': [],
+        'total_count': 0,
+        'patients': set(),
+        'categories': set()
+    })
+    
+    # Group tests by patients with date information
+    patients_with_tests = defaultdict(lambda: {
+        'patient': None,
+        'tests_by_date': defaultdict(list),
+        'pending_tests': [],
+        'completed_tests': [],
+        'in_progress_tests': [],
+        'total_tests': 0,
+        'latest_request_date': None,
+        'latest_completion_date': None,
+        'categories': set()
+    })
+    
+    # Process all tests and organize by dates
+    for test in all_tests:
+        # Group by requested date
+        requested_date = test.requested_at.date()
+        tests_by_requested_date[requested_date][test.status].append(test)
+        tests_by_requested_date[requested_date]['total_count'] += 1
+        tests_by_requested_date[requested_date]['patients'].add(test.patient)
+        
+        # Group by performed date (for completed tests)
+        if test.status == 'completed' and test.date_performed:
+            performed_date = test.date_performed.date()
+            tests_by_performed_date[performed_date]['tests'].append(test)
+            tests_by_performed_date[performed_date]['total_count'] += 1
+            tests_by_performed_date[performed_date]['patients'].add(test.patient)
+            tests_by_performed_date[performed_date]['categories'].add(test.category)
+        
+        # Group by patients with date tracking
+        patient_id = test.patient.id
+        patients_with_tests[patient_id]['patient'] = test.patient
+        patients_with_tests[patient_id]['tests_by_date'][requested_date].append(test)
+        patients_with_tests[patient_id]['total_tests'] += 1
+        patients_with_tests[patient_id]['categories'].add(test.category)
+        
+        # Track test status for patient
+        if test.status == 'pending':
+            patients_with_tests[patient_id]['pending_tests'].append(test)
+        elif test.status == 'completed':
+            patients_with_tests[patient_id]['completed_tests'].append(test)
+        elif test.status == 'in_progress':
+            patients_with_tests[patient_id]['in_progress_tests'].append(test)
+        
+        # Update latest dates for patient
+        if (not patients_with_tests[patient_id]['latest_request_date'] or 
+            requested_date > patients_with_tests[patient_id]['latest_request_date']):
+            patients_with_tests[patient_id]['latest_request_date'] = requested_date
+            
+        if (test.status == 'completed' and test.date_performed and
+            (not patients_with_tests[patient_id]['latest_completion_date'] or 
+             test.date_performed.date() > patients_with_tests[patient_id]['latest_completion_date'])):
+            patients_with_tests[patient_id]['latest_completion_date'] = test.date_performed.date()
+    
+    # Convert defaultdicts to ordered dicts sorted by date (most recent first)
+    tests_by_requested_date_ordered = OrderedDict(
+        sorted(tests_by_requested_date.items(), key=lambda x: x[0], reverse=True)
+    )
+    
+    tests_by_performed_date_ordered = OrderedDict(
+        sorted(tests_by_performed_date.items(), key=lambda x: x[0], reverse=True)
+    )
+    
+    # Convert patients dict and sort by latest activity
     patients_data = []
-    for patient in patients:
-        # Count pending tests for this patient
-        pending_tests_count = LabTest.objects.filter(
-            patient=patient,
-            status='pending'
-        ).count()
-        # Count completed tests for this patient
-        completed_tests_count = LabTest.objects.filter(
-            patient=patient,
-            status='completed'
-        ).count()
-        # Count in progress tests
-        in_progress_tests_count = LabTest.objects.filter(
-            patient=patient,
-            status='in_progress'
-        ).count()
-        # Get latest consultation or referral info
-        latest_referral = Referral.objects.filter(patient=patient).order_by('-id').first()
-        referred_by = latest_referral.notes if latest_referral else patient.referred_by
-        patients_data.append({
-            'patient': patient,
-            'pending_tests': pending_tests_count,
-            'completed_tests': completed_tests_count,
-            'in_progress_tests': in_progress_tests_count,
-            'total_tests': pending_tests_count + completed_tests_count + in_progress_tests_count,
-            'referred_by': referred_by or 'Walk-in',
-            'last_test_date': LabTest.objects.filter(patient=patient).order_by('-requested_at').first(),
-        })
-
-    # Calculate summary statistics
-    total_patients = patients.count()
-    patients_with_pending_tests = len([p for p in patients_data if p['pending_tests'] > 0])
-    total_pending_tests = LabTest.objects.filter(status='pending').count()
-    total_completed_today = LabTest.objects.filter(
-        status='completed',
-        date_performed__date=timezone.now().date()
-    ).count()
-    total_in_progress = LabTest.objects.filter(status='in_progress').count()
-
-    # Get available test categories for quick test creation
-    test_categories = TestCategory.objects.all().order_by('name')
-
-    context = {
-        'patients_data': patients_data,
-        'test_categories': test_categories,
-        'stats': {
-            'total_patients': total_patients,
-            'patients_with_pending_tests': patients_with_pending_tests,
-            'total_pending_tests': total_pending_tests,
-            'total_completed_today': total_completed_today,
-            'total_in_progress': total_in_progress,
-        },
-        'debug_info': {
-            'total_patients_fetched': len(patients_data),
-            'test_categories_count': test_categories.count(),
-            'methods_used': ['Patient.objects.filter(id__in=LabTest)', 'LabTest filtering'],
-        } if request.user.is_superuser else None
+    for patient_data in patients_with_tests.values():
+        # Convert categories set to list
+        patient_data['categories'] = list(patient_data['categories'])
+        
+        # Add counts
+        patient_data['pending_count'] = len(patient_data['pending_tests'])
+        patient_data['completed_count'] = len(patient_data['completed_tests'])
+        patient_data['in_progress_count'] = len(patient_data['in_progress_tests'])
+        
+        # Get referral info
+        latest_referral = Referral.objects.filter(
+            patient=patient_data['patient']
+        ).order_by('-id').first()
+        patient_data['referred_by'] = (
+            latest_referral.notes if latest_referral 
+            else patient_data['patient'].referred_by or 'Walk-in'
+        )
+        
+        patients_data.append(patient_data)
+    
+    # Sort patients by latest request date (most recent first)
+    patients_data.sort(
+        key=lambda x: x['latest_request_date'] or date.min, 
+        reverse=True
+    )
+    
+    # Get date-based statistics
+    today = timezone.now().date()
+    yesterday = today - timedelta(days=1)
+    week_ago = today - timedelta(days=7)
+    
+    # Today's statistics
+    today_requested = tests_by_requested_date.get(today, {})
+    today_completed = tests_by_performed_date.get(today, {})
+    
+    # Weekly statistics
+    weekly_stats = {
+        'requested': 0,
+        'completed': 0,
+        'pending': 0,
+        'dates_with_activity': 0
     }
-    return render(request, 'laboratory/test_entry.html', context)
-
-@login_required(login_url='home')
-def lab_test_entry(request):
-    """
-    Fetch all patients and display them in a table for lab test entry
-    """
-    # Get all patients
-    patients = Patient.objects.all().select_related('ward', 'bed').order_by('-date_registered')
     
-    # Prepare patient data with test counts and additional info
-    patients_data = []
-    for patient in patients:
-        # Count pending tests for this patient
-        pending_tests_count = LabTest.objects.filter(
-            patient=patient,
-            status='pending'
-        ).count()
-        
-        # Count completed tests for this patient
-        completed_tests_count = LabTest.objects.filter(
-            patient=patient,
-            status='completed'
-        ).count()
-        
-        # Count in progress tests
-        in_progress_tests_count = LabTest.objects.filter(
-            patient=patient,
-            status='in_progress'
-        ).count()
-        
-        # Get latest consultation or referral info
-        latest_referral = Referral.objects.filter(patient=patient).order_by('-id').first()
-        referred_by = latest_referral.notes if latest_referral else patient.referred_by
-        
-        patients_data.append({
-            'patient': patient,
-            'pending_tests': pending_tests_count,
-            'completed_tests': completed_tests_count,
-            'in_progress_tests': in_progress_tests_count,
-            'total_tests': pending_tests_count + completed_tests_count + in_progress_tests_count,
-            'referred_by': referred_by or 'Walk-in',
-            'last_test_date': LabTest.objects.filter(patient=patient).order_by('-requested_at').first(),
-        })
+    for test_date, data in tests_by_requested_date_ordered.items():
+        if test_date >= week_ago:
+            weekly_stats['requested'] += data['total_count']
+            weekly_stats['pending'] += len(data['pending'])
+            if data['total_count'] > 0:
+                weekly_stats['dates_with_activity'] += 1
     
-    # Calculate summary statistics
-    total_patients = patients.count()
-    patients_with_pending_tests = len([p for p in patients_data if p['pending_tests'] > 0])
-    total_pending_tests = LabTest.objects.filter(status='pending').count()
-    total_completed_today = LabTest.objects.filter(
-        status='completed',
-        date_performed__date=timezone.now().date()
-    ).count()
-    total_in_progress = LabTest.objects.filter(status='in_progress').count()
+    for test_date, data in tests_by_performed_date_ordered.items():
+        if test_date >= week_ago:
+            weekly_stats['completed'] += data['total_count']
     
-    # Get available test categories with sub-tests for quick test creation
-    test_categories = TestCategory.objects.prefetch_related('subcategories').all().order_by('name')
+    # Get all test categories for reference
+    all_test_categories = TestCategory.objects.prefetch_related(
+        'subcategories'
+    ).all().order_by('name')
+    
+    # Overall statistics
+    total_stats = {
+        'total_patients': len(patients_with_tests),
+        'total_tests': all_tests.count(),
+        'pending_tests': all_tests.filter(status='pending').count(),
+        'completed_tests': all_tests.filter(status='completed').count(),
+        'in_progress_tests': all_tests.filter(status='in_progress').count(),
+        'today_requested': today_requested.get('total_count', 0),
+        'today_completed': today_completed.get('total_count', 0),
+        'yesterday_requested': tests_by_requested_date.get(yesterday, {}).get('total_count', 0),
+        'yesterday_completed': tests_by_performed_date.get(yesterday, {}).get('total_count', 0),
+    }
     
     context = {
+        # Date-grouped data
+        'tests_by_requested_date': tests_by_requested_date_ordered,
+        'tests_by_performed_date': tests_by_performed_date_ordered,
+        
+        # Patient data with date tracking
         'patients_data': patients_data,
-        'test_categories': test_categories,
-        'stats': {
-            'total_patients': total_patients,
-            'patients_with_pending_tests': patients_with_pending_tests,
-            'total_pending_tests': total_pending_tests,
-            'total_completed_today': total_completed_today,
-            'total_in_progress': total_in_progress,
+        
+        # Categories and reference data
+        'test_categories': all_test_categories,
+        
+        # Statistics
+        'stats': total_stats,
+        'weekly_stats': weekly_stats,
+        'today_stats': {
+            'requested': today_requested,
+            'completed': today_completed,
         },
+        
+        # Quick access to pending tests (for existing functionality)
+        'pending_tests': all_tests.filter(status='pending').order_by('-requested_at'),
+        
+        # Debug information for superusers
         'debug_info': {
-            'total_patients_fetched': len(patients_data),
-            'test_categories_count': test_categories.count(),
-            'methods_used': ['Patient.objects.all()', 'LabTest filtering'],
+            'total_dates_with_requests': len(tests_by_requested_date_ordered),
+            'total_dates_with_completions': len(tests_by_performed_date_ordered),
+            'date_range_requested': (
+                list(tests_by_requested_date_ordered.keys())[:5] if tests_by_requested_date_ordered else []
+            ),
+            'date_range_completed': (
+                list(tests_by_performed_date_ordered.keys())[:5] if tests_by_performed_date_ordered else []
+            ),
+            'methods_used': [
+                'Date-based grouping with defaultdict',
+                'OrderedDict for chronological sorting',
+                'Patient-centric date tracking',
+                'Weekly and daily statistics calculation',
+                'Optimized queries with select_related/prefetch_related'
+            ],
         } if request.user.is_superuser else None
     }
     
@@ -1912,25 +2010,6 @@ def admissions_dataold(request):
         'requested': format_data(all_tests),
         'completed': format_data(completed_tests),
     })  
-
-from hospapp.models import LabTest, Patient
-
-@login_required(login_url='home')
-def lab_entry(request):
-    pending_tests = LabTest.objects.select_related('patient').filter(testcompleted=False).order_by('-submitted_on')
-    if request.method == 'POST':
-        test_id = request.POST.get('test_id')
-        result = request.POST.get('result')
-        try:
-            test = LabTest.objects.get(id=test_id, testcompleted=False)
-            test.result = result
-            test.testcompleted = True
-            test.save()
-            messages.success(request, f"Test {test.test_name} for {test.patient.full_name} completed.")
-        except LabTest.DoesNotExist:
-            messages.error(request, "Invalid test entry.")
-    return render(request, 'laboratory/test_entry.html', {'tests': pending_tests})
-
 
 def admissions_data(request):
     today = timezone.now().date()
