@@ -6,13 +6,6 @@
 {% block content %}
 
 
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
-
-
-
-
-
 <!-- Patient Records Table -->
 <section class="content">
     <div class="container-fluid">
@@ -25,65 +18,532 @@
             </div>
             <!-- /.card-header -->
             <div class="card-body">
+                {% if test_outstanding %}
                 <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
                     <thead class="thead-light">
                         <tr>
                             <th style="width: 50px;">#</th>
                             <th>Patient Name</th>
-                            <th>Gender</th>
-                            <th>Blood Group</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
                             <th>Status</th>
                             <th style="width: 160px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for patient in patients %}
+                        {% for test in test_outstanding %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ patient.full_name }}</td>
-                            <td>{{ patient.gender }}</td>
-                            <td>{{ patient.blood_group }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
                             <td>
-                                <span class="badge badge-{% if patient.status == 'active' %}success{% elif patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
-                                    {{ patient.get_status_display }}
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
                                 </span>
                             </td>
-                            <td colspan="2">
-                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ patient.id }})"><i class="fas fa-folder-open"></i> View</button>
-                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ patient.id }})"><i class="fas fa-chart-line"></i> Monitor</button>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
                             </td>
                         </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">No patients found.</td>
-                        </tr>
                         {% endfor %}
-
-
-
                     </tbody>
-                    <tfoot>
-                        <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Patient Name</th>
-                            <th>Gender</th>
-                            <th>Blood Group</th>
-                            <th>Status</th>
-                            <th style="width: 160px;">Actions</th>
-                        </tr>
-                    </tfoot>
                 </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+                {% if test_outstanding %}
+<table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+    <h3>Test waiting at laborator</h3>
+    <thead class="thead-light">
+        <tr>
+            <th style="width: 50px;">#</th>
+            <th>Patient Name</th>
+            <th>Test Name</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th style="width: 160px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for test in test_outstanding %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ test.patient.name }}</td>
+            <td>{{ test.test_name }}</td>
+            <td>{{ test.category }}</td>
+            <td>
+                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                    {{ test.patient.get_status_display }}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                    <i class="fas fa-folder-open"></i> View
+                </button>
+                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                    <i class="fas fa-chart-line"></i> Monitor
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-center text-muted">No outstanding tests found.</p>
+{% endif %}
+
+
+
             </div>
+
+            
+        </div>
 
             <!-- /.card-body -->
         </div>
-        <!-- /.card -->
-    </div>
-    <!-- /.col --
-    <!-- /.row -->
-    </div>
+       
     <!-- /.container-fluid -->
 </section>
+
+<section class="content">
+    <div class="container-fluid">
+
+
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Patient records</h3>
+            </div>
+            <!-- /.card-header -->
+            <div class="card-body">
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+
+
+            </div>
+
+
+        </div>
+
+        <!-- /.card-body -->
+    </div>
+
+    <!-- /.container-fluid -->
+</section>
+
+
+
+<section class="content">
+    <div class="container-fluid">
+
+
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Patient records</h3>
+            </div>
+            <!-- /.card-header -->
+            <div class="card-body">
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+
+
+            </div>
+
+
+        </div>
+
+        <!-- /.card-body -->
+    </div>
+
+    <!-- /.container-fluid -->
+</section>
+
+
+
+
+
+<section class="content">
+    <div class="container-fluid">
+
+
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Patient records</h3>
+            </div>
+            <!-- /.card-header -->
+            <div class="card-body">
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+
+
+            </div>
+
+
+        </div>
+
+        <!-- /.card-body -->
+    </div>
+
+    <!-- /.container-fluid -->
+</section>
+
+
+<section class="content">
+    <div class="container-fluid">
+
+
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Patient records</h3>
+            </div>
+            <!-- /.card-header -->
+            <div class="card-body">
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+                {% if test_outstanding %}
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <h3>Test waiting at laborator</h3>
+                    <thead class="thead-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Patient Name</th>
+                            <th>Test Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in test_outstanding %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ test.patient.name }}</td>
+                            <td>{{ test.test_name }}</td>
+                            <td>{{ test.category }}</td>
+                            <td>
+                                <span class="badge badge-{% if test.patient.status == 'active' %}success{% elif test.patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
+                                    {{ test.patient.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ test.id }})">
+                                    <i class="fas fa-folder-open"></i> View
+                                </button>
+                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ test.id }})">
+                                    <i class="fas fa-chart-line"></i> Monitor
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-center text-muted">No outstanding tests found.</p>
+                {% endif %}
+
+
+
+            </div>
+
+
+        </div>
+
+        <!-- /.card-body -->
+    </div>
+
+    <!-- /.container-fluid -->
+</section>
+
 <!-- /.content -->
 <!-- Overview Modal -->
 <div class="modal fade" id="overviewModal" tabindex="-1" aria-labelledby="overviewModalLabel" aria-hidden="true">

@@ -1997,4 +1997,11 @@ def admissions_data(request):
 #Waiting List
 
 def waitinglist(request):
-    return render(request, 'doctors/waitinglist.html')
+    today = date.today()
+    appointments_today = Appointment.objects.filter(scheduled_time=today)
+    test_outstanding = LabTest.objects.filter(testcompleted=True)    
+    context = {
+        'appointments_today': appointments_today,
+        'test_outstanding': test_outstanding,
+    }
+    return render(request, 'doctors/waitinglist.html', context)
