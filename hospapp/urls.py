@@ -92,15 +92,19 @@ urlpatterns = [
     path('ad/reports', views.director_reports, name='director_reports'),
     path('ad/accounts', views.user_accounts, name='user_accounts'),
 
+    ######### Receptionist URLS ###########
     path('r/home', views.receptionist, name='receptionist'),
+    path('search-patients/', views.search_patients, name='search_patients'),
+
     path('r/new_patient', views.register_patient, name='register_patient'),
-    path('register_p', views.register_p, name='register_p'),
-    path('admit/', views.admit_patient, name='admit_patient'),
+    path('receptionist/register/submit/', views.register_p, name='register_p'),
+    path('receptionist/admit/', views.admit_patient, name='admit_patient'),
+
     path('update', views.update_patient_info, name='update_patient_info'),
     path('schedule', views.schedule_appointment, name='schedule_appointment'),
     path('refer', views.refer_patient, name='refer_patient'),
     path('ajax/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
-    path('ajax/get-available-beds/', views.get_available_beds, name='get_available_beds'),
+    # path('ajax/get-available-beds/', views.get_available_beds, name='get_available_beds'),
     
     path('chart', views.chart_view, name='chart_view'),
 

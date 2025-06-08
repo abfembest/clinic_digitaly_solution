@@ -76,6 +76,19 @@ class Patient(models.Model):
         ('recovered', 'Recovered'),
         ('stable', 'Stable'),
     ]
+    
+    RELATIONSHIP_CHOICES = [
+        ('Spouse', 'Spouse'),
+        ('Father', 'Father'),
+        ('Mother', 'Mother'),
+        ('Son', 'Son'),
+        ('Daughter', 'Daughter'),
+        ('Brother', 'Brother'),
+        ('Sister', 'Sister'),
+        ('Guardian', 'Guardian'),
+        ('Friend', 'Friend'),
+        ('Other', 'Other'),
+    ]
 
     # Core Demographics
     address = models.TextField()
@@ -85,7 +98,7 @@ class Patient(models.Model):
     email = models.EmailField(blank=True, null=True)
     first_time = models.CharField(max_length=20, blank=True)
     full_name = models.CharField(max_length=200)
-    gender = models.CharField(max_length=10)  # Added max_length
+    gender = models.CharField(max_length=10)
     id_number = models.CharField(max_length=100, blank=True)
     id_type = models.CharField(max_length=20, blank=True)
     marital_status = models.CharField(max_length=20)
@@ -94,9 +107,14 @@ class Patient(models.Model):
     photo = models.ImageField(upload_to='patient_photos/', blank=True, null=True)
     state_of_origin = models.CharField(max_length=50, blank=True)
 
-    # Next of Kin
+    # Next of Kin - EXISTING FIELDS
     next_of_kin_name = models.CharField(max_length=100)
     next_of_kin_phone = models.CharField(max_length=15)
+    
+    # Next of Kin - ADD THESE NEW FIELDS
+    next_of_kin_relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, blank=True, null=True)
+    next_of_kin_email = models.EmailField(blank=True, null=True)
+    next_of_kin_address = models.TextField(blank=True, null=True)
 
     # Medical Status
     bed = models.ForeignKey(Bed, null=True, blank=True, on_delete=models.SET_NULL)
@@ -107,6 +125,7 @@ class Patient(models.Model):
     referred_by = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
     ward = models.ForeignKey(Ward, null=True, blank=True, on_delete=models.SET_NULL)
+    
     def __str__(self):
         return f"{self.full_name}"
 

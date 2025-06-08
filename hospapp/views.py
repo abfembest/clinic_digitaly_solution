@@ -26,10 +26,6 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import IntegrityError, DatabaseError
 from decimal import Decimal
-from django.utils import timezone
-from django.db.models import Q, Count
-from collections import defaultdict, OrderedDict
-from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 today = timezone.now().date()
 
@@ -755,8 +751,8 @@ def laboratory(request):
 @login_required(login_url='home')
 def lab_test_entry(request):
     """
-    Enhanced view that handles lab test result entries with proper date grouping
-    Groups tests by requested dates and performed dates for better organization
+    Combined view that handles both displaying patients with lab tests 
+    and processing test result entries with category/subcategory information
     """
     
     # Handle POST request for test result submission
@@ -785,208 +781,188 @@ def lab_test_entry(request):
         except LabTest.DoesNotExist:
             messages.error(request, "Invalid test entry or test already completed.")
         
+        # Redirect to avoid resubmission on refresh
         return redirect('lab_test_entry')
     
-    # Get all lab tests with related data
-    all_tests = LabTest.objects.select_related(
-        'patient', 'category', 'performed_by', 'requested_by'
-    ).prefetch_related(
-        'category__subcategories'
-    ).order_by('-requested_at')
+    # Get only patients who have at least one lab test
+    patient_ids_with_tests = LabTest.objects.values_list('patient', flat=True).distinct()
+    patients = Patient.objects.filter(
+        id__in=patient_ids_with_tests
+    ).select_related('ward', 'bed').order_by('-date_registered')
     
-    # Group tests by requested dates
-    tests_by_requested_date = defaultdict(lambda: {
-        'pending': [],
-        'completed': [],
-        'in_progress': [],
-        'cancelled': [],
-        'total_count': 0,
-        'patients': set()
-    })
-    
-    # Group tests by performed dates (for completed tests)
-    tests_by_performed_date = defaultdict(lambda: {
-        'tests': [],
-        'total_count': 0,
-        'patients': set(),
-        'categories': set()
-    })
-    
-    # Group tests by patients with date information
-    patients_with_tests = defaultdict(lambda: {
-        'patient': None,
-        'tests_by_date': defaultdict(list),
-        'pending_tests': [],
-        'completed_tests': [],
-        'in_progress_tests': [],
-        'total_tests': 0,
-        'latest_request_date': None,
-        'latest_completion_date': None,
-        'categories': set()
-    })
-    
-    # Process all tests and organize by dates
-    for test in all_tests:
-        # Group by requested date
-        requested_date = test.requested_at.date()
-        tests_by_requested_date[requested_date][test.status].append(test)
-        tests_by_requested_date[requested_date]['total_count'] += 1
-        tests_by_requested_date[requested_date]['patients'].add(test.patient)
-        
-        # Group by performed date (for completed tests)
-        if test.status == 'completed' and test.date_performed:
-            performed_date = test.date_performed.date()
-            tests_by_performed_date[performed_date]['tests'].append(test)
-            tests_by_performed_date[performed_date]['total_count'] += 1
-            tests_by_performed_date[performed_date]['patients'].add(test.patient)
-            tests_by_performed_date[performed_date]['categories'].add(test.category)
-        
-        # Group by patients with date tracking
-        patient_id = test.patient.id
-        patients_with_tests[patient_id]['patient'] = test.patient
-        patients_with_tests[patient_id]['tests_by_date'][requested_date].append(test)
-        patients_with_tests[patient_id]['total_tests'] += 1
-        patients_with_tests[patient_id]['categories'].add(test.category)
-        
-        # Track test status for patient
-        if test.status == 'pending':
-            patients_with_tests[patient_id]['pending_tests'].append(test)
-        elif test.status == 'completed':
-            patients_with_tests[patient_id]['completed_tests'].append(test)
-        elif test.status == 'in_progress':
-            patients_with_tests[patient_id]['in_progress_tests'].append(test)
-        
-        # Update latest dates for patient
-        if (not patients_with_tests[patient_id]['latest_request_date'] or 
-            requested_date > patients_with_tests[patient_id]['latest_request_date']):
-            patients_with_tests[patient_id]['latest_request_date'] = requested_date
-            
-        if (test.status == 'completed' and test.date_performed and
-            (not patients_with_tests[patient_id]['latest_completion_date'] or 
-             test.date_performed.date() > patients_with_tests[patient_id]['latest_completion_date'])):
-            patients_with_tests[patient_id]['latest_completion_date'] = test.date_performed.date()
-    
-    # Convert defaultdicts to ordered dicts sorted by date (most recent first)
-    tests_by_requested_date_ordered = OrderedDict(
-        sorted(tests_by_requested_date.items(), key=lambda x: x[0], reverse=True)
-    )
-    
-    tests_by_performed_date_ordered = OrderedDict(
-        sorted(tests_by_performed_date.items(), key=lambda x: x[0], reverse=True)
-    )
-    
-    # Convert patients dict and sort by latest activity
+    # Prepare patient data with test counts, categories, and subcategories
     patients_data = []
-    for patient_data in patients_with_tests.values():
-        # Convert categories set to list
-        patient_data['categories'] = list(patient_data['categories'])
+    for patient in patients:
+        # Get all tests for this patient with category relationships
+        pending_tests = LabTest.objects.filter(
+            patient=patient,
+            status='pending'
+        ).select_related('category').prefetch_related(
+            'category__subcategories'
+        ).order_by('-requested_at')
         
-        # Add counts
-        patient_data['pending_count'] = len(patient_data['pending_tests'])
-        patient_data['completed_count'] = len(patient_data['completed_tests'])
-        patient_data['in_progress_count'] = len(patient_data['in_progress_tests'])
+        completed_tests = LabTest.objects.filter(
+            patient=patient,
+            status='completed'
+        ).select_related('category').prefetch_related(
+            'category__subcategories'
+        ).order_by('-date_performed')
         
-        # Get referral info
-        latest_referral = Referral.objects.filter(
-            patient=patient_data['patient']
-        ).order_by('-id').first()
-        patient_data['referred_by'] = (
-            latest_referral.notes if latest_referral 
-            else patient_data['patient'].referred_by or 'Walk-in'
-        )
+        in_progress_tests = LabTest.objects.filter(
+            patient=patient,
+            status='in_progress'
+        ).select_related('category').prefetch_related(
+            'category__subcategories'
+        ).order_by('-requested_at')
         
-        patients_data.append(patient_data)
+        # Get unique categories for this patient's tests
+        patient_categories = TestCategory.objects.filter(
+            test_category__patient=patient
+        ).prefetch_related('subcategories').distinct().order_by('name')
+        
+        # Get categories with test counts for this patient
+        category_stats = []
+        for category in patient_categories:
+            category_test_count = LabTest.objects.filter(
+                patient=patient,
+                category=category
+            ).count()
+            
+            category_pending_count = LabTest.objects.filter(
+                patient=patient,
+                category=category,
+                status='pending'
+            ).count()
+            
+            category_completed_count = LabTest.objects.filter(
+                patient=patient,
+                category=category,
+                status='completed'
+            ).count()
+            
+            # Get subcategories and their related tests for this patient
+            subcategory_data = []
+            for subcategory in category.subcategories.all():
+                # Note: You might need to add a subcategory field to LabTest model
+                # For now, this shows the structure you'd use
+                subcategory_data.append({
+                    'subcategory': subcategory,
+                    'name': subcategory.name,
+                })
+            
+            category_stats.append({
+                'category': category,
+                'total_tests': category_test_count,
+                'pending_tests': category_pending_count,
+                'completed_tests': category_completed_count,
+                'subcategories': subcategory_data,
+            })
+        
+        # Get latest consultation or referral info
+        latest_referral = Referral.objects.filter(patient=patient).order_by('-id').first()
+        referred_by = latest_referral.notes if latest_referral else patient.referred_by
+        
+        # Get last test date
+        last_test = LabTest.objects.filter(patient=patient).order_by('-requested_at').first()
+        
+        patients_data.append({
+            'patient': patient,
+            'pending_tests': pending_tests,
+            'completed_tests': completed_tests,
+            'in_progress_tests': in_progress_tests,
+            'pending_count': pending_tests.count(),
+            'completed_count': completed_tests.count(),
+            'in_progress_count': in_progress_tests.count(),
+            'total_tests': pending_tests.count() + completed_tests.count() + in_progress_tests.count(),
+            'referred_by': referred_by or 'Walk-in',
+            'last_test_date': last_test.requested_at if last_test else None,
+            'categories': patient_categories,
+            'category_stats': category_stats,
+        })
     
-    # Sort patients by latest request date (most recent first)
-    patients_data.sort(
-        key=lambda x: x['latest_request_date'] or date.min, 
-        reverse=True
-    )
+    # Calculate summary statistics
+    total_patients = patients.count()
+    patients_with_pending_tests = len([p for p in patients_data if p['pending_count'] > 0])
+    total_pending_tests = LabTest.objects.filter(status='pending').count()
+    total_completed_today = LabTest.objects.filter(
+        status='completed',
+        date_performed__date=timezone.now().date()
+    ).count()
+    total_in_progress = LabTest.objects.filter(status='in_progress').count()
     
-    # Get date-based statistics
-    today = timezone.now().date()
-    yesterday = today - timedelta(days=1)
-    week_ago = today - timedelta(days=7)
-    
-    # Today's statistics
-    today_requested = tests_by_requested_date.get(today, {})
-    today_completed = tests_by_performed_date.get(today, {})
-    
-    # Weekly statistics
-    weekly_stats = {
-        'requested': 0,
-        'completed': 0,
-        'pending': 0,
-        'dates_with_activity': 0
-    }
-    
-    for test_date, data in tests_by_requested_date_ordered.items():
-        if test_date >= week_ago:
-            weekly_stats['requested'] += data['total_count']
-            weekly_stats['pending'] += len(data['pending'])
-            if data['total_count'] > 0:
-                weekly_stats['dates_with_activity'] += 1
-    
-    for test_date, data in tests_by_performed_date_ordered.items():
-        if test_date >= week_ago:
-            weekly_stats['completed'] += data['total_count']
-    
-    # Get all test categories for reference
+    # Get all available test categories and subcategories for quick test creation
     all_test_categories = TestCategory.objects.prefetch_related(
         'subcategories'
     ).all().order_by('name')
     
-    # Overall statistics
-    total_stats = {
-        'total_patients': len(patients_with_tests),
-        'total_tests': all_tests.count(),
-        'pending_tests': all_tests.filter(status='pending').count(),
-        'completed_tests': all_tests.filter(status='completed').count(),
-        'in_progress_tests': all_tests.filter(status='in_progress').count(),
-        'today_requested': today_requested.get('total_count', 0),
-        'today_completed': today_completed.get('total_count', 0),
-        'yesterday_requested': tests_by_requested_date.get(yesterday, {}).get('total_count', 0),
-        'yesterday_completed': tests_by_performed_date.get(yesterday, {}).get('total_count', 0),
-    }
+    # Get category statistics across all patients
+    category_overview = []
+    for category in all_test_categories:
+        total_tests_in_category = LabTest.objects.filter(category=category).count()
+        pending_tests_in_category = LabTest.objects.filter(
+            category=category, 
+            status='pending'
+        ).count()
+        completed_tests_in_category = LabTest.objects.filter(
+            category=category, 
+            status='completed'
+        ).count()
+        
+        category_overview.append({
+            'category': category,
+            'total_tests': total_tests_in_category,
+            'pending_tests': pending_tests_in_category,
+            'completed_tests': completed_tests_in_category,
+            'subcategories': category.subcategories.all(),
+        })
+    
+    # Get all pending tests for quick access (for the original lab_entry functionality)
+    all_pending_tests = LabTest.objects.select_related(
+        'patient', 'category'
+    ).prefetch_related(
+        'category__subcategories'
+    ).filter(
+        status='pending'
+    ).order_by('-requested_at')
+    
+    # Group pending tests by category
+    pending_tests_by_category = {}
+    for test in all_pending_tests:
+        category_name = test.category.name
+        if category_name not in pending_tests_by_category:
+            pending_tests_by_category[category_name] = {
+                'category': test.category,
+                'tests': [],
+                'count': 0
+            }
+        pending_tests_by_category[category_name]['tests'].append(test)
+        pending_tests_by_category[category_name]['count'] += 1
     
     context = {
-        # Date-grouped data
-        'tests_by_requested_date': tests_by_requested_date_ordered,
-        'tests_by_performed_date': tests_by_performed_date_ordered,
-        
-        # Patient data with date tracking
         'patients_data': patients_data,
-        
-        # Categories and reference data
         'test_categories': all_test_categories,
-        
-        # Statistics
-        'stats': total_stats,
-        'weekly_stats': weekly_stats,
-        'today_stats': {
-            'requested': today_requested,
-            'completed': today_completed,
+        'category_overview': category_overview,
+        'pending_tests': all_pending_tests,
+        'pending_tests_by_category': pending_tests_by_category,
+        'stats': {
+            'total_patients': total_patients,
+            'patients_with_pending_tests': patients_with_pending_tests,
+            'total_pending_tests': total_pending_tests,
+            'total_completed_today': total_completed_today,
+            'total_in_progress': total_in_progress,
+            'total_categories': all_test_categories.count(),
         },
-        
-        # Quick access to pending tests (for existing functionality)
-        'pending_tests': all_tests.filter(status='pending').order_by('-requested_at'),
-        
-        # Debug information for superusers
         'debug_info': {
-            'total_dates_with_requests': len(tests_by_requested_date_ordered),
-            'total_dates_with_completions': len(tests_by_performed_date_ordered),
-            'date_range_requested': (
-                list(tests_by_requested_date_ordered.keys())[:5] if tests_by_requested_date_ordered else []
-            ),
-            'date_range_completed': (
-                list(tests_by_performed_date_ordered.keys())[:5] if tests_by_performed_date_ordered else []
-            ),
+            'total_patients_fetched': len(patients_data),
+            'test_categories_count': all_test_categories.count(),
+            'pending_tests_count': all_pending_tests.count(),
+            'category_overview_count': len(category_overview),
             'methods_used': [
-                'Date-based grouping with defaultdict',
-                'OrderedDict for chronological sorting',
-                'Patient-centric date tracking',
-                'Weekly and daily statistics calculation',
-                'Optimized queries with select_related/prefetch_related'
+                'Patient.objects.filter(id__in=LabTest)', 
+                'LabTest filtering with category relationships',
+                'TestCategory.objects.prefetch_related(subcategories)',
+                'Category statistics aggregation',
+                'Result processing with category info'
             ],
         } if request.user.is_superuser else None
     }
@@ -1679,96 +1655,67 @@ def user_accounts(request):
     context = {'users' : users }
     return render(request, 'hms_admin/user_accounts.html', context)
 
-# Receptionist View
+''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
+
 @login_required(login_url='home')
 def receptionist(request):
-    return render(request, 'receptionist/index.html')
+    today = localdate()
+    start_of_week = today - timedelta(days=today.weekday())
+
+    recent_activity = Patient.objects.order_by('-date_registered')[:5]
+    queue = Appointment.objects.filter(scheduled_time__date=today).order_by('scheduled_time')[:5]
+
+    context = {
+        'new_patients_today': Patient.objects.filter(date_registered__date=today).count(),
+        'active_patients': Patient.objects.count(),
+        'appointments_today': Appointment.objects.filter(scheduled_time__date=today).count(),
+        'admissions_this_week': Admission.objects.filter(admitted_on__range=[start_of_week, today]).count(),
+        'recent_activity': recent_activity,
+        'queue': queue,
+    }
+    return render(request, 'receptionist/index.html', context)
+
+@login_required
+def search_patients(request):
+    query = request.GET.get('q', '')
+    results = []
+
+    if len(query) >= 3:
+        patients = Patient.objects.filter(
+            full_name__icontains=query
+        ) | Patient.objects.filter(
+            phone__icontains=query
+        ) | Patient.objects.filter(
+            id_number__icontains=query
+        )
+
+        results = [{
+            'name': p.full_name,
+            'id': p.id_number or f'P-{p.id}',
+            'phone': p.phone,
+            'last_seen': p.date_registered.strftime('%Y-%m-%d'),
+        } for p in patients[:10]]
+
+    return JsonResponse({'results': results})
 
 @login_required(login_url='home')
 def register_patient(request):
     patients = Patient.objects.all().order_by('-date_registered')
     wards = Ward.objects.all()
     available_beds = Bed.objects.filter(is_occupied=False)
-    department = Department.objects.all()
-        
+    departments = Department.objects.all()
+
+    doctors = Profile.objects.filter(role='doctor')
+    nurses = Profile.objects.filter(role='nurse')
+
     return render(request, 'receptionist/register.html', {
         'wards': wards,
         'patients': patients,
-        'available_beds' : available_beds,
-        'department' : department
-    }
-)
-
-@csrf_exempt
-def admit_patient(request):
-    if request.method == 'POST':
-        patient_name = request.POST.get('patient_id')
-        ward_name = request.POST.get('ward')
-        bed_number = request.POST.get('bed_number')
-        reason = request.POST.get('admission_reason')
-        doctor = request.POST.get('doctor')
-        admission_date = request.POST.get('admission_date') or timezone.now().date()
-
-        # Get patient
-        try:
-            patient = Patient.objects.get(full_name=patient_name)
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-            return redirect('register_patient')
-
-        # Get ward
-        try:
-            ward = Ward.objects.get(name=ward_name)
-        except Ward.DoesNotExist:
-            messages.error(request, "Selected ward does not exist.")
-            return redirect('register_patient')
-
-        # Get bed
-        try:
-            bed = Bed.objects.get(ward=ward, number=bed_number, is_occupied=False)
-        except Bed.DoesNotExist:
-            messages.error(request, "Selected bed is not available.")
-            return redirect('register_patient')
-
-        # Update bed status
-        bed.is_occupied = True
-        bed.save()
-
-        # Update patient info
-        patient.is_inpatient = True
-        patient.ward = ward
-        patient.bed = bed
-        patient.status = 'stable'
-        patient.notes = reason
-        patient.save()
-
-        # Create admission record
-        Admission.objects.create(
-            patient=patient,
-            admission_date=admission_date,
-            ward=ward,
-            bed=bed,
-            doctor_assigned=doctor,
-            status='Admitted'
-        )
-
-        messages.success(request, f"{patient.full_name} has been admitted successfully.")
-        return redirect('register_patient')
-    
-@csrf_exempt
-def get_available_beds(request):
-    ward_name = request.GET.get('ward_name')
-    if not ward_name:
-        return JsonResponse({'error': 'Ward not specified'}, status=400)
-    
-    try:
-        ward = Ward.objects.get(name=ward_name)
-    except Ward.DoesNotExist:
-        return JsonResponse({'error': 'Ward not found'}, status=404)
-    
-    beds = Bed.objects.filter(ward=ward, is_occupied=False)
-    bed_list = [{'number': bed.number} for bed in beds]
-    return JsonResponse({'beds': bed_list})
+        'available_beds': available_beds,
+        'department': departments,
+        'doctors': doctors,
+        'nurses': nurses,
+    })
 
 @csrf_exempt
 def register_p(request):
@@ -1776,84 +1723,167 @@ def register_p(request):
         data = request.POST
         photo = request.FILES.get('photo')
 
+        # Basic required fields
         full_name = data.get('full_name')
-        phone = data.get('phone')
-        dob = data.get('dob')
+        date_of_birth = data.get('date_of_birth')
         gender = data.get('gender')
+        phone = data.get('phone')
+        marital_status = data.get('marital_status')
+        address = data.get('address')
+        nationality = data.get('nationality')
+        next_of_kin_name = data.get('next_of_kin_name')
+        next_of_kin_phone = data.get('next_of_kin_phone')
+        next_of_kin_relationship = data.get('next_of_kin_relationship')
 
-        if not full_name or not phone or not dob or not gender:
-            messages.error(request, "Full name, phone, gender, and date of birth are required.")
+        if not all([full_name, date_of_birth, gender, phone, marital_status, address,
+                    nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
+            messages.error(request, "Please fill all required fields marked with *.")
             return redirect('register_patient')
 
-        if Patient.objects.filter(full_name=full_name, date_of_birth=dob).exists():
-            messages.warning(request, "A patient with the same name and date of birth already exists.")
+        # Check for duplicates
+        if Patient.objects.filter(full_name=full_name, date_of_birth=date_of_birth).exists():
+            messages.warning(request, "A patient with this name and date of birth already exists.")
             return redirect('register_patient')
 
         try:
-            Patient.objects.create(
+            patient = Patient.objects.create(
                 full_name=full_name,
-                date_of_birth=dob,
+                date_of_birth=date_of_birth,
                 gender=gender,
                 phone=phone,
                 email=data.get('email'),
-                marital_status=data.get('marital_status'),
-                address=data.get('address'),
-                nationality=data.get('nationality'),
+                marital_status=marital_status,
+                address=address,
+                nationality=nationality,
                 state_of_origin=data.get('state_of_origin'),
                 id_type=data.get('id_type'),
                 id_number=data.get('id_number'),
                 photo=photo,
-                first_time=data.get('first_time'),
+                blood_group=data.get('blood_group'),
                 referred_by=data.get('referred_by'),
-                notes=data.get('notes')
+                notes=data.get('notes'),
+                first_time=data.get('first_time'),
+
+                # Next of kin
+                next_of_kin_name=next_of_kin_name,
+                next_of_kin_phone=next_of_kin_phone,
+                next_of_kin_relationship=next_of_kin_relationship,
+                next_of_kin_email=data.get('next_of_kin_email'),
+                next_of_kin_address=data.get('next_of_kin_address'),
             )
 
-            messages.success(request, "Patient registered successfully.")
+            messages.success(request, f"Patient '{patient.full_name}' registered successfully.")
             return redirect('register_patient')
 
         except Exception as e:
-            messages.error(request, f"An error occurred: {str(e)}")
+            messages.error(request, f"An error occurred during registration: {e}")
             return redirect('register_patient')
+
+    return redirect('register_patient')
+
+@csrf_exempt
+def admit_patient(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        reason = request.POST.get('admission_reason')
+        attending_id = request.POST.get('attending')
+
+        if not all([patient_id, reason, attending_id]):
+            messages.error(request, "All fields are required.")
+            return redirect('register_patient')
+
+        try:
+            patient = Patient.objects.get(id=patient_id)
+        except Patient.DoesNotExist:
+            messages.error(request, "Selected patient not found.")
+            return redirect('register_patient')
+
+        # ✅ Check for existing open admission
+        if Admission.objects.filter(patient=patient, status='Admitted').exists():
+            messages.warning(request, f"{patient.full_name} is already admitted and not yet discharged.")
+            return redirect('register_patient')
+
+        # Get attending staff name
+        try:
+            attending_profile = Profile.objects.get(user__id=attending_id)
+            attending_name = f"{attending_profile.user.first_name} {attending_profile.user.last_name}"
+        except Profile.DoesNotExist:
+            attending_name = "Unknown Staff"
+
+        # Update patient status
+        patient.is_inpatient = True
+        patient.status = 'stable'
+        patient.notes = reason
+        patient.save()
+
+        # Create admission
+        Admission.objects.create(
+            patient=patient,
+            doctor_assigned=attending_name,
+            admitted_by=request.user.get_full_name() or request.user.username,
+            status='Admitted'
+        )
+
+        messages.success(request, f"{patient.full_name} has been admitted successfully.")
+        return redirect('register_patient')
+
+    return redirect('register_patient')
 
 @csrf_exempt
 def update_patient_info(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
+        
+        if not patient_id:
+            messages.error(request, "Patient ID is required.")
+            return redirect('register_patient')
+            
         try:
             patient = Patient.objects.get(id=patient_id)
             
             # Update basic information
-            patient.full_name = request.POST.get('full_name')
-            patient.date_of_birth = parse_date(request.POST.get('dob'))
-            patient.gender = request.POST.get('gender')
-            patient.phone = request.POST.get('phone')
-            patient.email = request.POST.get('email')
-            patient.marital_status = request.POST.get('marital_status')
-            patient.address = request.POST.get('address')
-            patient.nationality = request.POST.get('nationality')
-            patient.state_of_origin = request.POST.get('state_of_origin')
-            patient.id_type = request.POST.get('id_type')
-            patient.id_number = request.POST.get('id_number')
+            patient.full_name = request.POST.get('full_name', patient.full_name)
+            
+            # Handle date parsing
+            dob = request.POST.get('dob')
+            if dob:
+                patient.date_of_birth = parse_date(dob)
+            
+            patient.gender = request.POST.get('gender', patient.gender)
+            patient.phone = request.POST.get('phone', patient.phone)
+            patient.email = request.POST.get('email') or patient.email
+            patient.marital_status = request.POST.get('marital_status') or patient.marital_status
+            patient.address = request.POST.get('address', patient.address)
+            patient.nationality = request.POST.get('nationality', patient.nationality)
+            patient.state_of_origin = request.POST.get('state_of_origin') or patient.state_of_origin
+            patient.id_type = request.POST.get('id_type') or patient.id_type
+            patient.id_number = request.POST.get('id_number') or patient.id_number
             
             # Handle photo upload if present
-            if 'photo' in request.FILES:
+            if 'photo' in request.FILES and request.FILES['photo']:
                 patient.photo = request.FILES['photo']
             
-            # Update additional info
-            patient.first_time = request.POST.get('first_time')
-            patient.referred_by = request.POST.get('referred_by')
-            patient.blood_group = request.POST.get('blood_group')
-            patient.next_of_kin_name = request.POST.get('next_of_kin_name')
-            patient.next_of_kin_phone = request.POST.get('next_of_kin_phone')
-            patient.notes = request.POST.get('notes')
+            # Update additional medical info
+            patient.blood_group = request.POST.get('blood_group') or patient.blood_group
+            patient.first_time = request.POST.get('first_time') or patient.first_time
+            patient.referred_by = request.POST.get('referred_by') or patient.referred_by
+            patient.notes = request.POST.get('notes') or patient.notes
+            
+            # Update Next of Kin information
+            patient.next_of_kin_name = request.POST.get('next_of_kin_name', patient.next_of_kin_name)
+            patient.next_of_kin_phone = request.POST.get('next_of_kin_phone', patient.next_of_kin_phone)
+            patient.next_of_kin_relationship = request.POST.get('next_of_kin_relationship') or patient.next_of_kin_relationship
+            patient.next_of_kin_email = request.POST.get('next_of_kin_email') or patient.next_of_kin_email
+            patient.next_of_kin_address = request.POST.get('next_of_kin_address') or patient.next_of_kin_address
             
             patient.save()
-        
+            
             messages.success(request, f"Patient {patient.full_name}'s information updated successfully.")
             
         except Patient.DoesNotExist:
             messages.error(request, "Patient not found.")
-            pass
+        except Exception as e:
+            messages.error(request, f"An error occurred while updating patient information: {str(e)}")
             
         return redirect('register_patient')
 
