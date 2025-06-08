@@ -52,8 +52,12 @@
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-warning">
                     <div class="inner">
+                        {%if stats.total_pending_tests%}
                         <h3>{{ stats.total_pending_tests }}</h3>
+                        {%else%}
+                        <h3>0</h3>
                         <p>Pending Tests</p>
+                        {%endif%}
                     </div>
                     <div class="icon">
                         <i class="fas fa-file-medical"></i>
@@ -63,8 +67,12 @@
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-success">
                     <div class="inner">
+                        {%if stats.total_completed_today%}
                         <h3>{{ stats.total_completed_today }}</h3>
-                        <p>Completed Today</p>
+                        {%else%}
+                        <h3>0</h3>
+                        <p>Completed Today</p>                        
+                        {%endif%}
                     </div>
                     <div class="icon">
                         <i class="fas fa-check-circle"></i>
@@ -74,8 +82,12 @@
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-secondary">
                     <div class="inner">
-                        <h3>{{ stats.total_in_progress }}</h3>
+                        {%if stats.total_completed_today%}
+                        <h3>{{ stats.total_in_progress}}</h3>
+                        {%else%}
+                        <h3>0</h3>
                         <p>In Progress</p>
+                        {%endif%}                      
                     </div>
                     <div class="icon">
                         <i class="fas fa-flask"></i>
@@ -145,11 +157,9 @@
                                 <th>Patient ID</th>
                                 <th>Patient Info</th>
                                 <th>Contact</th>
-                                <th>Status</th>
                                 <th>Test Summary</th>
                                 <th>Categories</th>
-                                <th>Last Test</th>
-                                <th>Referred By</th>
+                                <th>Recommended By</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -183,11 +193,11 @@
                                         <i class="fas fa-map-marker-alt"></i> {{ patient_data.patient.address|truncatechars:30|default:"N/A" }}
                                     </small>
                                 </td>
-                                <td>
+                                <!--<td>
                                     <span class="badge badge-{% if patient_data.patient.status == 'critical' %}danger{% elif patient_data.patient.status == 'stable' %}success{% else %}warning{% endif %}">
-                                        {{ patient_data.patient.status|title }}
+                                        
                                     </span>
-                                </td>
+                                </td>-->
                                 <td>
                                     <div class="d-flex flex-column">
                                         {% if patient_data.pending_count > 0 %}
@@ -207,39 +217,36 @@
                                 <td>
                                     {% if patient_data.categories %}
                                         {% for category in patient_data.categories %}
-                                            <span class="badge badge-outline badge-primary mb-1">{{ category.name }}</span>
+                                            <span class="badge badge-outline mb-1">{{ category.name }}</span>
                                             {% if not forloop.last %}<br>{% endif %}
                                         {% endfor %}
                                     {% else %}
                                         <small class="text-muted">No categories</small>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    {% if patient_data.last_test_date %}
-                                        <small>{{ patient_data.last_test_date|date:"M d, Y" }}</small>
-                                    {% else %}
-                                        <small class="text-muted">Never</small>
-                                    {% endif %}
-                                </td>
+                                
                                 <td>
                                     <small class="text-muted">{{ patient_data.referred_by|default:"Walk-in" }}</small>
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-primary view-tests" 
+                                    <div class="btn-group btn-group-sm" role="group" title="Open test deatails"">
+                                        <a href="{% url 'test_details' patient_data.patient.id %}" class="btn btn-primary">
+                                          <i class="fas fa-eye"></i>
+                                        </a>
+                                        <!--<button class="btn btn-primary view-tests"
                                                 data-patient-id="{{ patient_data.patient.id }}"
                                                 data-patient-name="{{ patient_data.patient.full_name }}"
                                                 title="View All Tests">
                                             <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-success create-test" 
+                                        </button>-->
+                                        <button class="btn btn-success create-test"
                                                 data-patient-id="{{ patient_data.patient.id }}"
                                                 data-patient-name="{{ patient_data.patient.full_name }}"
                                                 title="Create New Test">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                         {% if patient_data.pending_count > 0 %}
-                                        <button class="btn btn-warning quick-complete" 
+                                        <button class="btn btn-warning quick-complete"
                                                 data-patient-id="{{ patient_data.patient.id }}"
                                                 data-patient-name="{{ patient_data.patient.full_name }}"
                                                 title="Complete Pending Tests">
