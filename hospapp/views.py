@@ -2122,3 +2122,32 @@ def test_detail(request):
     
     return render(request, 'laboratory/test_details.html', {
     })
+
+
+#Lab submiting test results
+from django.shortcuts import redirect
+from django.views.decorators.csrf import csrf_exempt
+from .models import LabTest
+
+@csrf_exempt  # Only needed if you don't use {% csrf_token %} — you're using it, so this is optional
+def submit_test_results(request, patient_id):
+    if request.method == 'POST':
+        test_ids = request.POST.getlist('ids')
+
+        for test_id in test_ids:
+            try:
+                lab_test = LabTest.objects.get(id=test_id)
+                # Fetch the value using test name as the input name
+                result_value = request.POST.get(lab_test.test_name)
+
+                if result_value:
+                    lab_test.result_value = result_value  # <-- updated field
+                    lab_test.status = 'completed'  # Optional
+                    lab_test.save()
+            except LabTest.DoesNotExist:
+                continue  # Ignore invalid IDs
+
+        return redirect('test_details', patient_id=patient_id)
+
+    return redirect('test_details', patient_id=patient_id)
+ 

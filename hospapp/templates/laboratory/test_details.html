@@ -111,7 +111,7 @@
             {%endif%}
         </div>
 
-        <form method="post">
+        <form method="post" action="{% url 'submit_test_results' patient.id %}">
             {% csrf_token %}
             <div class="card">
                 <div class="card-header bg-primary text-white">
@@ -124,11 +124,13 @@
                     {% for test in testlist %}
                     <div class="test-row">
                         <label class="test-label">{{ test.test_name }}:</label>
-                        <input type="text" name="test_{{ test.id }}" class="test-input" placeholder="Enter result">
+                        <input type="text" name="{{ test.test_name }}" class="test-input" placeholder="Enter result">
+                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input" placeholder="Enter text id">
+
                     </div>
                     {% endfor %}
                     {% endfor %}
-                    
+
                     <div class="text-center mt-3">
                         <button type="submit" class="btn btn-success btn-submit">Submit Test Details</button>
                     </div>
