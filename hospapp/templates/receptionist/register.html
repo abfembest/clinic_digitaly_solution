@@ -28,8 +28,7 @@
             <ul class="nav nav-tabs mb-4" id="patientTabs" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link active" id="register-tab" data-toggle="tab" href="#register" role="tab">
-                        New
-                        Patient
+                        New Patient
                     </a>
                 </li>
                 <li class="nav-item">
@@ -42,8 +41,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
-                        Schedule
-                        Appointment
+                        Schedule Appointment
                     </a>
                 </li>
                 <li class="nav-item">
@@ -58,104 +56,189 @@
                 <div class="tab-pane fade show active" id="register" role="tabpanel">
                     <form enctype="multipart/form-data" action="{% url 'register_p' %}" method="post">
                         {% csrf_token %}
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Full Name</label>
-                                <input type="text" class="form-control" placeholder="John Doe" required
-                                    name="full_name">
+
+                        <!-- Patient Basic Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Patient Information</h5>
                             </div>
-                            <div class="form-group col-md-3">
-                                <label>Date of Birth</label>
-                                <input type="date" class="form-control" required name="dob">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Gender</label>
-                                <select class="form-control" required name="gender">
-                                    <option disabled selected>Choose...</option>
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                    <!-- <option>Other</option> -->
-                                </select>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Full Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" placeholder="John Doe" required
+                                            name="full_name">
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>Date of Birth <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" required name="date_of_birth">
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>Gender <span class="text-danger">*</span></label>
+                                        <select class="form-control" required name="gender">
+                                            <option value="" disabled selected>Choose...</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>Phone <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" placeholder="+234..." required
+                                            name="phone">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Email (optional)</label>
+                                        <input type="email" class="form-control" placeholder="example@mail.com"
+                                            name="email">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Marital Status <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="marital_status" required>
+                                            <option value="" disabled selected> -- Choose Marital Status --</option>
+                                            <option value="Single">Single</option>
+                                            <option value="Married">Married</option>
+                                            <option value="Divorced">Divorced</option>
+                                            <option value="Widowed">Widowed</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Home Address <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" rows="2" placeholder="123 Street, City" required
+                                            name="address"></textarea>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>Nationality <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" placeholder="e.g. Nigerian"
+                                            name="nationality" required>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>State of Origin</label>
+                                        <input type="text" class="form-control" name="state_of_origin">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>ID Type</label>
+                                        <select class="form-control" name="id_type">
+                                            <option value="" disabled selected> -- Choose ID Type --</option>
+                                            <option value="National ID">National ID</option>
+                                            <option value="Voter Card">Voter Card</option>
+                                            <option value="Driver's License">Driver's License</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>ID Number</label>
+                                        <input type="text" class="form-control" placeholder="Enter ID number"
+                                            name="id_number">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Upload Photo</label>
+                                        <input type="file" class="form-control-file" name="photo" accept="image/*">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>Blood Group</label>
+                                        <select class="form-control" name="blood_group">
+                                            <option value="" disabled selected> -- Choose Blood Group --</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-md-8">
+                                        <label>Referred By (if any)</label>
+                                        <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
+                                            name="referred_by">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label>Phone</label>
-                                <input type="tel" class="form-control" placeholder="+234..." required name="phone">
+                        <!-- Next of Kin Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Next of Kin Information</h5>
                             </div>
-                            <div class="form-group col-md-4">
-                                <label>Email (optional)</label>
-                                <input type="email" class="form-control" placeholder="example@mail.com" name="email">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Marital Status</label>
-                                <select class="form-control" name="marital_status">
-                                    <option>Single</option>
-                                    <option>Married</option>
-                                    <option>Divorced</option>
-                                    <option>Widowed</option>
-                                </select>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Next of Kin Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" placeholder="Next of Kin Full Name"
+                                            name="next_of_kin_name" required>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label>Relationship <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="next_of_kin_relationship" required>
+                                            <option value="" disabled selected>Choose relationship...</option>
+                                            <option value="Spouse">Spouse</option>
+                                            <option value="Father">Father</option>
+                                            <option value="Mother">Mother</option>
+                                            <option value="Son">Son</option>
+                                            <option value="Daughter">Daughter</option>
+                                            <option value="Brother">Brother</option>
+                                            <option value="Sister">Sister</option>
+                                            <option value="Guardian">Guardian</option>
+                                            <option value="Friend">Friend</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Next of Kin Phone <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" placeholder="+234..."
+                                            name="next_of_kin_phone" required>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label>Next of Kin Email (optional)</label>
+                                        <input type="email" class="form-control" placeholder="example@mail.com"
+                                            name="next_of_kin_email">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Next of Kin Address</label>
+                                    <textarea class="form-control" rows="2" placeholder="Next of Kin's home address"
+                                        name="next_of_kin_address"></textarea>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Home Address</label>
-                                <input type="text" class="form-control" placeholder="123 Street, City" name="address">
+                        <!-- Additional Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Additional Information</h5>
                             </div>
-                            <div class="form-group col-md-3">
-                                <label>Nationality</label>
-                                <input type="text" class="form-control" placeholder="e.g. Nigerian" name="nationality">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>State of Origin</label>
-                                <input type="text" class="form-control" name="state_of_origin">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label>ID Type</label>
-                                <select class="form-control" name="id_type">
-                                    <option>National ID</option>
-                                    <option>Voter Card</option>
-                                    <option>Driver's License</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>ID Number</label>
-                                <input type="text" class="form-control" placeholder="Enter ID number" name="id_number">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Upload Photo</label>
-                                <input type="file" class="form-control-file" name="photo">
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label>Additional Notes</label>
+                                    <textarea class="form-control" rows="3"
+                                        placeholder="Any other relevant information..." name="notes"></textarea>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>First Time or Returning?</label>
-                                <select class="form-control" name="first_time">
-                                    <option>First Time</option>
-                                    <option>Returning</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Referred By (if any)</label>
-                                <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
-                                    name="referred_by">
-                            </div>
-                        </div>
+                        <!-- Hidden field to set first_time as default -->
+                        <input type="hidden" name="first_time" value="First Time">
 
-                        <div class="form-group">
-                            <label>Additional Notes</label>
-                            <textarea class="form-control" rows="3" placeholder="Any other relevant information..."
-                                name="notes"></textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Register Patient</button>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus"></i> Register Patient
+                        </button>
                     </form>
                 </div>
 
@@ -164,198 +247,264 @@
                     <form method="POST" action="{% url 'admit_patient' %}">
                         {% csrf_token %}
                         <div class="form-group">
-                            <label>Patient ID or Name</label>
-                            <select class="form-control" autocomplete="on" placeholder="Search..." name="patient_id">
+                            <label>Patient <span class="text-danger">*</span></label>
+                            <select class="form-control" name="patient_id" required>
                                 <option value="" disabled selected>-- Select Patient --</option>
                                 {% for patient in patients %}
-                                <option value="{{patient.full_name}}">{{patient.full_name}}</option>
+                                <option value="{{ patient.id }}">{{ patient.full_name }} - ID: {{ patient.id }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label>Ward</label>
-                            <select name="ward" id="wardSelect" class="form-control" required>
-                                <option value="" selected disabled>-- Select Ward --</option>
-                                {% for ward in wards %}
-                                <option value="{{ ward.name }}">{{ ward.name }}</option>
-                                {% endfor %}
+                            <label>Reason for Admission <span class="text-danger">*</span></label>
+                            <textarea name="admission_reason" class="form-control" rows="3" required
+                                placeholder="Describe the reason for admission"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Attending Doctor/Nurse <span class="text-danger">*</span></label>
+                            <select name="attending" class="form-control" required>
+                                <option value="" disabled selected>-- Select Doctor/Nurse --</option>
+                                <optgroup label="Doctors">
+                                    {% for doctor in doctors %}
+                                    <option value="{{ doctor.user.id }}">
+                                        Dr. {{ doctor.user.get_full_name }} - {{ doctor.department.name|default:"No Dept" }}
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="Nurses">
+                                    {% for nurse in nurses %}
+                                    <option value="{{ nurse.user.id }}">
+                                        Nurse {{ nurse.user.get_full_name }} - {{ nurse.department.name|default:"No Dept" }}
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label>Bed Number</label>
-                            <select name="bed_number" id="bedSelect" class="form-control" required>
-                                <option value="" selected disabled>-- Select Bed --</option>
-                                <!-- Options will be filled dynamically -->
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Reason for Admission</label>
-                            <textarea name="admission_reason" class="form-control" rows="3" required></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Attending Doctor</label>
-                            <input type="text" name="doctor" class="form-control">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Admission Date</label>
-                            <input type="date" name="admission_date" class="form-control"
-                                value="{{ today|date:'Y-m-d' }}">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Admit Patient</button>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-hospital-user"></i> Admit Patient
+                        </button>
                     </form>
                 </div>
 
 
-                <!-- Update Info -->
+                <!-- Update Info Tab -->
                 <div class="tab-pane fade" id="update" role="tabpanel">
                     <form action="{% url 'update_patient_info' %}" method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="form-group">
-                            <label>Patient ID or Name</label>
+                            <label>Patient ID or Name <span class="text-danger">*</span></label>
                             <select class="form-control" id="patientSelect" name="patient_id" required>
                                 <option value="" selected disabled>-- Select Patient --</option>
                                 {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                <option value="{{ patient.id }}">{{ patient.full_name }} - ID: {{ patient.id }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Full Name</label>
-                                <input type="text" class="form-control" placeholder="John Doe" required name="full_name"
-                                    id="fullNameField">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Date of Birth</label>
-                                <input type="date" class="form-control" required name="dob" id="dobField">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Gender</label>
-                                <select class="form-control" required name="gender" id="genderField">
-                                    <option disabled selected>Choose...</option>
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label>Phone</label>
-                                <input type="tel" class="form-control" placeholder="+234..." required name="phone"
-                                    id="phoneField">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Email (optional)</label>
-                                <input type="email" class="form-control" placeholder="example@mail.com" name="email"
-                                    id="emailField">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Marital Status</label>
-                                <select class="form-control" name="marital_status" id="maritalStatusField">
-                                    <option>Single</option>
-                                    <option>Married</option>
-                                    <option>Divorced</option>
-                                    <option>Widowed</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Home Address</label>
-                                <input type="text" class="form-control" placeholder="123 Street, City" name="address"
-                                    id="addressField">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>Nationality</label>
-                                <input type="text" class="form-control" placeholder="e.g. Nigerian" name="nationality"
-                                    id="nationalityField">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>State of Origin</label>
-                                <input type="text" class="form-control" name="state_of_origin" id="stateField">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label>ID Type</label>
-                                <select class="form-control" name="id_type" id="idTypeField">
-                                    <option>National ID</option>
-                                    <option>Voter Card</option>
-                                    <option>Driver's License</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>ID Number</label>
-                                <input type="text" class="form-control" placeholder="Enter ID number" name="id_number"
-                                    id="idNumberField">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Update Photo</label>
-                                <input type="file" class="form-control-file" name="photo">
-                                <small class="form-text text-muted">Leave empty to keep current photo</small>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>First Time or Returning?</label>
-                                <select class="form-control" name="first_time" id="firstTimeField">
-                                    <option>First Time</option>
-                                    <option>Returning</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Referred By (if any)</label>
-                                <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
-                                    name="referred_by" id="referredByField">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Blood Group</label>
-                                <select class="form-control" name="blood_group" id="bloodGroupField">
-                                    <option>A+</option>
-                                    <option>A-</option>
-                                    <option>B+</option>
-                                    <option>B-</option>
-                                    <option>AB+</option>
-                                    <option>AB-</option>
-                                    <option>O+</option>
-                                    <option>O-</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Next of Kin Name</label>
-                                <input type="text" class="form-control" placeholder="Next of Kin Name"
-                                    name="next_of_kin_name" id="nextOfKinNameField">
-                            </div>
-                        </div>
-
+                        <!-- Patient Photo Display -->
                         <div class="form-group">
-                            <label>Next of Kin Phone</label>
-                            <input type="tel" class="form-control" placeholder="+234..." name="next_of_kin_phone"
-                                id="nextOfKinPhoneField">
+                            <div class="card" style="width: 200px;">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Patient Photo</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img id="patientPhotoDisplay" src="" alt="Patient Photo" class="img-thumbnail"
+                                        style="width: 150px; height: 150px; object-fit: cover; display: none;">
+                                    <div id="noPhotoMessage" class="text-muted">
+                                        <i class="fas fa-user-circle fa-5x"></i>
+                                        <p class="mt-2">No photo available</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Additional Notes</label>
-                            <textarea class="form-control" rows="3" placeholder="Any other relevant information..."
-                                name="notes" id="notesField"></textarea>
+                        <!-- Patient Basic Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Patient Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Full Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" placeholder="John Doe" required
+                                            name="full_name" id="fullNameField">
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>Date of Birth <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" required name="date_of_birth"
+                                            id="dobField">
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>Gender <span class="text-danger">*</span></label>
+                                        <select class="form-control" required name="gender" id="genderField">
+                                            <option value="" disabled selected>Choose...</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>Phone <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" placeholder="+234..." required
+                                            name="phone" id="phoneField">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Email (optional)</label>
+                                        <input type="email" class="form-control" placeholder="example@mail.com"
+                                            name="email" id="emailField">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Marital Status <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="marital_status" id="maritalStatusField"
+                                            required>
+                                            <option value="" disabled selected> -- Choose Marital Status --</option>
+                                            <option value="Single">Single</option>
+                                            <option value="Married">Married</option>
+                                            <option value="Divorced">Divorced</option>
+                                            <option value="Widowed">Widowed</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Home Address <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" rows="2" placeholder="123 Street, City" required
+                                            name="address" id="addressField"></textarea>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>Nationality <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" placeholder="e.g. Nigerian"
+                                            name="nationality" id="nationalityField" required>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>State of Origin</label>
+                                        <input type="text" class="form-control" name="state_of_origin" id="stateField">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>ID Type</label>
+                                        <select class="form-control" name="id_type" id="idTypeField">
+                                            <option value="" disabled selected> -- Choose ID Type --</option>
+                                            <option value="National ID">National ID</option>
+                                            <option value="Voter Card">Voter Card</option>
+                                            <option value="Driver's License">Driver's License</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>ID Number</label>
+                                        <input type="text" class="form-control" placeholder="Enter ID number"
+                                            name="id_number" id="idNumberField">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Update Photo</label>
+                                        <input type="file" class="form-control-file" name="photo" accept="image/*">
+                                        <small class="form-text text-muted">Leave empty to keep current photo</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>Blood Group</label>
+                                        <select class="form-control" name="blood_group" id="bloodGroupField">
+                                            <option value="" disabled selected> -- Choose Blood Group --</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-md-8">
+                                        <label>Referred By (if any)</label>
+                                        <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
+                                            name="referred_by" id="referredByField">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <button type="submit" class="btn btn-success">Update Patient Information</button>
+                        <!-- Next of Kin Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Next of Kin Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Next of Kin Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" placeholder="Next of Kin Full Name"
+                                            name="next_of_kin_name" id="nextOfKinNameField" required>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label>Relationship <span class="text-danger">*</span></label>
+                                        <select class="form-control" name="next_of_kin_relationship"
+                                            id="nextOfKinRelationshipField" required>
+                                            <option value="" disabled selected>Choose relationship...</option>
+                                            <option value="Spouse">Spouse</option>
+                                            <option value="Father">Father</option>
+                                            <option value="Mother">Mother</option>
+                                            <option value="Son">Son</option>
+                                            <option value="Daughter">Daughter</option>
+                                            <option value="Brother">Brother</option>
+                                            <option value="Sister">Sister</option>
+                                            <option value="Guardian">Guardian</option>
+                                            <option value="Friend">Friend</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>Next of Kin Phone <span class="text-danger">*</span></label>
+                                        <input type="tel" class="form-control" placeholder="+234..."
+                                            name="next_of_kin_phone" id="nextOfKinPhoneField" required>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label>Next of Kin Email (optional)</label>
+                                        <input type="email" class="form-control" placeholder="example@mail.com"
+                                            name="next_of_kin_email" id="nextOfKinEmailField">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Next of Kin Address</label>
+                                    <textarea class="form-control" rows="2" placeholder="Next of Kin's home address"
+                                        name="next_of_kin_address" id="nextOfKinAddressField"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Additional Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label>Additional Notes</label>
+                                    <textarea class="form-control" rows="3"
+                                        placeholder="Any other relevant information..." name="notes"
+                                        id="notesField"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-user-edit"></i> Update Patient Information
+                        </button>
                     </form>
                 </div>
 
@@ -365,21 +514,22 @@
                         {% csrf_token %}
                         <div class="form-row">
                             <div class="form-group col-md-6">
-                                <label>Patient</label>
+                                <label>Patient <span class="text-danger">*</span></label>
                                 <select class="form-control" name="patient_id" required>
                                     <option value="" disabled selected>-- Select Patient --</option>
                                     {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    <option value="{{ patient.id }}">{{ patient.full_name }} - ID: {{ patient.id }}
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Date & Time</label>
+                                <label>Date & Time <span class="text-danger">*</span></label>
                                 <input type="datetime-local" class="form-control" name="scheduled_time" required>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Select Department</label>
+                            <label>Select Department <span class="text-danger">*</span></label>
                             <select class="form-control" name="department" required>
                                 <option disabled selected>-- Select Department --</option>
                                 {% for i in department %}
@@ -387,26 +537,27 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-warning">Schedule</button>
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-calendar-plus"></i> Schedule Appointment
+                        </button>
                     </form>
                 </div>
-
 
                 <!-- Referral -->
                 <div class="tab-pane fade" id="refer" role="tabpanel">
                     <form action="{% url 'refer_patient' %}" method="post">
                         {% csrf_token %}
                         <div class="form-group">
-                            <label>Patient</label>
+                            <label>Patient <span class="text-danger">*</span></label>
                             <select class="form-control" name="patient_id" required>
                                 <option value="" disabled selected>-- Select Patient --</option>
                                 {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                <option value="{{ patient.id }}">{{ patient.full_name }} - ID: {{ patient.id }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Select Department</label>
+                            <label>Select Department <span class="text-danger">*</span></label>
                             <select class="form-control" name="department" required>
                                 <option disabled selected>-- Select Department --</option>
                                 {% for i in department %}
@@ -415,131 +566,125 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Referral Note</label>
-                            <textarea class="form-control" rows="3" name="notes" required></textarea>
+                            <label>Referral Note <span class="text-danger">*</span></label>
+                            <textarea class="form-control" rows="3" name="notes" required
+                                placeholder="Enter reason for referral"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-danger">Transfer Patient</button>
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="fas fa-exchange-alt"></i> Transfer Patient
+                        </button>
                     </form>
                 </div>
-
             </div>
         </div>
     </div>
 </section>
 
 <script>
-    // Updated AJAX script for patient data fetching
+    // Updated AJAX script for patient data fetching with all fields properly mapped
     document.getElementById('patientSelect').addEventListener('change', function () {
         const patientId = this.value;
         if (!patientId) return;
 
         fetch(`/ajax/patient-info/${patientId}/`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
-                // Populate all fields with retrieved patient data
-                document.getElementById('fullNameField').value = data.full_name || '';
-                document.getElementById('dobField').value = data.date_of_birth || '';
+                console.log('Patient data received:', data); // Debug log
 
-                // Set select values
-                const genderSelect = document.getElementById('genderField');
-                for (let i = 0; i < genderSelect.options.length; i++) {
-                    if (genderSelect.options[i].text === data.gender) {
-                        genderSelect.selectedIndex = i;
-                        break;
-                    }
+                // Handle patient photo display
+                const photoDisplay = document.getElementById('patientPhotoDisplay');
+                const noPhotoMessage = document.getElementById('noPhotoMessage');
+
+                if (data.photo && data.photo !== '' && data.photo !== null) {
+                    photoDisplay.src = data.photo;
+                    photoDisplay.style.display = 'block';
+                    noPhotoMessage.style.display = 'none';
+
+                    // Add error handler for image loading
+                    photoDisplay.onerror = function () {
+                        console.log('Image failed to load:', data.photo);
+                        photoDisplay.style.display = 'none';
+                        noPhotoMessage.style.display = 'block';
+                    };
+                } else {
+                    photoDisplay.style.display = 'none';
+                    noPhotoMessage.style.display = 'block';
                 }
 
+                // Populate basic patient information fields
+                document.getElementById('fullNameField').value = data.full_name || '';
+
+                // Handle date format conversion for date_of_birth
+                let dobValue = data.date_of_birth || '';
+                if (dobValue) {
+                    const date = new Date(dobValue);
+                    if (!isNaN(date.getTime())) {
+                        dobValue = date.toISOString().split('T')[0];
+                    }
+                }
+                document.getElementById('dobField').value = dobValue;
+
+                // Helper function to set select values
+                const setSelectValue = (selectId, value) => {
+                    const select = document.getElementById(selectId);
+                    if (select && value) {
+                        // First try exact match
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].text === value || select.options[i].value === value) {
+                                select.selectedIndex = i;
+                                return;
+                            }
+                        }
+                        // If no exact match found, try case-insensitive match
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].text.toLowerCase() === value.toLowerCase() ||
+                                select.options[i].value.toLowerCase() === value.toLowerCase()) {
+                                select.selectedIndex = i;
+                                return;
+                            }
+                        }
+                    }
+                };
+
+                // Set select field values
+                setSelectValue('genderField', data.gender);
+                setSelectValue('maritalStatusField', data.marital_status);
+                setSelectValue('idTypeField', data.id_type);
+                setSelectValue('bloodGroupField', data.blood_group);
+
+                // Fill basic information text inputs
                 document.getElementById('phoneField').value = data.phone || '';
                 document.getElementById('emailField').value = data.email || '';
-
-                // Set marital status dropdown
-                const maritalSelect = document.getElementById('maritalStatusField');
-                for (let i = 0; i < maritalSelect.options.length; i++) {
-                    if (maritalSelect.options[i].text === data.marital_status) {
-                        maritalSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-
                 document.getElementById('addressField').value = data.address || '';
                 document.getElementById('nationalityField').value = data.nationality || '';
                 document.getElementById('stateField').value = data.state_of_origin || '';
-
-                // Set ID type dropdown
-                const idTypeSelect = document.getElementById('idTypeField');
-                for (let i = 0; i < idTypeSelect.options.length; i++) {
-                    if (idTypeSelect.options[i].text === data.id_type) {
-                        idTypeSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-
                 document.getElementById('idNumberField').value = data.id_number || '';
-
-                // Set first time dropdown
-                const firstTimeSelect = document.getElementById('firstTimeField');
-                for (let i = 0; i < firstTimeSelect.options.length; i++) {
-                    if (firstTimeSelect.options[i].text === data.first_time) {
-                        firstTimeSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-
                 document.getElementById('referredByField').value = data.referred_by || '';
 
-                // Set blood group dropdown
-                const bloodGroupSelect = document.getElementById('bloodGroupField');
-                for (let i = 0; i < bloodGroupSelect.options.length; i++) {
-                    if (bloodGroupSelect.options[i].text === data.blood_group) {
-                        bloodGroupSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-
+                // Fill Next of Kin information
                 document.getElementById('nextOfKinNameField').value = data.next_of_kin_name || '';
                 document.getElementById('nextOfKinPhoneField').value = data.next_of_kin_phone || '';
+
+                // Set Next of Kin relationship dropdown
+                setSelectValue('nextOfKinRelationshipField', data.next_of_kin_relationship);
+
+                // Fill additional Next of Kin fields
+                document.getElementById('nextOfKinEmailField').value = data.next_of_kin_email || '';
+                document.getElementById('nextOfKinAddressField').value = data.next_of_kin_address || '';
+
+                // Fill additional notes
                 document.getElementById('notesField').value = data.notes || '';
             })
             .catch(error => {
                 console.error('Error fetching patient info:', error);
+                alert('Error loading patient information. Please try again.');
             });
     });
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const wardSelect = document.querySelector('select[name="ward"]');
-    const bedSelect = document.querySelector('select[name="bed_number"]');
-
-    wardSelect.addEventListener('change', function () {
-        const selectedWard = this.value;
-        bedSelect.innerHTML = '<option disabled selected>Loading...</option>';
-
-        fetch(`/ajax/get-available-beds/?ward_name=${encodeURIComponent(selectedWard)}`)
-            .then(response => response.json())
-            .then(data => {
-                bedSelect.innerHTML = '';
-                if (data.beds.length > 0) {
-                    data.beds.forEach(bed => {
-                        const option = document.createElement('option');
-                        option.value = bed.number;
-                        option.textContent = bed.number;
-                        bedSelect.appendChild(option);
-                    });
-                } else {
-                    const option = document.createElement('option');
-                    option.disabled = true;
-                    option.selected = true;
-                    option.textContent = 'No beds available';
-                    bedSelect.appendChild(option);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching beds:', error);
-                bedSelect.innerHTML = '<option disabled selected>Error loading beds</option>';
-            });
-    });
-});
 </script>
 
 {% endblock %}
