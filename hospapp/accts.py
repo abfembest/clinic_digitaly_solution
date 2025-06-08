@@ -671,8 +671,31 @@ def income_expenditure_view(request):
         total=Sum('amount'))['total'] or 0
     rejected_count = expenses_queryset.filter(status='rejected').count()
 
+<<<<<<< Updated upstream
     # Pagination - 15 expenses per page
     paginator = Paginator(expenses_queryset, 15)
+=======
+    for p in payments:
+        transactions.append({
+            'date': p['payment_date'].date(),
+            'type': 'Income',
+            'description': p['notes'] or '',
+            'amount': p['amount']
+        })
+
+    for e in expenses:
+        transactions.append({
+            'date': e['expense_date'],
+            'type': 'Expenditure',
+            'description': e['description'],
+            'amount': e['amount']
+        })
+
+    transactions.sort(key=lambda x: x['date'], reverse=True)
+
+    # Pagination - 10 transactions per page
+    paginator = Paginator(transactions, 20)
+>>>>>>> Stashed changes
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
@@ -708,6 +731,7 @@ def income_expenditure_view(request):
     return render(request, 'accounts/financials.html', context)
 
 def financial_reports(request):
+<<<<<<< Updated upstream
     # Define date ranges
     today = now().date()
     last_30_days_start = today - timedelta(days=29)
@@ -782,6 +806,41 @@ def financial_reports(request):
         daily_net_dict[date_str] = 0
 
     # Get daily income
+=======
+    # Define date range (last 30 days)
+    end_date = now().date()
+    start_date = end_date - timedelta(days=29)
+
+    # ===== INCOME CALCULATION =====
+    total_income = Payment.objects.filter(
+        status='completed',
+        payment_date__date__range=(start_date, end_date)
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    # ===== EXPENDITURE CALCULATION =====
+    # Calculate all expenses regardless of status (all firm expenditures)
+    total_expenditure = Expense.objects.filter(
+        expense_date__range=(start_date, end_date)
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+    # ===== NET BALANCE =====
+    net_balance = total_income - total_expenditure
+
+    # ===== CHART DATA PREPARATION =====
+    # Create date range for chart
+    date_labels = [(start_date + timedelta(days=i)) for i in range(30)]
+    
+    # Initialize daily dictionaries
+    daily_income_dict = OrderedDict()
+    daily_expenditure_dict = OrderedDict()
+    
+    for date_obj in date_labels:
+        date_str = date_obj.strftime('%Y-%m-%d')
+        daily_income_dict[date_str] = 0
+        daily_expenditure_dict[date_str] = 0
+
+    # Get daily income data
+>>>>>>> Stashed changes
     daily_income_qs = Payment.objects.filter(
         status='completed',
         payment_date__date__range=(last_30_days_start, today)
@@ -794,9 +853,15 @@ def financial_reports(request):
         if day_str in daily_income_dict:
             daily_income_dict[day_str] = float(entry['day_total'])
 
+<<<<<<< Updated upstream
     # Get daily expenditure
     daily_expenditure_qs = Expense.objects.filter(
         expense_date__range=(last_30_days_start, today)
+=======
+    # Get daily expenditure data (all expenses)
+    daily_expenditure_qs = Expense.objects.filter(
+        expense_date__range=(start_date, end_date)
+>>>>>>> Stashed changes
     ).values('expense_date').annotate(
         day_total=Sum('amount')
     ).order_by('expense_date')
@@ -806,6 +871,7 @@ def financial_reports(request):
         if day_str in daily_expenditure_dict:
             daily_expenditure_dict[day_str] = float(entry['day_total'])
 
+<<<<<<< Updated upstream
     # Calculate daily net
     for date_str in daily_income_dict.keys():
         daily_net_dict[date_str] = daily_income_dict[date_str] - daily_expenditure_dict[date_str]
@@ -884,6 +950,18 @@ def financial_reports(request):
         'recent_income': recent_income,
         'recent_expenses': recent_expenses,
         'date_range': f"{last_30_days_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}",
+=======
+    # Prepare chart labels (format dates for display)
+    chart_labels = [date_obj.strftime('%m-%d') for date_obj in date_labels]
+
+    context = {
+        'total_income': total_income,
+        'total_expenditure': total_expenditure,
+        'net_balance': net_balance,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(list(daily_income_dict.values())),
+        'expenditure_data': json.dumps(list(daily_expenditure_dict.values())),
+>>>>>>> Stashed changes
     }
 
     return render(request, 'accounts/financial_reports.html', context)

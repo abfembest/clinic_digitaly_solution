@@ -283,6 +283,7 @@
             </div>
         </div>
     </div>
+<<<<<<< Updated upstream
 </section>
 
 <!-- Chart Scripts -->
@@ -292,6 +293,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Daily Trend Chart
     var dailyCtx = document.getElementById('dailyTrendChart').getContext('2d');
     new Chart(dailyCtx, {
+=======
+  </section>
+  
+  <!-- Chart Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var ctx = document.getElementById('financialChart').getContext('2d');
+      new Chart(ctx, {
+>>>>>>> Stashed changes
         type: 'line',
         data: {
             labels: {{ chart_labels|safe }},
