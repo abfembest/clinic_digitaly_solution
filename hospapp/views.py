@@ -616,7 +616,41 @@ def get_patient_overview(request, patient_id):
 
     #notification icon 
 
+
 def notification_data(request):
+    today = date.today()
+    notifications = []
+
+    test_outstanding = LabTest.objects.filter(testcompleted=False).count()
+    if test_outstanding > 0:
+        notifications.append({
+            "title": "Test Outstanding",
+            "count": test_outstanding,
+            "url": "/tests/pending/"
+        })
+
+    appointments_today = Appointment.objects.filter(scheduled_time=today).count()
+    if appointments_today > 0:
+        notifications.append({
+            "title": "Appointments Available",
+            "count": appointments_today,
+            "url": "/results/available/"
+        })
+
+    test_results = LabTest.objects.filter(testcompleted=True).count()
+    if test_results > 0:
+        notifications.append({
+            "title": "Available Test Results",
+            "count": test_results,
+            "url": "/bookings/"
+        })
+
+    return JsonResponse({
+        "notifications": notifications
+    })
+
+
+"""def notification_data(request):
     return JsonResponse({
         "notifications": [
             {
@@ -636,7 +670,7 @@ def notification_data(request):
                 "url": "/bookings/"
             },
         ]
-    })
+    })"""
 
 
 @login_required(login_url='home')
@@ -2078,4 +2112,43 @@ def admissions_data(request):
     return JsonResponse({
         'requested': format_data(all_tests),
         'completed': format_data(completed_tests),
+    })
+
+
+#Waiting List
+
+def waitinglist(request):
+    today = date.today()
+    appointments_today = Appointment.objects.filter(scheduled_time=today)
+    test_outstanding = LabTest.objects.filter(testcompleted=True)    
+    context = {
+        'appointments_today': appointments_today,
+        'test_outstanding': test_outstanding,
+    }
+    return render(request, 'doctors/waitinglist.html', context)
+
+
+#Test details and completion by lab
+
+def test_details(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    pending_tests = LabTest.objects.filter(
+        patient=patient,
+        status='pending'
+    ).select_related('category', 'patient')
+
+    grouped_tests = defaultdict(list)
+    for test in pending_tests:
+        grouped_tests[test.category.name].append(test)
+
+    return render(request, 'laboratory/test_details.html', {
+        'pending_tests': dict(grouped_tests),
+        'patient': patient
+    })
+
+
+def test_detail(request):
+    
+    return render(request, 'laboratory/test_details.html', {
     })

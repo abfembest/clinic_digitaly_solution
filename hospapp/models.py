@@ -265,7 +265,7 @@ class Vitals(models.Model):
 # =============================================================================
 
 class LabResultFile(models.Model):
-    labtest = models.ForeignKey('LabTest', on_delete=models.CASCADE)
+    labtest = models.ForeignKey('LabTest', on_delete=models.CASCADE, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     result_file = models.FileField(upload_to='lab_results/')
     uploaded_at = models.DateTimeField(auto_now_add=True)

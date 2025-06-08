@@ -37,6 +37,7 @@ urlpatterns = [
     path('requesttest/', views.requesttest, name='requesttest'),
     path('submit-selection/', views.submit_test_selection, name='submit_selection'),
     path('notifications/data/', views.notification_data, name='notification_data'),
+    path('d/waitinglist/', views.waitinglist, name='waitinglist'),
    
     
 
@@ -45,6 +46,7 @@ urlpatterns = [
     path('l/home', views.laboratory, name='laboratory'),
     path('l/test_entry', views.lab_test_entry, name='lab_test_entry'),
     path('lab/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
+    path('l/test_details/<int:patient_id>/', views.test_details, name='test_details'),
     # path('patient-search/', views.patient_search, name='patient_search'),
     # path('lab-test/submit/', views.submit_lab_test, name='submit_lab_test'),
     path('l/upload_result', views.lab_result_upload, name='lab_result_upload'),
@@ -56,6 +58,8 @@ urlpatterns = [
     path('p/medication', views.dispense_medications, name='dispense_medications'),
     path('p/inventory', views.manage_inventory, name='manage_inventory'),
     path('p/reorder_alerts', views.reorder_alerts, name='reorder_alerts'),
+
+    
 
     path('a/home', views.accounts, name='accounts'),
     path('a/payment_tracker', accts.payment_tracker_view, name="patient_payment_tracker"),
