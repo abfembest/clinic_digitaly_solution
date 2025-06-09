@@ -17,7 +17,7 @@ class Department(models.Model):
     def __str__(self):
         return self.name
 
-class Profile(models.Model):
+class Staff(models.Model):
     ROLE_CHOICES = [
         ('account', 'Account'),
         ('admin', 'Administrator'),
@@ -313,15 +313,6 @@ class LabTest(models.Model):
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.test_name} ({self.status})"
-
-class LabTestField(models.Model):
-    """Additional fields for complex lab tests"""
-    lab_test = models.ForeignKey(LabTest, on_delete=models.CASCADE, related_name='fields')
-    name = models.CharField(max_length=100)
-    value = models.CharField(max_length=255)
-
-    def __str__(self):
-        return f"{self.name}: {self.value}"
 
 class TestCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)

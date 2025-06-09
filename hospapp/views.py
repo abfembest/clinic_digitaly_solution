@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Profile, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
+from .models import Patient, Staff, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -30,6 +30,10 @@ from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 today = timezone.now().date()
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Create your views here.
 ROLE_DASHBOARD_PATHS = {
     'nurse': 'n/home',
@@ -51,7 +55,7 @@ def home(request):
         if user:
             login(request, user)
             try:
-                role = user.profile.role
+                role = user.staff.role
                 dashboard_path = ROLE_DASHBOARD_PATHS.get(role)
                 if dashboard_path:
                     return redirect(f'/{dashboard_path}',context )
@@ -94,7 +98,7 @@ def register(request):
         )
 
         # Create Profile with default role
-        Profile.objects.create(
+        Staff.objects.create(
             user=user,
             gender=gender,
             role="receptionist",
@@ -128,7 +132,7 @@ def bed_ward_management_view(request):
         'wards': Ward.objects.all(),
         'beds_json': beds_json,
         'admitted_patients': Patient.objects.filter(is_inpatient=True),
-        'doctors': Profile.objects.select_related('user').filter(Q(role='doctor') | Q(role='nurse')),
+        'doctors': Staff.objects.select_related('user').filter(Q(role='doctor') | Q(role='nurse')),
         'departments' : Department.objects.all()
     }
     return render(request, 'nurses/bed_ward_management.html', context)
@@ -1455,7 +1459,7 @@ def hr(request):
 
 @login_required(login_url='home')
 def staff_profiles(request):
-    staff_list = Profile.objects.select_related('user', 'department').all()
+    staff_list = Staff.objects.select_related('user', 'department').all()
     departments = Department.objects.all()
     context = {
         'staff_list': staff_list,
@@ -1466,7 +1470,7 @@ def staff_profiles(request):
 @csrf_exempt
 def edit_staff_profile(request, staff_id):
     try:
-        profile = Profile.objects.select_related('user').get(id=staff_id)
+        profile = Staff.objects.select_related('user').get(id=staff_id)
         role = request.POST.get('role')
         department_id = request.POST.get('department')
         phone = request.POST.get('phone_number')
@@ -1488,7 +1492,7 @@ def edit_staff_profile(request, staff_id):
             'phone': profile.phone_number or '—',
             'name': f"{profile.user.first_name} {profile.user.last_name}",
         })
-    except Profile.DoesNotExist:
+    except Staff.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Staff not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -1496,7 +1500,7 @@ def edit_staff_profile(request, staff_id):
 @csrf_exempt
 def change_staff_password(request, staff_id):
     try:
-        profile = Profile.objects.select_related('user').get(id=staff_id)
+        profile = Staff.objects.select_related('user').get(id=staff_id)
         new_password = request.POST.get('new_password')
         confirm_password = request.POST.get('confirm_password')
 
@@ -1507,7 +1511,7 @@ def change_staff_password(request, staff_id):
         profile.user.save()
 
         return JsonResponse({'success': True})
-    except Profile.DoesNotExist:
+    except Staff.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Staff not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -1531,8 +1535,8 @@ def staff_attendance(request):
     today = timezone.localdate()
 
     try:
-        profile = request.user.profile
-    except Profile.DoesNotExist:
+        profile = request.user.staff
+    except Staff.DoesNotExist:
         messages.error(request, "Your user profile is not set up properly.")
         return redirect('home')
 
@@ -1601,7 +1605,7 @@ def staff_attendance(request):
 
 @login_required(login_url='home')
 def staff_transitions(request):
-    staff_list = Profile.objects.all().order_by('user__first_name')
+    staff_list = Staff.objects.all().order_by('user__first_name')
     transitions = StaffTransition.objects.all().order_by('-date', '-created_at')
 
     if request.method == 'POST':
@@ -1676,29 +1680,6 @@ def receptionist(request):
     }
     return render(request, 'receptionist/index.html', context)
 
-@login_required
-def search_patients(request):
-    query = request.GET.get('q', '')
-    results = []
-
-    if len(query) >= 3:
-        patients = Patient.objects.filter(
-            full_name__icontains=query
-        ) | Patient.objects.filter(
-            phone__icontains=query
-        ) | Patient.objects.filter(
-            id_number__icontains=query
-        )
-
-        results = [{
-            'name': p.full_name,
-            'id': p.id_number or f'P-{p.id}',
-            'phone': p.phone,
-            'last_seen': p.date_registered.strftime('%Y-%m-%d'),
-        } for p in patients[:10]]
-
-    return JsonResponse({'results': results})
-
 @login_required(login_url='home')
 def register_patient(request):
     patients = Patient.objects.all().order_by('-date_registered')
@@ -1706,8 +1687,8 @@ def register_patient(request):
     available_beds = Bed.objects.filter(is_occupied=False)
     departments = Department.objects.all()
 
-    doctors = Profile.objects.filter(role='doctor')
-    nurses = Profile.objects.filter(role='nurse')
+    doctors = Staff.objects.filter(role='doctor')
+    nurses = Staff.objects.filter(role='nurse')
 
     return render(request, 'receptionist/register.html', {
         'wards': wards,
@@ -1806,9 +1787,9 @@ def admit_patient(request):
 
         # Get attending staff name
         try:
-            attending_profile = Profile.objects.get(user__id=attending_id)
+            attending_profile = Staff.objects.get(user__id=attending_id)
             attending_name = f"{attending_profile.user.first_name} {attending_profile.user.last_name}"
-        except Profile.DoesNotExist:
+        except Staff.DoesNotExist:
             attending_name = "Unknown Staff"
 
         # Update patient status
@@ -1845,10 +1826,13 @@ def update_patient_info(request):
             # Update basic information
             patient.full_name = request.POST.get('full_name', patient.full_name)
             
-            # Handle date parsing
-            dob = request.POST.get('dob')
+            # Handle date parsing - CORRECTED: use 'date_of_birth' not 'dob'
+            dob = request.POST.get('date_of_birth')
             if dob:
-                patient.date_of_birth = parse_date(dob)
+                try:
+                    patient.date_of_birth = parse_date(dob)
+                except:
+                    logger.warning(f"Invalid date format: {dob}")
             
             patient.gender = request.POST.get('gender', patient.gender)
             patient.phone = request.POST.get('phone', patient.phone)
@@ -1885,8 +1869,63 @@ def update_patient_info(request):
             messages.error(request, "Patient not found.")
         except Exception as e:
             messages.error(request, f"An error occurred while updating patient information: {str(e)}")
+            logger.error(f"Error updating patient {patient_id}: {str(e)}")
             
         return redirect('register_patient')
+    
+    return redirect('register_patient')
+
+@csrf_exempt
+def get_patient_info(request, patient_id):
+    try:
+        patient = Patient.objects.get(id=patient_id)
+        
+        # Build photo URL safely
+        photo_url = ''
+        if patient.photo:
+            try:
+                photo_url = patient.photo.url
+            except:
+                photo_url = ''
+        
+        return JsonResponse({
+            # Basic Demographics
+            'full_name': patient.full_name or '',
+            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '',
+            'gender': patient.gender or '',
+            'phone': patient.phone or '',
+            'email': patient.email or '',
+            'marital_status': patient.marital_status or '',
+            'address': patient.address or '',
+            'nationality': patient.nationality or '',
+            'state_of_origin': patient.state_of_origin or '',
+            
+            # ID Information
+            'id_type': patient.id_type or '',
+            'id_number': patient.id_number or '',
+            
+            # Medical Information
+            'blood_group': patient.blood_group or '',
+            'first_time': patient.first_time or '',
+            'referred_by': patient.referred_by or '',
+            'notes': patient.notes or '',
+            
+            # Next of Kin Information - ALL FIELDS
+            'next_of_kin_name': patient.next_of_kin_name or '',
+            'next_of_kin_phone': patient.next_of_kin_phone or '',
+            'next_of_kin_relationship': patient.next_of_kin_relationship or '',
+            'next_of_kin_email': patient.next_of_kin_email or '',
+            'next_of_kin_address': patient.next_of_kin_address or '',
+            
+            # Photo
+            'photo': photo_url,
+        })
+        
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Patient not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching patient info {patient_id}: {str(e)}")
+        return JsonResponse({'error': 'An error occurred while fetching patient information'}, status=500)
 
 @csrf_exempt
 def schedule_appointment(request):
@@ -1944,34 +1983,6 @@ def refer_patient(request):
         
         referer = request.META.get('HTTP_REFERER', '/')
         return redirect(referer)
-
-    
-@csrf_exempt
-def get_patient_info(request, patient_id):
-    try:
-        patient = Patient.objects.get(id=patient_id)
-        return JsonResponse({
-            'full_name': patient.full_name,
-            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '',
-            'gender': patient.gender,
-            'phone': patient.phone,
-            'email': patient.email,
-            'marital_status': patient.marital_status,
-            'address': patient.address,
-            'nationality': patient.nationality,
-            'state_of_origin': patient.state_of_origin,
-            'id_type': patient.id_type,
-            'id_number': patient.id_number,
-            'first_time': patient.first_time,
-            'referred_by': patient.referred_by,
-            'blood_group': patient.blood_group,
-            'next_of_kin_name': patient.next_of_kin_name,
-            'next_of_kin_phone': patient.next_of_kin_phone,
-            'notes': patient.notes
-        })
-    except Patient.DoesNotExist:
-        return JsonResponse({'error': 'Patient not found'}, status=404)
-
 
 #Charts views
 def chart_view(request):
