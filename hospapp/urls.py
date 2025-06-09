@@ -38,6 +38,7 @@ urlpatterns = [
     path('submit-selection/', views.submit_test_selection, name='submit_selection'),
     path('notifications/data/', views.notification_data, name='notification_data'),
     path('d/waitinglist/', views.waitinglist, name='waitinglist'),
+    path('d/recomended_tests', views.recomended_tests, name='recomended_tests'),
    
     
 

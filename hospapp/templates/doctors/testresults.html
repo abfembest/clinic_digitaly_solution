@@ -1,0 +1,147 @@
+{% extends "laboratory/base.html" %}
+{% load static %}
+
+{% block title %}Lab | Test details{% endblock %}
+
+{% block content %}
+
+<style>
+    .compact-form {
+        max-width: 700px;
+        margin: 15px auto;
+    }
+
+    .card {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .category-header {
+        background: #f8f9fa;
+        border-left: 3px solid #007bff;
+        padding: 0.4rem 0.8rem;
+        margin: 0.5rem 0 0.3rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #495057;
+    }
+
+    .test-row {
+        padding: 0.4rem 0.8rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+        .test-row:last-child {
+            border-bottom: none;
+        }
+
+    .test-label {
+        flex: 1;
+        margin: 0;
+        font-size: 0.875rem;
+        color: #495057;
+    }
+
+    .test-input {
+        width: 45%;
+        padding: 0.3rem 0.6rem;
+        font-size: 0.875rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+
+        .test-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.1rem rgba(0,123,255,0.25);
+            outline: 0;
+        }
+
+    .btn-submit {
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+    }
+
+    h5 {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 0.375rem;
+        overflow: hidden;
+    }
+</style>
+<div class="container-fluid">
+    <div class="compact-form">
+
+        <!-- Patient Information Card -->
+        <div class="card mb-3">
+            <div class="card-body d-flex p-3">
+                {% if patient.photo %}
+                <img src="{{ patient.photo.url }}" class="img-thumbnail mr-3" width="150" height="150" alt="Patient Photo">
+                <div>
+                    <p class="mb-2"><strong>Name:</strong> {{ patient.full_name }}</p>
+                    <p class="mb-2"><strong>Address:</strong> {{ patient.address }} : {{ patient.phone }}</p>
+                    <p class="mb-0"><strong>Age:</strong> 45 years</p>
+
+                </div>
+                {%else%}
+                <img src="" class="img-thumbnail mr-3" width="150" height="150" alt="No Photo">
+                <div>
+                    <p class="mb-2"><strong>Name:</strong> {{ patient.name }}</p>
+                    <p class="mb-2"><strong>Address:</strong> {{ patient.address }} : {{ patient.phone }}</p>
+                    <p class="mb-0"><strong>Age:</strong> 45 years</p>
+
+                </div>
+
+            </div>
+            
+            {%endif%}
+        </div>
+
+        <form method="post" action="{% url 'submit_test_results' patient.id %}">
+            {% csrf_token %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Test Results Entry</h5>
+                </div>
+                <div class="card-body">
+                    {% for cat, testlist in pending_tests.items %}
+                    <div class="category-header bg-secondary">{{ cat }}</div>
+
+                    {% for test in testlist %}
+                    <div class="test-row">
+                        <label class="test-label">{{ test.test_name }}:</label>
+                        <input type="text" name="{{ test.test_name }}" class="test-input" placeholder="Enter result">
+                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input" placeholder="Enter text id">
+
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+
+                    <div class="text-center mt-3">
+                        <button type="submit" class="btn btn-success btn-submit">Submit Test Details</button>
+                    </div>
+                </div>
+
+
+            </div>
+        </form>
+
+
+    </div>
+</div>
+
+{% endblock %}
