@@ -17,7 +17,7 @@ class Department(models.Model):
     def __str__(self):
         return self.name
 
-class Profile(models.Model):
+class Staff(models.Model):
     ROLE_CHOICES = [
         ('account', 'Account'),
         ('admin', 'Administrator'),
@@ -292,6 +292,7 @@ class LabTest(models.Model):
     result_value = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     testcompleted = models.BooleanField(default=0)
+    doctor_comments = models.IntegerField(null=True, blank=True)
 
     # Timing
     date_performed = models.DateTimeField(null=True, blank=True)
@@ -313,15 +314,6 @@ class LabTest(models.Model):
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.test_name} ({self.status})"
-
-class LabTestField(models.Model):
-    """Additional fields for complex lab tests"""
-    lab_test = models.ForeignKey(LabTest, on_delete=models.CASCADE, related_name='fields')
-    name = models.CharField(max_length=100)
-    value = models.CharField(max_length=255)
-
-    def __str__(self):
-        return f"{self.name}: {self.value}"
 
 class TestCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -596,3 +588,18 @@ class ServiceType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+# =============================================================================
+# DOCTORS COMMENT MODELS
+# =============================================================================
+
+class DoctorComments(models.Model):
+    comments = models.TextField()
+    date = models.DateTimeField(default=timezone.now)
+    doctor_name = models.CharField(max_length=100)
+    labtech_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Comment by Dr. {self.doctor_name} on {self.date.strftime('%Y-%m-%d')}"

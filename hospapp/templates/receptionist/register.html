@@ -341,7 +341,7 @@
                                     <div class="form-group col-md-3">
                                         <label>Gender <span class="text-danger">*</span></label>
                                         <select class="form-control" required name="gender" id="genderField">
-                                            <option value="" disabled selected>Choose...</option>
+                                            <option value="" disabled>Choose...</option>
                                             <option value="Male">Male</option>
                                             <option value="Female">Female</option>
                                         </select>
@@ -363,7 +363,7 @@
                                         <label>Marital Status <span class="text-danger">*</span></label>
                                         <select class="form-control" name="marital_status" id="maritalStatusField"
                                             required>
-                                            <option value="" disabled selected> -- Choose Marital Status --</option>
+                                            <option value="" disabled> -- Choose Marital Status --</option>
                                             <option value="Single">Single</option>
                                             <option value="Married">Married</option>
                                             <option value="Divorced">Divorced</option>
@@ -393,7 +393,7 @@
                                     <div class="form-group col-md-4">
                                         <label>ID Type</label>
                                         <select class="form-control" name="id_type" id="idTypeField">
-                                            <option value="" disabled selected> -- Choose ID Type --</option>
+                                            <option value=""> -- Choose ID Type --</option>
                                             <option value="National ID">National ID</option>
                                             <option value="Voter Card">Voter Card</option>
                                             <option value="Driver's License">Driver's License</option>
@@ -415,7 +415,7 @@
                                     <div class="form-group col-md-4">
                                         <label>Blood Group</label>
                                         <select class="form-control" name="blood_group" id="bloodGroupField">
-                                            <option value="" disabled selected> -- Choose Blood Group --</option>
+                                            <option value=""> -- Choose Blood Group --</option>
                                             <option value="A+">A+</option>
                                             <option value="A-">A-</option>
                                             <option value="B+">B+</option>
@@ -451,7 +451,7 @@
                                         <label>Relationship <span class="text-danger">*</span></label>
                                         <select class="form-control" name="next_of_kin_relationship"
                                             id="nextOfKinRelationshipField" required>
-                                            <option value="" disabled selected>Choose relationship...</option>
+                                            <option value="">Choose relationship...</option>
                                             <option value="Spouse">Spouse</option>
                                             <option value="Father">Father</option>
                                             <option value="Mother">Mother</option>
@@ -581,110 +581,164 @@
 </section>
 
 <script>
-    // Updated AJAX script for patient data fetching with all fields properly mapped
-    document.getElementById('patientSelect').addEventListener('change', function () {
-        const patientId = this.value;
-        if (!patientId) return;
+// Enhanced AJAX script for patient data fetching with better error handling
+document.getElementById('patientSelect').addEventListener('change', function () {
+    const patientId = this.value;
+    if (!patientId) {
+        clearForm();
+        return;
+    }
 
-        fetch(`/ajax/patient-info/${patientId}/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Patient data received:', data); // Debug log
+    // Show loading state
+    const submitButton = document.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    submitButton.disabled = true;
 
-                // Handle patient photo display
-                const photoDisplay = document.getElementById('patientPhotoDisplay');
-                const noPhotoMessage = document.getElementById('noPhotoMessage');
+    fetch(`/ajax/patient-info/${patientId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Patient data received:', data);
 
-                if (data.photo && data.photo !== '' && data.photo !== null) {
-                    photoDisplay.src = data.photo;
-                    photoDisplay.style.display = 'block';
-                    noPhotoMessage.style.display = 'none';
+            // Handle patient photo display
+            handlePhotoDisplay(data.photo);
 
-                    // Add error handler for image loading
-                    photoDisplay.onerror = function () {
-                        console.log('Image failed to load:', data.photo);
-                        photoDisplay.style.display = 'none';
-                        noPhotoMessage.style.display = 'block';
-                    };
-                } else {
-                    photoDisplay.style.display = 'none';
-                    noPhotoMessage.style.display = 'block';
-                }
+            // Populate all form fields
+            populateFormFields(data);
 
-                // Populate basic patient information fields
-                document.getElementById('fullNameField').value = data.full_name || '';
+            // Reset button state
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error fetching patient info:', error);
+            alert('Error loading patient information. Please try again.');
+            
+            // Reset button state
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+            
+            clearForm();
+        });
+});
 
-                // Handle date format conversion for date_of_birth
-                let dobValue = data.date_of_birth || '';
-                if (dobValue) {
-                    const date = new Date(dobValue);
-                    if (!isNaN(date.getTime())) {
-                        dobValue = date.toISOString().split('T')[0];
+function handlePhotoDisplay(photoUrl) {
+    const photoDisplay = document.getElementById('patientPhotoDisplay');
+    const noPhotoMessage = document.getElementById('noPhotoMessage');
+
+    // Always reset the display first
+    photoDisplay.style.display = 'none';
+    noPhotoMessage.style.display = 'block';
+    noPhotoMessage.textContent = 'No photo available';
+
+    if (photoUrl && photoUrl !== '' && photoUrl !== null) {
+        // Show loading state
+        noPhotoMessage.textContent = 'Loading photo...';
+        
+        // Set up error handler BEFORE setting src
+        photoDisplay.onerror = function () {
+            console.log('Image failed to load:', photoUrl);
+            photoDisplay.style.display = 'none';
+            noPhotoMessage.style.display = 'block';
+            noPhotoMessage.textContent = 'Photo not available';
+        };
+
+        // Set up success handler
+        photoDisplay.onload = function () {
+            console.log('Image loaded successfully:', photoUrl);
+            photoDisplay.style.display = 'block';
+            noPhotoMessage.style.display = 'none';
+        };
+
+        // Clear any cached version and set new source
+        photoDisplay.src = '';
+        photoDisplay.src = photoUrl;
+    }
+}
+
+function populateFormFields(data) {
+    // Helper function to safely set input values
+    const setInputValue = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.value = value || '';
+        }
+    };
+
+    // Helper function to set select values
+    const setSelectValue = (selectId, value) => {
+        const select = document.getElementById(selectId);
+        if (select && value) {
+            select.value = value;
+            // If value setting didn't work, try finding by text
+            if (select.value !== value) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].text === value || 
+                        select.options[i].value === value ||
+                        select.options[i].text.toLowerCase() === value.toLowerCase()) {
+                        select.selectedIndex = i;
+                        break;
                     }
                 }
-                document.getElementById('dobField').value = dobValue;
+            }
+        } else if (select) {
+            select.selectedIndex = 0; // Reset to first option (usually "Choose...")
+        }
+    };
 
-                // Helper function to set select values
-                const setSelectValue = (selectId, value) => {
-                    const select = document.getElementById(selectId);
-                    if (select && value) {
-                        // First try exact match
-                        for (let i = 0; i < select.options.length; i++) {
-                            if (select.options[i].text === value || select.options[i].value === value) {
-                                select.selectedIndex = i;
-                                return;
-                            }
-                        }
-                        // If no exact match found, try case-insensitive match
-                        for (let i = 0; i < select.options.length; i++) {
-                            if (select.options[i].text.toLowerCase() === value.toLowerCase() ||
-                                select.options[i].value.toLowerCase() === value.toLowerCase()) {
-                                select.selectedIndex = i;
-                                return;
-                            }
-                        }
-                    }
-                };
+    // Populate basic patient information
+    setInputValue('fullNameField', data.full_name);
+    setInputValue('dobField', data.date_of_birth);
+    setInputValue('phoneField', data.phone);
+    setInputValue('emailField', data.email);
+    setInputValue('addressField', data.address);
+    setInputValue('nationalityField', data.nationality);
+    setInputValue('stateField', data.state_of_origin);
+    setInputValue('idNumberField', data.id_number);
+    setInputValue('referredByField', data.referred_by);
 
-                // Set select field values
-                setSelectValue('genderField', data.gender);
-                setSelectValue('maritalStatusField', data.marital_status);
-                setSelectValue('idTypeField', data.id_type);
-                setSelectValue('bloodGroupField', data.blood_group);
+    // Set select fields
+    setSelectValue('genderField', data.gender);
+    setSelectValue('maritalStatusField', data.marital_status);
+    setSelectValue('idTypeField', data.id_type);
+    setSelectValue('bloodGroupField', data.blood_group);
 
-                // Fill basic information text inputs
-                document.getElementById('phoneField').value = data.phone || '';
-                document.getElementById('emailField').value = data.email || '';
-                document.getElementById('addressField').value = data.address || '';
-                document.getElementById('nationalityField').value = data.nationality || '';
-                document.getElementById('stateField').value = data.state_of_origin || '';
-                document.getElementById('idNumberField').value = data.id_number || '';
-                document.getElementById('referredByField').value = data.referred_by || '';
+    // Populate Next of Kin information
+    setInputValue('nextOfKinNameField', data.next_of_kin_name);
+    setInputValue('nextOfKinPhoneField', data.next_of_kin_phone);
+    setInputValue('nextOfKinEmailField', data.next_of_kin_email);
+    setInputValue('nextOfKinAddressField', data.next_of_kin_address);
+    setSelectValue('nextOfKinRelationshipField', data.next_of_kin_relationship);
 
-                // Fill Next of Kin information
-                document.getElementById('nextOfKinNameField').value = data.next_of_kin_name || '';
-                document.getElementById('nextOfKinPhoneField').value = data.next_of_kin_phone || '';
+    // Additional notes
+    setInputValue('notesField', data.notes);
+}
 
-                // Set Next of Kin relationship dropdown
-                setSelectValue('nextOfKinRelationshipField', data.next_of_kin_relationship);
-
-                // Fill additional Next of Kin fields
-                document.getElementById('nextOfKinEmailField').value = data.next_of_kin_email || '';
-                document.getElementById('nextOfKinAddressField').value = data.next_of_kin_address || '';
-
-                // Fill additional notes
-                document.getElementById('notesField').value = data.notes || '';
-            })
-            .catch(error => {
-                console.error('Error fetching patient info:', error);
-                alert('Error loading patient information. Please try again.');
-            });
+function clearForm() {
+    // Clear all form fields
+    const inputs = document.querySelectorAll('#update input, #update textarea');
+    inputs.forEach(input => {
+        if (input.type !== 'file' && input.name !== 'patient_id') {
+            input.value = '';
+        }
     });
+
+    const selects = document.querySelectorAll('#update select');
+    selects.forEach(select => {
+        if (select.name !== 'patient_id') {
+            select.selectedIndex = 0;
+        }
+    });
+
+    // Reset photo display
+    document.getElementById('patientPhotoDisplay').style.display = 'none';
+    document.getElementById('noPhotoMessage').style.display = 'block';
+}
 </script>
 
 {% endblock %}
