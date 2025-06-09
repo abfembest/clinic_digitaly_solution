@@ -26,16 +26,16 @@
     <div class="container-fluid">
         <!-- Success/Error Messages -->
         {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            {% endfor %}
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        {% endfor %}
         {% endif %}
-        
+
         <!-- Statistics Cards -->
         <div class="row mb-3">
             <div class="col-lg-3 col-6">
@@ -56,8 +56,8 @@
                         <h3>{{ stats.total_pending_tests }}</h3>
                         {%else%}
                         <h3>0</h3>
-                        <p>Pending Tests</p>
                         {%endif%}
+                        <p>Pending Tests</p>
                     </div>
                     <div class="icon">
                         <i class="fas fa-file-medical"></i>
@@ -71,7 +71,7 @@
                         <h3>{{ stats.total_completed_today }}</h3>
                         {%else%}
                         <h3>0</h3>
-                        <p>Completed Today</p>                        
+                        <p>Completed Today</p>
                         {%endif%}
                     </div>
                     <div class="icon">
@@ -87,7 +87,7 @@
                         {%else%}
                         <h3>0</h3>
                         <p>In Progress</p>
-                        {%endif%}                      
+                        {%endif%}
                     </div>
                     <div class="icon">
                         <i class="fas fa-flask"></i>
@@ -96,42 +96,7 @@
             </div>
         </div>
 
-        <!-- Category Overview Cards -->
-        {% if category_overview %}
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card card-outline card-info">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-layer-group"></i> Test Categories Overview
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            {% for cat_data in category_overview %}
-                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-                                <div class="info-box">
-                                    <span class="info-box-icon bg-primary"><i class="fas fa-vial"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">{{ cat_data.category.name }}</span>
-                                        <span class="info-box-number">{{ cat_data.total_tests }} tests</span>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-warning" style="width: {% widthratio cat_data.pending_tests cat_data.total_tests 100 %}%"></div>
-                                        </div>
-                                        <span class="progress-description">
-                                            {{ cat_data.pending_tests }} pending, {{ cat_data.completed_tests }} completed
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
+
         <!-- All Patients Table -->
         <div class="card card-outline card-primary">
             <div class="card-header">
@@ -174,15 +139,15 @@
                                         <strong>{{ patient_data.patient.full_name }}</strong>
                                         <br>
                                         <small class="text-muted">
-                                            {{ patient_data.patient.gender }} • 
+                                            {{ patient_data.patient.gender }} •
                                             {{ patient_data.patient.date_of_birth|date:"M d, Y" }} •
                                             {{ patient_data.patient.blood_group|default:"N/A" }}
                                         </small>
                                         {% if patient_data.patient.is_inpatient %}
-                                            <br><span class="badge badge-info">Inpatient</span>
-                                            {% if patient_data.patient.ward %}
-                                                <small class="text-muted">{{ patient_data.patient.ward.name }}</small>
-                                            {% endif %}
+                                        <br><span class="badge badge-info">Inpatient</span>
+                                        {% if patient_data.patient.ward %}
+                                        <small class="text-muted">{{ patient_data.patient.ward.name }}</small>
+                                        {% endif %}
                                         {% endif %}
                                     </div>
                                 </td>
@@ -194,51 +159,51 @@
                                     </small>
                                 </td>
                                 <!--<td>
-                                    <span class="badge badge-{% if patient_data.patient.status == 'critical' %}danger{% elif patient_data.patient.status == 'stable' %}success{% else %}warning{% endif %}">
-                                        
-                                    </span>
-                                </td>-->
+                                <span class="badge badge-{% if patient_data.patient.status == 'critical' %}danger{% elif patient_data.patient.status == 'stable' %}success{% else %}warning{% endif %}">
+
+                                </span>
+                            </td>-->
                                 <td>
                                     <div class="d-flex flex-column">
                                         {% if patient_data.pending_count > 0 %}
-                                            <span class="badge badge-warning mb-1">{{ patient_data.pending_count }} Pending</span>
+                                        <span class="badge badge-warning mb-1">{{ patient_data.pending_count }} Pending</span>
                                         {% endif %}
                                         {% if patient_data.in_progress_count > 0 %}
-                                            <span class="badge badge-info mb-1">{{ patient_data.in_progress_count }} In Progress</span>
+                                        <span class="badge badge-info mb-1">{{ patient_data.in_progress_count }} In Progress</span>
                                         {% endif %}
                                         {% if patient_data.completed_count > 0 %}
-                                            <span class="badge badge-success mb-1">{{ patient_data.completed_count }} Completed</span>
+                                        <span class="badge badge-success mb-1">{{ patient_data.completed_count }} Completed</span>
                                         {% endif %}
                                         {% if patient_data.total_tests == 0 %}
-                                            <span class="text-muted">No tests</span>
+                                        <span class="text-muted">No tests</span>
                                         {% endif %}
                                     </div>
                                 </td>
                                 <td>
                                     {% if patient_data.categories %}
-                                        {% for category in patient_data.categories %}
-                                            <span class="badge badge-outline mb-1">{{ category.name }}</span>
-                                            {% if not forloop.last %}<br>{% endif %}
-                                        {% endfor %}
+                                    {% for category in patient_data.categories %}
+                                    <span class="badge badge-outline mb-1">{{ category.name }}</span>
+                                    {% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
                                     {% else %}
-                                        <small class="text-muted">No categories</small>
+                                    <small class="text-muted">No categories</small>
                                     {% endif %}
                                 </td>
-                                
+
                                 <td>
                                     <small class="text-muted">{{ patient_data.referred_by|default:"Walk-in" }}</small>
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm" role="group" title="Open test deatails"">
+                                    <div class="btn-group btn-group-sm" role="group" title="Open test deatails" ">
                                         <a href="{% url 'test_details' patient_data.patient.id %}" class="btn btn-primary">
-                                          <i class="fas fa-eye"></i>
+                                            <i class="fas fa-eye"></i>
                                         </a>
                                         <!--<button class="btn btn-primary view-tests"
-                                                data-patient-id="{{ patient_data.patient.id }}"
-                                                data-patient-name="{{ patient_data.patient.full_name }}"
-                                                title="View All Tests">
-                                            <i class="fas fa-eye"></i>
-                                        </button>-->
+                                            data-patient-id="{{ patient_data.patient.id }}"
+                                            data-patient-name="{{ patient_data.patient.full_name }}"
+                                            title="View All Tests">
+                                        <i class="fas fa-eye"></i>
+                                    </button>-->
                                         <button class="btn btn-success create-test"
                                                 data-patient-id="{{ patient_data.patient.id }}"
                                                 data-patient-name="{{ patient_data.patient.full_name }}"
@@ -273,6 +238,44 @@
             </div>
         </div>
 
+
+
+        <!-- Category Overview Cards -->
+        <!--{% if category_overview %}
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card card-outline card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-layer-group"></i> Test Categories Overview
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for cat_data in category_overview %}
+                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-primary"><i class="fas fa-vial"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">{{ cat_data.category.name }}</span>
+                                        <span class="info-box-number">{{ cat_data.total_tests }} tests</span>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning" style="width: {% widthratio cat_data.pending_tests cat_data.total_tests 100 %}%"></div>
+                                        </div>
+                                        <span class="progress-description">
+                                            {{ cat_data.pending_tests }} pending, {{ cat_data.completed_tests }} completed
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}-->
+
         <!-- Quick Test Entry Section for Pending Tests -->
         {% if pending_tests_by_category %}
         <div class="card card-outline card-warning mt-4">
@@ -288,7 +291,7 @@
                         <div class="card card-outline card-warning">
                             <div class="card-header">
                                 <h5 class="card-title">
-                                    {{ cat_data.category.name }} 
+                                    {{ cat_data.category.name }}
                                     <span class="badge badge-warning">{{ cat_data.count }} tests</span>
                                 </h5>
                             </div>
@@ -299,7 +302,7 @@
                                         <strong>{{ test.patient.full_name }}</strong><br>
                                         <small class="text-muted">{{ test.test_name }}</small>
                                     </div>
-                                    <button class="btn btn-sm btn-warning complete-test-direct" 
+                                    <button class="btn btn-sm btn-warning complete-test-direct"
                                             data-test-id="{{ test.id }}"
                                             data-test-name="{{ test.test_name }}"
                                             data-patient-name="{{ test.patient.full_name }}">
@@ -334,7 +337,7 @@
                             <i class="fas fa-spinner fa-spin fa-2x"></i>
                             <p>Loading patient data...</p>
                         </div>
-                        
+
                         <!-- Patient Info -->
                         <div class="row mb-3" id="patientInfoSection" style="display: none;">
                             <div class="col-md-12">
@@ -348,7 +351,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Pending Tests -->
                         <div id="pendingTestsContainer" style="display: none;">
                             <h6 class="text-warning mb-3">
@@ -396,7 +399,7 @@
                                 </table>
                             </div>
                         </div>
-                        
+
                         <!-- Completed Tests -->
                         <div id="completedTestsContainer" class="mt-4" style="display: none;">
                             <h6 class="text-success mb-3">
@@ -421,7 +424,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="modal-footer">
                         <button type="button" class="btn btn-success" id="createTestBtn">
                             <i class="fas fa-plus"></i> Create New Test
@@ -449,32 +452,32 @@
                     <form id="createTestForm">
                         <div class="modal-body">
                             <input type="hidden" id="createTestPatientId" name="patient_id">
-                            
+
                             <div class="form-group">
                                 <label>Patient</label>
                                 <input type="text" class="form-control" id="createTestPatientName" readonly>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="testName">Test Name *</label>
                                 <input type="text" class="form-control" id="testName" name="test_name" required>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="testCategory">Category</label>
                                 <select class="form-control" id="testCategory" name="category_id">
                                     <option value="">Select Category</option>
                                     {% for category in test_categories %}
-                                        <option value="{{ category.id }}">{{ category.name }}</option>
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="normalRange">Normal Range</label>
                                 <input type="text" class="form-control" id="normalRange" name="normal_range" placeholder="e.g., 70-100 mg/dL">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="testInstructions">Instructions</label>
                                 <textarea class="form-control" id="testInstructions" name="instructions" rows="3"></textarea>
@@ -507,17 +510,17 @@
                         {% csrf_token %}
                         <div class="modal-body">
                             <input type="hidden" id="completeTestId" name="test_id">
-                            
+
                             <div class="form-group">
                                 <label>Test Name</label>
                                 <input type="text" class="form-control" id="completeTestName" readonly>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="testResult">Test Result *</label>
                                 <textarea class="form-control" id="testResult" name="result_value" rows="4" required placeholder="Enter test results..."></textarea>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label for="testNotes">Additional Notes</label>
                                 <textarea class="form-control" id="testNotes" name="notes" rows="2" placeholder="Optional notes..."></textarea>

@@ -112,7 +112,7 @@ class Patient(models.Model):
     next_of_kin_phone = models.CharField(max_length=15)
     
     # Next of Kin - ADD THESE NEW FIELDS
-    next_of_kin_relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, blank=True, null=True)
+    next_of_kin_relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, blank=True, null=True, default='Ade')
     next_of_kin_email = models.EmailField(blank=True, null=True)
     next_of_kin_address = models.TextField(blank=True, null=True)
 

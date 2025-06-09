@@ -26,6 +26,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import IntegrityError, DatabaseError
 from decimal import Decimal
+from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 today = timezone.now().date()
 
