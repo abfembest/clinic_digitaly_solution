@@ -117,10 +117,42 @@ def logout_view(request):
     return redirect('home')
 
 
-""" Nurses Views """
+''' ############################################################################################################################ Nurses View ############################################################################################################################ '''
+
 @login_required(login_url='home')
 def nurses(request):
-    return render(request,'nurses/index.html')
+    user = request.user
+
+    # Fetch nurse profile
+    try:
+        nurse_profile = Staff.objects.get(user=user, role='nurse')
+    except Staff.DoesNotExist:
+        nurse_profile = None
+
+    # Dynamic dashboard data
+    active_patients = Patient.objects.filter(is_inpatient=True).count()
+    critical_patients = Patient.objects.filter(status='critical').count()
+    stable_patients = Patient.objects.filter(status='stable').count()
+    recovered_patients = Patient.objects.filter(status='recovered').count()
+    available_beds = Bed.objects.filter(is_occupied=False).count()
+
+    # Recent activities (limit to last 5 nursing notes)
+    recent_notes = NursingNote.objects.select_related('patient').order_by('-note_datetime')[:5]
+
+    # Today's admissions
+    todays_admissions = Admission.objects.filter(admission_date=now().date()).count()
+
+    context = {
+        'nurse_profile': nurse_profile,
+        'active_patients': active_patients,
+        'critical_patients': critical_patients,
+        'stable_patients': stable_patients,
+        'recovered_patients': recovered_patients,
+        'available_beds': available_beds,
+        'recent_notes': recent_notes,
+        'todays_admissions': todays_admissions,
+    }
+    return render(request, 'nurses/index.html', context)
 
 @login_required(login_url='home')
 def bed_ward_management_view(request):
@@ -442,6 +474,8 @@ def save_nursing_note(request):
         return redirect('nursing_notes')
 
     return redirect('nursing_notes')
+
+''' ############################################################################################################################ End Nurses View ############################################################################################################################ '''
 
 
 
@@ -1983,6 +2017,8 @@ def refer_patient(request):
         
         referer = request.META.get('HTTP_REFERER', '/')
         return redirect(referer)
+    
+''' ############################################################################################################################ End Receptionist View ############################################################################################################################ '''
 
 #Charts views
 def chart_view(request):
