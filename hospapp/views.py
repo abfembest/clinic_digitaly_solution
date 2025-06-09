@@ -29,6 +29,7 @@ from decimal import Decimal
 from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 today = timezone.now().date()
+from django.urls import reverse
 
 import logging
 
@@ -123,24 +124,65 @@ def logout_view(request):
 def nurses(request):
     user = request.user
 
-    # Fetch nurse profile
     try:
         nurse_profile = Staff.objects.get(user=user, role='nurse')
     except Staff.DoesNotExist:
         nurse_profile = None
 
-    # Dynamic dashboard data
     active_patients = Patient.objects.filter(is_inpatient=True).count()
     critical_patients = Patient.objects.filter(status='critical').count()
     stable_patients = Patient.objects.filter(status='stable').count()
     recovered_patients = Patient.objects.filter(status='recovered').count()
     available_beds = Bed.objects.filter(is_occupied=False).count()
 
-    # Recent activities (limit to last 5 nursing notes)
     recent_notes = NursingNote.objects.select_related('patient').order_by('-note_datetime')[:5]
-
-    # Today's admissions
     todays_admissions = Admission.objects.filter(admission_date=now().date()).count()
+
+    # ✅ Define quick actions here
+    quick_actions = [
+        {
+            'title': 'Admit New Patient',
+            'url': reverse('nursing_ward_actions'),
+            'icon': 'fa-user-plus',
+            'color': 'success',
+            'description': 'Register and admit new patients'
+        },
+        {
+            'title': 'Record Vitals',
+            'url': reverse('vitals'),
+            'icon': 'fa-heartbeat',
+            'color': 'warning',
+            'description': 'Monitor and record vital signs'
+        },
+        {
+            'title': 'Consultation Notes',
+            'url': reverse('nursing_notes'),
+            'icon': 'fa-clipboard',
+            'color': 'info',
+            'description': 'Document patient consultations'
+        },
+        {
+            'title': 'Prep for Consultation',
+            'url': '#',
+            'icon': 'fa-stethoscope',
+            'color': 'primary',
+            'description': 'Prepare patients for doctor visits'
+        },
+        {
+            'title': 'Discharge Patient',
+            'url': '#',
+            'icon': 'fa-door-open',
+            'color': 'danger',
+            'description': 'Process patient discharge'
+        },
+        {
+            'title': 'Monitor Patient Status',
+            'url': '#',
+            'icon': 'fa-chart-line',
+            'color': 'dark',
+            'description': 'View patient monitoring data'
+        },
+    ]
 
     context = {
         'nurse_profile': nurse_profile,
@@ -151,7 +193,9 @@ def nurses(request):
         'available_beds': available_beds,
         'recent_notes': recent_notes,
         'todays_admissions': todays_admissions,
+        'quick_actions': quick_actions,  # ✅ Add to context
     }
+
     return render(request, 'nurses/index.html', context)
 
 @login_required(login_url='home')
