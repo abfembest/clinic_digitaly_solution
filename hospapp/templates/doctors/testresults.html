@@ -1,4 +1,4 @@
-{% extends "laboratory/base.html" %}
+{% extends "doctors/base.html" %}
 {% load static %}
 
 {% block title %}Lab | Test details{% endblock %}
@@ -83,7 +83,7 @@
         overflow: hidden;
     }
 </style>
-<div class="container-fluid">
+<div class="container-fluid" id="print-area">
     <div class="compact-form">
 
         <!-- Patient Information Card -->
@@ -111,7 +111,7 @@
             {%endif%}
         </div>
 
-        <form method="post" action="{% url 'submit_test_results' patient.id %}">
+        <form method="post" action="{% url 'doc_test_comment' patient.id %}">
             {% csrf_token %}
             <div class="card">
                 <div class="card-header bg-primary text-white">
@@ -124,20 +124,23 @@
                     {% for test in testlist %}
                     <div class="test-row">
                         <label class="test-label">{{ test.test_name }}:</label>
-                        <input type="text" name="{{ test.test_name }}" class="test-input" placeholder="Enter result">
-                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input" placeholder="Enter text id">
-
+                        <input type="text" value="{{ test.result_value }}" class="test-input" readonly>
+                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input" placeholder="Enter text id" />
                     </div>
                     {% endfor %}
                     {% endfor %}
-
-                    <div class="text-center mt-3">
-                        <button type="submit" class="btn btn-success btn-submit">Submit Test Details</button>
+                    
+                        <div class="category-header bg-secondary">Doctor's comments</div>
+                        <textarea class="form-control" name="doctor_comment"></textarea>
+                    
+                        <div class="text-center mt-3">
+                            <button class="btn btn-secondary print">Print test result</button>
+                             <button type="submit" class="btn btn-primary btn-submit">Submit Test Details</button>
+                        </div>
                     </div>
+
+
                 </div>
-
-
-            </div>
         </form>
 
 

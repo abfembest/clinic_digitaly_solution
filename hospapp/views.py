@@ -2215,6 +2215,28 @@ def waitinglist(request):
     return render(request, 'doctors/waitinglist.html', context)
 
 
+
+
+
+
+##### Doctor test result view
+def test_results(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    pending_tests = LabTest.objects.filter(
+        patient=patient,
+        status='completed'
+    ).select_related('category', 'patient')
+
+    grouped_tests = defaultdict(list)
+    for test in pending_tests:
+        grouped_tests[test.category.name].append(test)
+
+    return render(request, 'doctors/testresults.html', {
+        'pending_tests': dict(grouped_tests),
+        'patient': patient
+    })
+
 #Test details and completion by lab
 
 def test_details(request, patient_id):
@@ -2235,18 +2257,9 @@ def test_details(request, patient_id):
     })
 
 
-def test_detail(request):
-    
-    return render(request, 'laboratory/test_details.html', {
-    })
-
 
 #Lab submiting test results
-from django.shortcuts import redirect
-from django.views.decorators.csrf import csrf_exempt
-from .models import LabTest
-
-@csrf_exempt  # Only needed if you don't use {% csrf_token %} — you're using it, so this is optional
+ # Only needed if you don't use {% csrf_token %} — you're using it, so this is optional
 def submit_test_results(request, patient_id):
     if request.method == 'POST':
         test_ids = request.POST.getlist('ids')
@@ -2267,7 +2280,7 @@ def submit_test_results(request, patient_id):
         return redirect('test_details', patient_id=patient_id)
 
     return redirect('test_details', patient_id=patient_id)
- #
+ 
 
 
  #Doctor's fetching test results that were recommended
@@ -2309,7 +2322,7 @@ def recomended_tests(request):
     for patient in patients:
         tests = {
             'pending': LabTest.objects.filter(patient=patient, status='pending'),
-            'completed': LabTest.objects.filter(patient=patient, status='completed'),
+            'completed': LabTest.objects.filter(patient=patient, status='completed', doctor_comments=0),
             'in_progress': LabTest.objects.filter(patient=patient, status='in_progress')
         }
 
@@ -2364,8 +2377,8 @@ def recomended_tests(request):
         }
         for cat in all_categories
     ]
-
-    all_pending_tests = LabTest.objects.select_related('patient', 'category').prefetch_related('category__subcategories').filter(status='pending').order_by('-requested_at')
+    all_pending_tests = LabTest.objects.select_related('patient', 'category').prefetch_related('category__subcategories').filter(status='pending', doctor_comments=0).order_by('-requested_at')
+    #all_pending_tests = LabTest.objects.select_related('patient', 'category').prefetch_related('category__subcategories').filter(status='pending').order_by('-requested_at')
 
     pending_by_category = defaultdict(lambda: {'tests': [], 'count': 0})
     for test in all_pending_tests:
@@ -2397,3 +2410,33 @@ def recomended_tests(request):
     }
 
     return render(request, 'doctors/recomended_test.html', context)
+
+#=============================
+#Doctor submitting comments on final test results
+#=============================
+from .models import LabTest, DoctorComments, Patient
+
+def doc_test_comment(request, patient_id):
+    if request.method == 'POST':
+        comment_text = request.POST.get('doctor_comment', '')
+        ids = request.POST.getlist('ids')
+
+        if not ids or not comment_text:
+            messages.error(request, "You must select tests and enter a comment.")
+            return redirect('test_details', patient_id=patient_id)
+
+        # Create a new DoctorComments record
+        comment_record = DoctorComments.objects.create(
+            comments=comment_text,
+            date=timezone.now(),
+            doctor_name=str(request.user),  # or request.user.get_full_name() if applicable
+            labtech_name="LabTech Placeholder"  # Replace with actual logic if needed
+        )
+        # Update each LabTest with the new doctor_comments ID
+        LabTest.objects.filter(id__in=ids).update(doctor_comments=comment_record.id)
+
+        messages.success(request, "Doctor's comment added and tests updated successfully.")
+        return redirect('test_details', patient_id=patient_id)
+
+    # If GET request (optional, show test details or redirect)
+    return redirect('test_details', patient_id=patient_id)

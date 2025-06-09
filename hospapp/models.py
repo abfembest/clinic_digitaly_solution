@@ -292,6 +292,7 @@ class LabTest(models.Model):
     result_value = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     testcompleted = models.BooleanField(default=0)
+    doctor_comments = models.IntegerField(null=True, blank=True)
 
     # Timing
     date_performed = models.DateTimeField(null=True, blank=True)
@@ -587,3 +588,18 @@ class ServiceType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+# =============================================================================
+# DOCTORS COMMENT MODELS
+# =============================================================================
+
+class DoctorComments(models.Model):
+    comments = models.TextField()
+    date = models.DateTimeField(default=timezone.now)
+    doctor_name = models.CharField(max_length=100)
+    labtech_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Comment by Dr. {self.doctor_name} on {self.date.strftime('%Y-%m-%d')}"

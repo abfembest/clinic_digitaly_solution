@@ -1,4 +1,4 @@
-{% extends "laboratory/base.html" %}
+{% extends "doctors/base.html" %}
 {% load static %}
 
 {% block title %}HMS | Lab Test Entry{% endblock %}
@@ -195,7 +195,7 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group" title="Open test deatails" ">
-                                        <a href="{% url 'test_details' patient_data.patient.id %}" class="btn btn-primary">
+                                        <a href="{% url 'test_results' patient_data.patient.id %}" class="btn btn-primary">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <!--<button class="btn btn-primary view-tests"
@@ -240,41 +240,6 @@
 
 
 
-        <!-- Category Overview Cards -->
-        <!--{% if category_overview %}
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card card-outline card-info">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-layer-group"></i> Test Categories Overview
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            {% for cat_data in category_overview %}
-                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-                                <div class="info-box">
-                                    <span class="info-box-icon bg-primary"><i class="fas fa-vial"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">{{ cat_data.category.name }}</span>
-                                        <span class="info-box-number">{{ cat_data.total_tests }} tests</span>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-warning" style="width: {% widthratio cat_data.pending_tests cat_data.total_tests 100 %}%"></div>
-                                        </div>
-                                        <span class="progress-description">
-                                            {{ cat_data.pending_tests }} pending, {{ cat_data.completed_tests }} completed
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}-->
 
         <!-- Quick Test Entry Section for Pending Tests -->
         {% if pending_tests_by_category %}

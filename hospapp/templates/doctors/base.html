@@ -49,7 +49,6 @@
 
             <!-- Right navbar links -->
             <ul class="navbar-nav ml-auto">
-               
             </ul>
         </nav>
 
@@ -89,7 +88,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="{% url 'recomended_tests' %}" class="nav-link">
+                            <a href="{% url 'requesttest' %}" class="nav-link">
                                 <i class="nav-icon fas fa-vials"></i>
                                 <p>Request Test</p>
                             </a>
@@ -98,7 +97,7 @@
                         <li class="nav-item">
                             <a href="{% url 'recomended_tests' %}" class="nav-link">
                                 <i class="nav-icon fas fa-vials"></i>
-                                <p>Test Results</p>
+                                <p>Recommended test</p>
                             </a>
                         </li>
 
@@ -246,9 +245,9 @@
                             const li = document.createElement("li");
                             li.className = "list-group-item d-flex justify-content-between align-items-center";
                             li.innerHTML = `
-                            <span>${item.title}</span>
-                            <span class="badge badge-primary badge-pill">${item.count}</span>
-                        `;
+                                <span>${item.title}</span>
+                                <span class="badge badge-primary badge-pill">${item.count}</span>
+                            `;
                             li.style.cursor = "pointer";
                             li.onclick = () => window.location.href = item.url;
                             list.appendChild(li);
@@ -272,7 +271,59 @@
         });
     </script>
 
-    
+    <!--Printing function-->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const printButton = document.querySelector(".btn.btn-secondary.print");
+
+            if (printButton) {
+                printButton.addEventListener("click", function (e) {
+                    e.preventDefault();  // Prevent form submission
+
+                    const printContents = document.getElementById("print-area").innerHTML;
+
+                    // Create an invisible iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.style.position = 'fixed';
+                    iframe.style.right = '0';
+                    iframe.style.bottom = '0';
+                    iframe.style.width = '0';
+                    iframe.style.height = '0';
+                    iframe.style.border = 'none';
+                    document.body.appendChild(iframe);
+
+                    const doc = iframe.contentWindow.document;
+                    doc.open();
+                    doc.write(`
+                    <html>
+                        <head>
+                            <title>Print</title>
+                            <style>
+                                /* Include your CSS here or link it */
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    padding: 20px;
+                                }
+                                h2 { color: #333; }
+                            </style>
+                            <link rel="stylesheet" href="{% static 'css/your-styles.css' %}">
+                        </head>
+                        <body>${printContents}</body>
+                    </html>
+                `);
+                    doc.close();
+
+                    // Wait for content to load before printing
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+
+                    // Remove iframe after printing
+                    setTimeout(() => document.body.removeChild(iframe), 1000);
+                });
+            }
+        });
+    </script>
+
 </body>
 
 </html>
