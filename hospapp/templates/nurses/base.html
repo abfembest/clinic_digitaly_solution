@@ -93,15 +93,9 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="{% url 'nursing_ward_actions' %}" class="nav-link {% if request.resolver_match.url_name == 'nursing_ward_actions' %}active{% endif %}">
+                            <a href="{% url 'nursing_actions' %}" class="nav-link {% if request.resolver_match.url_name == 'nursing_ward_actions' %}active{% endif %}">
                                 <i class="nav-icon fas fa-hospital-user"></i>
-                                <p>Ward Actions</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{% url 'nursing_ward_actions' %}#assign" class="nav-link">
-                                <i class="nav-icon fas fa-bed"></i>
-                                <p>Assign Ward</p>
+                                <p>Nursing Actions</p>
                             </a>
                         </li>
                         <li class="nav-item">

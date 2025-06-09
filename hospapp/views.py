@@ -199,19 +199,14 @@ def nurses(request):
     return render(request, 'nurses/index.html', context)
 
 @login_required(login_url='home')
-def bed_ward_management_view(request):
-    beds = Bed.objects.filter(is_occupied=False).values('id', 'number', 'ward_id', 'ward__name')
-    beds_json = json.dumps(list(beds), cls=DjangoJSONEncoder)
-
+def nursing_actions(request):
     context = {
         'patients': Patient.objects.all(),
-        'wards': Ward.objects.all(),
-        'beds_json': beds_json,
         'admitted_patients': Patient.objects.filter(is_inpatient=True),
         'doctors': Staff.objects.select_related('user').filter(Q(role='doctor') | Q(role='nurse')),
-        'departments' : Department.objects.all()
+        'departments': Department.objects.all(),
     }
-    return render(request, 'nurses/bed_ward_management.html', context)
+    return render(request, 'nurses/nursing_actions.html', context)
 
 @csrf_exempt
 @login_required(login_url='home')

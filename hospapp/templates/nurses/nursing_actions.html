@@ -1,0 +1,169 @@
+{% extends "nurses/base.html" %}
+{% load static %}
+
+{% block title %}Nursing Actions | Nurses{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div class="container-fluid">
+    <h4 class="mb-2">Nursing Actions</h4>
+  </div>
+</div>
+
+<section class="content">
+  <div class="container-fluid">
+    <ul class="nav nav-tabs" id="wardTabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="admit-tab" data-toggle="tab" href="#admit" role="tab">Admit Patient</a>
+      </li>
+      <!-- Removed: Ward/Bed Assignment Tab -->
+      <li class="nav-item">
+        <a class="nav-link" id="discharge-tab" data-toggle="tab" href="#discharge" role="tab">Discharge</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="monitor-tab" data-toggle="tab" href="#monitor" role="tab">Monitor Status</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="referral-tab" data-toggle="tab" href="#referral" role="tab">Refer Patient</a>
+      </li>
+    </ul>
+
+    <div class="tab-content border rounded p-3 bg-white" id="wardTabsContent">
+      <!-- Admit Patient -->
+      <div class="tab-pane fade show active" id="admit" role="tabpanel">
+          <form method="POST" action="{% url 'admit_patient_nurse' %}">
+              {% csrf_token %}
+              <div class="form-row">
+                  <div class="form-group col-md-6">
+                      <label>Patient ID or Name</label>
+                      <select class="form-control" name="patient_id">
+                          {% for patient in patients %}
+                          <option value="{{patient.id}}">{{patient.full_name}}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+              </div>
+
+              <div class="form-row">
+                  <div class="form-group col-md-6">
+                      <label>Assign Doctor /Nurse</label>
+                      <select name="doctor" class="form-control text-capitalize" required>
+                          <option value="" selected disabled>-- Select Doctor --</option>
+                          {% for doctor in doctors %}
+                          <option value="{{ doctor.user.get_full_name }}">{{ doctor.role }} - {{ doctor.user.get_full_name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+              </div>
+
+              <div class="form-group">
+                  <label>Reason for Admission</label>
+                  <textarea name="admission_reason" class="form-control" required></textarea>
+              </div> 
+
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-primary">Admit Patient</button>
+              </div>
+          </form>
+      </div>
+
+      <!-- Discharge -->
+      <div class="tab-pane fade" id="discharge" role="tabpanel">
+          <form action="{% url 'discharge_patient' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-group">
+                  <label>Patient ID</label>
+                  <select name="patient_id" class="form-control" required>
+                      <option value="" selected disabled>Select Patient</option>
+                      {% for patient in admitted_patients %}
+                      <option value="{{ patient.id }}">
+                          {{ patient.full_name }}
+                      </option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Discharge Summary</label>
+                  <textarea name="discharge_summary" class="form-control" rows="3" required></textarea>
+              </div>
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-danger">Discharge Patient</button>
+              </div>
+          </form>
+      </div>
+
+      <!-- Monitor -->
+      <div class="tab-pane fade" id="monitor" role="tabpanel">
+          <form action="{% url 'update_patient_status' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-group">
+                  <label>Patient Name/ID</label>
+                  <select name="patient_id" class="form-control" required>
+                      <option value="">Select Patient</option>
+                      {% for patient in admitted_patients %}
+                      <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Condition Status</label>
+                  <select name="status" class="form-control" required>
+                      <option value="stable">Stable</option>
+                      <option value="critical">Critical</option>
+                      <option value="under_observation">Under Observation</option>
+                      <option value="improving">Improving</option>
+                      <option value="deteriorating">Deteriorating</option>
+                  </select>
+              </div>
+              <div class="form-group">
+                  <label>Notes</label>
+                  <textarea name="notes" class="form-control" rows="3" required></textarea>
+              </div>
+              <div class="form-group text-center">
+                  <button type="submit" class="btn btn-info">Update Status</button>
+              </div>
+        </form>
+      </div>
+
+      <!-- Referral -->
+      <div class="tab-pane fade" id="referral" role="tabpanel">
+        <form method="POST" action="{% url 'refer_patient' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Patient</label>
+            <select name="patient_id" class="form-control" required>
+              <option value="">Select Patient</option>
+              {% for patient in admitted_patients %}
+              <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Department to Refer To</label>
+            <select name="department" class="form-control" required>
+              <option value="">Select Department</option>
+              {% for department in departments %}
+              <option value="{{ department.id }}">{{ department.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Reason for Referral / Notes</label>
+            <textarea name="notes" class="form-control" rows="3" required></textarea>
+          </div>
+
+          <div class="form-group text-center">
+            <button type="submit" class="btn btn-secondary">Submit Referral</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Removed: Bed/Ward JS logic -->
+
+{% endblock %}

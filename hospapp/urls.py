@@ -9,8 +9,10 @@ urlpatterns = [
     path('register', views.register, name='register'),
     path('logout', views.logout_view, name='logout'),
 
+    ########################### Nurses URLS #################################
+
     path('n/home', views.nurses, name='nurse'),
-    path('n/bed_ward_management', views.bed_ward_management_view, name='nursing_ward_actions'),
+    path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
     path('n/admit_patient_nurse', views.admit_patient_nurse, name='admit_patient_nurse'),
     path('n/assign_ward_bed', views.assign_ward_bed, name='assign_ward_bed'),
     path('n/discharge_patient', views.discharge_patient, name='discharge_patient'),
@@ -20,6 +22,8 @@ urlpatterns = [
     path('n/record_vitals', views.record_vitals, name='record_vitals'),
     path('n/nursing_notes', views.nursing_notes, name='nursing_notes'),
     path('n/save_nursing_notes', views.save_nursing_note, name='save_nursing_note'),
+
+    ########################### End Nurses URLS #################################
 
     path('d/home', views.doctors, name='doctors'),
     path('d/home', views.chart_view, name='chart_view'),
