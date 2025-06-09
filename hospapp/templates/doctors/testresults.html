@@ -1,4 +1,4 @@
-{% extends "laboratory/base.html" %}
+{% extends "doctors/base.html" %}
 {% load static %}
 
 {% block title %}Lab | Test details{% endblock %}
@@ -124,20 +124,23 @@
                     {% for test in testlist %}
                     <div class="test-row">
                         <label class="test-label">{{ test.test_name }}:</label>
-                        <input type="text" name="{{ test.test_name }}" class="test-input" placeholder="Enter result">
+                        <input type="text" value="{{ test.result_value }}" class="test-input" readonly>
                         <input type="hidden" name="ids" value="{{ test.id }}" class="test-input" placeholder="Enter text id">
 
                     </div>
                     {% endfor %}
                     {% endfor %}
-
-                    <div class="text-center mt-3">
-                        <button type="submit" class="btn btn-success btn-submit">Submit Test Details</button>
+                    <div class="test-row">
+                        <label class="test-label">Doctor's recommendation':</label>
+                        <textarea  class="test-input"></textarea>
                     </div>
+                        <div class="text-center mt-3">
+                            <button type="submit" class="btn btn-success btn-submit">Submit Test Details</button>
+                        </div>
+                    </div>
+
+
                 </div>
-
-
-            </div>
         </form>
 
 

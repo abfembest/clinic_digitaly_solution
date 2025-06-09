@@ -2129,6 +2129,28 @@ def waitinglist(request):
     return render(request, 'doctors/waitinglist.html', context)
 
 
+
+
+
+
+##### Doctor test result view
+def test_results(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    pending_tests = LabTest.objects.filter(
+        patient=patient,
+        status='completed'
+    ).select_related('category', 'patient')
+
+    grouped_tests = defaultdict(list)
+    for test in pending_tests:
+        grouped_tests[test.category.name].append(test)
+
+    return render(request, 'doctors/testresults.html', {
+        'pending_tests': dict(grouped_tests),
+        'patient': patient
+    })
+
 #Test details and completion by lab
 
 def test_details(request, patient_id):
