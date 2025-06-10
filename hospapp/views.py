@@ -842,7 +842,7 @@ def lab_test_entry(request):
     patient_ids_with_tests = LabTest.objects.values_list('patient', flat=True).distinct()
     patients = Patient.objects.filter(
         id__in=patient_ids_with_tests
-    ).select_related('ward', 'bed').order_by('-date_registered')
+    ).order_by('-date_registered')
     
     # Prepare patient data with test counts, categories, and subcategories
     patients_data = []
