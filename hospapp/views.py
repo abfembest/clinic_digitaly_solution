@@ -2288,7 +2288,7 @@ def recomended_tests(request):
 
     # Fetch patients who have lab tests
     patient_ids = LabTest.objects.values_list('patient', flat=True).distinct()
-    patients = Patient.objects.filter(id__in=patient_ids).select_related('ward', 'bed').order_by('-date_registered')
+    patients = Patient.objects.filter(id__in=patient_ids).order_by('-date_registered')
 
     patients_data = []
     for patient in patients:

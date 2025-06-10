@@ -1,11 +1,12 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>HMS | Doctors</title>
+    <title>{% block title %}HMS | Doctors{% endblock %}</title>
+    <!-- Tell the browser to be responsive to screen width -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Font Awesome -->
@@ -14,15 +15,19 @@
     <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}">
-    <!-- AdminLTE -->
+    <!-- Theme style -->
     <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
-    <!-- Google Font -->
+    <!-- DataTables -->
+    <link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/datatables-buttons/css/buttons.bootstrap4.min.css' %}">
+    <!-- Google Font: Source Sans Pro -->
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
 </head>
 
-<body class="hold-transition sidebar-mini">
+<body class="hold-transition sidebar-mini sidebar-collapse">
+    <!-- Site wrapper -->
     <div class="wrapper">
-
         <!-- Navbar -->
         <nav class="main-header navbar navbar-expand navbar-white navbar-light">
             <!-- Left navbar links -->
@@ -35,118 +40,201 @@
                 </li>
             </ul>
 
-            <!-- Search Form -->
-            <form class="form-inline ml-3">
-                <div class="input-group input-group-sm">
-                    <input class="form-control form-control-navbar" type="search" placeholder="Search" aria-label="Search">
-                    <div class="input-group-append">
-                        <button class="btn btn-navbar" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </form>
-
             <!-- Right navbar links -->
             <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <span class="nav-link text-muted">
+                        <i class="fas fa-user-md mr-1"></i>
+                        {{ user.get_full_name|default:user.username }}
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </li>
             </ul>
         </nav>
+        <!-- /.navbar -->
 
-        <!-- Sidebar -->
+        <!-- Main Sidebar Container -->
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
             <!-- Brand Logo -->
             <a href="{% url 'doctors' %}" class="brand-link">
-                <img src="{% static 'dist/img/ayologo.jpg' %}" alt="Logo"
+                <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo" 
                      class="brand-image img-circle elevation-3" style="opacity: .8">
-                <span class="brand-text font-weight-light">Doctors</span>
+                <span class="brand-text font-weight-medium text-uppercase">Doctors</span>
             </a>
 
             <!-- Sidebar -->
             <div class="sidebar">
-                <div class="mb-3">
-                    <img src="{% static 'dist/img/header.jpg' %}" alt="Header Image" class="img-fluid">
+                <!-- Sidebar Header Image -->
+                <div class="mt-3 mb-3">
+                    <img src="{% static 'dist/img/header.jpg' %}" alt="Header Image" class="img-fluid rounded">
                 </div>
 
+                <!-- Sidebar user panel (optional) -->
+                <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+                    <div class="image">
+                        {% if user.staff.photo %}
+                        <img src="{{ user.staff.photo.url }}" class="img-circle elevation-2" alt="{{ user.get_full_name|default:user.username }}">
+                        {% else %}
+                        <img src="{% static 'dist/img/user2-160x160.jpg' %}" class="img-circle elevation-2" alt="User Image">
+                        {% endif %}
+                    </div>
+                    <div class="info">
+                        <a href="#" class="d-block">{{ user.get_full_name|default:user.username }}</a>
+                        <small class="text-muted text-capitalize">{{ user.staff.role|default:"Doctor" }}</small>
+                    </div>
+                </div>
+
+                <!-- Sidebar Menu -->
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                        <!-- Dashboard -->
                         <li class="nav-item">
-                            <a href="{% url 'doctors' %}" class="nav-link">
-                                <i class="nav-icon fas fa-th-large"></i>
+                            <a href="{% url 'doctors' %}" class="nav-link {% if request.resolver_match.url_name == 'doctors' %}active{% endif %}">
+                                <i class="nav-icon fas fa-tachometer-alt"></i>
                                 <p>Dashboard</p>
                             </a>
                         </li>
+                        
+                        <!-- Patient Management -->
+                        <li class="nav-header">PATIENT MANAGEMENT</li>
                         <li class="nav-item">
-                            <a href="{% url 'doctor_consultation' %}" class="nav-link">
+                            <a href="{% url 'doctor_consultation' %}" class="nav-link {% if request.resolver_match.url_name == 'doctor_consultation' %}active{% endif %}">
                                 <i class="nav-icon fas fa-user-md"></i>
                                 <p>Patient Consultation</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="{% url 'access_medical_records' %}" class="nav-link">
+                            <a href="{% url 'access_medical_records' %}" class="nav-link {% if request.resolver_match.url_name == 'access_medical_records' %}active{% endif %}">
                                 <i class="nav-icon fas fa-folder-open"></i>
-                                <p>Patient Records</p>
+                                <p>Medical Records</p>
                             </a>
                         </li>
+                        
+                        <!-- Laboratory & Tests -->
+                        <li class="nav-header">LABORATORY & TESTS</li>
                         <li class="nav-item">
-                            <a href="{% url 'requesttest' %}" class="nav-link">
-                                <i class="nav-icon fas fa-vials"></i>
+                            <a href="{% url 'requesttest' %}" class="nav-link {% if request.resolver_match.url_name == 'requesttest' %}active{% endif %}">
+                                <i class="nav-icon fas fa-vial"></i>
                                 <p>Request Test</p>
                             </a>
                         </li>
-
                         <li class="nav-item">
-                            <a href="{% url 'recomended_tests' %}" class="nav-link">
-                                <i class="nav-icon fas fa-vials"></i>
-                                <p>Recommended test</p>
+                            <a href="{% url 'recomended_tests' %}" class="nav-link {% if request.resolver_match.url_name == 'recomended_tests' %}active{% endif %}">
+                                <i class="nav-icon fas fa-flask"></i>
+                                <p>Recommended Tests</p>
                             </a>
                         </li>
-
+                        
+                        <!-- Treatment & Monitoring -->
+                        <li class="nav-header">TREATMENT & MONITORING</li>
                         <li class="nav-item">
-                            <a href="{% url 'monitoring' %}" class="nav-link">
+                            <a href="{% url 'monitoring' %}" class="nav-link {% if request.resolver_match.url_name == 'monitoring' %}active{% endif %}">
                                 <i class="nav-icon fas fa-chart-line"></i>
                                 <p>Treatment Monitoring</p>
                             </a>
                         </li>
+                        
+                        <!-- Account -->
+                        <li class="nav-header">ACCOUNT</li>
                         <li class="nav-item">
                             <a href="{% url 'logout' %}" class="nav-link">
-                                <i class="nav-icon fas fa-sign-out-alt"></i>
+                                <i class="nav-icon fas fa-sign-out-alt text-danger"></i>
                                 <p>Logout</p>
                             </a>
                         </li>
                     </ul>
                 </nav>
+                <!-- /.sidebar-menu -->
             </div>
+            <!-- /.sidebar -->
         </aside>
 
-        <!-- Content Wrapper -->
+        <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             {% block content %}
+            
             {% endblock %}
+        </div>
+        <!-- /.content-wrapper -->
+
+        <!-- Toast notifications for Django messages -->
+        <div aria-live="polite" aria-atomic="true" style="position: fixed; top: 1rem; right: 1rem; z-index: 1080;">
+            <div id="toast-container">
+                {% if messages %}
+                {% for message in messages %}
+                    <div class="toast bg-{{ message.tags|default:"info" }} text-white mb-3" role="alert" data-delay="5000" data-autohide="true">
+                        <div class="toast-header bg-{{ message.tags|default:"info" }} text-white border-0">
+                            <i class="mr-2 fas fa-{{ 
+                            "check-circle" if message.tags == "success" 
+                            else "exclamation-triangle" if message.tags == "warning" 
+                            else "times-circle" if message.tags == "error" 
+                            else "info-circle"
+                            }}"></i>
+                            <strong class="mr-auto text-capitalize">{{ message.tags|default:"Info" }}</strong>
+                            <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="toast-body">
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Notification Bell Icon (initially hidden) -->
+        <div id="notification-bell" style="position: fixed; top: 50%; right: 0; z-index: 1050; display: none;">
+            <button class="btn btn-warning rounded-circle p-3 shadow" id="toggleNotifications">
+                <i class="fas fa-bell fa-lg"></i>
+                <span id="notification-count" class="badge badge-danger badge-pill position-absolute" style="top: -5px; right: -5px; display: none;">0</span>
+            </button>
+        </div>
+
+        <!-- Notification Panel -->
+        <div id="notification-panel" class="card shadow-lg" style="position: fixed; top: 50%; right: 70px; transform: translateY(-50%); width: 320px; display: none; z-index: 1040; max-height: 400px;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-bell mr-2"></i>
+                    Notifications
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-light" id="closeNotifications">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                <ul class="list-group list-group-flush" id="notificationList">
+                    <!-- Dynamic items go here -->
+                </ul>
+            </div>
         </div>
 
         <!-- Footer -->
         <footer class="main-footer">
-            <div class="float-right d-none d-sm-inline">
-                <b>Version</b> 3.0.4
+            <div class="float-right d-none d-sm-block">
+                <b>Version</b> 1.0.0
             </div>
-            <strong>&copy; 2014-2019 <a href="http://adminlte.io">AdminLTE.io</a>.</strong> All rights reserved.
+            <strong>Hospital Management System &copy; {% now "Y" %}.</strong> All rights reserved.
         </footer>
 
         <!-- Control Sidebar -->
         <aside class="control-sidebar control-sidebar-dark">
-            <!-- Empty control sidebar -->
+            <!-- Control sidebar content goes here -->
         </aside>
+        <!-- /.control-sidebar -->
     </div>
+    <!-- ./wrapper -->
 
-    <!-- Scripts -->
+    <!-- jQuery -->
     <script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
+    <!-- Bootstrap 4 -->
     <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
-    <script src="{% static 'dist/js/demo.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-
-    <!-- DataTables  & Plugins -->
+    <!-- DataTables & Plugins -->
     <script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
@@ -160,13 +248,20 @@
     <script src="{% static 'plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
     <!-- AdminLTE App -->
+    <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Initialize DataTables -->
     <script>
         $(function () {
             $("#example1").DataTable({
-                "responsive": true, "lengthChange": false, "autoWidth": false,
+                "responsive": true, 
+                "lengthChange": false, 
+                "autoWidth": false,
                 "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
             }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+            
             $('#example2').DataTable({
                 "paging": true,
                 "lengthChange": false,
@@ -179,54 +274,64 @@
         });
     </script>
 
-
-
+    <!-- Initialize Toast Notifications -->
     <script>
-     document.addEventListener('DOMContentLoaded', () => {
-         {% if messages %}
-             {% for message in messages %}
-                 Swal.fire({
-                     toast: true,
-                     position: 'top-end',
-                     icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
-                     title: "{{ message|escapejs }}",
-                     showConfirmButton: false,
-                     timer: 3000,
-                     timerProgressBar: true,
-                     didOpen: (toast) => {
-                         toast.addEventListener('mouseenter', Swal.stopTimer)
-                         toast.addEventListener('mouseleave', Swal.resumeTimer)
-                     }
-                 });
-             {% endfor %}
-         {% endif %}
-     });
+        $(document).ready(function () {
+            // Initialize toast notifications
+            $('.toast').toast('show');
+        });
     </script>
 
+    <!-- SweetAlert2 Messages -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            {% if messages %}
+                {% for message in messages %}
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+                        title: "{{ message|escapejs }}",
+                        showConfirmButton: false,
+                        timer: 4000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.addEventListener('mouseenter', Swal.stopTimer)
+                            toast.addEventListener('mouseleave', Swal.resumeTimer)
+                        }
+                    });
+                {% endfor %}
+            {% endif %}
+        });
+    </script>
 
-    <!-- Notification Bell Icon (initially hidden) -->
-    <div id="notification-bell" style="position: fixed; top: 50%; right: 0; z-index: 1050; display: none;">
-        <button class="btn btn-warning rounded-circle p-3 shadow" id="toggleNotifications">
-            <i class="fas fa-bell"></i>
-        </button>
-    </div>
+    <!-- Tab Navigation Handler -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const hash = window.location.hash;
+            if (hash) {
+                const tabTrigger = document.querySelector(`a[href="${hash}"]`);
+                if (tabTrigger) {
+                    $(tabTrigger).tab('show');
+                }
+            }
 
-    <!-- Notification Panel -->
-    <div id="notification-panel" class="card shadow-sm" style="position: fixed; top: 50%; right: 70px; transform: translateY(-50%); width: 300px; display: none; z-index: 1040;">
-        <div class="card-header bg-primary text-white">
-            Notifications
-        </div>
-        <ul class="list-group list-group-flush" id="notificationList">
-            <!-- Dynamic items go here -->
-        </ul>
-    </div>
+            // Update hash on tab click
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+                history.replaceState(null, null, e.target.hash);
+            });
+        });
+    </script>
 
+    <!-- Notification System -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const toggleBtn = document.getElementById("toggleNotifications");
+            const closeBtn = document.getElementById("closeNotifications");
             const panel = document.getElementById("notification-panel");
             const list = document.getElementById("notificationList");
             const bell = document.getElementById("notification-bell");
+            const countBadge = document.getElementById("notification-count");
 
             // Function to fetch and update notifications
             function loadNotifications() {
@@ -234,96 +339,140 @@
                     .then(response => response.json())
                     .then(data => {
                         const notifications = data.notifications;
-                        const hasNotifications = notifications.some(item => item.count > 0);
+                        const totalCount = notifications.reduce((sum, item) => sum + item.count, 0);
+                        const hasNotifications = totalCount > 0;
 
-                        // Show bell icon only if any notification count > 0
+                        // Show/hide bell icon based on notification count
                         bell.style.display = hasNotifications ? "block" : "none";
+                        
+                        // Update count badge
+                        if (totalCount > 0) {
+                            countBadge.textContent = totalCount > 99 ? '99+' : totalCount;
+                            countBadge.style.display = "block";
+                        } else {
+                            countBadge.style.display = "none";
+                        }
 
-                        // Populate panel (so it's ready even before click)
+                        // Populate notification panel
                         list.innerHTML = "";
-                        notifications.forEach(item => {
+                        if (notifications.length === 0) {
                             const li = document.createElement("li");
-                            li.className = "list-group-item d-flex justify-content-between align-items-center";
-                            li.innerHTML = `
-                                <span>${item.title}</span>
-                                <span class="badge badge-primary badge-pill">${item.count}</span>
-                            `;
-                            li.style.cursor = "pointer";
-                            li.onclick = () => window.location.href = item.url;
+                            li.className = "list-group-item text-center text-muted";
+                            li.innerHTML = '<i class="fas fa-bell-slash mr-2"></i>No notifications';
                             list.appendChild(li);
-                        });
+                        } else {
+                            notifications.forEach(item => {
+                                const li = document.createElement("li");
+                                li.className = "list-group-item d-flex justify-content-between align-items-center";
+                                li.innerHTML = `
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-circle text-primary mr-2" style="font-size: 6px;"></i>
+                                        <span>${item.title}</span>
+                                    </div>
+                                    <span class="badge badge-primary badge-pill">${item.count}</span>
+                                `;
+                                li.style.cursor = "pointer";
+                                li.onclick = () => {
+                                    window.location.href = item.url;
+                                    panel.style.display = "none";
+                                };
+                                
+                                // Add hover effect
+                                li.addEventListener('mouseenter', function() {
+                                    this.style.backgroundColor = '#f8f9fa';
+                                });
+                                li.addEventListener('mouseleave', function() {
+                                    this.style.backgroundColor = '';
+                                });
+                                
+                                list.appendChild(li);
+                            });
+                        }
                     })
                     .catch(err => {
                         console.error("Notification fetch error:", err);
+                        list.innerHTML = '<li class="list-group-item text-center text-danger"><i class="fas fa-exclamation-triangle mr-2"></i>Error loading notifications</li>';
                     });
             }
 
             // Initial fetch
             loadNotifications();
 
-            // Optional: Refresh every 60 seconds
+            // Refresh notifications every 10 seconds
             setInterval(loadNotifications, 10000);
 
             // Toggle panel visibility
             toggleBtn.addEventListener("click", () => {
                 panel.style.display = panel.style.display === "none" ? "block" : "none";
             });
+
+            // Close panel
+            closeBtn.addEventListener("click", () => {
+                panel.style.display = "none";
+            });
+
+            // Close panel when clicking outside
+            document.addEventListener("click", (e) => {
+                if (!panel.contains(e.target) && !toggleBtn.contains(e.target)) {
+                    panel.style.display = "none";
+                }
+            });
         });
     </script>
 
-    <!--Printing function-->
+    <!-- Printing Function -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const printButton = document.querySelector(".btn.btn-secondary.print");
 
             if (printButton) {
                 printButton.addEventListener("click", function (e) {
-                    e.preventDefault();  // Prevent form submission
+                    e.preventDefault();
 
                     const printContents = document.getElementById("print-area").innerHTML;
+                    const originalContents = document.body.innerHTML;
 
-                    // Create an invisible iframe
-                    const iframe = document.createElement('iframe');
-                    iframe.style.position = 'fixed';
-                    iframe.style.right = '0';
-                    iframe.style.bottom = '0';
-                    iframe.style.width = '0';
-                    iframe.style.height = '0';
-                    iframe.style.border = 'none';
-                    document.body.appendChild(iframe);
-
-                    const doc = iframe.contentWindow.document;
-                    doc.open();
-                    doc.write(`
-                    <html>
+                    // Create print window
+                    const printWindow = window.open('', '_blank', 'width=800,height=600');
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
                         <head>
-                            <title>Print</title>
+                            <title>Print Document</title>
+                            <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
+                            <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
                             <style>
-                                /* Include your CSS here or link it */
                                 body {
-                                    font-family: Arial, sans-serif;
+                                    font-family: 'Source Sans Pro', sans-serif;
                                     padding: 20px;
+                                    background: white;
                                 }
-                                h2 { color: #333; }
+                                @media print {
+                                    body { margin: 0; }
+                                    .no-print { display: none !important; }
+                                }
                             </style>
-                            <link rel="stylesheet" href="{% static 'css/your-styles.css' %}">
                         </head>
-                        <body>${printContents}</body>
-                    </html>
-                `);
-                    doc.close();
-
-                    // Wait for content to load before printing
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-
-                    // Remove iframe after printing
-                    setTimeout(() => document.body.removeChild(iframe), 1000);
+                        <body>
+                            ${printContents}
+                        </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    
+                    // Wait for content to load then print
+                    printWindow.onload = function() {
+                        printWindow.print();
+                        printWindow.close();
+                    };
                 });
             }
         });
     </script>
 
-</body>
+    <!-- Custom Scripts Block -->
+    {% block extra_scripts %}
+    {% endblock %}
 
+</body>
 </html>
