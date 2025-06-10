@@ -2286,97 +2286,62 @@ def recomended_tests(request):
 
         return redirect('lab_test_entry')
 
-    # Fetch patients who have lab tests
-    patient_ids = LabTest.objects.values_list('patient', flat=True).distinct()
-    patients = Patient.objects.filter(id__in=patient_ids).order_by('-date_registered')
+    # Fetch all lab tests with related patient and category information
+    lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
 
-    patients_data = []
-    for patient in patients:
-        tests = {
-            'pending': LabTest.objects.filter(patient=patient, status='pending'),
-            'completed': LabTest.objects.filter(patient=patient, status='completed', doctor_comments=0),
-            'in_progress': LabTest.objects.filter(patient=patient, status='in_progress')
-        }
-
-        for status in tests:
-            tests[status] = tests[status].select_related('category').prefetch_related('category__subcategories').order_by('-requested_at')
-
-        categories = TestCategory.objects.filter(test_category__patient=patient).prefetch_related('subcategories').distinct().order_by('name')
-
-        category_stats = [
-            {
-                'category': cat,
-                'total_tests': LabTest.objects.filter(patient=patient, category=cat).count(),
-                'pending_tests': LabTest.objects.filter(patient=patient, category=cat, status='pending').count(),
-                'completed_tests': LabTest.objects.filter(patient=patient, category=cat, status='completed').count(),
-                'subcategories': [{'subcategory': sub, 'name': sub.name} for sub in cat.subcategories.all()]
-            }
-            for cat in categories
-        ]
-
-        latest_referral = Referral.objects.filter(patient=patient).order_by('-id').first()
-        last_test = LabTest.objects.filter(patient=patient).order_by('-requested_at').first()
-
-        patients_data.append({
-            'patient': patient,
-            **{k + '_tests': v for k, v in tests.items()},
-            **{k + '_count': v.count() for k, v in tests.items()},
-            'total_tests': sum(v.count() for v in tests.values()),
-            'referred_by': latest_referral.notes if latest_referral else patient.referred_by or 'Walk-in',
-            'last_test_date': last_test.requested_at if last_test else None,
-            'categories': categories,
-            'category_stats': category_stats,
-        })
-
-    today = timezone.now().date()
-    stats = {
-        'total_patients': patients.count(),
-        'patients_with_pending_tests': sum(1 for p in patients_data if p['pending_count'] > 0),
-        'total_pending_tests': LabTest.objects.filter(status='pending').count(),
-        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
-        'total_in_progress': LabTest.objects.filter(status='in_progress').count(),
-        'total_categories': TestCategory.objects.count(),
+    # Group tests by status for statistics
+    tests_by_status = {
+        'pending': lab_tests.filter(status='pending'),
+        'completed': lab_tests.filter(status='completed', doctor_comments=0),
+        'in_progress': lab_tests.filter(status='in_progress')
     }
 
-    all_categories = TestCategory.objects.prefetch_related('subcategories').all().order_by('name')
-    category_overview = [
-        {
-            'category': cat,
-            'total_tests': LabTest.objects.filter(category=cat).count(),
-            'pending_tests': LabTest.objects.filter(category=cat, status='pending').count(),
-            'completed_tests': LabTest.objects.filter(category=cat, status='completed').count(),
-            'subcategories': cat.subcategories.all(),
-        }
-        for cat in all_categories
-    ]
-    all_pending_tests = LabTest.objects.select_related('patient', 'category').prefetch_related('category__subcategories').filter(status='pending', doctor_comments=0).order_by('-requested_at')
-    #all_pending_tests = LabTest.objects.select_related('patient', 'category').prefetch_related('category__subcategories').filter(status='pending').order_by('-requested_at')
+    # Prepare test data for the template
+    tests_data = []
+    for test in lab_tests:
+        tests_data.append({
+            'test': test,
+            'patient': test.patient,
+            'category': test.category,
+            'status': test.status,
+            'requested_at': test.requested_at,
+            'date_performed': test.date_performed,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'System',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A'
+        })
 
+    # Statistics
+    today = timezone.now().date()
+    stats = {
+        'total_tests': lab_tests.count(),
+        'total_pending_tests': tests_by_status['pending'].count(),
+        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
+        'total_in_progress': tests_by_status['in_progress'].count(),
+        'total_categories': TestCategory.objects.count(),
+        'unique_patients': Patient.objects.filter(lab_tests__isnull=False).distinct().count(),
+    }
+
+    # Group pending tests by category
     pending_by_category = defaultdict(lambda: {'tests': [], 'count': 0})
-    for test in all_pending_tests:
+    for test in tests_by_status['pending']:
         category_data = pending_by_category[test.category.name]
         category_data['category'] = test.category
         category_data['tests'].append(test)
         category_data['count'] += 1
 
     context = {
-        'patients_data': patients_data,
-        'test_categories': all_categories,
-        'category_overview': category_overview,
-        'pending_tests': all_pending_tests,
+        'tests_data': tests_data,
+        'test_categories': TestCategory.objects.all(),
         'pending_tests_by_category': dict(pending_by_category),
         'stats': stats,
         'debug_info': {
-            'total_patients_fetched': len(patients_data),
-            'test_categories_count': all_categories.count(),
-            'pending_tests_count': all_pending_tests.count(),
-            'category_overview_count': len(category_overview),
+            'total_tests_fetched': len(tests_data),
+            'test_categories_count': TestCategory.objects.count(),
+            'pending_tests_count': tests_by_status['pending'].count(),
             'methods_used': [
-                'Patient.objects.filter(id__in=LabTest)',
-                'LabTest filtering with category relationships',
-                'TestCategory.objects.prefetch_related(subcategories)',
-                'Category statistics aggregation',
-                'Result processing with category info'
+                'LabTest.objects.select_related(patient, category)',
+                'Test category grouping',
+                'Status-based filtering'
             ]
         } if request.user.is_superuser else None
     }

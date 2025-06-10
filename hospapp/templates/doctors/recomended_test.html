@@ -98,145 +98,123 @@
 
 
         <!-- All Patients Table -->
-        <div class="card card-outline card-primary">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-users"></i> All Patients - Lab Test Management
-                </h3>
-                <div class="card-tools">
-                    <div class="input-group input-group-sm" style="width: 300px;">
-                        <input type="text" id="patientSearch" class="form-control" placeholder="Search by patient name...">
-                        <div class="input-group-append">
-                            <button type="button" class="btn btn-default">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped table-sm">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Patient ID</th>
-                                <th>Patient Info</th>
-                                <th>Contact</th>
-                                <th>Test Summary</th>
-                                <th>Categories</th>
-                                <th>Recommended By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="patientsTableBody">
-                            {% for patient_data in patients_data %}
-                            <tr data-patient-name="{{ patient_data.patient.full_name|lower }}">
-                                <td>
-                                    <span class="badge badge-secondary">{{ patient_data.patient.id }}</span>
-                                </td>
-                                <td>
-                                    <div>
-                                        <strong>{{ patient_data.patient.full_name }}</strong>
-                                        <br>
-                                        <small class="text-muted">
-                                            {{ patient_data.patient.gender }} •
-                                            {{ patient_data.patient.date_of_birth|date:"M d, Y" }} •
-                                            {{ patient_data.patient.blood_group|default:"N/A" }}
-                                        </small>
-                                        {% if patient_data.patient.is_inpatient %}
-                                        <br><span class="badge badge-info">Inpatient</span>
-                                        {% if patient_data.patient.ward %}
-                                        <small class="text-muted">{{ patient_data.patient.ward.name }}</small>
-                                        {% endif %}
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td>
-                                    <small>
-                                        <i class="fas fa-phone"></i> {{ patient_data.patient.phone|default:"N/A" }}
-                                        <br>
-                                        <i class="fas fa-map-marker-alt"></i> {{ patient_data.patient.address|truncatechars:30|default:"N/A" }}
-                                    </small>
-                                </td>
-                                <!--<td>
-                                <span class="badge badge-{% if patient_data.patient.status == 'critical' %}danger{% elif patient_data.patient.status == 'stable' %}success{% else %}warning{% endif %}">
-
-                                </span>
-                            </td>-->
-                                <td>
-                                    <div class="d-flex flex-column">
-                                        {% if patient_data.pending_count > 0 %}
-                                        <span class="badge badge-warning mb-1">{{ patient_data.pending_count }} Pending</span>
-                                        {% endif %}
-                                        {% if patient_data.in_progress_count > 0 %}
-                                        <span class="badge badge-info mb-1">{{ patient_data.in_progress_count }} In Progress</span>
-                                        {% endif %}
-                                        {% if patient_data.completed_count > 0 %}
-                                        <span class="badge badge-success mb-1">{{ patient_data.completed_count }} Completed</span>
-                                        {% endif %}
-                                        {% if patient_data.total_tests == 0 %}
-                                        <span class="text-muted">No tests</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td>
-                                    {% if patient_data.categories %}
-                                    {% for category in patient_data.categories %}
-                                    <span class="badge badge-outline mb-1">{{ category.name }}</span>
-                                    {% if not forloop.last %}<br>{% endif %}
-                                    {% endfor %}
-                                    {% else %}
-                                    <small class="text-muted">No categories</small>
-                                    {% endif %}
-                                </td>
-
-                                <td>
-                                    <small class="text-muted">{{ patient_data.referred_by|default:"Walk-in" }}</small>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group" title="Open test deatails" ">
-                                        <a href="{% url 'test_results' patient_data.patient.id %}" class="btn btn-primary">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <!--<button class="btn btn-primary view-tests"
-                                            data-patient-id="{{ patient_data.patient.id }}"
-                                            data-patient-name="{{ patient_data.patient.full_name }}"
-                                            title="View All Tests">
-                                        <i class="fas fa-eye"></i>
-                                    </button>-->
-                                        <button class="btn btn-success create-test"
-                                                data-patient-id="{{ patient_data.patient.id }}"
-                                                data-patient-name="{{ patient_data.patient.full_name }}"
-                                                title="Create New Test">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                        {% if patient_data.pending_count > 0 %}
-                                        <button class="btn btn-warning quick-complete"
-                                                data-patient-id="{{ patient_data.patient.id }}"
-                                                data-patient-name="{{ patient_data.patient.full_name }}"
-                                                title="Complete Pending Tests">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="9" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
-                                        <br>
-                                        No patients with lab tests found
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<div class="card card-outline card-primary">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-users"></i> All Patients - Lab Test Management
+        </h3>
+        <div class="card-tools">
+            <div class="input-group input-group-sm" style="width: 300px;">
+                <input type="text" id="patientSearch" class="form-control" placeholder="Search by patient name...">
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-default">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped table-sm">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Patient Info</th>
+                        <th>Contact</th>
+                        <th>Test Summary</th>
+                        <th>Categories</th>
+                        <th>Recommended By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="patientsTableBody">
+                    {% for test_data in tests_data %}
+                    <tr data-patient-name="{{ test_data.patient.full_name|lower }}">
+                        <td>
+                            <span class="badge badge-secondary">{{ test_data.patient.id }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>{{ test_data.patient.full_name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {{ test_data.patient.gender }} •
+                                    {{ test_data.patient.date_of_birth|date:"M d, Y" }} •
+                                    {{ test_data.patient.blood_group|default:"N/A" }}
+                                </small>
+                                {% if test_data.patient.is_inpatient %}
+                                <br><span class="badge badge-info">Inpatient</span>
+                                {% if test_data.patient.ward %}
+                                <small class="text-muted">{{ test_data.patient.ward.name }}</small>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <small>
+                                <i class="fas fa-phone"></i> {{ test_data.patient.phone|default:"N/A" }}
+                                <br>
+                                <i class="fas fa-map-marker-alt"></i> {{ test_data.patient.address|truncatechars:30|default:"N/A" }}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="badge badge-{% if test_data.status == 'pending' %}warning{% elif test_data.status == 'in_progress' %}info{% elif test_data.status == 'completed' %}success{% else %}secondary{% endif %} mb-1">
+                                    {{ test_data.test.test_name }}
+                                </span>
+                                <small class="text-muted">{{ test_data.status|title }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if test_data.category %}
+                            <span class="badge badge-outline mb-1">{{ test_data.category.name }}</span>
+                            {% else %}
+                            <small class="text-muted">No category</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ test_data.requested_by|default:"Walk-in" }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'test_results' test_data.patient.id %}" class="btn btn-primary" title="View test details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-success create-test"
+                                        data-patient-id="{{ test_data.patient.id }}"
+                                        data-patient-name="{{ test_data.patient.full_name }}"
+                                        title="Create New Test">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                {% if test_data.status == 'pending' %}
+                                <button class="btn btn-warning complete-test-direct"
+                                        data-test-id="{{ test_data.test.id }}"
+                                        data-test-name="{{ test_data.test.test_name }}"
+                                        data-patient-name="{{ test_data.patient.full_name }}"
+                                        title="Complete Test">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                <br>
+                                No patients with lab tests found
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 
 
