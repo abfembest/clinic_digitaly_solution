@@ -27,7 +27,8 @@
         <!-- Success/Error Messages -->
         {% if messages %}
         {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+            role="alert">
             {{ message }}
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
@@ -98,126 +99,126 @@
 
 
         <!-- All Patients Table -->
-<div class="card card-outline card-primary">
-    <div class="card-header">
-        <h3 class="card-title">
-            <i class="fas fa-users"></i> All Patients - Lab Test Management
-        </h3>
-        <div class="card-tools">
-            <div class="input-group input-group-sm" style="width: 300px;">
-                <input type="text" id="patientSearch" class="form-control" placeholder="Search by patient name...">
-                <div class="input-group-append">
-                    <button type="button" class="btn btn-default">
-                        <i class="fas fa-search"></i>
-                    </button>
+        <div class="card card-outline card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-users"></i> All Patients - Lab Test Management
+                </h3>
+                <div class="card-tools">
+                    <div class="input-group input-group-sm" style="width: 300px;">
+                        <input type="text" id="patientSearch" class="form-control"
+                            placeholder="Search by patient name...">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-default">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped table-sm">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Patient Info</th>
+                                <th>Contact</th>
+                                <th>Test Summary</th>
+                                <th>Categories</th>
+                                <th>Recommended By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                            {% for test_data in tests_data %}
+                            <tr data-patient-name="{{ test_data.patient.full_name|lower }}">
+                                <td>
+                                    <span class="badge badge-secondary">{{ test_data.patient.id }}</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ test_data.patient.full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ test_data.patient.gender }} •
+                                            {{ test_data.patient.date_of_birth|date:"M d, Y" }} •
+                                            {{ test_data.patient.blood_group|default:"N/A" }}
+                                        </small>
+                                        {% if test_data.patient.is_inpatient %}
+                                        <br><span class="badge badge-info">Inpatient</span>
+                                        {% if test_data.patient.ward %}
+                                        <small class="text-muted">{{ test_data.patient.ward.name }}</small>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>
+                                        <i class="fas fa-phone"></i> {{ test_data.patient.phone|default:"N/A" }}
+                                        <br>
+                                        <i class="fas fa-map-marker-alt"></i> {{
+                                        test_data.patient.address|truncatechars:30|default:"N/A" }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span
+                                            class="badge badge-{% if test_data.status == 'pending' %}warning{% elif test_data.status == 'in_progress' %}info{% elif test_data.status == 'completed' %}success{% else %}secondary{% endif %} mb-1">
+                                            {{ test_data.test.test_name }}
+                                        </span>
+                                        <small class="text-muted">{{ test_data.status|title }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if test_data.category %}
+                                    <span class="badge badge-outline mb-1">{{ test_data.category.name }}</span>
+                                    {% else %}
+                                    <small class="text-muted">No category</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ test_data.requested_by|default:"Walk-in" }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'test_results' test_data.patient.id %}" class="btn btn-primary"
+                                            title="View test details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button class="btn btn-success create-test"
+                                            data-patient-id="{{ test_data.patient.id }}"
+                                            data-patient-name="{{ test_data.patient.full_name }}"
+                                            title="Create New Test">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        {% if test_data.status == 'pending' %}
+                                        <button class="btn btn-warning complete-test-direct"
+                                            data-test-id="{{ test_data.test.id }}"
+                                            data-test-name="{{ test_data.test.test_name }}"
+                                            data-patient-name="{{ test_data.patient.full_name }}" title="Complete Test">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                        <br>
+                                        No patients with lab tests found
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped table-sm">
-                <thead class="thead-light">
-                    <tr>
-                        <th>Patient ID</th>
-                        <th>Patient Info</th>
-                        <th>Contact</th>
-                        <th>Test Summary</th>
-                        <th>Categories</th>
-                        <th>Recommended By</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="patientsTableBody">
-                    {% for test_data in tests_data %}
-                    <tr data-patient-name="{{ test_data.patient.full_name|lower }}">
-                        <td>
-                            <span class="badge badge-secondary">{{ test_data.patient.id }}</span>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>{{ test_data.patient.full_name }}</strong>
-                                <br>
-                                <small class="text-muted">
-                                    {{ test_data.patient.gender }} •
-                                    {{ test_data.patient.date_of_birth|date:"M d, Y" }} •
-                                    {{ test_data.patient.blood_group|default:"N/A" }}
-                                </small>
-                                {% if test_data.patient.is_inpatient %}
-                                <br><span class="badge badge-info">Inpatient</span>
-                                {% if test_data.patient.ward %}
-                                <small class="text-muted">{{ test_data.patient.ward.name }}</small>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td>
-                            <small>
-                                <i class="fas fa-phone"></i> {{ test_data.patient.phone|default:"N/A" }}
-                                <br>
-                                <i class="fas fa-map-marker-alt"></i> {{ test_data.patient.address|truncatechars:30|default:"N/A" }}
-                            </small>
-                        </td>
-                        <td>
-                            <div class="d-flex flex-column">
-                                <span class="badge badge-{% if test_data.status == 'pending' %}warning{% elif test_data.status == 'in_progress' %}info{% elif test_data.status == 'completed' %}success{% else %}secondary{% endif %} mb-1">
-                                    {{ test_data.test.test_name }}
-                                </span>
-                                <small class="text-muted">{{ test_data.status|title }}</small>
-                            </div>
-                        </td>
-                        <td>
-                            {% if test_data.category %}
-                            <span class="badge badge-outline mb-1">{{ test_data.category.name }}</span>
-                            {% else %}
-                            <small class="text-muted">No category</small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <small class="text-muted">{{ test_data.requested_by|default:"Walk-in" }}</small>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a href="{% url 'test_results' test_data.patient.id %}" class="btn btn-primary" title="View test details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <button class="btn btn-success create-test"
-                                        data-patient-id="{{ test_data.patient.id }}"
-                                        data-patient-name="{{ test_data.patient.full_name }}"
-                                        title="Create New Test">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                                {% if test_data.status == 'pending' %}
-                                <button class="btn btn-warning complete-test-direct"
-                                        data-test-id="{{ test_data.test.id }}"
-                                        data-test-name="{{ test_data.test.test_name }}"
-                                        data-patient-name="{{ test_data.patient.full_name }}"
-                                        title="Complete Test">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center py-4">
-                            <div class="text-muted">
-                                <i class="fas fa-info-circle fa-2x mb-2"></i>
-                                <br>
-                                No patients with lab tests found
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-
-
 
         <!-- Quick Test Entry Section for Pending Tests -->
         {% if pending_tests_by_category %}
@@ -246,9 +247,8 @@
                                         <small class="text-muted">{{ test.test_name }}</small>
                                     </div>
                                     <button class="btn btn-sm btn-warning complete-test-direct"
-                                            data-test-id="{{ test.id }}"
-                                            data-test-name="{{ test.test_name }}"
-                                            data-patient-name="{{ test.patient.full_name }}">
+                                        data-test-id="{{ test.id }}" data-test-name="{{ test.test_name }}"
+                                        data-patient-name="{{ test.patient.full_name }}">
                                         <i class="fas fa-check"></i> Complete
                                     </button>
                                 </div>
@@ -263,7 +263,8 @@
         {% endif %}
 
         <!-- Patient Tests Modal -->
-        <div class="modal fade" id="patientTestsModal" tabindex="-1" role="dialog" aria-labelledby="patientTestsModalLabel" aria-hidden="true">
+        <div class="modal fade" id="patientTestsModal" tabindex="-1" role="dialog"
+            aria-labelledby="patientTestsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl" role="document">
                 <div class="modal-content">
                     <div class="modal-header bg-primary">
@@ -418,12 +419,14 @@
 
                             <div class="form-group">
                                 <label for="normalRange">Normal Range</label>
-                                <input type="text" class="form-control" id="normalRange" name="normal_range" placeholder="e.g., 70-100 mg/dL">
+                                <input type="text" class="form-control" id="normalRange" name="normal_range"
+                                    placeholder="e.g., 70-100 mg/dL">
                             </div>
 
                             <div class="form-group">
                                 <label for="testInstructions">Instructions</label>
-                                <textarea class="form-control" id="testInstructions" name="instructions" rows="3"></textarea>
+                                <textarea class="form-control" id="testInstructions" name="instructions"
+                                    rows="3"></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -461,12 +464,14 @@
 
                             <div class="form-group">
                                 <label for="testResult">Test Result *</label>
-                                <textarea class="form-control" id="testResult" name="result_value" rows="4" required placeholder="Enter test results..."></textarea>
+                                <textarea class="form-control" id="testResult" name="result_value" rows="4" required
+                                    placeholder="Enter test results..."></textarea>
                             </div>
 
                             <div class="form-group">
                                 <label for="testNotes">Additional Notes</label>
-                                <textarea class="form-control" id="testNotes" name="notes" rows="2" placeholder="Optional notes..."></textarea>
+                                <textarea class="form-control" id="testNotes" name="notes" rows="2"
+                                    placeholder="Optional notes..."></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -487,65 +492,65 @@
 <!-- Scripts -->
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // CSRF Token setup
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+    document.addEventListener('DOMContentLoaded', function () {
+        // CSRF Token setup
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
                 }
             }
+            return cookieValue;
         }
-        return cookieValue;
-    }
-    const csrftoken = getCookie('csrftoken');
+        const csrftoken = getCookie('csrftoken');
 
-    // Patient Search Filter
-    const searchInput = document.getElementById('patientSearch');
-    const tableBody = document.getElementById('patientsTableBody');
+        // Patient Search Filter
+        const searchInput = document.getElementById('patientSearch');
+        const tableBody = document.getElementById('patientsTableBody');
 
-    searchInput.addEventListener('input', function() {
-        const filter = this.value.toLowerCase();
-        Array.from(tableBody.querySelectorAll('tr')).forEach(row => {
-            const patientName = row.getAttribute('data-patient-name') || '';
-            row.style.display = patientName.includes(filter) ? '' : 'none';
+        searchInput.addEventListener('input', function () {
+            const filter = this.value.toLowerCase();
+            Array.from(tableBody.querySelectorAll('tr')).forEach(row => {
+                const patientName = row.getAttribute('data-patient-name') || '';
+                row.style.display = patientName.includes(filter) ? '' : 'none';
+            });
         });
-    });
 
-    // Modal references
-    const testModal = $('#patientTestsModal');
-    const createModal = $('#createTestModal');
-    const completeModal = $('#completeTestModal');
-    
-    let currentPatientId = null;
+        // Modal references
+        const testModal = $('#patientTestsModal');
+        const createModal = $('#createTestModal');
+        const completeModal = $('#completeTestModal');
 
-    // Function to fetch patient tests via AJAX
-    function fetchPatientTests(patientId) {
-        currentPatientId = patientId;
-        
-        // Show loading, hide content
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('patientInfoSection').style.display = 'none';
-        document.getElementById('pendingTestsContainer').style.display = 'none';
-        document.getElementById('inProgressTestsContainer').style.display = 'none';
-        document.getElementById('completedTestsContainer').style.display = 'none';
+        let currentPatientId = null;
 
-        fetch(`/laboratory/patient_tests/${patientId}/`, {
-            headers: {
-                'X-CSRFToken': csrftoken,
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('loading').style.display = 'none';
-            // Update patient info section
-            const patientInfo = document.getElementById('patientInfo');
-            patientInfo.innerHTML = `
+        // Function to fetch patient tests via AJAX
+        function fetchPatientTests(patientId) {
+            currentPatientId = patientId;
+
+            // Show loading, hide content
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('patientInfoSection').style.display = 'none';
+            document.getElementById('pendingTestsContainer').style.display = 'none';
+            document.getElementById('inProgressTestsContainer').style.display = 'none';
+            document.getElementById('completedTestsContainer').style.display = 'none';
+
+            fetch(`/laboratory/patient_tests/${patientId}/`, {
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    // Update patient info section
+                    const patientInfo = document.getElementById('patientInfo');
+                    patientInfo.innerHTML = `
                 <div class="row">
                     <div class="col-md-4">
                         <strong>Name:</strong> ${data.patient.full_name}<br>
@@ -564,12 +569,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            document.getElementById('patientInfoSection').style.display = 'block';
+                    document.getElementById('patientInfoSection').style.display = 'block';
 
-            // Update pending tests
-            const pendingTestsBody = document.getElementById('pendingTestsBody');
-            if (data.pending_tests && data.pending_tests.length > 0) {
-                pendingTestsBody.innerHTML = data.pending_tests.map(test => `
+                    // Update pending tests
+                    const pendingTestsBody = document.getElementById('pendingTestsBody');
+                    if (data.pending_tests && data.pending_tests.length > 0) {
+                        pendingTestsBody.innerHTML = data.pending_tests.map(test => `
                     <tr>
                         <td>${test.test_name}</td>
                         <td>${test.category || 'N/A'}</td>
@@ -586,13 +591,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                     </tr>
                 `).join('');
-                document.getElementById('pendingTestsContainer').style.display = 'block';
-            }
+                        document.getElementById('pendingTestsContainer').style.display = 'block';
+                    }
 
-            // Update in progress tests
-            const inProgressTestsBody = document.getElementById('inProgressTestsBody');
-            if (data.in_progress_tests && data.in_progress_tests.length > 0) {
-                inProgressTestsBody.innerHTML = data.in_progress_tests.map(test => `
+                    // Update in progress tests
+                    const inProgressTestsBody = document.getElementById('inProgressTestsBody');
+                    if (data.in_progress_tests && data.in_progress_tests.length > 0) {
+                        inProgressTestsBody.innerHTML = data.in_progress_tests.map(test => `
                     <tr>
                         <td>${test.test_name}</td>
                         <td>${test.category || 'N/A'}</td>
@@ -609,13 +614,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                     </tr>
                 `).join('');
-                document.getElementById('inProgressTestsContainer').style.display = 'block';
-            }
+                        document.getElementById('inProgressTestsContainer').style.display = 'block';
+                    }
 
-            // Update completed tests
-            const completedTestsBody = document.getElementById('completedTestsBody');
-            if (data.completed_tests && data.completed_tests.length > 0) {
-                completedTestsBody.innerHTML = data.completed_tests.map(test => `
+                    // Update completed tests
+                    const completedTestsBody = document.getElementById('completedTestsBody');
+                    if (data.completed_tests && data.completed_tests.length > 0) {
+                        completedTestsBody.innerHTML = data.completed_tests.map(test => `
                     <tr>
                         <td>${test.test_name}</td>
                         <td>${test.category || 'N/A'}</td>
@@ -632,236 +637,236 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                     </tr>
                 `).join('');
-                document.getElementById('completedTestsContainer').style.display = 'block';
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching patient tests:', error);
-            document.getElementById('loading').style.display = 'none';
-            alert('Error loading patient data. Please try again.');
-        });
-    }
-
-    // View Tests Button Click Handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.view-tests')) {
-            const btn = e.target.closest('.view-tests');
-            const patientId = btn.getAttribute('data-patient-id');
-            const patientName = btn.getAttribute('data-patient-name');
-            
-            document.getElementById('patientName').textContent = patientName;
-            fetchPatientTests(patientId);
-            testModal.modal('show');
-        }
-    });
-
-    // Create Test Button Click Handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.create-test')) {
-            const btn = e.target.closest('.create-test');
-            const patientId = btn.getAttribute('data-patient-id');
-            const patientName = btn.getAttribute('data-patient-name');
-            
-            document.getElementById('createTestPatientId').value = patientId;
-            document.getElementById('createTestPatientName').value = patientName;
-            createModal.modal('show');
-        }
-    });
-
-    // Create Test from Modal Button
-    document.getElementById('createTestBtn').addEventListener('click', function() {
-        if (currentPatientId) {
-            const patientName = document.getElementById('patientName').textContent;
-            document.getElementById('createTestPatientId').value = currentPatientId;
-            document.getElementById('createTestPatientName').value = patientName;
-            testModal.modal('hide');
-            createModal.modal('show');
-        }
-    });
-
-    // Complete Test Button Click Handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.complete-test-btn') || e.target.closest('.complete-test-direct')) {
-            const btn = e.target.closest('.complete-test-btn') || e.target.closest('.complete-test-direct');
-            const testId = btn.getAttribute('data-test-id');
-            const testName = btn.getAttribute('data-test-name');
-            
-            document.getElementById('completeTestId').value = testId;
-            document.getElementById('completeTestName').value = testName;
-            completeModal.modal('show');
-        }
-    });
-
-    // Quick Complete Button Click Handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.quick-complete')) {
-            const btn = e.target.closest('.quick-complete');
-            const patientId = btn.getAttribute('data-patient-id');
-            const patientName = btn.getAttribute('data-patient-name');
-            
-            if (confirm(`Complete all pending tests for ${patientName}?`)) {
-                fetch(`/laboratory/quick_complete_tests/${patientId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrftoken,
-                        'Content-Type': 'application/json',
+                        document.getElementById('completedTestsContainer').style.display = 'block';
                     }
                 })
+                .catch(error => {
+                    console.error('Error fetching patient tests:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    alert('Error loading patient data. Please try again.');
+                });
+        }
+
+        // View Tests Button Click Handler
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.view-tests')) {
+                const btn = e.target.closest('.view-tests');
+                const patientId = btn.getAttribute('data-patient-id');
+                const patientName = btn.getAttribute('data-patient-name');
+
+                document.getElementById('patientName').textContent = patientName;
+                fetchPatientTests(patientId);
+                testModal.modal('show');
+            }
+        });
+
+        // Create Test Button Click Handler
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.create-test')) {
+                const btn = e.target.closest('.create-test');
+                const patientId = btn.getAttribute('data-patient-id');
+                const patientName = btn.getAttribute('data-patient-name');
+
+                document.getElementById('createTestPatientId').value = patientId;
+                document.getElementById('createTestPatientName').value = patientName;
+                createModal.modal('show');
+            }
+        });
+
+        // Create Test from Modal Button
+        document.getElementById('createTestBtn').addEventListener('click', function () {
+            if (currentPatientId) {
+                const patientName = document.getElementById('patientName').textContent;
+                document.getElementById('createTestPatientId').value = currentPatientId;
+                document.getElementById('createTestPatientName').value = patientName;
+                testModal.modal('hide');
+                createModal.modal('show');
+            }
+        });
+
+        // Complete Test Button Click Handler
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.complete-test-btn') || e.target.closest('.complete-test-direct')) {
+                const btn = e.target.closest('.complete-test-btn') || e.target.closest('.complete-test-direct');
+                const testId = btn.getAttribute('data-test-id');
+                const testName = btn.getAttribute('data-test-name');
+
+                document.getElementById('completeTestId').value = testId;
+                document.getElementById('completeTestName').value = testName;
+                completeModal.modal('show');
+            }
+        });
+
+        // Quick Complete Button Click Handler
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.quick-complete')) {
+                const btn = e.target.closest('.quick-complete');
+                const patientId = btn.getAttribute('data-patient-id');
+                const patientName = btn.getAttribute('data-patient-name');
+
+                if (confirm(`Complete all pending tests for ${patientName}?`)) {
+                    fetch(`/laboratory/quick_complete_tests/${patientId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken,
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert('Error completing tests: ' + (data.error || 'Unknown error'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error completing tests. Please try again.');
+                        });
+                }
+            }
+        });
+
+        // Create Test Form Submit Handler
+        document.getElementById('createTestForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+
+            fetch('/laboratory/create_test/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        location.reload();
+                        createModal.modal('hide');
+                        this.reset();
+
+                        // Refresh the patient tests modal if open
+                        if (currentPatientId) {
+                            fetchPatientTests(currentPatientId);
+                        } else {
+                            location.reload();
+                        }
+
+                        // Show success message
+                        showAlert('Test created successfully!', 'success');
                     } else {
-                        alert('Error completing tests: ' + (data.error || 'Unknown error'));
+                        alert('Error creating test: ' + (data.error || 'Unknown error'));
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error completing tests. Please try again.');
+                    alert('Error creating test. Please try again.');
                 });
-            }
-        }
-    });
-
-    // Create Test Form Submit Handler
-    document.getElementById('createTestForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData);
-        
-        fetch('/laboratory/create_test/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                createModal.modal('hide');
-                this.reset();
-                
-                // Refresh the patient tests modal if open
-                if (currentPatientId) {
-                    fetchPatientTests(currentPatientId);
-                } else {
-                    location.reload();
-                }
-                
-                // Show success message
-                showAlert('Test created successfully!', 'success');
-            } else {
-                alert('Error creating test: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error creating test. Please try again.');
         });
-    });
 
-    // Complete Test Form Submit Handler
-    document.getElementById('completeTestForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData);
-        
-        fetch('/laboratory/complete_test/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                completeModal.modal('hide');
-                this.reset();
-                
-                // Refresh the patient tests modal if open
-                if (currentPatientId) {
-                    fetchPatientTests(currentPatientId);
-                } else {
-                    location.reload();
-                }
-                
-                showAlert('Test completed successfully!', 'success');
-            } else {
-                alert('Error completing test: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error completing test. Please try again.');
-        });
-    });
+        // Complete Test Form Submit Handler
+        document.getElementById('completeTestForm').addEventListener('submit', function (e) {
+            e.preventDefault();
 
-    // View Test Details Handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.view-test-btn')) {
-            const btn = e.target.closest('.view-test-btn');
-            const testId = btn.getAttribute('data-test-id');
-            
-            fetch(`/laboratory/test_details/${testId}/`, {
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+
+            fetch('/laboratory/complete_test/', {
+                method: 'POST',
                 headers: {
                     'X-CSRFToken': csrftoken,
-                }
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showTestDetailsModal(data.test);
-                } else {
-                    alert('Error loading test details');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error loading test details');
-            });
-        }
-    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        completeModal.modal('hide');
+                        this.reset();
 
-    // Print Test Handler
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.print-test-btn')) {
-            const btn = e.target.closest('.print-test-btn');
-            const testId = btn.getAttribute('data-test-id');
-            
-            window.open(`/laboratory/print_test/${testId}/`, '_blank');
-        }
-    });
+                        // Refresh the patient tests modal if open
+                        if (currentPatientId) {
+                            fetchPatientTests(currentPatientId);
+                        } else {
+                            location.reload();
+                        }
 
-    // Utility function to show alerts
-    function showAlert(message, type = 'info') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
+                        showAlert('Test completed successfully!', 'success');
+                    } else {
+                        alert('Error completing test: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error completing test. Please try again.');
+                });
+        });
+
+        // View Test Details Handler
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.view-test-btn')) {
+                const btn = e.target.closest('.view-test-btn');
+                const testId = btn.getAttribute('data-test-id');
+
+                fetch(`/laboratory/test_details/${testId}/`, {
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showTestDetailsModal(data.test);
+                        } else {
+                            alert('Error loading test details');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error loading test details');
+                    });
+            }
+        });
+
+        // Print Test Handler
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.print-test-btn')) {
+                const btn = e.target.closest('.print-test-btn');
+                const testId = btn.getAttribute('data-test-id');
+
+                window.open(`/laboratory/print_test/${testId}/`, '_blank');
+            }
+        });
+
+        // Utility function to show alerts
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
             ${message}
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
         `;
-        
-        const container = document.querySelector('.container-fluid');
-        const firstChild = container.firstChild;
-        container.insertBefore(alertDiv, firstChild);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
-    }
 
-    // Function to show test details in a modal
-    function showTestDetailsModal(test) {
-        const modalContent = `
+            const container = document.querySelector('.container-fluid');
+            const firstChild = container.firstChild;
+            container.insertBefore(alertDiv, firstChild);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Function to show test details in a modal
+        function showTestDetailsModal(test) {
+            const modalContent = `
             <div class="modal fade" id="testDetailsModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -901,44 +906,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('testDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('testDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Add new modal to body
+            document.body.insertAdjacentHTML('beforeend', modalContent);
+            $('#testDetailsModal').modal('show');
+
+            // Remove modal from DOM when hidden
+            $('#testDetailsModal').on('hidden.bs.modal', function () {
+                this.remove();
+            });
         }
-        
-        // Add new modal to body
-        document.body.insertAdjacentHTML('beforeend', modalContent);
-        $('#testDetailsModal').modal('show');
-        
-        // Remove modal from DOM when hidden
-        $('#testDetailsModal').on('hidden.bs.modal', function() {
-            this.remove();
+
+        // Clear form fields when modals are hidden
+        createModal.on('hidden.bs.modal', function () {
+            document.getElementById('createTestForm').reset();
         });
-    }
 
-    // Clear form fields when modals are hidden
-    createModal.on('hidden.bs.modal', function() {
-        document.getElementById('createTestForm').reset();
+        completeModal.on('hidden.bs.modal', function () {
+            document.getElementById('completeTestForm').reset();
+        });
+
+        // Auto-refresh page every 5 minutes to keep data current
+        setInterval(function () {
+            if (!testModal.hasClass('show') && !createModal.hasClass('show') && !completeModal.hasClass('show')) {
+                location.reload();
+            }
+        }, 300000); // 5 minutes
+
+        // Initialize tooltips
+        $('[data-toggle="tooltip"]').tooltip();
+
+        // Initialize any additional Bootstrap components
+        $('.alert').alert();
     });
-    
-    completeModal.on('hidden.bs.modal', function() {
-        document.getElementById('completeTestForm').reset();
-    });
-
-    // Auto-refresh page every 5 minutes to keep data current
-    setInterval(function() {
-        if (!testModal.hasClass('show') && !createModal.hasClass('show') && !completeModal.hasClass('show')) {
-            location.reload();
-        }
-    }, 300000); // 5 minutes
-
-    // Initialize tooltips
-    $('[data-toggle="tooltip"]').tooltip();
-    
-    // Initialize any additional Bootstrap components
-    $('.alert').alert();
-});
 </script>
 {% endblock %}
