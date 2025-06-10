@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -124,25 +124,24 @@ def logout_view(request):
 def nurses(request):
     user = request.user
 
-    try:
-        nurse_profile = Staff.objects.get(user=user, role='nurse')
-    except Staff.DoesNotExist:
-        nurse_profile = None
+    # ✅ Get nurse profile
+    nurse_profile = Staff.objects.filter(user=user, role='nurse').first()
 
+    # ✅ Dashboard stats
     active_patients = Patient.objects.filter(is_inpatient=True).count()
     critical_patients = Patient.objects.filter(status='critical').count()
     stable_patients = Patient.objects.filter(status='stable').count()
     recovered_patients = Patient.objects.filter(status='recovered').count()
-    available_beds = Bed.objects.filter(is_occupied=False).count()
-
-    recent_notes = NursingNote.objects.select_related('patient').order_by('-note_datetime')[:5]
     todays_admissions = Admission.objects.filter(admission_date=now().date()).count()
 
-    # ✅ Define quick actions here
+    # ✅ Recent activities
+    recent_notes = NursingNote.objects.select_related('patient').order_by('-note_datetime')[:5]
+
+    # ✅ Action shortcuts
     quick_actions = [
         {
             'title': 'Admit New Patient',
-            'url': reverse('nursing_ward_actions'),
+            'url': reverse('nursing_actions'),
             'icon': 'fa-user-plus',
             'color': 'success',
             'description': 'Register and admit new patients'
@@ -155,32 +154,32 @@ def nurses(request):
             'description': 'Monitor and record vital signs'
         },
         {
-            'title': 'Consultation Notes',
-            'url': reverse('nursing_notes'),
-            'icon': 'fa-clipboard',
-            'color': 'info',
-            'description': 'Document patient consultations'
-        },
-        {
             'title': 'Prep for Consultation',
-            'url': '#',
+            'url': reverse('nursing_actions') + '#monitor',
             'icon': 'fa-stethoscope',
             'color': 'primary',
             'description': 'Prepare patients for doctor visits'
         },
         {
             'title': 'Discharge Patient',
-            'url': '#',
+            'url': reverse('nursing_actions') + '#discharge',
             'icon': 'fa-door-open',
             'color': 'danger',
             'description': 'Process patient discharge'
         },
         {
             'title': 'Monitor Patient Status',
-            'url': '#',
+            'url': reverse('nursing_actions') + '#monitor',
             'icon': 'fa-chart-line',
             'color': 'dark',
-            'description': 'View patient monitoring data'
+            'description': 'Update and monitor condition'
+        },
+        {
+            'title': 'Write Nursing Note',
+            'url': reverse('nursing_actions') + '#nursing_note',
+            'icon': 'fa-notes-medical',
+            'color': 'info',
+            'description': 'Document observations and updates'
         },
     ]
 
@@ -190,10 +189,9 @@ def nurses(request):
         'critical_patients': critical_patients,
         'stable_patients': stable_patients,
         'recovered_patients': recovered_patients,
-        'available_beds': available_beds,
         'recent_notes': recent_notes,
         'todays_admissions': todays_admissions,
-        'quick_actions': quick_actions,  # ✅ Add to context
+        'quick_actions': quick_actions,
     }
 
     return render(request, 'nurses/index.html', context)
@@ -218,22 +216,34 @@ def admit_patient_nurse(request):
         doctor = request.POST.get('doctor')
         admission_reason = request.POST.get('admission_reason')
 
-        patient = get_object_or_404(Patient, id=patient_id)
+        # Validate patient_id
+        if not patient_id or patient_id.strip() == '':
+            messages.error(request, "Please select a patient to admit.")
+            return redirect('nursing_actions')
+
+        try:
+            patient = get_object_or_404(Patient, id=int(patient_id))
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid patient selection.")
+            return redirect('nursing_actions')
 
         if Admission.objects.filter(patient=patient, status='Admitted').exists():
             messages.warning(request, f"{patient.full_name} is already admitted.")
             return redirect('nursing_actions')
+
+        # Store admission details in the notes field since the model lacks specific fields
+        admission_details = f"Reason for Admission: {admission_reason}"
 
         Admission.objects.create(
             patient=patient,
             admission_date=timezone.now().date(),
             doctor_assigned=doctor,
             status='Admitted',
-            admitted_by=request.user.get_full_name() or request.user.username
+            admitted_by=request.user.get_full_name() or request.user.username,
+            discharge_notes=admission_details
         )
 
         patient.is_inpatient = True
-        patient.notes = f"{patient.notes or ''}\n\nADMISSION: {admission_reason}"
         patient.save()
 
         messages.success(request, f"{patient.full_name} admitted successfully.")
@@ -246,36 +256,47 @@ def admit_patient_nurse(request):
 @login_required(login_url='home')
 def discharge_patient(request):
     if request.method == 'POST':
-        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        patient_id = request.POST.get('patient_id')
         summary = request.POST.get('discharge_summary')
+        followup_date = request.POST.get('followup_date')
+        followup_doctor = request.POST.get('followup_doctor')
 
-        if not patient.is_inpatient:
-            messages.error(request, f"{patient.full_name} is not admitted.")
+        # Validate patient_id
+        if not patient_id or patient_id.strip() == '':
+            messages.error(request, "Please select a patient to discharge.")
             return redirect('nursing_actions')
 
+        try:
+            patient = get_object_or_404(Patient, id=int(patient_id))
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid patient selection.")
+            return redirect('nursing_actions')
+        
         admission = Admission.objects.filter(patient=patient, status='Admitted').first()
         if not admission:
-            messages.error(request, "No active admission found.")
+            messages.error(request, "No active admission found for this patient.")
             return redirect('nursing_actions')
+        
+        # Combine all discharge info into the notes field
+        full_summary = f"Discharge Summary:\n{summary}"
+        if followup_date:
+            full_summary += f"\n\nFollow-up Date: {followup_date}"
+        if followup_doctor:
+            full_summary += f"\nFollow-up Doctor: {followup_doctor}"
 
+        # Update patient status
         patient.is_inpatient = False
-        patient.notes = f"{patient.notes or ''}\n\nDISCHARGE SUMMARY:\n{summary}"
         patient.status = 'recovered'
-        patient.ward = None
-        patient.bed = None
         patient.save()
 
-        if patient.bed:
-            patient.bed.is_occupied = False
-            patient.bed.save()
-
+        # Update admission record
         admission.status = 'Discharged'
         admission.discharge_date = timezone.now().date()
-        admission.discharge_notes = summary
-        admission.discharged_by = request.user.get_full_name()
+        admission.discharge_notes = full_summary
+        admission.discharged_by = request.user.get_full_name() or request.user.username
         admission.save()
 
-        messages.success(request, f"{patient.full_name} discharged successfully.")
+        messages.success(request, f"{patient.full_name} has been discharged successfully.")
         return redirect('nursing_actions')
 
     return redirect('nursing_actions')
@@ -285,22 +306,35 @@ def discharge_patient(request):
 @login_required(login_url='home')
 def update_patient_status(request):
     if request.method == 'POST':
-        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
-        new_status = request.POST.get('status')
-        note_text = request.POST.get('notes')
+        patient_id = request.POST.get('patient_id')
+        new_status = request.POST.get('status') #
+        note_text = request.POST.get('notes') #
+        next_check = request.POST.get('next_check') #
 
-        if not patient.is_inpatient:
-            messages.error(request, f"{patient.full_name} is not admitted.")
-            return redirect('nursing_actions')
+        patient = get_object_or_404(Patient, id=patient_id)
+        
+        # Combine monitoring info for the nursing note
+        monitoring_notes = f"Patient status set to: {new_status}.\n{note_text}"
+        if next_check:
+            monitoring_notes += f"\nNext Check scheduled for: {timezone.datetime.fromisoformat(next_check).strftime('%Y-%m-%d %H:%M')}"
 
-        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
-        note_entry = f"\n\nSTATUS UPDATE ({timestamp}): {new_status}\n{note_text}"
+        # Create a detailed nursing note for the status update
+        NursingNote.objects.create(
+            patient=patient,
+            nurse=request.user.get_full_name() or request.user.username,
+            note_type='observation', #
+            notes=monitoring_notes,
+            note_datetime=timezone.now(),
+            patient_status=new_status
+        )
+        
+        # Update the main patient status only if it's a valid choice
+        valid_statuses = [choice[0] for choice in Patient.STATUS_CHOICES] #
+        if new_status in valid_statuses:
+            patient.status = new_status
+            patient.save()
 
-        patient.status = new_status
-        patient.notes = f"{patient.notes or ''}{note_entry}"
-        patient.save()
-
-        messages.success(request, f"{patient.full_name}'s status updated.")
+        messages.success(request, f"{patient.full_name}'s monitoring status has been updated.")
         return redirect('nursing_actions')
 
     return redirect('nursing_actions')
@@ -310,58 +344,79 @@ def update_patient_status(request):
 @login_required(login_url='home')
 def refer_patient(request):
     if request.method == 'POST':
-        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
-        department_id = request.POST.get('department')
-        notes = request.POST.get('notes')
-
+        patient_id = request.POST.get('patient_id')
+        department_id = request.POST.get('department') #
+        notes = request.POST.get('notes') #
+        priority = request.POST.get('priority') #
+        
+        patient = get_object_or_404(Patient, id=patient_id)
         department = get_object_or_404(Department, id=department_id)
+
+        # Prepend priority to notes since there's no dedicated field in the model
+        referral_notes = f"PRIORITY: {priority.upper()}\n\n{notes}"
 
         Referral.objects.create(
             patient=patient,
-            department=department,
-            notes=notes
+            department=department, #
+            notes=referral_notes #
         )
 
-        messages.success(request, f"{patient.full_name} referred to {department.name}.")
+        messages.success(request, f"{patient.full_name} has been referred to {department.name}.")
         return redirect('nursing_actions')
 
     return redirect('nursing_actions')
 
-
 @csrf_exempt
 @login_required(login_url='home')
-def save_nursing_note(request):
+def save_nursing_note(request):  # Make sure this matches your URL name
     if request.method == 'POST':
-        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        patient_id = request.POST.get('patient_id')
+        
+        # Validate patient_id
+        if not patient_id or patient_id.strip() == '':
+            messages.error(request, "Please select a patient to add nursing notes.")
+            return redirect('nursing_actions')
+
+        try:
+            patient = get_object_or_404(Patient, id=int(patient_id))
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid patient selection.")
+            return redirect('nursing_actions')
+
         NursingNote.objects.create(
             patient=patient,
             note_type=request.POST.get('note_type'),
             notes=request.POST.get('notes'),
             follow_up=request.POST.get('follow_up'),
             nurse=request.user.get_full_name() or request.user.username,
-            patient_status=patient.status,
             note_datetime=timezone.now()
         )
-        messages.success(request, "Nursing note saved.")
+        messages.success(request, "Nursing note saved successfully.")
         return redirect('nursing_actions')
-    return redirect('nursing_actions')
 
+    return redirect('nursing_actions')
 
 @csrf_exempt
 @login_required(login_url='home')
 def handover_log(request):
     if request.method == 'POST':
-        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
-        notes = request.POST.get('notes')
+        patient_id = request.POST.get('patient_id')
+        handover_to = request.POST.get('handover_to') #
+        shift = request.POST.get('shift') #
+        notes = request.POST.get('notes') #
+        
+        patient = get_object_or_404(Patient, id=patient_id)
 
-        from .models import HandoverLog
+        # Combine handover details into the main notes field
+        handover_details = f"Handover To: {handover_to}\nShift: {shift.title()}\n\n{notes}"
+
         HandoverLog.objects.create(
             patient=patient,
-            notes=notes,
-            author=request.user
+            notes=handover_details, #
+            author=request.user #
         )
 
-        messages.success(request, "Handover logged.")
+        messages.success(request, f"Handover for {patient.full_name} has been logged.")
         return redirect('nursing_actions')
 
     return redirect('nursing_actions')
@@ -371,16 +426,39 @@ def handover_log(request):
 def get_patient_details(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)
+
+        vitals = list(Vitals.objects.filter(patient=patient).order_by('-recorded_at')[:5].values(
+            'temperature', 'blood_pressure', 'pulse', 'recorded_at'
+        ))
+
+        prescriptions = list(Prescription.objects.filter(patient=patient).order_by('-created_at')[:5].values(
+            'medication', 'instructions', 'start_date'
+        ))
+
+        lab_tests = list(LabTest.objects.filter(patient=patient).order_by('-requested_at')[:5].values(
+            'test_name', 'result_value', 'status'
+        ))
+
+        care_plan = CarePlan.objects.filter(patient=patient).order_by('-created_at').first()
+        care_plan_data = care_plan.plan_of_care if care_plan else None
+
+        nursing_notes = list(NursingNote.objects.filter(patient=patient).order_by('-note_datetime')[:5].values(
+            'note_type', 'notes', 'note_datetime'
+        ))
+
         return JsonResponse({
             'id': patient.id,
             'full_name': patient.full_name,
             'status': patient.status,
-            'is_inpatient': patient.is_inpatient,
-            'ward': patient.ward.id if patient.ward else None,
-            'ward_name': patient.ward.name if patient.ward else None,
-            'bed': patient.bed.number if patient.bed else None,
-            'notes': patient.notes
+            'notes': patient.notes,
+            'photo_url': patient.photo.url if patient.photo else None,
+            'vitals': vitals,
+            'prescriptions': prescriptions,
+            'lab_tests': lab_tests,
+            'care_plan': care_plan_data,
+            'nursing_notes': nursing_notes,
         })
+
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
 
@@ -1655,17 +1733,13 @@ def receptionist(request):
 @login_required(login_url='home')
 def register_patient(request):
     patients = Patient.objects.all().order_by('-date_registered')
-    wards = Ward.objects.all()
-    available_beds = Bed.objects.filter(is_occupied=False)
     departments = Department.objects.all()
 
     doctors = Staff.objects.filter(role='doctor')
     nurses = Staff.objects.filter(role='nurse')
 
     return render(request, 'receptionist/register.html', {
-        'wards': wards,
         'patients': patients,
-        'available_beds': available_beds,
         'department': departments,
         'doctors': doctors,
         'nurses': nurses,

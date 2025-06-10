@@ -11,7 +11,7 @@ urlpatterns = [
 
     ########################### Nurses URLS #################################
 
-    path('n/home', views.nursing_actions, name='nurse'),
+    path('n/home', views.nurses, name='nurse'),
     path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
 
     path('n/admit_patient_nurse', views.admit_patient_nurse, name='admit_patient_nurse'),
