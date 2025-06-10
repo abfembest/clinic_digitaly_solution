@@ -98,12 +98,12 @@
                                 <p>Nursing Actions</p>
                             </a>
                         </li>
-                        <li class="nav-item">
+                        {% comment %} <li class="nav-item">
                             <a href="{% url 'nursing_notes' %}" class="nav-link {% if request.resolver_match.url_name == 'nursing_notes' %}active{% endif %}">
                                 <i class="nav-icon fas fa-notes-medical"></i>
                                 <p>Consultation Notes</p>
                             </a>
-                        </li>
+                        </li> {% endcomment %}
                         <li class="nav-header">ACCOUNT</li>
                         <li class="nav-item">
                             <a href="{% url 'logout' %}" class="nav-link">

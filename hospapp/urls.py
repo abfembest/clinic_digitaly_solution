@@ -11,17 +11,22 @@ urlpatterns = [
 
     ########################### Nurses URLS #################################
 
-    path('n/home', views.nurses, name='nurse'),
+    path('n/home', views.nursing_actions, name='nurse'),
     path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
+
     path('n/admit_patient_nurse', views.admit_patient_nurse, name='admit_patient_nurse'),
-    path('n/assign_ward_bed', views.assign_ward_bed, name='assign_ward_bed'),
     path('n/discharge_patient', views.discharge_patient, name='discharge_patient'),
     path('n/update_patient_status', views.update_patient_status, name='update_patient_status'),
+    path('n/refer_patient', views.refer_patient, name='refer_patient'),
+
+    path('n/save_nursing_note', views.save_nursing_note, name='nursing_note'),
+    path('n/handover_log', views.handover_log, name='handover_log'),
+
     path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
+
+    # Optional vitals routes (already provided earlier)
     path('n/vitals', views.vitals, name='vitals'),
     path('n/record_vitals', views.record_vitals, name='record_vitals'),
-    path('n/nursing_notes', views.nursing_notes, name='nursing_notes'),
-    path('n/save_nursing_notes', views.save_nursing_note, name='save_nursing_note'),
 
     ########################### End Nurses URLS #################################
 

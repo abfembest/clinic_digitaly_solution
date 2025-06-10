@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Staff, Ward, Bed, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, ExpenseCategory
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -203,230 +203,168 @@ def nursing_actions(request):
     context = {
         'patients': Patient.objects.all(),
         'admitted_patients': Patient.objects.filter(is_inpatient=True),
-        'doctors': Staff.objects.select_related('user').filter(Q(role='doctor') | Q(role='nurse')),
+        'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
+        'nurses': Staff.objects.select_related('user').filter(Q(role='nurse')),
         'departments': Department.objects.all(),
     }
     return render(request, 'nurses/nursing_actions.html', context)
+
 
 @csrf_exempt
 @login_required(login_url='home')
 def admit_patient_nurse(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
-        admission_reason = request.POST.get('admission_reason')
-        ward_id = request.POST.get('ward')
-        bed_number = request.POST.get('bed_number')
         doctor = request.POST.get('doctor')
-        admission_date = request.POST.get('admission_date') or timezone.now().date()
+        admission_reason = request.POST.get('admission_reason')
 
-        # ✅ Get patient by ID
-        try:
-            patient = Patient.objects.get(id=patient_id)
-        except Patient.DoesNotExist:
-            messages.error(request, f"Patient with ID '{patient_id}' not found.")
-            return redirect('nursing_ward_actions')
+        patient = get_object_or_404(Patient, id=patient_id)
 
-        # ✅ Check if already admitted
         if Admission.objects.filter(patient=patient, status='Admitted').exists():
-            messages.warning(request, f"Patient '{patient.full_name}' is already admitted.")
-            return redirect('nursing_ward_actions')
+            messages.warning(request, f"{patient.full_name} is already admitted.")
+            return redirect('nursing_actions')
 
-        try:
-            ward = Ward.objects.get(id=ward_id)
-        except Ward.DoesNotExist:
-            messages.error(request, "Selected ward does not exist.")
-            return redirect('nursing_ward_actions')
-
-        try:
-            bed = Bed.objects.get(number=bed_number, ward=ward)
-        except Bed.DoesNotExist:
-            messages.error(request, "Selected bed does not exist.")
-            return redirect('nursing_ward_actions')
-
-        # ✅ Create admission
         Admission.objects.create(
             patient=patient,
-            admission_date=admission_date,
-            ward=ward,
-            bed=bed,
+            admission_date=timezone.now().date(),
             doctor_assigned=doctor,
             status='Admitted',
-            admitted_by=request.user.username
+            admitted_by=request.user.get_full_name() or request.user.username
         )
 
-        # ✅ Update bed and patient
-        bed.is_occupied = True
-        bed.save()
-
         patient.is_inpatient = True
-        patient.ward = ward
-        patient.bed = bed
-        patient.notes = admission_reason
+        patient.notes = f"{patient.notes or ''}\n\nADMISSION: {admission_reason}"
         patient.save()
 
-        messages.success(request, f"Patient '{patient.full_name}' admitted to Ward {ward.name}, Bed {bed.number}.")
-        return redirect('nursing_ward_actions')
+        messages.success(request, f"{patient.full_name} admitted successfully.")
+        return redirect('nursing_actions')
 
-    return redirect('nursing_ward_actions')
+    return redirect('nursing_actions')
 
-@csrf_exempt
-@login_required(login_url='home')
-def assign_ward_bed(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        ward_id = request.POST.get('ward_id')
-        bed_number = request.POST.get('bed_number')
-        doctor = request.POST.get('doctor')
-
-        try:
-            patient = Patient.objects.get(id=patient_id)
-            ward = Ward.objects.get(id=ward_id)
-            new_bed = Bed.objects.get(ward=ward, number=bed_number, is_occupied=False)
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-            return redirect('nursing_ward_actions')
-        except Ward.DoesNotExist:
-            messages.error(request, "Ward not found.")
-            return redirect('nursing_ward_actions')
-        except Bed.DoesNotExist:
-            messages.error(request, "Selected bed is not available.")
-            return redirect('nursing_ward_actions')
-
-        # Release the old bed if exists
-        if patient.bed:
-            patient.bed.is_occupied = False
-            patient.bed.save()
-
-        # Assign new bed
-        new_bed.is_occupied = True
-        new_bed.save()
-
-        # Update or create admission
-        admission = Admission.objects.filter(patient=patient, status='Admitted').first()
-        if admission:
-            admission.ward = ward
-            admission.bed = new_bed
-            admission.doctor_assigned = doctor or admission.doctor_assigned
-            admission.admission_date = timezone.now().date()
-            admission.save()
-        else:
-            Admission.objects.create(
-                patient=patient,
-                admission_date=timezone.now().date(),
-                ward=ward,
-                bed=new_bed,
-                doctor_assigned=doctor,
-                status='Admitted',
-                admitted_by=request.user.username
-            )
-
-        # Update patient record
-        patient.ward = ward
-        patient.bed = new_bed
-        patient.is_inpatient = True
-        patient.status = 'stable'
-        patient.save()
-
-        messages.success(request, f"{patient.full_name} has been reassigned to {ward.name}, Bed {new_bed.number}")
-        return redirect('nursing_ward_actions')
-
-    return redirect('nursing_ward_actions')
 
 @csrf_exempt
 @login_required(login_url='home')
 def discharge_patient(request):
     if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        discharge_summary = request.POST.get('discharge_summary')
+        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        summary = request.POST.get('discharge_summary')
 
-        try:
-            patient = Patient.objects.get(id=patient_id)
+        if not patient.is_inpatient:
+            messages.error(request, f"{patient.full_name} is not admitted.")
+            return redirect('nursing_actions')
 
-            if not patient.is_inpatient:
-                messages.error(request, f"{patient.full_name} is not currently admitted.")
-                return redirect('nursing_ward_actions')
+        admission = Admission.objects.filter(patient=patient, status='Admitted').first()
+        if not admission:
+            messages.error(request, "No active admission found.")
+            return redirect('nursing_actions')
 
-            # Try to get the active admission record
-            admission = Admission.objects.filter(patient=patient, status='Admitted').order_by('-admission_date').first()
-            if not admission:
-                messages.error(request, f"No active admission record found for {patient.full_name}.")
-                return redirect('nursing_ward_actions')
+        patient.is_inpatient = False
+        patient.notes = f"{patient.notes or ''}\n\nDISCHARGE SUMMARY:\n{summary}"
+        patient.status = 'recovered'
+        patient.ward = None
+        patient.bed = None
+        patient.save()
 
-            # Release the bed
-            bed = patient.bed
-            if bed:
-                bed.is_occupied = False
-                bed.save()
+        if patient.bed:
+            patient.bed.is_occupied = False
+            patient.bed.save()
 
-            # Update patient record
-            patient.is_inpatient = False
-            patient.ward = None
-            patient.bed = None
-            patient.status = 'discharged'
-            patient.notes = f"{patient.notes or ''}\n\nDISCHARGE SUMMARY ({timezone.now().strftime('%Y-%m-%d %H:%M')}):\n{discharge_summary}"
-            patient.save()
+        admission.status = 'Discharged'
+        admission.discharge_date = timezone.now().date()
+        admission.discharge_notes = summary
+        admission.discharged_by = request.user.get_full_name()
+        admission.save()
 
-            # Update admission record
-            admission.status = 'Discharged'
-            admission.discharge_date = timezone.now().date()
-            admission.discharge_notes = discharge_summary
-            admission.discharged_by = request.user.username
-            admission.save()
+        messages.success(request, f"{patient.full_name} discharged successfully.")
+        return redirect('nursing_actions')
 
-            messages.success(request, f"{patient.full_name} has been discharged successfully.")
+    return redirect('nursing_actions')
 
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-
-        return redirect('nursing_ward_actions')
-
-    return redirect('nursing_ward_actions')
 
 @csrf_exempt
 @login_required(login_url='home')
 def update_patient_status(request):
     if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        status = request.POST.get('status')
+        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        new_status = request.POST.get('status')
+        note_text = request.POST.get('notes')
+
+        if not patient.is_inpatient:
+            messages.error(request, f"{patient.full_name} is not admitted.")
+            return redirect('nursing_actions')
+
+        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
+        note_entry = f"\n\nSTATUS UPDATE ({timestamp}): {new_status}\n{note_text}"
+
+        patient.status = new_status
+        patient.notes = f"{patient.notes or ''}{note_entry}"
+        patient.save()
+
+        messages.success(request, f"{patient.full_name}'s status updated.")
+        return redirect('nursing_actions')
+
+    return redirect('nursing_actions')
+
+
+@csrf_exempt
+@login_required(login_url='home')
+def refer_patient(request):
+    if request.method == 'POST':
+        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        department_id = request.POST.get('department')
         notes = request.POST.get('notes')
 
-        try:
-            patient = Patient.objects.get(id=patient_id)
+        department = get_object_or_404(Department, id=department_id)
 
-            if not patient.is_inpatient:
-                messages.error(request, f"{patient.full_name} is not currently admitted.")
-                return redirect('nursing_ward_actions')
+        Referral.objects.create(
+            patient=patient,
+            department=department,
+            notes=notes
+        )
 
-            # Get active admission
-            admission = Admission.objects.filter(patient=patient, status='Admitted').order_by('-admission_date').first()
-            if not admission:
-                messages.error(request, f"No active admission record found for {patient.full_name}.")
-                return redirect('nursing_ward_actions')
+        messages.success(request, f"{patient.full_name} referred to {department.name}.")
+        return redirect('nursing_actions')
 
-            # Update patient status
-            patient.status = status
+    return redirect('nursing_actions')
 
-            # Timestamped note
-            timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
-            new_note = f"\n\nSTATUS UPDATE ({timestamp}) - STATUS: {status}\n{notes}"
-            patient.notes = f"{patient.notes or ''}{new_note}"
-            patient.save()
 
-            # Optional: Append to admission notes if you like (e.g. monitor history)
-            if admission.discharge_notes:
-                admission.discharge_notes += f"\n\n{new_note}"
-            else:
-                admission.discharge_notes = new_note
-            admission.save()
+@csrf_exempt
+@login_required(login_url='home')
+def save_nursing_note(request):
+    if request.method == 'POST':
+        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        NursingNote.objects.create(
+            patient=patient,
+            note_type=request.POST.get('note_type'),
+            notes=request.POST.get('notes'),
+            follow_up=request.POST.get('follow_up'),
+            nurse=request.user.get_full_name() or request.user.username,
+            patient_status=patient.status,
+            note_datetime=timezone.now()
+        )
+        messages.success(request, "Nursing note saved.")
+        return redirect('nursing_actions')
+    return redirect('nursing_actions')
 
-            messages.success(request, f"{patient.full_name}'s status updated to {status}.")
 
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
+@csrf_exempt
+@login_required(login_url='home')
+def handover_log(request):
+    if request.method == 'POST':
+        patient = get_object_or_404(Patient, id=request.POST.get('patient_id'))
+        notes = request.POST.get('notes')
 
-        return redirect('nursing_ward_actions')
+        from .models import HandoverLog
+        HandoverLog.objects.create(
+            patient=patient,
+            notes=notes,
+            author=request.user
+        )
 
-    return redirect('nursing_ward_actions')
+        messages.success(request, "Handover logged.")
+        return redirect('nursing_actions')
+
+    return redirect('nursing_actions')
 
 @csrf_exempt
 @login_required(login_url='home')
@@ -474,45 +412,6 @@ def record_vitals(request):
         except Exception as e:
             messages.error(request, f"Error recording vitals: {str(e)}")
     return redirect('vitals')
-
-@login_required(login_url='home')
-def nursing_notes(request):
-    context = {
-        'patients': Patient.objects.all(),
-    }
-    return render(request, 'nurses/nursing_notes.html', context)
-
-@csrf_exempt
-@login_required(login_url='home')
-def save_nursing_note(request):
-    if request.method == "POST":
-        patient_id = request.POST.get('patient_id')
-        note_datetime = request.POST.get('note_datetime') or timezone.now()
-        note_type = request.POST.get('note_type')
-        nurse = request.user.get_full_name() or request.user.username
-        patient_status = request.POST.get('patient_status')
-        notes = request.POST.get('notes')
-        follow_up = request.POST.get('follow_up')
-
-        try:
-            patient = Patient.objects.get(id=patient_id)
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-            return redirect('nursing_notes')  # adjust URL name accordingly
-
-        NursingNote.objects.create(
-            patient=patient,
-            note_datetime=note_datetime,
-            note_type=note_type,
-            nurse=nurse,
-            patient_status=patient_status,
-            notes=notes,
-            follow_up=follow_up
-        )
-        messages.success(request, "Nursing note saved successfully.")
-        return redirect('nursing_notes')
-
-    return redirect('nursing_notes')
 
 ''' ############################################################################################################################ End Nurses View ############################################################################################################################ '''
 

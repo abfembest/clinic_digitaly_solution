@@ -1,15 +1,14 @@
 from django.contrib import admin
 from .models import (
-    Admission, Appointment, Bed, CarePlan, Consultation, Department,
+    Admission, Appointment, CarePlan, Consultation, Department,
     EmergencyAlert, HandoverLog, LabResultFile, LabTest,
     MedicalRecord, NursingNote, Patient, Prescription, Staff,
-    Referral, Shift, Attendance, ShiftAssignment, Vitals, Ward,TestCategory,
+    Referral, Shift, Attendance, ShiftAssignment, Vitals, TestCategory,
     TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload,DoctorComments
 )
 
 admin.site.register(Admission)
 admin.site.register(Appointment)
-admin.site.register(Bed)
 admin.site.register(CarePlan)
 admin.site.register(Consultation)
 admin.site.register(Department)
@@ -27,7 +26,6 @@ admin.site.register(Shift)
 admin.site.register(ShiftAssignment)
 admin.site.register(Attendance)
 admin.site.register(Vitals)
-admin.site.register(Ward)
 admin.site.register(TestCategory)
 admin.site.register(TestSubcategory)
 admin.site.register(StaffTransition)

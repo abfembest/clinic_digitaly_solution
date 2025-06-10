@@ -43,24 +43,6 @@ class Staff(models.Model):
         return f"{self.user.first_name} {self.user.last_name} ({self.role})"
 
 # =============================================================================
-# WARD & BED MANAGEMENT (Alphabetical)
-# =============================================================================
-
-class Bed(models.Model):
-    is_occupied = models.BooleanField(default=False)
-    number = models.CharField(max_length=20)
-    ward = models.ForeignKey('Ward', on_delete=models.CASCADE, related_name='beds')
-
-    def __str__(self):
-        return f"{self.ward.name} - Bed {self.number}"
-
-class Ward(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return self.name
-
-# =============================================================================
 # PATIENT CORE MODELS (Alphabetical)
 # =============================================================================
 
@@ -117,14 +99,12 @@ class Patient(models.Model):
     next_of_kin_address = models.TextField(blank=True, null=True)
 
     # Medical Status
-    bed = models.ForeignKey(Bed, null=True, blank=True, on_delete=models.SET_NULL)
     diagnosis = models.TextField(blank=True, null=True)
     is_inpatient = models.BooleanField(default=False)
     medication = models.TextField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
     referred_by = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
-    ward = models.ForeignKey(Ward, null=True, blank=True, on_delete=models.SET_NULL)
     
     def __str__(self):
         return f"{self.full_name}"
@@ -162,7 +142,6 @@ class Admission(models.Model):
     admission_date = models.DateField(default=timezone.now)
     admitted_by = models.CharField(max_length=100, blank=True, null=True)
     admitted_on = models.DateField(default=date.today)
-    bed = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True)
     discharge_date = models.DateField(blank=True, null=True)
     discharge_notes = models.TextField(blank=True, null=True)
     discharged_by = models.CharField(max_length=100, blank=True, null=True)
@@ -170,7 +149,6 @@ class Admission(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Admitted')
     time = models.TimeField(auto_now_add=True)
-    ward = models.ForeignKey(Ward, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"Admission for {self.patient.full_name} - {self.status}"
@@ -588,8 +566,6 @@ class ServiceType(models.Model):
 
     def __str__(self):
         return self.name
-
-
 
 # =============================================================================
 # DOCTORS COMMENT MODELS

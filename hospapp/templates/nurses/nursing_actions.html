@@ -1,5 +1,4 @@
 {% extends "nurses/base.html" %}
-
 {% load static %}
 
 {% block title %}Nursing Actions | Nurses{% endblock %}
@@ -13,149 +12,191 @@
 
 <section class="content">
   <div class="container-fluid">
-    <ul class="nav nav-tabs" id="wardTabs" role="tablist">
-      <li class="nav-item">
-        <a class="nav-link active" id="admit-tab" data-toggle="tab" href="#admit" role="tab">Admit Patient</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="discharge-tab" data-toggle="tab" href="#discharge" role="tab">Discharge</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="monitor-tab" data-toggle="tab" href="#monitor" role="tab">Monitor Status</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="referral-tab" data-toggle="tab" href="#referral" role="tab">Refer Patient</a>
-      </li>
+    <ul class="nav nav-tabs" id="nursingTabs" role="tablist">
+      <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#admit">Admit Patient</a></li>
+      <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#discharge">Discharge</a></li>
+      <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#monitor">Monitor Status</a></li>
+      <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#referral">Refer Patient</a></li>
+      <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#nursing_note">Nursing Notes</a></li>
+      <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#handover">Handover Log</a></li>
     </ul>
 
-    <div class="tab-content border rounded p-3 bg-white" id="wardTabsContent">
-      <!-- Admit Patient -->
-      <div class="tab-pane fade show active" id="admit" role="tabpanel">
-          <form method="POST" action="{% url 'admit_patient_nurse' %}">
-              {% csrf_token %}
-              <div class="form-row">
-                  <div class="form-group col-md-6">
-                      <label>Patient ID or Name</label>
-                      <select class="form-control" name="patient_id">
-                          {% for patient in patients %}
-                          <option value="{{patient.id}}">{{patient.full_name}}</option>
-                          {% endfor %}
-                      </select>
-                  </div>
-              </div>
-
-              <div class="form-row">
-                  <div class="form-group col-md-6">
-                      <label>Assign Doctor /Nurse</label>
-                      <select name="doctor" class="form-control text-capitalize" required>
-                          <option value="" selected disabled>-- Select Doctor --</option>
-                          {% for doctor in doctors %}
-                          <option value="{{ doctor.user.get_full_name }}">{{ doctor.role }} - {{ doctor.user.get_full_name }}</option>
-                          {% endfor %}
-                      </select>
-                  </div>
-              </div>
-
-              <div class="form-group">
-                  <label>Reason for Admission</label>
-                  <textarea name="admission_reason" class="form-control" required></textarea>
-              </div> 
-
-              <div class="form-group text-center">
-                  <button type="submit" class="btn btn-primary">Admit Patient</button>
-              </div>
-          </form>
-      </div>
-
-      <!-- Discharge -->
-      <div class="tab-pane fade" id="discharge" role="tabpanel">
-          <form action="{% url 'discharge_patient' %}" method="POST">
-              {% csrf_token %}
-              <div class="form-group">
-                  <label>Patient ID</label>
-                  <select name="patient_id" class="form-control" required>
-                      <option value="" selected disabled>Select Patient</option>
-                      {% for patient in admitted_patients %}
-                      <option value="{{ patient.id }}">
-                          {{ patient.full_name }}
-                      </option>
-                      {% endfor %}
-                  </select>
-              </div>
-              <div class="form-group">
-                  <label>Discharge Summary</label>
-                  <textarea name="discharge_summary" class="form-control" rows="3" required></textarea>
-              </div>
-              <div class="form-group text-center">
-                  <button type="submit" class="btn btn-danger">Discharge Patient</button>
-              </div>
-          </form>
-      </div>
-
-      <!-- Monitor -->
-      <div class="tab-pane fade" id="monitor" role="tabpanel">
-          <form action="{% url 'update_patient_status' %}" method="POST">
-              {% csrf_token %}
-              <div class="form-group">
-                  <label>Patient Name/ID</label>
-                  <select name="patient_id" class="form-control" required>
-                      <option value="">Select Patient</option>
-                      {% for patient in admitted_patients %}
-                      <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                      {% endfor %}
-                  </select>
-              </div>
-              <div class="form-group">
-                  <label>Condition Status</label>
-                  <select name="status" class="form-control" required>
-                      <option value="stable">Stable</option>
-                      <option value="critical">Critical</option>
-                      <option value="under_observation">Under Observation</option>
-                      <option value="improving">Improving</option>
-                      <option value="deteriorating">Deteriorating</option>
-                  </select>
-              </div>
-              <div class="form-group">
-                  <label>Notes</label>
-                  <textarea name="notes" class="form-control" rows="3" required></textarea>
-              </div>
-              <div class="form-group text-center">
-                  <button type="submit" class="btn btn-info">Update Status</button>
-              </div>
+    <div class="tab-content border rounded p-3 bg-white">
+      <!-- 1. Admit Patient -->
+      <div class="tab-pane fade show active" id="admit">
+        <form method="POST" action="{% url 'admit_patient_nurse' %}">
+          {% csrf_token %}
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Patient</label>
+              <select class="form-control" name="patient_id">{% for patient in patients %}
+                <option value="{{patient.id}}">{{patient.full_name}}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-6">
+              <label>Assign Doctor</label>
+              <select name="doctor" class="form-control" required>
+                <option disabled selected>-- Select Doctor --</option>
+                {% for doctor in doctors %}
+                <option value="{{ doctor.user.get_full_name }}">{{ doctor.user.get_full_name }}</option>
+                {% endfor %}
+                {% for nurse in nurses %}
+                <option value="{{ nurse.user.get_full_name }}">{{ nurse.user.get_full_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Reason for Admission</label>
+            <textarea name="admission_reason" class="form-control" required></textarea>
+          </div>
+          <div class="form-group text-center">
+            <button class="btn btn-primary" type="submit">Admit Patient</button>
+          </div>
         </form>
       </div>
 
-      <!-- Referral -->
-      <div class="tab-pane fade" id="referral" role="tabpanel">
+      <!-- 2. Discharge -->
+      <div class="tab-pane fade" id="discharge">
+        <form method="POST" action="{% url 'discharge_patient' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Patient</label>
+            <select name="patient_id" class="form-control" required>
+              <option disabled selected>Select Patient</option>
+              {% for patient in admitted_patients %}
+              <option value="{{patient.id}}">{{patient.full_name}}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Discharge Summary</label>
+            <textarea name="discharge_summary" class="form-control" rows="3" required></textarea>
+          </div>
+          <div class="form-group text-center">
+            <button class="btn btn-danger" type="submit">Discharge</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. Monitor Status -->
+      <div class="tab-pane fade" id="monitor">
+        <form method="POST" action="{% url 'update_patient_status' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Patient</label>
+            <select name="patient_id" class="form-control" required>
+              {% for patient in admitted_patients %}
+              <option value="{{patient.id}}">{{patient.full_name}}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Condition</label>
+            <select name="status" class="form-control" required>
+              <option value="stable">Stable</option>
+              <option value="critical">Critical</option>
+              <option value="under_observation">Under Observation</option>
+              <option value="improving">Improving</option>
+              <option value="deteriorating">Deteriorating</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" class="form-control" required></textarea>
+          </div>
+          <div class="form-group text-center">
+            <button class="btn btn-info" type="submit">Update Status</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 4. Referral -->
+      <div class="tab-pane fade" id="referral">
         <form method="POST" action="{% url 'refer_patient' %}">
           {% csrf_token %}
           <div class="form-group">
             <label>Patient</label>
             <select name="patient_id" class="form-control" required>
-              <option value="">Select Patient</option>
               {% for patient in admitted_patients %}
-              <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+              <option value="{{patient.id}}">{{patient.full_name}}</option>
               {% endfor %}
             </select>
           </div>
-
           <div class="form-group">
-            <label>Department to Refer To</label>
+            <label>Department</label>
             <select name="department" class="form-control" required>
-              <option value="">Select Department</option>
               {% for department in departments %}
-              <option value="{{ department.id }}">{{ department.name }}</option>
+              <option value="{{department.id}}">{{department.name}}</option>
               {% endfor %}
             </select>
           </div>
-
           <div class="form-group">
-            <label>Reason for Referral / Notes</label>
-            <textarea name="notes" class="form-control" rows="3" required></textarea>
+            <label>Referral Notes</label>
+            <textarea name="notes" class="form-control" required></textarea>
           </div>
-
           <div class="form-group text-center">
-            <button type="submit" class="btn btn-secondary">Submit Referral</button>
+            <button class="btn btn-secondary" type="submit">Submit Referral</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 5. Nursing Note -->
+      <div class="tab-pane fade" id="nursing_note">
+        <form method="POST" action="{% url 'nursing_note' %}">
+          {% csrf_token %}
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Patient</label>
+              <select name="patient_id" class="form-control" required>
+                {% for patient in admitted_patients %}
+                <option value="{{patient.id}}">{{patient.full_name}}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-md-6">
+              <label>Note Type</label>
+              <select name="note_type" class="form-control" required>
+                <option value="observation">Observation</option>
+                <option value="medication">Medication Administered</option>
+                <option value="care_plan">Care Plan Update</option>
+                <option value="response">Patient Response</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Note Details</label>
+            <textarea name="notes" class="form-control" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Follow Up (optional)</label>
+            <input type="text" name="follow_up" class="form-control">
+          </div>
+          <div class="form-group text-center">
+            <button class="btn btn-success" type="submit">Save Note</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 6. Handover Log -->
+      <div class="tab-pane fade" id="handover">
+        <form method="POST" action="{% url 'handover_log' %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Patient</label>
+            <select name="patient_id" class="form-control" required>
+              {% for patient in admitted_patients %}
+              <option value="{{patient.id}}">{{patient.full_name}}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Handover Notes</label>
+            <textarea name="notes" class="form-control" required></textarea>
+          </div>
+          <div class="form-group text-center">
+            <button class="btn btn-warning" type="submit">Log Handover</button>
           </div>
         </form>
       </div>
@@ -163,7 +204,4 @@
     </div>
   </div>
 </section>
-
-<!-- Removed: Bed/Ward JS logic -->
-
 {% endblock %}
