@@ -6,8 +6,8 @@
 
 
 <!-- NEW dashboard items-->
- {% include 'dashboardstyle.css' %}
-   
+{% include 'dashboardstyle.css' %}
+
 <div class="container py-5">
     <!-- Dashboard Header -->
     <div class="dashboard-header mb-4">
@@ -24,7 +24,7 @@
     </div>
 
 
-    <!-- Feature Cards -->
+    <!-- Feature Cards with Corrected URLs -->
     <div class="row g-4">
         <!-- Patient Notes Card -->
         <div class="col-md-6 col-lg-4">
@@ -35,7 +35,8 @@
                             <i class="bi bi-journal-medical"></i>
                         </div>
                         <h5 class="card-title">Patient Records</h5>
-                        <p class="card-text">Review consultation notes, medical history, and laboratory results for your patients.</p>
+                        <p class="card-text">Review consultation notes, medical history, and laboratory results for your
+                            patients.</p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
@@ -45,21 +46,23 @@
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">Access Patient Records <i class="bi bi-arrow-right"></i></a>
+                    <a href="{% url 'access_medical_records' %}" class="action-link">Access Patient Records <i
+                            class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
 
-        <!-- Diagnose Card -->
+        <!-- Patient Consultation Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
                     <div>
                         <div class="icon-container bg-diagnose">
-                            <i class="bi bi-clipboard2-pulse"></i>
+                            <i class="bi bi-user-md"></i>
                         </div>
-                        <h5 class="card-title">Diagnosis & Advice</h5>
-                        <p class="card-text">Diagnose conditions and provide medical advice based on patient assessments.</p>
+                        <h5 class="card-title">Patient Consultation</h5>
+                        <p class="card-text">Conduct patient consultations and provide medical advice based on patient
+                            assessments.</p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
@@ -69,60 +72,63 @@
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">Start Diagnosis <i class="bi bi-arrow-right"></i></a>
+                    <a href="{% url 'doctor_consultation' %}" class="action-link">Start Consultation <i
+                            class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
 
-        <!-- Prescribe Card -->
+        <!-- Request Test Card -->
         <div class="col-md-4 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
                     <div>
                         <div class="icon-container bg-prescribe">
-                            <i class="bi bi-prescription2"></i>
+                            <i class="bi bi-vial"></i>
                         </div>
-                        <h5 class="card-title">Prescriptions</h5>
-                        <p class="card-text">Prescribe medications or fertility treatments with digital prescription system.</p>
+                        <h5 class="card-title">Request Test</h5>
+                        <p class="card-text">Request laboratory tests and diagnostic procedures for your patients.</p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-warning text-dark">5 Pending Approvals</span>
-                            <span class="badge bg-success">10 Recent Prescriptions</span>
+                            <span class="badge bg-warning text-dark">5 Pending Requests</span>
+                            <span class="badge bg-success">10 Tests Requested</span>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">Write Prescription <i class="bi bi-arrow-right"></i></a>
+                    <a href="{% url 'requesttest' %}" class="action-link">Request Test <i
+                            class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
 
-        <!-- Tests Card -->
+        <!-- Recommended Tests Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
                     <div>
                         <div class="icon-container bg-tests">
-                            <i class="bi bi-file-earmark-medical"></i>
+                            <i class="bi bi-flask"></i>
                         </div>
-                        <h5 class="card-title">Lab Tests & Scans</h5>
-                        <p class="card-text">Request further diagnostic tests such as hormone assessments and ultrasound scans.</p>
+                        <h5 class="card-title">Recommended Tests</h5>
+                        <p class="card-text">View and manage recommended diagnostic tests and laboratory procedures.</p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-secondary">7 Tests Ordered</span>
+                            <span class="badge bg-secondary">7 Recommendations</span>
                             <span class="badge bg-info">15 Results Available</span>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">Request Tests <i class="bi bi-arrow-right"></i></a>
+                    <a href="{% url 'recomended_tests' %}" class="action-link">View Recommendations <i
+                            class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
 
-        <!-- Monitor Card -->
+        <!-- Treatment Monitoring Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
@@ -131,7 +137,8 @@
                             <i class="bi bi-graph-up"></i>
                         </div>
                         <h5 class="card-title">Treatment Monitoring</h5>
-                        <p class="card-text">Monitor ongoing treatments and IVF cycles with comprehensive tracking tools.</p>
+                        <p class="card-text">Monitor ongoing treatments and IVF cycles with comprehensive tracking
+                            tools.</p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
@@ -141,34 +148,36 @@
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">View Treatment Progress <i class="bi bi-arrow-right"></i></a>
+                    <a href="{% url 'monitoring' %}" class="action-link">View Treatment Progress <i
+                            class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
-        <!--Reports and data-->
+
+        <!-- Reports and Data Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
                     <div>
                         <div class="icon-container bg-monitor">
-                            <i class="bi bi-graph-up"></i>
+                            <i class="bi bi-bar-chart"></i>
                         </div>
                         <h5 class="card-title">Reports and Data</h5>
-                        <p class="card-text">Monitor ongoing treatments and IVF cycles with comprehensive tracking tools.</p>
+                        <p class="card-text">Access comprehensive reports and analytical data for patient management.
+                        </p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-primary">9 Active IVF Cycles</span>
-                            <span class="badge bg-danger">2 Need Attention</span>
+                            <span class="badge bg-primary">15 Reports Available</span>
+                            <span class="badge bg-success">Updated Today</span>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">View Treatment Progress <i class="bi bi-arrow-right"></i></a>
+                    <a href="#" class="action-link">View Reports <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
-
     </div>
 
     <!--Statistical Graphy-->
@@ -258,85 +267,9 @@
         </div>
     </div>
 
-
-    <!-- Content Header (Page header) -->
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="row mb-2">
-                <div class="col-sm-6">
-                    <h1 class="m-0 text-dark">Dashboard</h1>
-                </div><!-- /.col -->
-                <!-- <div class="col-sm-6">
-                    <ol class="breadcrumb float-sm-right">
-                        <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                        <li class="breadcrumb-item active">Dashboard</li>
-                    </ol>
-                </div> -->
-            </div><!-- /.row -->
-        </div><!-- /.container-fluid -->
-    </div>
-    <!-- /.content-header -->
-    <!-- 🌟 Doctor Dashboard Icons -->
-    <section class="dashboard-icons py-3 my-2 rounded">
-        <div class="container-fluid">
-            <div class="d-flex flex-wrap justify-content-center">
-
-
-
-                <!-- Home -->
-                <div class="p-2">
-                    <a href="{% url 'doctors' %}" class="bg-primary text-white p-4 text-center d-block"
-                       style="width: 150px; border-radius: 30px">
-                        <i class="bi bi-house-door display-4 d-block mb-2"></i>
-                        <span>Home</span>
-                    </a>
-                </div>
-
-                <!-- Patient Consultation -->
-                <div class="p-2">
-                    <a href="{% url 'doctor_consultation' %}" class="bg-success text-white p-4 text-center d-block"
-                       style="width: 150px; border-radius: 30px">
-                        <i class="bi bi-person-lines-fill display-4 d-block mb-2"></i>
-                        <span>Consultation</span>
-                    </a>
-                </div>
-
-                <!-- Patient Records -->
-                <div class="p-2">
-                    <a href="{% url 'access_medical_records' %}" class="bg-info text-white p-4 text-center d-block"
-                       style="width: 150px; border-radius: 30px">
-                        <i class="bi bi-folder2-open display-4 d-block mb-2"></i>
-                        <span>Records</span>
-                    </a>
-                </div>
-
-                <!-- Treatment Monitoring -->
-                <div class="p-2">
-                    <a href="{% url 'monitoring' %}"
-                       class="bg-warning text-white p-4 text-center d-block" style="width: 150px; border-radius: 30px">
-                        <i class="bi bi-activity display-4 d-block mb-2"></i>
-                        <span>Monitoring</span>
-                    </a>
-                </div>
-
-            </div>
-        </div>
-    </section>
-
-
-  
-                    
-    <aside class="control-sidebar control-sidebar-dark">
-        <!-- Control sidebar content goes here -->
-    </aside>
-
-    <!--Chart JS-->
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-   
+
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -437,8 +370,4 @@
                 });
         });
     </script>
-
-
-
     {% endblock %}
-  

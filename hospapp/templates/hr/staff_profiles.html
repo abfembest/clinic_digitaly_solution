@@ -4,108 +4,237 @@
 
 {% block content %}
 
-<!-- Content Header (Page header) -->
+<!-- Content Header -->
 <div class="content-header">
   <div class="container-fluid">
     <div class="row mb-2">
       <div class="col-sm-6">
-        <h1 class="m-0 text-dark">Staff Profiles</h1>
+        <h1 class="m-0"><i class="fas fa-users text-primary"></i> Staff Profiles</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i> Home</a></li>
+          <li class="breadcrumb-item active">Staff Profiles</li>
+        </ol>
       </div>
     </div>
   </div>
 </div>
-<!-- /.content-header -->
 
 <section class="content">
   <div class="container-fluid">
-    <div class="card card-outline card-primary">
+    <!-- Main Card -->
+    <div class="card card-primary card-outline shadow">
       <div class="card-header">
-        <h3 class="card-title">Staff Records</h3>
+        <h3 class="card-title">
+          <i class="fas fa-users mr-2"></i>
+          Staff Directory
+        </h3>
+        <div class="card-tools">
+          <button type="button" class="btn btn-tool" data-card-widget="collapse">
+            <i class="fas fa-minus"></i>
+          </button>
+          <button type="button" class="btn btn-tool" data-card-widget="maximize">
+            <i class="fas fa-expand"></i>
+          </button>
+        </div>
       </div>
-      <div class="card-body">
+      
+      <div class="card-body p-0">
+        <!-- Search and Filter Bar -->
+        <div class="row p-3 bg-light border-bottom">
+          <div class="col-md-4">
+            <div class="input-group input-group-sm">
+              <div class="input-group-prepend">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+              </div>
+              <input type="text" class="form-control" placeholder="Search staff..." id="staffSearch">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-control form-control-sm" id="roleFilter">
+              <option value="">All Roles</option>
+              <option value="receptionist">Receptionist</option>
+              <option value="nurse">Nurse</option>
+              <option value="doctor">Doctor</option>
+              <option value="lab">Lab Technician</option>
+              <option value="admin">Administrator</option>
+              <option value="pharmacy">Pharmacy</option>
+              <option value="hr">HR</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-control form-control-sm" id="deptFilter">
+              <option value="">All Departments</option>
+              {% for dept in departments %}
+                <option value="{{ dept.name }}">{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-sm btn-outline-secondary btn-block" id="clearFilters">
+              <i class="fas fa-times"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Staff Table -->
         <div class="table-responsive">
-          <table class="table table-bordered table-sm">
-            <thead class="thead-light">
+          <table class="table table-hover table-striped mb-0" id="staffTable">
+            <thead class="bg-primary text-white">
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">Name</th>
-                <th scope="col">Role</th>
-                <th scope="col">Department</th>
-                <th scope="col">Phone</th>
-                <th scope="col">Email</th>
-                <th scope="col">Gender</th>
-                <th scope="col">Date Joined</th>
-                <th scope="col">Actions</th>
+                <th class="text-center" style="width: 50px;">#</th>
+                <th><i class="fas fa-user mr-1"></i>Name</th>
+                <th><i class="fas fa-id-badge mr-1"></i>Role</th>
+                <th><i class="fas fa-building mr-1"></i>Department</th>
+                <th><i class="fas fa-phone mr-1"></i>Phone</th>
+                <th><i class="fas fa-envelope mr-1"></i>Email</th>
+                <th class="text-center"><i class="fas fa-venus-mars mr-1"></i>Gender</th>
+                <th><i class="fas fa-calendar mr-1"></i>Date Joined</th>
+                <th class="text-center" style="width: 150px;"><i class="fas fa-cogs mr-1"></i>Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for staff in staff_list %}
-              <tr data-staff-id="{{ staff.id }}">
-                <th scope="row">{{ forloop.counter }}</th>
-                <td class="staff-name">{{ staff.user.first_name }} {{ staff.user.last_name }}</td>
-                <td class="staff-role">{{ staff.get_role_display }}</td>
-                <td class="staff-department">{% if staff.department %}{{ staff.department.name }}{% else %}&mdash;{% endif %}</td>
-                <td class="staff-phone">{{ staff.phone_number|default:"&mdash;" }}</td>
-                <td class="staff-email">{{ staff.user.email|default:"&mdash;" }}</td>
-                <td class="staff-gender">{{ staff.get_gender_display }}</td>
-                <td class="staff-date-joined">{{ staff.date_joined|date:"M d, Y" }}</td>
+              <tr data-staff-id="{{ staff.id }}" class="staff-row">
+                <td class="text-center font-weight-bold text-muted">{{ forloop.counter }}</td>
+                <td class="staff-name">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-initial rounded-circle bg-primary text-white mr-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 14px;">
+                      {{ staff.user.first_name|first }}{{ staff.user.last_name|first }}
+                    </div>
+                    <div>
+                      <strong>{{ staff.user.first_name }} {{ staff.user.last_name }}</strong>
+                    </div>
+                  </div>
+                </td>
+                <td class="staff-role">
+                  <span class="badge badge-pill 
+                    {% if staff.role == 'doctor' %}badge-success
+                    {% elif staff.role == 'nurse' %}badge-info
+                    {% elif staff.role == 'receptionist' %}badge-warning
+                    {% elif staff.role == 'admin' %}badge-danger
+                    {% elif staff.role == 'lab' %}badge-primary
+                    {% elif staff.role == 'pharmacy' %}badge-secondary
+                    {% elif staff.role == 'hr' %}badge-dark
+                    {% else %}badge-light{% endif %}">
+                    {{ staff.get_role_display }}
+                  </span>
+                </td>
+                <td class="staff-department">
+                  {% if staff.department %}
+                    <i class="fas fa-building text-muted mr-1"></i>{{ staff.department.name }}
+                  {% else %}
+                    <span class="text-muted"><i class="fas fa-minus"></i></span>
+                  {% endif %}
+                </td>
+                <td class="staff-phone">
+                  {% if staff.phone_number %}
+                    <i class="fas fa-phone text-muted mr-1"></i>{{ staff.phone_number }}
+                  {% else %}
+                    <span class="text-muted"><i class="fas fa-minus"></i></span>
+                  {% endif %}
+                </td>
+                <td class="staff-email">
+                  {% if staff.user.email %}
+                    <i class="fas fa-envelope text-muted mr-1"></i>{{ staff.user.email }}
+                  {% else %}
+                    <span class="text-muted"><i class="fas fa-minus"></i></span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <i class="fas {% if staff.gender == 'M' %}fa-mars text-primary{% else %}fa-venus text-pink{% endif %} mr-1"></i>
+                  {{ staff.get_gender_display }}
+                </td>
                 <td>
-                  <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#editStaffModal{{ staff.id }}" aria-label="Edit {{ staff.user.first_name }} {{ staff.user.last_name }}">
-                    <i class="fas fa-edit"></i> Edit
-                  </button>
-                  <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#changePasswordModal{{ staff.id }}" aria-label="Change Password for {{ staff.user.first_name }} {{ staff.user.last_name }}">
-                    <i class="fas fa-key"></i> Password
-                  </button>
+                  <small class="text-muted">
+                    <i class="fas fa-calendar mr-1"></i>{{ staff.date_joined|date:"M d, Y" }}
+                  </small>
+                </td>
+                <td class="text-center">
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#editStaffModal{{ staff.id }}" title="Edit Profile">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-toggle="modal" data-target="#changePasswordModal{{ staff.id }}" title="Change Password">
+                      <i class="fas fa-key"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
 
               <!-- Edit Staff Modal -->
               <div class="modal fade" id="editStaffModal{{ staff.id }}" tabindex="-1" aria-labelledby="editStaffModalLabel{{ staff.id }}" aria-hidden="true">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-lg">
                   <form method="post" action="{% url 'edit_staff_profile' staff.id %}" class="edit-staff-form">
                     {% csrf_token %}
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title" id="editStaffModalLabel{{ staff.id }}">Edit Staff: {{ staff.user.first_name }} {{ staff.user.last_name }}</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="editStaffModalLabel{{ staff.id }}">
+                          <i class="fas fa-user-edit mr-2"></i>Edit Staff: {{ staff.user.first_name }} {{ staff.user.last_name }}
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                           <span aria-hidden="true">&times;</span>
                         </button>
                       </div>
                       <div class="modal-body">
-                        <div class="mb-3">
-                          <label for="role{{ staff.id }}" class="form-label">Role</label>
-                          <select name="role" class="form-control" id="role{{ staff.id }}" required>
-                            <option value="">Select Role</option>
-                            <option value="receptionist" {% if staff.role == 'receptionist' %}selected{% endif %}>Receptionist</option>
-                            <option value="nurse" {% if staff.role == 'nurse' %}selected{% endif %}>Nurse</option>
-                            <option value="doctor" {% if staff.role == 'doctor' %}selected{% endif %}>Doctor</option>
-                            <option value="lab" {% if staff.role == 'lab' %}selected{% endif %}>Lab Technician</option>
-                            <option value="admin" {% if staff.role == 'admin' %}selected{% endif %}>Administrator</option>
-                            <option value="pharmacy" {% if staff.role == 'pharmacy' %}selected{% endif %}>Pharmacy</option>
-                            <option value="hr" {% if staff.role == 'hr' %}selected{% endif %}>HR</option>
-                          </select>
+                        <div class="row">
+                          <div class="col-md-6">
+                            <div class="form-group">
+                              <label for="role{{ staff.id }}" class="form-label">
+                                <i class="fas fa-id-badge mr-1"></i>Role <span class="text-danger">*</span>
+                              </label>
+                              <select name="role" class="form-control" id="role{{ staff.id }}" required>
+                                <option value="">Select Role</option>
+                                <option value="receptionist" {% if staff.role == 'receptionist' %}selected{% endif %}>Receptionist</option>
+                                <option value="nurse" {% if staff.role == 'nurse' %}selected{% endif %}>Nurse</option>
+                                <option value="doctor" {% if staff.role == 'doctor' %}selected{% endif %}>Doctor</option>
+                                <option value="lab" {% if staff.role == 'lab' %}selected{% endif %}>Lab Technician</option>
+                                <option value="admin" {% if staff.role == 'admin' %}selected{% endif %}>Administrator</option>
+                                <option value="pharmacy" {% if staff.role == 'pharmacy' %}selected{% endif %}>Pharmacy</option>
+                                <option value="hr" {% if staff.role == 'hr' %}selected{% endif %}>HR</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <div class="form-group">
+                              <label for="department{{ staff.id }}" class="form-label">
+                                <i class="fas fa-building mr-1"></i>Department <span class="text-danger">*</span>
+                              </label>
+                              <select name="department" id="department{{ staff.id }}" class="form-control" required>
+                                <option value="">Select Department</option>
+                                {% for dept in departments %}
+                                  <option value="{{ dept.id }}" {% if staff.department and dept.id == staff.department.id %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                              </select>
+                            </div>
+                          </div>
                         </div>
-                        <div class="mb-3">
-                          <label for="department{{ staff.id }}" class="form-label">Department</label>
-                          <select name="department" id="department{{ staff.id }}" class="form-control" required>
-                            <option value="">Select Department</option>
-                            {% for dept in departments %}
-                              <option value="{{ dept.id }}" {% if staff.department and dept.id == staff.department.id %}selected{% endif %}>{{ dept.name }}</option>
-                            {% endfor %}
-                          </select>
+                        <div class="form-group">
+                          <label for="phone{{ staff.id }}" class="form-label">
+                            <i class="fas fa-phone mr-1"></i>Phone Number
+                          </label>
+                          <div class="input-group">
+                            <div class="input-group-prepend">
+                              <span class="input-group-text"><i class="fas fa-phone-alt"></i></span>
+                            </div>
+                            <input type="text" name="phone_number" class="form-control" id="phone{{ staff.id }}" value="{{ staff.phone_number }}" maxlength="15" placeholder="Enter phone number" />
+                          </div>
                         </div>
-                        <div class="mb-3">
-                          <label for="phone{{ staff.id }}" class="form-label">Phone Number</label>
-                          <input type="text" name="phone_number" class="form-control" id="phone{{ staff.id }}" value="{{ staff.phone_number }}" maxlength="15" />
-                        </div>
-                        <div class="mb-3">
-                          <label for="address{{ staff.id }}" class="form-label">Address</label>
-                          <textarea name="address" class="form-control" id="address{{ staff.id }}" rows="3">{{ staff.address }}</textarea>
+                        <div class="form-group">
+                          <label for="address{{ staff.id }}" class="form-label">
+                            <i class="fas fa-map-marker-alt mr-1"></i>Address
+                          </label>
+                          <textarea name="address" class="form-control" id="address{{ staff.id }}" rows="3" placeholder="Enter address">{{ staff.address }}</textarea>
                         </div>
                       </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                      <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                          <i class="fas fa-times mr-1"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                          <i class="fas fa-save mr-1"></i>Save Changes
+                        </button>
                       </div>
                     </div>
                   </form>
@@ -118,26 +247,59 @@
                   <form method="post" action="{% url 'change_staff_password' staff.id %}" class="change-password-form">
                     {% csrf_token %}
                     <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title" id="changePasswordModalLabel{{ staff.id }}">Change Password: {{ staff.user.first_name }} {{ staff.user.last_name }}</h5>
+                      <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="changePasswordModalLabel{{ staff.id }}">
+                          <i class="fas fa-key mr-2"></i>Change Password: {{ staff.user.first_name }} {{ staff.user.last_name }}
+                        </h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                           <span aria-hidden="true">&times;</span>
                         </button>
                       </div>
                       <div class="modal-body">
-                        <div class="mb-3">
-                          <label for="new_password{{ staff.id }}" class="form-label">New Password</label>
-                          <input type="password" name="new_password" class="form-control" id="new_password{{ staff.id }}" required autocomplete="new-password" minlength="8" />
-                          <div class="form-text">Password must be at least 8 characters long.</div>
+                        <div class="alert alert-info" role="alert">
+                          <i class="fas fa-info-circle mr-2"></i>
+                          <strong>Security Notice:</strong> Password must be at least 8 characters long and contain a mix of letters, numbers, and special characters.
                         </div>
-                        <div class="mb-3">
-                          <label for="confirm_password{{ staff.id }}" class="form-label">Confirm Password</label>
-                          <input type="password" name="confirm_password" class="form-control" id="confirm_password{{ staff.id }}" required autocomplete="new-password" />
+                        <div class="form-group">
+                          <label for="new_password{{ staff.id }}" class="form-label">
+                            <i class="fas fa-lock mr-1"></i>New Password <span class="text-danger">*</span>
+                          </label>
+                          <div class="input-group">
+                            <div class="input-group-prepend">
+                              <span class="input-group-text"><i class="fas fa-key"></i></span>
+                            </div>
+                            <input type="password" name="new_password" class="form-control" id="new_password{{ staff.id }}" required autocomplete="new-password" minlength="8" placeholder="Enter new password" />
+                            <div class="input-group-append">
+                              <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('new_password{{ staff.id }}')">
+                                <i class="fas fa-eye"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label for="confirm_password{{ staff.id }}" class="form-label">
+                            <i class="fas fa-lock mr-1"></i>Confirm Password <span class="text-danger">*</span>
+                          </label>
+                          <div class="input-group">
+                            <div class="input-group-prepend">
+                              <span class="input-group-text"><i class="fas fa-check"></i></span>
+                            </div>
+                            <input type="password" name="confirm_password" class="form-control" id="confirm_password{{ staff.id }}" required autocomplete="new-password" placeholder="Confirm new password" />
+                            <div class="input-group-append">
+                              <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('confirm_password{{ staff.id }}')">
+                                <i class="fas fa-eye"></i>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning">Change Password</button>
+                      <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                          <i class="fas fa-times mr-1"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-warning">
+                          <i class="fas fa-key mr-1"></i>Change Password
+                        </button>
                       </div>
                     </div>
                   </form>
@@ -145,7 +307,13 @@
               </div>
               {% empty %}
               <tr>
-                <td colspan="9" class="text-center text-muted">No staff found.</td>
+                <td colspan="9" class="text-center py-5">
+                  <div class="text-muted">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <h5>No staff found</h5>
+                    <p>There are currently no staff members in the system.</p>
+                  </div>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -158,10 +326,67 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // Handle all edit staff forms via AJAX
+  // Search and filter functionality
+  const searchInput = document.getElementById('staffSearch');
+  const roleFilter = document.getElementById('roleFilter');
+  const deptFilter = document.getElementById('deptFilter');
+  const clearFilters = document.getElementById('clearFilters');
+  const staffRows = document.querySelectorAll('.staff-row');
+
+  function filterStaff() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const selectedRole = roleFilter.value.toLowerCase();
+    const selectedDept = deptFilter.value.toLowerCase();
+
+    staffRows.forEach(row => {
+      const name = row.querySelector('.staff-name').textContent.toLowerCase();
+      const role = row.querySelector('.staff-role').textContent.toLowerCase();
+      const dept = row.querySelector('.staff-department').textContent.toLowerCase();
+
+      const matchesSearch = name.includes(searchTerm);
+      const matchesRole = !selectedRole || role.includes(selectedRole);
+      const matchesDept = !selectedDept || dept.includes(selectedDept);
+
+      row.style.display = matchesSearch && matchesRole && matchesDept ? '' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', filterStaff);
+  roleFilter.addEventListener('change', filterStaff);
+  deptFilter.addEventListener('change', filterStaff);
+
+  clearFilters.addEventListener('click', function() {
+    searchInput.value = '';
+    roleFilter.value = '';
+    deptFilter.value = '';
+    filterStaff();
+  });
+
+  // Password toggle function
+  window.togglePassword = function(fieldId) {
+    const field = document.getElementById(fieldId);
+    const icon = field.nextElementSibling.querySelector('.btn i');
+    
+    if (field.type === 'password') {
+      field.type = 'text';
+      icon.classList.remove('fa-eye');
+      icon.classList.add('fa-eye-slash');
+    } else {
+      field.type = 'password';
+      icon.classList.remove('fa-eye-slash');
+      icon.classList.add('fa-eye');
+    }
+  };
+
+  // Handle edit staff forms via AJAX
   document.querySelectorAll('.edit-staff-form').forEach(form => {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Saving...';
+      submitBtn.disabled = true;
 
       const url = this.action;
       const formData = new FormData(this);
@@ -178,20 +403,46 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(data => {
         if (data.success) {
           const row = document.querySelector(`tr[data-staff-id="${staffId}"]`);
-          row.querySelector('.staff-role').textContent = data.role;
-          row.querySelector('.staff-department').textContent = data.department;
-          row.querySelector('.staff-phone').textContent = data.phone;
-          row.querySelector('.staff-name').textContent = data.name;
-
-          // Close modal
+          row.querySelector('.staff-role').innerHTML = `<span class="badge badge-pill badge-success">${data.role}</span>`;
+          row.querySelector('.staff-department').innerHTML = `<i class="fas fa-building text-muted mr-1"></i>${data.department}`;
+          row.querySelector('.staff-phone').innerHTML = data.phone ? `<i class="fas fa-phone text-muted mr-1"></i>${data.phone}` : '<span class="text-muted"><i class="fas fa-minus"></i></span>';
+          
           $(`#editStaffModal${staffId}`).modal('hide');
+          
+          // Show success toast
+          $(document).Toasts('create', {
+            class: 'bg-success',
+            title: 'Success',
+            subtitle: 'Staff Updated',
+            body: 'Staff profile has been updated successfully.',
+            autohide: true,
+            delay: 3000
+          });
         } else {
-          alert('Update failed: ' + (data.error || 'Unknown error'));
+          $(document).Toasts('create', {
+            class: 'bg-danger',
+            title: 'Error',
+            subtitle: 'Update Failed',
+            body: data.error || 'Unknown error occurred',
+            autohide: true,
+            delay: 5000
+          });
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating the staff.');
+        $(document).Toasts('create', {
+          class: 'bg-danger',
+          title: 'Error',
+          subtitle: 'Network Error',
+          body: 'An error occurred while updating the staff.',
+          autohide: true,
+          delay: 5000
+        });
+      })
+      .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
       });
     });
   });
@@ -201,6 +452,11 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
 
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Changing...';
+      submitBtn.disabled = true;
+
       const url = this.action;
       const formData = new FormData(this);
       const staffId = this.closest('.modal').id.replace('changePasswordModal', '');
@@ -209,7 +465,16 @@ document.addEventListener('DOMContentLoaded', function () {
       const confirmPwd = formData.get('confirm_password');
 
       if (pwd !== confirmPwd) {
-        alert("Passwords do not match.");
+        $(document).Toasts('create', {
+          class: 'bg-warning',
+          title: 'Validation Error',
+          subtitle: 'Password Mismatch',
+          body: 'Passwords do not match. Please try again.',
+          autohide: true,
+          delay: 5000
+        });
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
         return;
       }
 
@@ -224,14 +489,41 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(data => {
         if (data.success) {
           $(`#changePasswordModal${staffId}`).modal('hide');
-          alert('Password changed successfully.');
+          this.reset();
+          
+          $(document).Toasts('create', {
+            class: 'bg-success',
+            title: 'Success',
+            subtitle: 'Password Changed',
+            body: 'Password has been changed successfully.',
+            autohide: true,
+            delay: 3000
+          });
         } else {
-          alert('Password change failed: ' + (data.error || 'Unknown error'));
+          $(document).Toasts('create', {
+            class: 'bg-danger',
+            title: 'Error',
+            subtitle: 'Password Change Failed',
+            body: data.error || 'Unknown error occurred',
+            autohide: true,
+            delay: 5000
+          });
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while changing password.');
+        $(document).Toasts('create', {
+          class: 'bg-danger',
+          title: 'Error',
+          subtitle: 'Network Error',
+          body: 'An error occurred while changing password.',
+          autohide: true,
+          delay: 5000
+        });
+      })
+      .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
       });
     });
   });

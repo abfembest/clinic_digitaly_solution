@@ -30,6 +30,8 @@ urlpatterns = [
 
     ########################### End Nurses URLS #################################
 
+    ########################### Doctors URLS ####################################
+
     path('d/home', views.doctors, name='doctors'),
     path('d/home', views.chart_view, name='chart_view'),
     path('d/consultations', views.doctor_consultation, name='doctor_consultation'),
@@ -52,6 +54,8 @@ urlpatterns = [
     path('d/doc_test_comment/<int:patient_id>/', views.doc_test_comment, name='doc_test_comment'),
     path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
     path('fetch-activity/', views.fetch_patient_activity, name='fetch_patient_activity'),
+
+    ########################### End Doctors URLS #################################
 
     #path('doctors/individual', views.individual_record, name='individual_record'),
     #path('doctors/all', views.all_record, name='all_record'),

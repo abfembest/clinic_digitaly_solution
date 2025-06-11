@@ -247,8 +247,6 @@
     <script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
     <!-- AdminLTE App -->
     <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Initialize DataTables -->
     <script>
@@ -277,29 +275,6 @@
         $(document).ready(function () {
             // Initialize toast notifications
             $('.toast').toast('show');
-        });
-    </script>
-
-    <!-- SweetAlert2 Messages -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            {% if messages %}
-                {% for message in messages %}
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
-                        title: "{{ message|escapejs }}",
-                        showConfirmButton: false,
-                        timer: 4000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
-                {% endfor %}
-            {% endif %}
         });
     </script>
 

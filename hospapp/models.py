@@ -243,7 +243,6 @@ class Vitals(models.Model):
 # =============================================================================
 
 class LabResultFile(models.Model):
-    labtest = models.ForeignKey('LabTest', on_delete=models.CASCADE, null=True, blank=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     result_file = models.FileField(upload_to='lab_results/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -271,6 +270,7 @@ class LabTest(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     testcompleted = models.BooleanField(default=0)
     doctor_comments = models.IntegerField(null=True, blank=True)
+    labresulttestid = models.IntegerField(null=True, blank=True)
 
     # Timing
     date_performed = models.DateTimeField(null=True, blank=True)

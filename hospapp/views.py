@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory,Payment,DoctorComments
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -1398,10 +1398,155 @@ def patient_payment_tracker(request):
 # def budget_planning(request):
 #     return render(request, 'accounts/planning.html')
 
-# HR Views
+''' ############################################################################################################################ HR View ############################################################################################################################ '''
+
 @login_required(login_url='home')
 def hr(request):
-    return render(request, 'hr/index.html')
+    """
+    Comprehensive HR Dashboard with real data from models
+    """
+    # Get current date info
+    today = timezone.now().date()
+    current_month_start = today.replace(day=1)
+    week_ago = today - timedelta(days=7)
+    
+    # === BASIC STAFF METRICS ===
+    total_staff = Staff.objects.count()
+    total_departments = Department.objects.count()
+    
+    # === TODAY'S ATTENDANCE DATA ===
+    today_attendance = Attendance.objects.filter(date__date=today)
+    present_today = today_attendance.filter(status='Present').count()
+    absent_today = today_attendance.filter(status='Absent').count()
+    on_leave_today = today_attendance.filter(status='On Leave').count()
+    
+    # Calculate percentages for progress bars
+    attendance_percentage = (present_today / total_staff * 100) if total_staff > 0 else 0
+    absent_percentage = (absent_today / total_staff * 100) if total_staff > 0 else 0
+    leave_percentage = (on_leave_today / total_staff * 100) if total_staff > 0 else 0
+    
+    # === STAFF TRANSITIONS THIS MONTH ===
+    new_hires_month = StaffTransition.objects.filter(
+        transition_type='onboarding',
+        date__gte=current_month_start,
+        date__lte=today
+    ).count()
+    
+    offboarded_month = StaffTransition.objects.filter(
+        transition_type='offboarding',
+        date__gte=current_month_start,
+        date__lte=today
+    ).count()
+    
+    # === RECENT TRANSITIONS (Last 10) ===
+    recent_transitions = StaffTransition.objects.order_by('-created_at')[:10]
+    
+    # === SHIFT ASSIGNMENTS FOR TODAY ===
+    shift_assignments_today = ShiftAssignment.objects.filter(date=today).count()
+    
+    # Get shift distribution for today
+    shift_distribution = Shift.objects.annotate(
+        count=Count('shiftassignment__id', filter=Q(shiftassignment__date=today))
+    ).values('name', 'count')
+    
+    # === DEPARTMENT STATISTICS ===
+    department_stats = []
+    colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6c757d']
+    
+    dept_data = Department.objects.annotate(
+        staff_count=Count('staff')
+    ).values('name', 'staff_count')
+    
+    for idx, dept in enumerate(dept_data):
+        department_stats.append({
+            'name': dept['name'],
+            'count': dept['staff_count'],
+            'color': colors[idx % len(colors)]
+        })
+    
+    # === ROLE DISTRIBUTION ===
+    role_distribution = Staff.objects.values('role').annotate(
+        count=Count('id')
+    ).order_by('-count')
+
+    # Add display name manually
+    role_display_map = dict(Staff.ROLE_CHOICES)
+    for role in role_distribution:
+        role['role_display'] = role_display_map.get(role['role'], role['role'])
+    
+    # === WEEKLY ATTENDANCE TRENDS ===
+    # Get last 7 days of attendance data
+    attendance_labels = []
+    attendance_present_data = []
+    attendance_absent_data = []
+    attendance_leave_data = []
+    
+    for i in range(6, -1, -1):  # Last 7 days
+        check_date = today - timedelta(days=i)
+        attendance_labels.append(check_date.strftime('%a %m/%d'))
+        
+        day_attendance = Attendance.objects.filter(date__date=check_date)
+        present = day_attendance.filter(status='Present').count()
+        absent = day_attendance.filter(status='Absent').count()
+        leave = day_attendance.filter(status='On Leave').count()
+        
+        attendance_present_data.append(present)
+        attendance_absent_data.append(absent)
+        attendance_leave_data.append(leave)
+    
+    # === EMERGENCY ALERTS ===
+    emergency_alerts = EmergencyAlert.objects.filter(
+        timestamp__gte=today
+    ).order_by('-timestamp')[:5]
+    
+    # === PENDING TASKS & NOTIFICATIONS ===
+    # Calculate some HR-specific metrics for alerts
+    pending_tasks_count = 0  # You can implement this based on your workflow
+    expiring_certs_count = 0  # You can implement certification expiry logic
+    
+    # If you have a certification model, uncomment and modify:
+    # from datetime import timedelta
+    # thirty_days_from_now = today + timedelta(days=30)
+    # expiring_certs_count = StaffCertification.objects.filter(
+    #     expiry_date__lte=thirty_days_from_now,
+    #     expiry_date__gte=today
+    # ).count()
+    
+    context = {
+        # Basic metrics
+        'total_staff': total_staff,
+        'total_departments': total_departments,
+        'present_today': present_today,
+        'absent_today': absent_today,
+        'on_leave_today': on_leave_today,
+        'new_hires_month': new_hires_month,
+        'offboarded_month': offboarded_month,
+        'shift_assignments_today': shift_assignments_today,
+        
+        # Percentages for progress bars
+        'attendance_percentage': round(attendance_percentage, 1),
+        'absent_percentage': round(absent_percentage, 1),
+        'leave_percentage': round(leave_percentage, 1),
+        
+        # Complex data structures
+        'department_stats': department_stats,
+        'role_distribution': role_distribution,
+        'shift_distribution': shift_distribution,
+        'recent_transitions': recent_transitions,
+        'emergency_alerts': emergency_alerts,
+        
+        # Chart data (JSON serialized for JavaScript)
+        'attendance_labels': json.dumps(attendance_labels),
+        'attendance_present_data': json.dumps(attendance_present_data),
+        'attendance_absent_data': json.dumps(attendance_absent_data),
+        'attendance_leave_data': json.dumps(attendance_leave_data),
+        
+        # Notification counters
+        'pending_tasks_count': pending_tasks_count,
+        'expiring_certs_count': expiring_certs_count,
+    }
+    
+    return render(request, 'hr/index.html', context)
 
 @login_required(login_url='home')
 def staff_profiles(request):
@@ -1486,7 +1631,7 @@ def staff_attendance(request):
         messages.error(request, "Your user profile is not set up properly.")
         return redirect('home')
 
-    staff_users = User.objects.filter(profile__isnull=False).order_by('first_name', 'last_name')
+    staff_users = User.objects.filter(staff__isnull=False).order_by('first_name', 'last_name')
     shifts = Shift.objects.all().order_by('name')
 
     if request.method == 'POST':
@@ -1581,6 +1726,8 @@ def staff_transitions(request):
 @login_required(login_url='home')
 def staff_certifications(request):
     return render(request, 'hr/certifications.html')
+
+''' ############################################################################################################################ End HR View ############################################################################################################################ '''
 
 @login_required(login_url='home')             
 def inventory(request):
@@ -2092,38 +2239,38 @@ def waitinglist(request):
 
 def test_results(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
-
-    pending_tests = LabTest.objects.filter(
-    patient=patient,
-    status='completed').filter(
-    Q(doctor_comments=0) | Q(doctor_comments__isnull=True)).select_related('category', 'patient')
-    for i in pending_tests:
-        print(i)
-    grouped_tests = defaultdict(list)
-    for test in pending_tests:
-        grouped_tests[test.category.name].append(test)
-
-    return render(request, 'doctors/testresults.html', {
-        'pending_tests': dict(grouped_tests),
-        'patient': patient
-    })
-
-
-def oldtest_results(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-
+    
     pending_tests = LabTest.objects.filter(
         patient=patient,
         status='completed'
+    ).filter(
+        Q(doctor_comments=0) | Q(doctor_comments__isnull=True)
     ).select_related('category', 'patient')
-
+    
+    for i in pending_tests:
+        print(i)
+    
     grouped_tests = defaultdict(list)
     for test in pending_tests:
         grouped_tests[test.category.name].append(test)
-
+    
+    # Fetch uploaded lab result files for this patient
+    # Get unique file IDs from tests that have associated files
+    file_ids = pending_tests.filter(
+        labresulttestid__isnull=False
+    ).values_list('labresulttestid', flat=True).distinct()
+    
+    # Fetch the actual LabResultFile objects
+    uploaded_files = LabResultFile.objects.filter(
+        id__in=file_ids,
+        patient=patient
+    ).order_by('-uploaded_at')
+    
     return render(request, 'doctors/testresults.html', {
         'pending_tests': dict(grouped_tests),
-        'patient': patient
+        'patient': patient,
+        'uploaded_files': uploaded_files,
+        'selected_patient': patient  # Adding this for template compatibility
     })
 
 #Test details and completion by lab
@@ -2145,30 +2292,60 @@ def test_details(request, patient_id):
         'patient': patient
     })
 
-
-
-#Lab submiting test results
- # Only needed if you don't use {% csrf_token %} — you're using it, so this is optional
 def submit_test_results(request, patient_id):
     if request.method == 'POST':
+        # Get the patient object for file upload
+        patient = get_object_or_404(Patient, id=patient_id)
+        
+        # Process test results (your existing logic)
         test_ids = request.POST.getlist('ids')
-
+        
+        # Handle file upload first (if provided)
+        uploaded_file = request.FILES.get('result_file')
+        lab_result_file = None
+        
+        if uploaded_file:
+            try:
+                # Create a new LabResultFile entry
+                lab_result_file = LabResultFile.objects.create(
+                    patient=patient,
+                    result_file=uploaded_file,
+                    uploaded_by=request.user if request.user.is_authenticated else None
+                )
+            except Exception as e:
+                messages.error(request, f'File upload failed: {str(e)}')
+                return render(request, 'laboratory/test_entry.html')
+        
+        # Process individual test results
         for test_id in test_ids:
             try:
                 lab_test = LabTest.objects.get(id=test_id)
                 # Fetch the value using test name as the input name
                 result_value = request.POST.get(lab_test.test_name)
-
+                
                 if result_value:
-                    lab_test.result_value = result_value  # <-- updated field
-                    lab_test.status = 'completed'  # Optional
+                    lab_test.result_value = result_value
+                    lab_test.status = 'completed'
+                    
+                    # Link the uploaded file to this test (similar to doctor_comments pattern)
+                    if lab_result_file:
+                        lab_test.labresulttestid = lab_result_file.id
+                    
                     lab_test.save()
             except LabTest.DoesNotExist:
                 continue  # Ignore invalid IDs
-
+        
+        # Success messages
+        if uploaded_file and lab_result_file:
+            messages.success(request, f'Test results updated and file "{uploaded_file.name}" uploaded successfully!')
+        elif test_ids:
+            messages.success(request, 'Test results updated successfully!')
+        else:
+            messages.warning(request, 'No tests were selected for update.')
+        
         return render(request, 'laboratory/test_entry.html')
-
-    return render(request,'laboratory/test_entry.html')
+    
+    return render(request, 'laboratory/test_entry.html')
  
 
 

@@ -12,12 +12,12 @@
     }
 
     .card {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .card-header {
         padding: 0.5rem 1rem;
-        border-bottom: 1px solid rgba(0,0,0,0.1);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .card-body {
@@ -42,9 +42,9 @@
         justify-content: space-between;
     }
 
-        .test-row:last-child {
-            border-bottom: none;
-        }
+    .test-row:last-child {
+        border-bottom: none;
+    }
 
     .test-label {
         flex: 1;
@@ -61,11 +61,11 @@
         border-radius: 0.25rem;
     }
 
-        .test-input:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.1rem rgba(0,123,255,0.25);
-            outline: 0;
-        }
+    .test-input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
+        outline: 0;
+    }
 
     .btn-submit {
         padding: 0.6rem 1.5rem;
@@ -82,7 +82,107 @@
         border-radius: 0.375rem;
         overflow: hidden;
     }
+
+    /* Toggle switch styles */
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        margin-right: 10px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 24px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider {
+        background-color: #007bff;
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+
+    .toggle-label {
+        font-weight: 500;
+        color: #495057;
+        margin: 0;
+    }
+
+    /* File upload section styles */
+    .file-upload-section {
+        opacity: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
+        transform: translateY(-10px);
+    }
+
+    .file-upload-section.active {
+        opacity: 1;
+        max-height: 200px;
+        transform: translateY(0);
+        margin-top: 1rem;
+    }
+
+    .file-upload-area {
+        border: 2px dashed #007bff;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+        text-align: center;
+        background-color: #f8f9ff;
+        transition: all 0.2s ease;
+    }
+
+    .file-upload-area:hover {
+        border-color: #0056b3;
+        background-color: #e6f3ff;
+    }
+
+    .file-upload-area.drag-over {
+        border-color: #0056b3;
+        background-color: #e6f3ff;
+        transform: scale(1.02);
+    }
 </style>
+
 <div class="container-fluid">
     <div class="compact-form">
 
@@ -90,28 +190,25 @@
         <div class="card mb-3">
             <div class="card-body d-flex p-3">
                 {% if patient.photo %}
-                <img src="{{ patient.photo.url }}" class="img-thumbnail mr-3" width="150" height="150" alt="Patient Photo">
+                <img src="{{ patient.photo.url }}" class="img-thumbnail mr-3" width="150" height="150"
+                    alt="Patient Photo">
                 <div>
                     <p class="mb-2"><strong>Name:</strong> {{ patient.full_name }}</p>
                     <p class="mb-2"><strong>Address:</strong> {{ patient.address }} : {{ patient.phone }}</p>
                     <p class="mb-0"><strong>Age:</strong> 45 years</p>
-
                 </div>
-                {%else%}
+                {% else %}
                 <img src="" class="img-thumbnail mr-3" width="150" height="150" alt="No Photo">
                 <div>
                     <p class="mb-2"><strong>Name:</strong> {{ patient.name }}</p>
                     <p class="mb-2"><strong>Address:</strong> {{ patient.address }} : {{ patient.phone }}</p>
                     <p class="mb-0"><strong>Age:</strong> 45 years</p>
-
                 </div>
-
+                {% endif %}
             </div>
-            
-            {%endif%}
         </div>
 
-        <form method="post" action="{% url 'submit_test_results' patient.id %}">
+        <form method="post" action="{% url 'submit_test_results' patient.id %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="card">
                 <div class="card-header bg-primary text-white">
@@ -125,23 +222,121 @@
                     <div class="test-row">
                         <label class="test-label">{{ test.test_name }}:</label>
                         <input type="text" name="{{ test.test_name }}" class="test-input" placeholder="Enter result">
-                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input" placeholder="Enter text id">
-
+                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input"
+                            placeholder="Enter text id">
                     </div>
                     {% endfor %}
                     {% endfor %}
+
+                    <!-- File Upload Toggle -->
+                    <div class="toggle-container">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="fileUploadToggle">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="fileUploadToggle" class="toggle-label">Add/Upload File</label>
+                    </div>
+
+                    <!-- File Upload Section (Hidden by default) -->
+                    <div id="fileUploadSection" class="file-upload-section">
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <div class="mb-3">
+                                <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
+                                <p class="mb-2"><strong>Select or Drop File Here</strong></p>
+                                <p class="text-muted small">Allowed file types: PDF, JPG, PNG, DOC</p>
+                            </div>
+                            <input type="file" id="resultFile" name="result_file" class="form-control-file"
+                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="display: none;">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('resultFile').click()">
+                                Choose File
+                            </button>
+                        </div>
+                        <div id="fileInfo" class="mt-2" style="display: none;">
+                            <small class="text-success">
+                                <i class="fas fa-check-circle"></i>
+                                <span id="fileName"></span>
+                            </small>
+                        </div>
+                    </div>
 
                     <div class="text-center mt-3">
                         <button type="submit" class="btn btn-success btn-submit">Submit Test Details</button>
                     </div>
                 </div>
-
-
             </div>
         </form>
-
-
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileUploadToggle = document.getElementById('fileUploadToggle');
+    const fileUploadSection = document.getElementById('fileUploadSection');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('resultFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+
+    // Toggle file upload section
+    fileUploadToggle.addEventListener('change', function() {
+        if (this.checked) {
+            fileUploadSection.classList.add('active');
+        } else {
+            fileUploadSection.classList.remove('active');
+            // Reset file input when hiding
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+        }
+    });
+
+    // Handle file selection
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            fileName.textContent = this.files[0].name;
+            fileInfo.style.display = 'block';
+        } else {
+            fileInfo.style.display = 'none';
+        }
+    });
+
+    // Drag and drop functionality
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    });
+
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+    });
+
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files && files[0]) {
+            // Check file type
+            const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'];
+            const fileExtension = '.' + files[0].name.split('.').pop().toLowerCase();
+            
+            if (allowedTypes.includes(fileExtension)) {
+                fileInput.files = files;
+                fileName.textContent = files[0].name;
+                fileInfo.style.display = 'block';
+            } else {
+                alert('Please select a valid file type (PDF, JPG, PNG, DOC)');
+            }
+        }
+    });
+
+    // Click to upload
+    fileUploadArea.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'BUTTON') {
+            fileInput.click();
+        }
+    });
+});
+</script>
 
 {% endblock %}
