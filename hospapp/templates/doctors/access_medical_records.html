@@ -4,12 +4,6 @@
 {% block title %}Doctor | Patient Records{% endblock %}
 
 {% block content %}
-
-
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
-
-
 <!-- Page Header -->
 <div class="content-header">
     <div class="container-fluid">
@@ -20,520 +14,201 @@
     </div>
 </div>
 
+
 <style>
-   
-    .profile-card {
-        backdrop-filter: blur(10px);
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        border-radius: 20px;
+    .medical-icon-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        padding: 50px 0;
     }
 
-        .profile-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+    .icon-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        border: 2px solid transparent;
+    }
+
+        .icon-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            border-color: #0d6efd;
+            text-decoration: none;
+            color: inherit;
         }
 
-    .profile-avatar {
+    .icon-wrapper {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .individual-record {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+
+    .patient-records {
+        background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+    }
+
+    .icon-card:hover .individual-record {
+        background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+        color: white;
+    }
+
+    .icon-card:hover .patient-records {
+        background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+        color: white;
+    }
+
+    .icon-wrapper i {
+        font-size: 2.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-card:hover .icon-wrapper i {
+        transform: scale(1.1);
+    }
+
+    .icon-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #212529;
+    }
+
+    .icon-description {
+        color: #6c757d;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    .pulse-animation {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        transition: all 0.3s ease;
+    }
+
+    .icon-card:hover .pulse-animation {
         width: 120px;
         height: 120px;
-        border: 4px solid #fff;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease;
     }
 
-        .profile-avatar:hover {
-            transform: scale(1.05);
+    @media (max-width: 768px) {
+        .icon-card {
+            margin-bottom: 30px;
+            padding: 30px 20px;
         }
 
-    .activity-item {
-        transition: all 0.2s ease;
-        border-left: 3px solid transparent;
-        padding-left: 15px;
-    }
-
-        .activity-item:hover {
-            background-color: rgba(102, 126, 234, 0.05);
-            border-left-color: #667eea;
-            transform: translateX(5px);
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
         }
 
-    .badge-custom {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        border: none;
-    }
+            .icon-wrapper i {
+                font-size: 2rem;
+            }
 
-    .btn-expand {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        border: none;
-        transition: all 0.3s ease;
-    }
-
-        .btn-expand:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        .icon-title {
+            font-size: 1.3rem;
         }
-
-    .timeline-dot {
-        width: 12px;
-        height: 12px;
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        border-radius: 50%;
-        position: absolute;
-        left: -9px;
-        top: 50%;
-        transform: translateY(-50%);
     }
 
-    .activity-timeline {
-        position: relative;
-        padding-left: 25px;
+    .header-section {
+        text-align: center;
+        margin-bottom: 50px;
     }
 
-        .activity-timeline::before {
-            content: '';
-            position: absolute;
-            left: -3px;
-            top: 20px;
-            bottom: 20px;
-            width: 2px;
-            background: linear-gradient(to bottom, #667eea, #764ba2);
-            opacity: 0.3;
-        }
-
-    .collapse-animation {
-        transition: all 0.4s ease;
+    .header-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #212529;
+        margin-bottom: 15px;
     }
 
-    .stats-card {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(5px);
-        transition: all 0.3s ease;
+    .header-subtitle {
+        font-size: 1.2rem;
+        color: #6c757d;
     }
-
-        .stats-card:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-3px);
-        }
 </style>
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
-            <div class="card profile-card border-0">
-                <div class="card-body p-4">
-                    <!-- Profile Header -->
-                    <div class="row align-items-center mb-4">
-                        <div class="col-auto">
-                            <img id="profileAvatar" src="https://via.placeholder.com/120x120/667eea/ffffff?text=JD"
-                                 alt="Profile Picture" class="rounded-circle profile-avatar">
-                        </div>
-                        <div class="col">
-                            <h2 class="mb-1 fw-bold text-dark" id="userName">John Doe</h2>
-                            <p class="text-muted mb-2">
-                                <i class="bi bi-person-badge me-2"></i>
-                                User ID: <span class="badge badge-custom text-white" id="userId">#12345</span>
-                            </p>
-                            <p class="text-muted mb-0">
-                                <i class="bi bi-calendar-check me-2"></i>
-                                Member since: <span id="dateJoined" class="fw-semibold">January 15, 2022</span>
-                            </p>
-                        </div>
-                    </div>
 
-                    <!-- Quick Stats -->
-                    <div class="row mb-4">
-                        <div class="col-4">
-                            <div class="stats-card text-center p-3 rounded-3">
-                                <h4 class="mb-1 text-primary fw-bold" id="totalActivities">47</h4>
-                                <small class="text-muted">Activities</small>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="stats-card text-center p-3 rounded-3">
-                                <h4 class="mb-1 text-success fw-bold" id="streakDays">23</h4>
-                                <small class="text-muted">Day Streak</small>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="stats-card text-center p-3 rounded-3">
-                                <h4 class="mb-1 text-warning fw-bold" id="badgesEarned">8</h4>
-                                <small class="text-muted">Badges</small>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Activity History Section -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 text-dark fw-bold">
-                            <i class="bi bi-clock-history me-2 text-primary"></i>
-                            Activity History
-                        </h5>
-                        <button class="btn btn-expand text-white btn-sm rounded-pill px-3"
-                                id="toggleHistory" data-bs-toggle="collapse" data-bs-target="#activityHistory">
-                            <i class="bi bi-chevron-down me-1"></i>
-                            <span id="toggleText">Show</span>
-                        </button>
-                    </div>
+<div class="medical-icon-container">
+    <div class="container">
+        <div class="header-section">
+            <h1 class="header-title">Medical Records System</h1>
+            <p class="header-subtitle">Access and manage patient medical information</p>
+        </div>
 
-                    <!-- Collapsible Activity Timeline -->
-                    <div class="collapse collapse-animation" id="activityHistory">
-                        <div class="activity-timeline" id="activityList">
-                            <!-- Activities will be populated by JavaScript -->
-                        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-6 col-sm-8 mb-4">
+                <a href="?view=individual" class="icon-card">
+                    <div class="icon-wrapper individual-record">
+                        <div class="pulse-animation"></div>
+                        <i class="bi bi-file-medical"></i>
                     </div>
-                </div>
+                    <h3 class="icon-title text-center">Individual Medical Record</h3>
+                    <p class="icon-description text-center">
+                        View and manage a single patient's complete medical history, including diagnoses, treatments, and medications.
+                    </p>
+                </a>
+            </div>
+
+            <div class="col-lg-5 col-md-6 col-sm-8 mb-4">
+                <a href="?view=all" class="icon-card">
+                    <div class="icon-wrapper patient-records">
+                        <div class="pulse-animation"></div>
+                        <i class="bi bi-files-alt"></i>
+                    </div>
+                    <h3 class="icon-title text-center">View Patient Records</h3>
+                    <p class="icon-description text-center">
+                        Browse and search through multiple patient records with advanced filtering and sorting options.
+                    </p>
+                </a>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Sample user data
-    const userData = {
-        name: "Sarah Johnson",
-        userId: "#SJ2024",
-        avatar: "https://via.placeholder.com/120x120/764ba2/ffffff?text=SJ",
-        dateJoined: "March 8, 2023",
-        totalActivities: 64,
-        streakDays: 31,
-        badgesEarned: 12,
-        activities: [
-            {
-                id: 1,
-                type: "login",
-                description: "Logged into the platform",
-                timestamp: "2024-06-04T09:30:00",
-                icon: "bi-box-arrow-in-right",
-                color: "text-success"
-            },
-            {
-                id: 2,
-                type: "achievement",
-                description: "Earned 'Weekly Warrior' badge",
-                timestamp: "2024-06-03T16:45:00",
-                icon: "bi-trophy",
-                color: "text-warning"
-            },
-            {
-                id: 3,
-                type: "interaction",
-                description: "Completed daily challenge",
-                timestamp: "2024-06-03T14:20:00",
-                icon: "bi-check-circle",
-                color: "text-primary"
-            },
-            {
-                id: 4,
-                type: "social",
-                description: "Connected with 3 new friends",
-                timestamp: "2024-06-02T11:15:00",
-                icon: "bi-people",
-                color: "text-info"
-            },
-            {
-                id: 5,
-                type: "content",
-                description: "Shared a new post",
-                timestamp: "2024-06-01T19:30:00",
-                icon: "bi-chat-square-text",
-                color: "text-secondary"
-            },
-            {
-                id: 6,
-                type: "milestone",
-                description: "Reached 30-day streak milestone",
-                timestamp: "2024-05-31T08:00:00",
-                icon: "bi-calendar-check",
-                color: "text-danger"
-            }
-        ]
-    };
 
-    // Format date for display
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
 
-        if (diffInHours < 1) return 'Just now';
-        if (diffInHours < 24) return `${diffInHours}h ago`;
-        if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
-
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
-    }
-
-    // Populate user profile
-    function populateProfile() {
-        document.getElementById('userName').textContent = userData.name;
-        document.getElementById('userId').textContent = userData.userId;
-        document.getElementById('profileAvatar').src = userData.avatar;
-        document.getElementById('dateJoined').textContent = userData.dateJoined;
-        document.getElementById('totalActivities').textContent = userData.totalActivities;
-        document.getElementById('streakDays').textContent = userData.streakDays;
-        document.getElementById('badgesEarned').textContent = userData.badgesEarned;
-    }
-
-    // Populate activity history
-    function populateActivities() {
-        const activityList = document.getElementById('activityList');
-        activityList.innerHTML = '';
-
-        userData.activities.forEach((activity, index) => {
-            const activityItem = document.createElement('div');
-            activityItem.className = 'activity-item mb-3 p-3 rounded-3 position-relative';
-            activityItem.innerHTML = `
-                        <div class="timeline-dot"></div>
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0 me-3">
-                                <i class="bi ${activity.icon} fs-5 ${activity.color}"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <p class="mb-1 fw-semibold text-dark">${activity.description}</p>
-                                <small class="text-muted">
-                                    <i class="bi bi-clock me-1"></i>
-                                    ${formatDate(activity.timestamp)}
-                                </small>
-                            </div>
-                        </div>
-                    `;
-            activityList.appendChild(activityItem);
-        });
-    }
-
-    // Toggle history section
-    document.getElementById('toggleHistory').addEventListener('click', function () {
-        const toggleText = document.getElementById('toggleText');
-        const icon = this.querySelector('i');
-
-        setTimeout(() => {
-            if (document.getElementById('activityHistory').classList.contains('show')) {
-                toggleText.textContent = 'Hide';
-                icon.className = 'bi bi-chevron-up me-1';
-            } else {
-                toggleText.textContent = 'Show';
-                icon.className = 'bi bi-chevron-down me-1';
-            }
-        }, 200);
-    });
-
-    // Add smooth loading animation
-    function initializeProfile() {
-        const profileCard = document.querySelector('.profile-card');
-        profileCard.style.opacity = '0';
-        profileCard.style.transform = 'translateY(30px)';
-
-        setTimeout(() => {
-            profileCard.style.transition = 'all 0.6s ease';
-            profileCard.style.opacity = '1';
-            profileCard.style.transform = 'translateY(0)';
-        }, 100);
-    }
-
-    // Initialize everything when page loads
+    // Add smooth scrolling and additional interactivity
     document.addEventListener('DOMContentLoaded', function () {
-        populateProfile();
-        populateActivities();
-        initializeProfile();
-    });
+        const cards = document.querySelectorAll('.icon-card');
 
-    // Add click effect to avatar
-    document.getElementById('profileAvatar').addEventListener('click', function () {
-        this.style.transform = 'scale(1.1) rotate(5deg)';
-        setTimeout(() => {
-            this.style.transform = 'scale(1) rotate(0deg)';
-        }, 300);
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', function () {
+                this.style.zIndex = '10';
+            });
+
+            card.addEventListener('mouseleave', function () {
+                this.style.zIndex = '1';
+            });
+        });
     });
 </script>
 
 
-<!-- Patient Records Table -->
-<section class="content">
-    <div class="container-fluid">
 
 
 
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Patient records</h3>
-            </div>
-            <!-- /.card-header -->
-            <div class="card-body">
-                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Patient Name</th>
-                            <th>Gender</th>
-                            <th>Blood Group</th>
-                            <th>Status</th>
-                            <th style="width: 160px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for patient in patients %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ patient.full_name }}</td>
-                            <td>{{ patient.gender }}</td>
-                            <td>{{ patient.blood_group }}</td>
-                            <td>
-                                <span class="badge badge-{% if patient.status == 'active' %}success{% elif patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
-                                    {{ patient.get_status_display }}
-                                </span>
-                            </td>
-                            <td colspan="2">
-                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ patient.id }})"><i class="fas fa-folder-open"></i> View</button>
-                                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ patient.id }})"><i class="fas fa-chart-line"></i> Monitor</button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">No patients found.</td>
-                        </tr>
-                        {% endfor %}
-
-
-
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Patient Name</th>
-                            <th>Gender</th>
-                            <th>Blood Group</th>
-                            <th>Status</th>
-                            <th style="width: 160px;">Actions</th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <!-- /.card-body -->
-        </div>
-        <!-- /.card -->
-    </div>
-    <!-- /.col --
-    <!-- /.row -->
-    </div>
-    <!-- /.container-fluid -->
-</section>
-<!-- /.content -->
-<!-- Overview Modal -->
-<div class="modal fade" id="overviewModal" tabindex="-1" aria-labelledby="overviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="overviewModalLabel">Patient Overview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="overviewContent">Loading...</div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Monitor Modal -->
-<div class="modal fade" id="monitorModal" tabindex="-1" aria-labelledby="monitorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="monitorModalLabel">Patient Monitoring</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="monitorContent">Loading...</div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-
-
-
-<!-- URL Templates -->
-<script>
-    const urlOverviewTemplate = "{% url 'patient_overview' 0 %}".replace("0", "__ID__");
-    const urlMonitorTemplate = "{% url 'patient_monitor' 0 %}".replace("0", "__ID__");
-
-    function loadOverview(patientId) {
-        const url = urlOverviewTemplate.replace("__ID__", patientId);
-        document.getElementById("overviewContent").innerHTML = "Loading...";
-
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                let html = `<strong>Name:</strong> ${data.name}<br>
-                    <strong>Gender:</strong> ${data.gender}<br>
-                    <strong>Status:</strong> ${data.status}<br>
-                    <strong>Ward:</strong> ${data.ward || 'N/A'}<br>
-                    <strong>Bed:</strong> ${data.bed || 'N/A'}<br><hr>
-                    <strong>Last Vitals:</strong><ul>`;
-
-                if (data.last_vitals && data.last_vitals.length > 0) {
-                    data.last_vitals.forEach(v => {
-                        html += `<li>${v.date}: BP=${v.bp || 'N/A'}, HR=${v.hr || 'N/A'}, Temp=${v.temp || 'N/A'}°C</li>`;
-                    });
-                } else {
-                    html += `<li>No vitals recorded</li>`;
-                }
-                html += "</ul>";
-                document.getElementById("overviewContent").innerHTML = html;
-            })
-            .catch(error => {
-                document.getElementById("overviewContent").innerHTML = "Error loading patient data.";
-                console.error("Error:", error);
-            });
-    }
-
-    function loadMonitor(patientId) {
-        const url = urlMonitorTemplate.replace("__ID__", patientId);
-        document.getElementById("monitorContent").innerHTML = "Loading...";
-
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                let html = `<strong>Consultations:</strong><ul>`;
-
-                if (data.consultations && data.consultations.length > 0) {
-                    data.consultations.forEach(c => {
-                        html += `<li>${c.date}: ${c.notes}</li>`;
-                    });
-                } else {
-                    html += `<li>No consultations recorded</li>`;
-                }
-
-                html += "</ul><hr><strong>Prescriptions:</strong><ul>";
-
-                if (data.prescriptions && data.prescriptions.length > 0) {
-                    data.prescriptions.forEach(p => {
-                        html += `<li>${p.date}: ${p.drug} - ${p.dosage}</li>`;
-                    });
-                } else {
-                    html += `<li>No prescriptions recorded</li>`;
-                }
-
-                html += "</ul>";
-                document.getElementById("monitorContent").innerHTML = html;
-            })
-            .catch(error => {
-                document.getElementById("monitorContent").innerHTML = "Error loading monitoring data.";
-                console.error("Error:", error);
-            });
-    }
-</script>
-
-
-
-{% endblock %}
+    {% endblock %}

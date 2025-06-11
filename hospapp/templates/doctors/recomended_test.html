@@ -1,7 +1,7 @@
 {% extends "doctors/base.html" %}
 {% load static %}
 
-{% block title %}HMS | Lab Test Entry{% endblock %}
+{% block title %}HMS | Test administration{% endblock %}
 
 {% block content %}
 <!-- Header -->
@@ -9,11 +9,11 @@
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Lab Test Entry</h1>
+                <h1 class="m-0 text-dark">IVF Test Administrations</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'laboratory' %}">Laboratory</a></li>
+                    <li class="breadcrumb-item"><a href="">Laboratory</a></li>
                     <li class="breadcrumb-item active">Test Entry</li>
                 </ol>
             </div>
@@ -28,7 +28,7 @@
         {% if messages %}
         {% for message in messages %}
         <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
-            role="alert">
+             role="alert">
             {{ message }}
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
@@ -36,457 +36,345 @@
         </div>
         {% endfor %}
         {% endif %}
+    </div>
+    <!-- Statistics Cards -->
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-        <!-- Statistics Cards -->
-        <div class="row mb-3">
-            <div class="col-lg-3 col-6">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3>{{ stats.total_patients }}</h3>
-                        <p>Total Patients</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-6">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        {%if stats.total_pending_tests%}
-                        <h3>{{ stats.total_pending_tests }}</h3>
-                        {%else%}
-                        <h3>0</h3>
-                        {%endif%}
-                        <p>Pending Tests</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-file-medical"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-6">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        {%if stats.total_completed_today%}
-                        <h3>{{ stats.total_completed_today }}</h3>
-                        {%else%}
-                        <h3>0</h3>
-                        <p>Completed Today</p>
-                        {%endif%}
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-6">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        {%if stats.total_completed_today%}
-                        <h3>{{ stats.total_in_progress}}</h3>
-                        {%else%}
-                        <h3>0</h3>
-                        <p>In Progress</p>
-                        {%endif%}
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-flask"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+        .stats-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
 
+            .stats-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: var(--card-color);
+                border-radius: 20px 20px 0 0;
+            }
 
-        <!-- All Patients Table -->
-        <div class="card card-outline card-primary">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-users"></i> All Patients - Lab Test Management
-                </h3>
-                <div class="card-tools">
-                    <div class="input-group input-group-sm" style="width: 300px;">
-                        <input type="text" id="patientSearch" class="form-control"
-                            placeholder="Search by patient name...">
-                        <div class="input-group-append">
-                            <button type="button" class="btn btn-default">
-                                <i class="fas fa-search"></i>
-                            </button>
+            .stats-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            }
+
+            .stats-card.info {
+                --card-color: linear-gradient(135deg, #667eea, #764ba2);
+            }
+
+            .stats-card.warning {
+                --card-color: linear-gradient(135deg, #f093fb, #f5576c);
+            }
+
+            .stats-card.success {
+                --card-color: linear-gradient(135deg, #4facfe, #00f2fe);
+            }
+
+            .stats-card.secondary {
+                --card-color: linear-gradient(135deg, #43e97b, #38f9d7);
+            }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--card-color);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin: 0.5rem 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-color);
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .container-custom {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .row {
+            --bs-gutter-x: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .stats-number {
+                font-size: 2rem;
+            }
+
+            .stats-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+
+            .stats-card {
+                padding: 1.2rem;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+            }
+        }
+    </style>
+    
+        <div class="container-custom">
+            <!-- Statistics Cards -->
+            <div class="row">
+                <div class="col-lg-3 col-md-6 col-12">
+                    <div class="stats-card info">
+                        <div class="stats-header">
+                            <div class="stats-body">                            
+                                <h3 class="stats-number">{{ stats.total_patients }}</h3>
+                                <p class="stats-label">Total Patients</p>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6 col-12">
+                    <div class="stats-card warning pulse">
+                        <div class="stats-header">
+                            <div class="stats-body">
+                                {%if stats.total_pending_tests%}
+                                <h3 class="stats-number">{{ stats.total_pending_tests }}</h3>
+                                {%else%}
+                                <h3>0</h3>
+                                {%endif%}
+
+                                <p class="stats-label">Pending Tests</p>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-file-medical"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6 col-12">
+                    <div class="stats-card success">
+                        <div class="stats-header">
+                            <div class="stats-body">
+                                {%if stats.total_completed_today%}
+                                <h3 class="stats-number">{{ stats.total_completed_today }}</h3>
+                                {%else%}
+                                <h3>0</h3>
+                                {%endif%}
+                                <p class="stats-label">Completed Today</p>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6 col-12">
+                    <div class="stats-card secondary">
+                        <div class="stats-header">
+                            <div class="stats-body">
+                                {%if stats.total_completed_today%}
+                                <h3 class="stats-number">{{ stats.total_in_progress}}</h3>
+                                {%else%}
+                                <h3>0</h3>
+                                {%endif%}
+                                <p class="stats-label">In Progress</p>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-flask"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped table-sm">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Patient ID</th>
-                                <th>Patient Info</th>
-                                <th>Contact</th>
-                                <th>Test Summary</th>
-                                <th>Categories</th>
-                                <th>Recommended By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="patientsTableBody">
-                            {% for test_data in tests_data %}
-                            <tr data-patient-name="{{ test_data.patient.full_name|lower }}">
-                                <td>
-                                    <span class="badge badge-secondary">{{ test_data.patient.id }}</span>
-                                </td>
-                                <td>
-                                    <div>
-                                        <strong>{{ test_data.patient.full_name }}</strong>
-                                        <br>
-                                        <small class="text-muted">
-                                            {{ test_data.patient.gender }} •
-                                            {{ test_data.patient.date_of_birth|date:"M d, Y" }} •
-                                            {{ test_data.patient.blood_group|default:"N/A" }}
-                                        </small>
-                                        {% if test_data.patient.is_inpatient %}
-                                        <br><span class="badge badge-info">Inpatient</span>
-                                        {% if test_data.patient.ward %}
-                                        <small class="text-muted">{{ test_data.patient.ward.name }}</small>
-                                        {% endif %}
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td>
-                                    <small>
-                                        <i class="fas fa-phone"></i> {{ test_data.patient.phone|default:"N/A" }}
-                                        <br>
-                                        <i class="fas fa-map-marker-alt"></i> {{
-                                        test_data.patient.address|truncatechars:30|default:"N/A" }}
-                                    </small>
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-column">
-                                        <span
-                                            class="badge badge-{% if test_data.status == 'pending' %}warning{% elif test_data.status == 'in_progress' %}info{% elif test_data.status == 'completed' %}success{% else %}secondary{% endif %} mb-1">
-                                            {{ test_data.test.test_name }}
-                                        </span>
-                                        <small class="text-muted">{{ test_data.status|title }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    {% if test_data.category %}
-                                    <span class="badge badge-outline mb-1">{{ test_data.category.name }}</span>
-                                    {% else %}
-                                    <small class="text-muted">No category</small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <small class="text-muted">{{ test_data.requested_by|default:"Walk-in" }}</small>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a href="{% url 'test_results' test_data.patient.id %}" class="btn btn-primary"
-                                            title="View test details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <button class="btn btn-success create-test"
-                                            data-patient-id="{{ test_data.patient.id }}"
-                                            data-patient-name="{{ test_data.patient.full_name }}"
-                                            title="Create New Test">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                        {% if test_data.status == 'pending' %}
-                                        <button class="btn btn-warning complete-test-direct"
-                                            data-test-id="{{ test_data.test.id }}"
-                                            data-test-name="{{ test_data.test.test_name }}"
-                                            data-patient-name="{{ test_data.patient.full_name }}" title="Complete Test">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
-                                        <br>
-                                        No patients with lab tests found
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
+</section>
 
-        <!-- Quick Test Entry Section for Pending Tests -->
-        {% if pending_tests_by_category %}
-        <div class="card card-outline card-warning mt-4">
+
+
+<!-- Patient Records Table -->
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
             <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-clock"></i> Quick Test Entry - Pending Tests by Category
-                </h3>
+                <h3 class="card-title">Patient records</h3>
             </div>
+            <!-- /.card-header -->
             <div class="card-body">
-                <div class="row">
-                    {% for category_name, cat_data in pending_tests_by_category.items %}
-                    <div class="col-lg-6 col-md-12 mb-3">
-                        <div class="card card-outline card-warning">
-                            <div class="card-header">
-                                <h5 class="card-title">
-                                    {{ cat_data.category.name }}
-                                    <span class="badge badge-warning">{{ cat_data.count }} tests</span>
-                                </h5>
-                            </div>
-                            <div class="card-body p-2">
-                                {% for test in cat_data.tests %}
-                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                    <div>
-                                        <strong>{{ test.patient.full_name }}</strong><br>
-                                        <small class="text-muted">{{ test.test_name }}</small>
-                                    </div>
-                                    <button class="btn btn-sm btn-warning complete-test-direct"
-                                        data-test-id="{{ test.id }}" data-test-name="{{ test.test_name }}"
-                                        data-patient-name="{{ test.patient.full_name }}">
-                                        <i class="fas fa-check"></i> Complete
-                                    </button>
+                <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Patient Info</th>
+                            <th>Contact</th>
+                            <th>Categories</th>
+                            <th>Test Summary</th>
+                            <th>Recommended By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in unique_patients_with_tests %}
+                        <tr data-patient-name="{{ entry.patient.full_name|lower }}">
+                            <td>
+                                <span class="badge badge-secondary">{{ entry.patient.id }}</span>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ entry.patient.full_name }}</strong><br>
+                                    <small class="text-muted">
+                                        {{ entry.patient.gender }} •
+                                        {{ entry.patient.date_of_birth|date:"M d, Y" }} •
+                                        {{ entry.patient.blood_group|default:"N/A" }}
+                                    </small>
+                                    {% if entry.patient.is_inpatient %}
+                                    <br><span class="badge badge-info">Inpatient</span>
+                                    {% if entry.patient.ward %}
+                                    <small class="text-muted">{{ entry.patient.ward.name }}</small>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <small>
+                                    <i class="fas fa-phone"></i> {{ entry.patient.phone|default:"N/A" }}<br>
+                                    <i class="fas fa-map-marker-alt"></i> {{ entry.patient.address|truncatechars:30|default:"N/A" }}
+                                </small>
+                            </td>
+
+                            <td>
+                                {% for category in entry.categories %}
+                                <div class="d-flex flex-column">
+                                    <span class="badge badge-outline mb-1">{{ category }}</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                {% for test in entry.tests %}
+                                <div class="d-flex flex-column">
+                                    <span class="badge badge-warning mb-1">{{ test.test_name }}</span>
                                 </div>
                                 {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Patient Tests Modal -->
-        <div class="modal fade" id="patientTestsModal" tabindex="-1" role="dialog"
-            aria-labelledby="patientTestsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-xl" role="document">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary">
-                        <h5 class="modal-title text-white" id="patientTestsModalLabel">
-                            <i class="fas fa-flask"></i> Lab Tests for <span id="patientName"></span>
-                        </h5>
-                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Loading spinner -->
-                        <div id="loading" class="text-center py-4">
-                            <i class="fas fa-spinner fa-spin fa-2x"></i>
-                            <p>Loading patient data...</p>
-                        </div>
-
-                        <!-- Patient Info -->
-                        <div class="row mb-3" id="patientInfoSection" style="display: none;">
-                            <div class="col-md-12">
-                                <div class="card card-outline card-info">
-                                    <div class="card-header">
-                                        <h3 class="card-title">Patient Information</h3>
-                                    </div>
-                                    <div class="card-body" id="patientInfo">
-                                        <!-- Patient details will be loaded here -->
-                                    </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ entry.requested_by }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'test_results' entry.patient.id %}" class="btn btn-primary" title="View test details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button class="btn btn-success create-test"
+                                            data-patient-id="{{ entry.patient.id }}"
+                                            data-patient-name="{{ entry.patient.full_name }}"
+                                            title="Create New Test">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    
+                                    <button class="btn btn-warning complete-test-direct"
+                                            data-test-id="{{ test.id }}"
+                                            data-test-name="{{ test.test_name }}"
+                                            data-patient-name="{{ entry.patient.full_name }}"
+                                            title="Complete Test">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    
                                 </div>
-                            </div>
-                        </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                    <br>
+                                    No patients with lab tests found
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
 
-                        <!-- Pending Tests -->
-                        <div id="pendingTestsContainer" style="display: none;">
-                            <h6 class="text-warning mb-3">
-                                <i class="fas fa-hourglass-half"></i> Pending Tests
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm table-striped">
-                                    <thead class="thead-warning">
-                                        <tr>
-                                            <th>Test Name</th>
-                                            <th>Category</th>
-                                            <th>Requested By</th>
-                                            <th>Date Requested</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="pendingTestsBody">
-                                        <!-- Test rows dynamically loaded here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
 
-                        <!-- In Progress Tests -->
-                        <div id="inProgressTestsContainer" style="display: none;">
-                            <h6 class="text-info mb-3">
-                                <i class="fas fa-flask"></i> In Progress Tests
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm table-striped">
-                                    <thead class="thead-info">
-                                        <tr>
-                                            <th>Test Name</th>
-                                            <th>Category</th>
-                                            <th>Started By</th>
-                                            <th>Date Started</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="inProgressTestsBody">
-                                        <!-- In progress test rows dynamically loaded here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                </table>
 
-                        <!-- Completed Tests -->
-                        <div id="completedTestsContainer" class="mt-4" style="display: none;">
-                            <h6 class="text-success mb-3">
-                                <i class="fas fa-check-circle"></i> Completed Tests
-                            </h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm table-striped">
-                                    <thead class="thead-success">
-                                        <tr>
-                                            <th>Test Name</th>
-                                            <th>Category</th>
-                                            <th>Completed By</th>
-                                            <th>Date Completed</th>
-                                            <th>Result Summary</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="completedTestsBody">
-                                        <!-- Completed test rows dynamically loaded here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-success" id="createTestBtn">
-                            <i class="fas fa-plus"></i> Create New Test
-                        </button>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                            <i class="fas fa-times"></i> Close
-                        </button>
-                    </div>
-                </div>
             </div>
+
+            <!-- /.card-body -->
         </div>
-
-        <!-- Create Test Modal -->
-        <div class="modal fade" id="createTestModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header bg-success">
-                        <h5 class="modal-title text-white">
-                            <i class="fas fa-plus"></i> Create New Lab Test
-                        </h5>
-                        <button type="button" class="close text-white" data-dismiss="modal">
-                            <span>&times;</span>
-                        </button>
-                    </div>
-                    <form id="createTestForm">
-                        <div class="modal-body">
-                            <input type="hidden" id="createTestPatientId" name="patient_id">
-
-                            <div class="form-group">
-                                <label>Patient</label>
-                                <input type="text" class="form-control" id="createTestPatientName" readonly>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="testName">Test Name *</label>
-                                <input type="text" class="form-control" id="testName" name="test_name" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="testCategory">Category</label>
-                                <select class="form-control" id="testCategory" name="category_id">
-                                    <option value="">Select Category</option>
-                                    {% for category in test_categories %}
-                                    <option value="{{ category.id }}">{{ category.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="normalRange">Normal Range</label>
-                                <input type="text" class="form-control" id="normalRange" name="normal_range"
-                                    placeholder="e.g., 70-100 mg/dL">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="testInstructions">Instructions</label>
-                                <textarea class="form-control" id="testInstructions" name="instructions"
-                                    rows="3"></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> Create Test
-                            </button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Complete Test Modal -->
-        <div class="modal fade" id="completeTestModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning">
-                        <h5 class="modal-title">
-                            <i class="fas fa-check"></i> Complete Lab Test
-                        </h5>
-                        <button type="button" class="close" data-dismiss="modal">
-                            <span>&times;</span>
-                        </button>
-                    </div>
-                    <form id="completeTestForm" method="post">
-                        {% csrf_token %}
-                        <div class="modal-body">
-                            <input type="hidden" id="completeTestId" name="test_id">
-
-                            <div class="form-group">
-                                <label>Test Name</label>
-                                <input type="text" class="form-control" id="completeTestName" readonly>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="testResult">Test Result *</label>
-                                <textarea class="form-control" id="testResult" name="result_value" rows="4" required
-                                    placeholder="Enter test results..."></textarea>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="testNotes">Additional Notes</label>
-                                <textarea class="form-control" id="testNotes" name="notes" rows="2"
-                                    placeholder="Optional notes..."></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-check"></i> Complete Test
-                            </button>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
+        <!-- /.card -->
     </div>
+    <!-- /.container-fluid -->
 </section>
+<!-- /.content -->
 {% endblock %}
 
 <!-- Scripts -->

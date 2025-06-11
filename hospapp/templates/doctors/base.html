@@ -74,7 +74,7 @@
                 </div>
 
                 <!-- Sidebar user panel (optional) -->
-                <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+                <div class="user-panel d-flex">
                     <div class="image">
                         {% if user.staff.photo %}
                         <img src="{{ user.staff.photo.url }}" class="img-circle elevation-2" alt="{{ user.get_full_name|default:user.username }}">
@@ -83,13 +83,12 @@
                         {% endif %}
                     </div>
                     <div class="info">
-                        <a href="#" class="d-block">{{ user.get_full_name|default:user.username }}</a>
-                        <small class="text-muted text-capitalize">{{ user.staff.role|default:"Doctor" }}</small>
+                        <span class="d-block text-white">{{ user.get_full_name|default:user.username }}</span>
                     </div>
                 </div>
 
                 <!-- Sidebar Menu -->
-                <nav class="mt-2">
+                <nav class="mt-0">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                         <!-- Dashboard -->
                         <li class="nav-item">
@@ -137,7 +136,6 @@
                                 <p>Treatment Monitoring</p>
                             </a>
                         </li>
-                        
                         <!-- Account -->
                         <li class="nav-header">ACCOUNT</li>
                         <li class="nav-item">

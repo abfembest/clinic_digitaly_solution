@@ -50,6 +50,12 @@ urlpatterns = [
     path('d/recomended_tests', views.recomended_tests, name='recomended_tests'),
     path('d/test_results/<int:patient_id>/', views.test_results, name='test_results'),
     path('d/doc_test_comment/<int:patient_id>/', views.doc_test_comment, name='doc_test_comment'),
+    path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
+    path('fetch-activity/', views.fetch_patient_activity, name='fetch_patient_activity'),
+
+    #path('doctors/individual', views.individual_record, name='individual_record'),
+    #path('doctors/all', views.all_record, name='all_record'),
+
 
    
     

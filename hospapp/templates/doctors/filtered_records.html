@@ -1,0 +1,377 @@
+{% extends "doctors/base.html" %}
+{% load static %}
+
+{% block title %}Doctor | Patient Records{% endblock %}
+
+{% block content %}
+
+
+<!-- Page Header -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1 class="m-0 text-dark">Patient Records</h1>
+            <span class="badge badge-info p-2">Total Patients: {{ patients|length }}</span>
+        </div>
+    </div>
+</div>
+
+
+
+  {% if selected_patient %}
+<h5>Showing records for: <strong>{{ selected_patient.full_name }}</strong></h5>
+
+<!-- Export Buttons -->
+<a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-sm btn-outline-secondary mb-3">Export CSV</a>
+<a href="?{{ request.GET.urlencode }}&export=pdf" class="btn btn-sm btn-outline-secondary mb-3">Export PDF</a>
+
+<h6>Lab Tests</h6>
+<table class="table table-sm table-bordered">
+    <thead><tr><th>Test</th><th>Date</th><th>Status</th></tr></thead>
+    <tbody>
+        {% for t in labtests %}
+        <tr><td>{{ t.test_name }}</td><td>{{ t.created }}</td><td>{{ t.status }}</td></tr>
+        {% empty %}
+        <tr><td colspan="3">No data</td></tr>{% endfor %}
+    </tbody>
+</table>
+
+<!-- Repeat for comments, vitals, payments... -->
+{% endif %}
+
+
+
+<style>
+
+    .profile-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border-radius: 20px;
+    }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+        .profile-avatar:hover {
+            transform: scale(1.05);
+        }
+
+    .activity-item {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        padding-left: 15px;
+    }
+
+        .activity-item:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+            border-left-color: #667eea;
+            transform: translateX(5px);
+        }
+
+    .badge-custom {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+    }
+
+    .btn-expand {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+        .btn-expand:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+    .timeline-dot {
+        width: 12px;
+        height: 12px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border-radius: 50%;
+        position: absolute;
+        left: -9px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .activity-timeline {
+        position: relative;
+        padding-left: 25px;
+    }
+
+        .activity-timeline::before {
+            content: '';
+            position: absolute;
+            left: -3px;
+            top: 20px;
+            bottom: 20px;
+            width: 2px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            opacity: 0.3;
+        }
+
+    .collapse-animation {
+        transition: all 0.4s ease;
+    }
+
+    .stats-card {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+    }
+
+        .stats-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+</style>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card profile-card border-0">
+                <div class="card-body p-4">
+                    <!-- Profile Header -->
+                    <div class="row align-items-center mb-4">
+                        <div class="col-auto">
+                            <img id="profileAvatar" src="https://via.placeholder.com/120x120/667eea/ffffff?text=JD"
+                                 alt="Profile Picture" class="rounded-circle profile-avatar">
+                        </div>
+                        <div class="col">
+                            <h2 class="mb-1 fw-bold text-dark" id="userName">John Doe</h2>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-person-badge me-2"></i>
+                                User ID: <span class="badge badge-custom text-white" id="userId">#12345</span>
+                            </p>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-calendar-check me-2"></i>
+                                Member since: <span id="dateJoined" class="fw-semibold">January 15, 2022</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="row mb-4">
+                        <div class="col-4">
+                            <div class="stats-card text-center p-3 rounded-3">
+                                <h4 class="mb-1 text-primary fw-bold" id="totalActivities">47</h4>
+                                <small class="text-muted">Activities</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stats-card text-center p-3 rounded-3">
+                                <h4 class="mb-1 text-success fw-bold" id="streakDays">23</h4>
+                                <small class="text-muted">Day Streak</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stats-card text-center p-3 rounded-3">
+                                <h4 class="mb-1 text-warning fw-bold" id="badgesEarned">8</h4>
+                                <small class="text-muted">Badges</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity History Section -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 text-dark fw-bold">
+                            <i class="bi bi-clock-history me-2 text-primary"></i>
+                            Activity History
+                        </h5>
+                        <button class="btn btn-expand text-white btn-sm rounded-pill px-3"
+                                id="toggleHistory" data-bs-toggle="collapse" data-bs-target="#activityHistory">
+                            <i class="bi bi-chevron-down me-1"></i>
+                            <span id="toggleText">Show</span>
+                        </button>
+                    </div>
+
+                    <!-- Collapsible Activity Timeline -->
+                    <div class="collapse collapse-animation" id="activityHistory">
+                        <div class="activity-timeline" id="activityList">
+                            <!-- Activities will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Sample user data
+    const userData = {
+        name: "Sarah Johnson",
+        userId: "#SJ2024",
+        avatar: "https://via.placeholder.com/120x120/764ba2/ffffff?text=SJ",
+        dateJoined: "March 8, 2023",
+        totalActivities: 64,
+        streakDays: 31,
+        badgesEarned: 12,
+        activities: [
+            {
+                id: 1,
+                type: "login",
+                description: "Logged into the platform",
+                timestamp: "2024-06-04T09:30:00",
+                icon: "bi-box-arrow-in-right",
+                color: "text-success"
+            },
+            {
+                id: 2,
+                type: "achievement",
+                description: "Earned 'Weekly Warrior' badge",
+                timestamp: "2024-06-03T16:45:00",
+                icon: "bi-trophy",
+                color: "text-warning"
+            },
+            {
+                id: 3,
+                type: "interaction",
+                description: "Completed daily challenge",
+                timestamp: "2024-06-03T14:20:00",
+                icon: "bi-check-circle",
+                color: "text-primary"
+            },
+            {
+                id: 4,
+                type: "social",
+                description: "Connected with 3 new friends",
+                timestamp: "2024-06-02T11:15:00",
+                icon: "bi-people",
+                color: "text-info"
+            },
+            {
+                id: 5,
+                type: "content",
+                description: "Shared a new post",
+                timestamp: "2024-06-01T19:30:00",
+                icon: "bi-chat-square-text",
+                color: "text-secondary"
+            },
+            {
+                id: 6,
+                type: "milestone",
+                description: "Reached 30-day streak milestone",
+                timestamp: "2024-05-31T08:00:00",
+                icon: "bi-calendar-check",
+                color: "text-danger"
+            }
+        ]
+    };
+
+    // Format date for display
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+
+        if (diffInHours < 1) return 'Just now';
+        if (diffInHours < 24) return `${diffInHours}h ago`;
+        if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        });
+    }
+
+    // Populate user profile
+    function populateProfile() {
+        document.getElementById('userName').textContent = userData.name;
+        document.getElementById('userId').textContent = userData.userId;
+        document.getElementById('profileAvatar').src = userData.avatar;
+        document.getElementById('dateJoined').textContent = userData.dateJoined;
+        document.getElementById('totalActivities').textContent = userData.totalActivities;
+        document.getElementById('streakDays').textContent = userData.streakDays;
+        document.getElementById('badgesEarned').textContent = userData.badgesEarned;
+    }
+
+    // Populate activity history
+    function populateActivities() {
+        const activityList = document.getElementById('activityList');
+        activityList.innerHTML = '';
+
+        userData.activities.forEach((activity, index) => {
+            const activityItem = document.createElement('div');
+            activityItem.className = 'activity-item mb-3 p-3 rounded-3 position-relative';
+            activityItem.innerHTML = `
+                            <div class="timeline-dot"></div>
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0 me-3">
+                                    <i class="bi ${activity.icon} fs-5 ${activity.color}"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <p class="mb-1 fw-semibold text-dark">${activity.description}</p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        ${formatDate(activity.timestamp)}
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+            activityList.appendChild(activityItem);
+        });
+    }
+
+    // Toggle history section
+    document.getElementById('toggleHistory').addEventListener('click', function () {
+        const toggleText = document.getElementById('toggleText');
+        const icon = this.querySelector('i');
+
+        setTimeout(() => {
+            if (document.getElementById('activityHistory').classList.contains('show')) {
+                toggleText.textContent = 'Hide';
+                icon.className = 'bi bi-chevron-up me-1';
+            } else {
+                toggleText.textContent = 'Show';
+                icon.className = 'bi bi-chevron-down me-1';
+            }
+        }, 200);
+    });
+
+    // Add smooth loading animation
+    function initializeProfile() {
+        const profileCard = document.querySelector('.profile-card');
+        profileCard.style.opacity = '0';
+        profileCard.style.transform = 'translateY(30px)';
+
+        setTimeout(() => {
+            profileCard.style.transition = 'all 0.6s ease';
+            profileCard.style.opacity = '1';
+            profileCard.style.transform = 'translateY(0)';
+        }, 100);
+    }
+
+    // Initialize everything when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        populateProfile();
+        populateActivities();
+        initializeProfile();
+    });
+
+    // Add click effect to avatar
+    document.getElementById('profileAvatar').addEventListener('click', function () {
+        this.style.transform = 'scale(1.1) rotate(5deg)';
+        setTimeout(() => {
+            this.style.transform = 'scale(1) rotate(0deg)';
+        }, 300);
+    });
+</script>
+
+    {% endblock %}

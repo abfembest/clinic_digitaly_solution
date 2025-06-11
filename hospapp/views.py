@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory,Payment,DoctorComments
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.views.decorators.http import require_GET
+from django.shortcuts import get_object_or_404, render
 import json
 from datetime import datetime, date
 from django.db.models import Sum
@@ -30,6 +31,9 @@ from collections import defaultdict
 from dateutil.relativedelta import relativedelta
 today = timezone.now().date()
 from django.urls import reverse
+import csv
+from reportlab.pdfgen import canvas
+
 
 import logging
 
@@ -435,7 +439,7 @@ def get_patient_details(request, patient_id):
             'medication', 'instructions', 'start_date'
         ))
 
-        lab_tests = list(LabTest.objects.filter(patient=patient).order_by('-requested_at')[:5].values(
+        _ts = list(LabTest.objects.filter(patient=patient).order_by('-requested_at')[:5].values(
             'test_name', 'result_value', 'status'
         ))
 
@@ -623,10 +627,17 @@ def save_care_plan(request):
 
 @login_required(login_url='home')
 def access_medical_records(request):
-    patients = Patient.objects.all()
-    return render(request, 'doctors/access_medical_records.html', {
-        'patients': patients
-    })
+    view_type = request.GET.get('view')
+    if view_type == 'individual':
+        patients = Patient.objects.all()
+        return render(request, 'doctors/individual_records.html', {'patients': patients})
+
+    elif view_type == 'all':
+        patients = Patient.objects.all()
+        return render(request, 'doctors/all_records.html', {'patients': patients})
+
+    # Default page with the two links
+    return render(request, 'doctors/access_medical_records.html')
 
 @login_required(login_url='home')
 def get_patient_overview(request, patient_id):
@@ -802,24 +813,20 @@ def laboratory(request):
         }
     return render(request, 'laboratory/index.html', context)
 
+
+
+
+
 @login_required(login_url='home')
+
 def lab_test_entry(request):
-    """
-    Combined view that handles both displaying patients with lab tests 
-    and processing test result entries with category/subcategory information
-    """
-    
-    # Handle POST request for test result submission
     if request.method == 'POST':
         test_id = request.POST.get('test_id')
         result_value = request.POST.get('result_value')
         notes = request.POST.get('notes', '')
-        
+
         try:
-            test = LabTest.objects.select_related('patient', 'category').get(
-                id=test_id, 
-                status='pending'
-            )
+            test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
             test.result_value = result_value
             test.notes = notes
             test.status = 'completed'
@@ -827,201 +834,91 @@ def lab_test_entry(request):
             test.date_performed = timezone.now()
             test.performed_by = request.user
             test.save()
-            
-            messages.success(
-                request, 
-                f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully."
-            )
+
+            messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
         except LabTest.DoesNotExist:
             messages.error(request, "Invalid test entry or test already completed.")
-        
-        # Redirect to avoid resubmission on refresh
+
         return redirect('lab_test_entry')
-    
-    # Get only patients who have at least one lab test
-    patient_ids_with_tests = LabTest.objects.values_list('patient', flat=True).distinct()
-    patients = Patient.objects.filter(
-        id__in=patient_ids_with_tests
-    ).order_by('-date_registered')
-    
-    # Prepare patient data with test counts, categories, and subcategories
-    patients_data = []
-    for patient in patients:
-        # Get all tests for this patient with category relationships
-        pending_tests = LabTest.objects.filter(
-            patient=patient,
-            status='pending'
-        ).select_related('category').prefetch_related(
-            'category__subcategories'
-        ).order_by('-requested_at')
-        
-        completed_tests = LabTest.objects.filter(
-            patient=patient,
-            status='completed'
-        ).select_related('category').prefetch_related(
-            'category__subcategories'
-        ).order_by('-date_performed')
-        
-        in_progress_tests = LabTest.objects.filter(
-            patient=patient,
-            status='in_progress'
-        ).select_related('category').prefetch_related(
-            'category__subcategories'
-        ).order_by('-requested_at')
-        
-        # Get unique categories for this patient's tests
-        patient_categories = TestCategory.objects.filter(
-            test_category__patient=patient
-        ).prefetch_related('subcategories').distinct().order_by('name')
-        
-        # Get categories with test counts for this patient
-        category_stats = []
-        for category in patient_categories:
-            category_test_count = LabTest.objects.filter(
-                patient=patient,
-                category=category
-            ).count()
-            
-            category_pending_count = LabTest.objects.filter(
-                patient=patient,
-                category=category,
-                status='pending'
-            ).count()
-            
-            category_completed_count = LabTest.objects.filter(
-                patient=patient,
-                category=category,
-                status='completed'
-            ).count()
-            
-            # Get subcategories and their related tests for this patient
-            subcategory_data = []
-            for subcategory in category.subcategories.all():
-                # Note: You might need to add a subcategory field to LabTest model
-                # For now, this shows the structure you'd use
-                subcategory_data.append({
-                    'subcategory': subcategory,
-                    'name': subcategory.name,
-                })
-            
-            category_stats.append({
-                'category': category,
-                'total_tests': category_test_count,
-                'pending_tests': category_pending_count,
-                'completed_tests': category_completed_count,
-                'subcategories': subcategory_data,
-            })
-        
-        # Get latest consultation or referral info
-        latest_referral = Referral.objects.filter(patient=patient).order_by('-id').first()
-        referred_by = latest_referral.notes if latest_referral else patient.referred_by
-        
-        # Get last test date
-        last_test = LabTest.objects.filter(patient=patient).order_by('-requested_at').first()
-        
-        patients_data.append({
-            'patient': patient,
-            'pending_tests': pending_tests,
-            'completed_tests': completed_tests,
-            'in_progress_tests': in_progress_tests,
-            'pending_count': pending_tests.count(),
-            'completed_count': completed_tests.count(),
-            'in_progress_count': in_progress_tests.count(),
-            'total_tests': pending_tests.count() + completed_tests.count() + in_progress_tests.count(),
-            'referred_by': referred_by or 'Walk-in',
-            'last_test_date': last_test.requested_at if last_test else None,
-            'categories': patient_categories,
-            'category_stats': category_stats,
-        })
-    
-    # Calculate summary statistics
-    total_patients = patients.count()
-    patients_with_pending_tests = len([p for p in patients_data if p['pending_count'] > 0])
-    total_pending_tests = LabTest.objects.filter(status='pending').count()
-    total_completed_today = LabTest.objects.filter(
-        status='completed',
-        date_performed__date=timezone.now().date()
-    ).count()
-    total_in_progress = LabTest.objects.filter(status='in_progress').count()
-    
-    # Get all available test categories and subcategories for quick test creation
-    all_test_categories = TestCategory.objects.prefetch_related(
-        'subcategories'
-    ).all().order_by('name')
-    
-    # Get category statistics across all patients
-    category_overview = []
-    for category in all_test_categories:
-        total_tests_in_category = LabTest.objects.filter(category=category).count()
-        pending_tests_in_category = LabTest.objects.filter(
-            category=category, 
-            status='pending'
-        ).count()
-        completed_tests_in_category = LabTest.objects.filter(
-            category=category, 
-            status='completed'
-        ).count()
-        
-        category_overview.append({
-            'category': category,
-            'total_tests': total_tests_in_category,
-            'pending_tests': pending_tests_in_category,
-            'completed_tests': completed_tests_in_category,
-            'subcategories': category.subcategories.all(),
-        })
-    
-    # Get all pending tests for quick access (for the original lab_entry functionality)
-    all_pending_tests = LabTest.objects.select_related(
-        'patient', 'category'
-    ).prefetch_related(
-        'category__subcategories'
-    ).filter(
+
+    # Filter lab tests strictly by status='pending' and doctor_comments=0
+    lab_tests = LabTest.objects.select_related('patient', 'category').filter(
         status='pending'
     ).order_by('-requested_at')
-    
-    # Group pending tests by category
-    pending_tests_by_category = {}
-    for test in all_pending_tests:
-        category_name = test.category.name
-        if category_name not in pending_tests_by_category:
-            pending_tests_by_category[category_name] = {
-                'category': test.category,
+
+    # Group tests by status (filtered dataset only contains 'pending')
+    tests_by_status = {
+        'pending': lab_tests,
+        'completed': LabTest.objects.none(),  # no need for completed here
+        'in_progress': LabTest.objects.none()  # not used either
+    }
+
+    # Prepare structured test data
+    tests_data = []
+    for test in lab_tests:
+        tests_data.append({
+            'test': test,
+            'patient': test.patient,
+            'category': test.category,
+            'status': test.status,
+            'requested_at': test.requested_at,
+            'date_performed': test.date_performed,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'System',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A'
+        })
+
+    # Build patient_map for patients with relevant tests
+    patient_map = {}
+    for item in tests_data:
+        patient_id = item['patient'].id
+        if patient_id not in patient_map:
+            patient_map[patient_id] = {
+                'patient': item['patient'],
                 'tests': [],
-                'count': 0
+                'categories': set(),
+                'requested_by': item['requested_by'],
+                'pending_count': 0,
+                'in_progress_count': 0,
+                'completed_count': 0,
+                'total_tests': 0,
+                'referred_by': item['requested_by']
             }
-        pending_tests_by_category[category_name]['tests'].append(test)
-        pending_tests_by_category[category_name]['count'] += 1
-    
+        patient_map[patient_id]['tests'].append(item['test'])
+        patient_map[patient_id]['categories'].add(item['category'])
+        patient_map[patient_id]['pending_count'] += 1
+        patient_map[patient_id]['total_tests'] += 1
+
+    # Statistics
+    today = timezone.now().date()
+    stats = {
+        'total_tests': lab_tests.count(),
+        'total_pending_tests': lab_tests.count(),
+        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
+        'total_in_progress': 0,
+        'total_categories': TestCategory.objects.count(),
+        'unique_patients': len(patient_map),
+        'total_patients': len(patient_map),  # used by your template stats
+    }
+
     context = {
-        'patients_data': patients_data,
-        'test_categories': all_test_categories,
-        'category_overview': category_overview,
-        'pending_tests': all_pending_tests,
-        'pending_tests_by_category': pending_tests_by_category,
-        'stats': {
-            'total_patients': total_patients,
-            'patients_with_pending_tests': patients_with_pending_tests,
-            'total_pending_tests': total_pending_tests,
-            'total_completed_today': total_completed_today,
-            'total_in_progress': total_in_progress,
-            'total_categories': all_test_categories.count(),
-        },
+        'tests_data': tests_data,
+        'test_categories': TestCategory.objects.all(),
+        'patients_data': patient_map.values(),
+        'stats': stats,
         'debug_info': {
-            'total_patients_fetched': len(patients_data),
-            'test_categories_count': all_test_categories.count(),
-            'pending_tests_count': all_pending_tests.count(),
-            'category_overview_count': len(category_overview),
+            'total_tests_fetched': len(tests_data),
+            'test_categories_count': TestCategory.objects.count(),
+            'pending_tests_count': lab_tests.count(),
             'methods_used': [
-                'Patient.objects.filter(id__in=LabTest)', 
-                'LabTest filtering with category relationships',
-                'TestCategory.objects.prefetch_related(subcategories)',
-                'Category statistics aggregation',
-                'Result processing with category info'
-            ],
+                'Filtered: status=pending & doctor_comments=0',
+                'Grouped by patient',
+                'Structured stats for dashboard'
+            ]
         } if request.user.is_superuser else None
     }
-    
+
     return render(request, 'laboratory/test_entry.html', context)
+
 
 
 @login_required(login_url='home')
@@ -2192,7 +2089,27 @@ def waitinglist(request):
 
 
 ##### Doctor test result view
+
 def test_results(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    pending_tests = LabTest.objects.filter(
+    patient=patient,
+    status='completed').filter(
+    Q(doctor_comments=0) | Q(doctor_comments__isnull=True)).select_related('category', 'patient')
+    for i in pending_tests:
+        print(i)
+    grouped_tests = defaultdict(list)
+    for test in pending_tests:
+        grouped_tests[test.category.name].append(test)
+
+    return render(request, 'doctors/testresults.html', {
+        'pending_tests': dict(grouped_tests),
+        'patient': patient
+    })
+
+
+def oldtest_results(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
 
     pending_tests = LabTest.objects.filter(
@@ -2249,21 +2166,22 @@ def submit_test_results(request, patient_id):
             except LabTest.DoesNotExist:
                 continue  # Ignore invalid IDs
 
-        return redirect('test_details', patient_id=patient_id)
+        return render(request, 'laboratory/test_entry.html')
 
-    return redirect('test_details', patient_id=patient_id)
+    return render(request,'laboratory/test_entry.html')
  
 
 
  #Doctor's fetching test results that were recommended
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.utils import timezone
-from collections import defaultdict
-from .models import LabTest, Patient, TestCategory, Referral
 
-@login_required(login_url='home')
+
+from collections import defaultdict
+from django.utils import timezone
+from django.shortcuts import render, redirect
+from django.contrib import messages
+
+
+
 def recomended_tests(request):
     if request.method == 'POST':
         test_id = request.POST.get('test_id')
@@ -2279,7 +2197,103 @@ def recomended_tests(request):
             test.date_performed = timezone.now()
             test.performed_by = request.user
             test.save()
-            
+
+            messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
+        except LabTest.DoesNotExist:
+            messages.error(request, "Invalid test entry or test already completed.")
+
+        return redirect('lab_test_entry')
+
+    # Fetch all lab tests
+    lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
+
+    # Group tests by status (corrected 'pending' typo)
+    tests_by_status = {
+        'pending': lab_tests.filter(status='pending'),
+        'completed': lab_tests.filter(status='completed', doctor_comments=0),
+        'in_progress': lab_tests.filter(status='in_progress')
+    }
+
+    # Build test data list
+    tests_data = []
+    for test in lab_tests:
+        tests_data.append({
+            'test': test,
+            'patient': test.patient,
+            'category': test.category,
+            'status': test.status,
+            'requested_at': test.requested_at,
+            'date_performed': test.date_performed,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'System',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+            'doctor_comments': test.doctor_comments
+        })
+
+    # Build patient map only where status is 'completed' and doctor_comments == 0
+    patient_map = {}
+    for data in tests_data:
+        if data['status'] != 'completed' or (data['doctor_comments'] or 0) != 0:
+            continue
+
+        patient_id = data['patient'].id
+        if patient_id not in patient_map:
+            patient_map[patient_id] = {
+                'patient': data['patient'],
+                'tests': [],
+                'categories': set(),
+                'requested_by': data['requested_by']
+            }
+
+        patient_map[patient_id]['tests'].append(data['test'])
+        if data['category']:
+            patient_map[patient_id]['categories'].add(data['category'].name)
+
+    # Statistics
+    today = timezone.now().date()
+    stats = {
+        'total_tests': lab_tests.count(),
+        'total_pending_tests': tests_by_status['pending'].count(),
+        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
+        'total_in_progress': tests_by_status['in_progress'].count(),
+        'total_categories': TestCategory.objects.count(),
+        'unique_patients': Patient.objects.filter(lab_tests__isnull=False).distinct().count(),
+    }
+
+    context = {
+        'tests_data': tests_data,
+        'test_categories': TestCategory.objects.all(),
+        'unique_patients_with_tests': patient_map.values(),  # Only with status='completed' and doctor_comments==0
+        'stats': stats,
+        'debug_info': {
+            'total_tests_fetched': len(tests_data),
+            'test_categories_count': TestCategory.objects.count(),
+            'pending_tests_count': tests_by_status['pending'].count(),
+            'methods_used': [
+                'LabTest.objects.select_related(patient, category)',
+                'Status == completed and doctor_comments == 0'
+            ]
+        } if request.user.is_superuser else None
+    }
+
+    return render(request, 'doctors/recomended_test.html', context)
+
+
+def bk2recomended_tests(request):
+    if request.method == 'POST':
+        test_id = request.POST.get('test_id')
+        result_value = request.POST.get('result_value')
+        notes = request.POST.get('notes', '')
+
+        try:
+            test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
+            test.result_value = result_value
+            test.notes = notes
+            test.status = 'completed'
+            test.testcompleted = True
+            test.date_performed = timezone.now()
+            test.performed_by = request.user
+            test.save()
+
             messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
         except LabTest.DoesNotExist:
             messages.error(request, "Invalid test entry or test already completed.")
@@ -2289,14 +2303,110 @@ def recomended_tests(request):
     # Fetch all lab tests with related patient and category information
     lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
 
-    # Group tests by status for statistics
+    # Group tests by status
     tests_by_status = {
         'pending': lab_tests.filter(status='pending'),
+        'completed': lab_tests.filter(status='completed', doctor_comments__gt=0),
+        'in_progress': lab_tests.filter(status='in_progress')
+    }
+
+    # Create a list of all tests (this will include all statuses)
+    tests_data = []
+    for test in lab_tests:
+        tests_data.append({
+            'test': test,
+            'patient': test.patient,
+            'category': test.category,
+            'status': test.status,
+            'requested_at': test.requested_at,
+            'date_performed': test.date_performed,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'System',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+            'doctor_comments': test.doctor_comments  # Add this so we can filter on it
+        })
+
+    # Create patient map ONLY for tests that are completed AND have doctor_comments > 0
+    patient_map = {}
+    for data in tests_data:
+        if data['status'] != 'completed' or (data['doctor_comments'] or 0) <= 0:
+            continue
+        patient_id = data['patient'].id
+        if patient_id not in patient_map:
+            patient_map[patient_id] = {
+                'patient': data['patient'],
+                'tests': [],
+                'categories': set(),
+                'requested_by': data['requested_by']
+            }
+        patient_map[patient_id]['tests'].append(data['test'])
+        if data['category']:
+            patient_map[patient_id]['categories'].add(data['category'].name)
+
+    # Statistics
+    today = timezone.now().date()
+    stats = {
+        'total_tests': lab_tests.count(),
+        'total_pending_tests': tests_by_status['pending'].count(),
+        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
+        'total_in_progress': tests_by_status['in_progress'].count(),
+        'total_categories': TestCategory.objects.count(),
+        'unique_patients': Patient.objects.filter(lab_tests__isnull=False).distinct().count(),
+    }
+
+    context = {
+        'tests_data': tests_data,
+        'test_categories': TestCategory.objects.all(),
+        'unique_patients_with_tests': patient_map.values(),  # Now only patients with completed tests + comments
+        'stats': stats,
+        'debug_info': {
+            'total_tests_fetched': len(tests_data),
+            'test_categories_count': TestCategory.objects.count(),
+            'pending_tests_count': tests_by_status['pending'].count(),
+            'methods_used': [
+                'LabTest.objects.select_related(patient, category)',
+                'Patient grouping in view',
+                'Status-based filtering with doctor_comments'
+            ]
+        } if request.user.is_superuser else None
+    }
+
+    return render(request, 'doctors/recomended_test.html', context)
+
+
+
+def bkrecomended_tests(request):
+    if request.method == 'POST':
+        test_id = request.POST.get('test_id')
+        result_value = request.POST.get('result_value')
+        notes = request.POST.get('notes', '')
+
+        try:
+            test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
+            test.result_value = result_value
+            test.notes = notes
+            test.status = 'completed'
+            test.testcompleted = True
+            test.date_performed = timezone.now()
+            test.performed_by = request.user
+            test.save()
+
+            messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
+        except LabTest.DoesNotExist:
+            messages.error(request, "Invalid test entry or test already completed.")
+
+        return redirect('lab_test_entry')
+
+    # Fetch all lab tests with related patient and category information
+    lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
+
+    # Group tests by status
+    tests_by_status = {
+        'pending': lab_tests.filter(status='pendin'),
         'completed': lab_tests.filter(status='completed', doctor_comments=0),
         'in_progress': lab_tests.filter(status='in_progress')
     }
 
-    # Prepare test data for the template
+    # Create a list of all tests for use if needed
     tests_data = []
     for test in lab_tests:
         tests_data.append({
@@ -2310,6 +2420,23 @@ def recomended_tests(request):
             'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A'
         })
 
+    # Create a unique patient map with pending tests and categories
+    patient_map = {}
+    for item in tests_data:
+        if item['status'] != 'pending':
+            continue
+        patient_id = item['patient'].id
+        if patient_id not in patient_map:
+            patient_map[patient_id] = {
+                'patient': item['patient'],
+                'tests': [],
+                'categories': set(),
+                'requested_by': item['requested_by']
+            }
+        patient_map[patient_id]['tests'].append(item['test'])
+        if item['category']:
+            patient_map[patient_id]['categories'].add(item['category'].name)
+
     # Statistics
     today = timezone.now().date()
     stats = {
@@ -2321,18 +2448,29 @@ def recomended_tests(request):
         'unique_patients': Patient.objects.filter(lab_tests__isnull=False).distinct().count(),
     }
 
-    # Group pending tests by category
-    pending_by_category = defaultdict(lambda: {'tests': [], 'count': 0})
-    for test in tests_by_status['pending']:
-        category_data = pending_by_category[test.category.name]
-        category_data['category'] = test.category
-        category_data['tests'].append(test)
-        category_data['count'] += 1
+    # Group lab tests by patient for template rendering
+    patient_map = {}
+    for data in tests_data:
+        patient_id = data['patient'].id
+        if patient_id not in patient_map:
+            patient_map[patient_id] = {
+            'patient': data['patient'],
+            'tests': [],
+            'categories': set(),
+            'requested_by': data['requested_by']
+        }
+        if data['status'] == 'completed':
+            patient_map[patient_id]['tests'].append(data['test'])
+            if data['category']:
+                patient_map[patient_id]['categories'].add(data['category'].name)
+
+
+
 
     context = {
         'tests_data': tests_data,
         'test_categories': TestCategory.objects.all(),
-        'pending_tests_by_category': dict(pending_by_category),
+        'unique_patients_with_tests': patient_map.values(),  # send only unique patients with pending tests
         'stats': stats,
         'debug_info': {
             'total_tests_fetched': len(tests_data),
@@ -2340,13 +2478,15 @@ def recomended_tests(request):
             'pending_tests_count': tests_by_status['pending'].count(),
             'methods_used': [
                 'LabTest.objects.select_related(patient, category)',
-                'Test category grouping',
+                'Patient grouping in view',
                 'Status-based filtering'
             ]
         } if request.user.is_superuser else None
     }
 
     return render(request, 'doctors/recomended_test.html', context)
+
+
 
 #=============================
 #Doctor submitting comments on final test results
@@ -2360,7 +2500,7 @@ def doc_test_comment(request, patient_id):
 
         if not ids or not comment_text:
             messages.error(request, "You must select tests and enter a comment.")
-            return redirect('test_details', patient_id=patient_id)
+            return redirect('recomended_tests')
 
         # Create a new DoctorComments record
         comment_record = DoctorComments.objects.create(
@@ -2373,7 +2513,134 @@ def doc_test_comment(request, patient_id):
         LabTest.objects.filter(id__in=ids).update(doctor_comments=comment_record.id)
 
         messages.success(request, "Doctor's comment added and tests updated successfully.")
-        return redirect('test_details', patient_id=patient_id)
+        return redirect('recomended_tests')
 
     # If GET request (optional, show test details or redirect)
-    return redirect('test_details', patient_id=patient_id)
+    return redirect('recomended_tests')
+
+
+###############################################################
+    #DOCTOR ALL REPORTS AND PATIENT ACTIVITIES GENERATED
+###############################################################
+from reportlab.pdfgen import canvas
+from datetime import datetime
+from django.core.paginator import Paginator
+
+import csv
+from reportlab.pdfgen import canvas
+import io
+
+def fetch_patient_activity(request):
+    patient_id = request.POST.get('patient_id')
+    date_filter = request.POST.get('dateFilter')
+    start_date = request.POST.get('startDate')
+    end_date = request.POST.get('endDate')
+    export_format = request.POST.get('export')
+
+    if not patient_id:
+        return JsonResponse({'error': 'No patient selected'}, status=400)
+
+    filters = {'id': patient_id}
+    if date_filter == 'between' and start_date and end_date:
+        filters['created_at__range'] = [start_date, end_date]
+
+    lab_tests = LabTest.objects.filter(**filters)
+    doctor_comments = DoctorComments.objects.filter(**filters)
+    vitals = Vitals.objects.filter(**filters)
+    payments = Payment.objects.filter(**filters)
+
+    if export_format == 'csv':
+        return export_to_csv(lab_tests, doctor_comments, vitals, payments)
+    elif export_format == 'pdf':
+        return export_to_pdf(lab_tests, doctor_comments, vitals, payments)
+
+    # Paginate
+    paginator = Paginator(lab_tests, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'partials/activity_results.html', {
+        'lab_tests': page_obj,
+        'doctor_comments': doctor_comments,
+        'vitals': vitals,
+        'payments': payments,
+        'paginator': paginator,
+        'page_obj': page_obj
+    })
+
+def export_to_csv(lab_tests, doctor_comments, vitals, payments):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="patient_activity.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Lab Test', 'Doctor Comment', 'Vital Sign', 'Payment'])
+
+    max_len = max(len(lab_tests), len(doctor_comments), len(vitals), len(payments))
+    for i in range(max_len):
+        row = [
+            getattr(lab_tests[i], 'test_name', '') if i < len(lab_tests) else '',
+            getattr(doctor_comments[i], 'comment', '') if i < len(doctor_comments) else '',
+            getattr(vitals[i], 'temperature', '') if i < len(vitals) else '',
+            getattr(payments[i], 'amount', '') if i < len(payments) else '',
+        ]
+        writer.writerow(row)
+
+    return response
+
+def export_to_pdf(lab_tests, doctor_comments, vitals, payments):
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer)
+    p.drawString(100, 800, "Patient Activity Report")
+
+    y = 780
+    for test in lab_tests:
+        p.drawString(100, y, f"Lab Test: {test.test_name}")
+        y -= 20
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    return HttpResponse(buffer, content_type='application/pdf')
+
+def filter_activities(request):
+    patients = Patient.objects.all()
+    context = {'patients': patients}
+
+    patient_id = request.GET.get('patient_id')
+    date_filter = request.GET.get('dateFilter')
+    start_date = request.GET.get('startDate')
+    end_date = request.GET.get('endDate')
+    export_type = request.GET.get('export')  # 'csv' or 'pdf'
+
+    if patient_id:
+        patient = Patient.objects.get(id=patient_id)
+        context['selected_patient'] = patient
+
+        if date_filter == 'between' and start_date and end_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+            labtests = LabTest.objects.filter(patient=patient, created__range=(start, end))
+            comments = DoctorComments.objects.filter(patient=patient, created__range=(start, end))
+            vitals = Vitals.objects.filter(patient=patient, created__range=(start, end))
+            payments = Payment.objects.filter(patient=patient, created__range=(start, end))
+        else:
+            labtests = LabTest.objects.filter(patient=patient)
+            comments = DoctorComments.objects.filter(patient=patient)
+            vitals = Vitals.objects.filter(patient=patient)
+            payments = Payment.objects.filter(patient=patient)
+
+        context.update({
+            'labtests': labtests,
+            'comments': comments,
+            'vitals': vitals,
+            'payments': payments
+        })
+
+        # Export CSV
+        if export_type == 'csv':
+            return export_to_csv(patient, labtests, comments, vitals, payments)
+
+        # Export PDF
+        if export_type == 'pdf':
+            return export_to_pdf(patient, labtests, comments, vitals, payments)
+
+    return render(request, 'doctors/filtered_records.html', context)

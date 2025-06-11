@@ -1,0 +1,20 @@
+{% if lab_tests %}
+<h5>Lab Tests</h5>
+<ul>
+    {% for test in lab_tests %}
+    <li>{{ test.test_name }} - {{ test.created_at }}</li>
+    {% endfor %}
+</ul>
+
+<div>
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+</div>
+{% else %}
+<p>No lab tests found.</p>
+{% endif %}
