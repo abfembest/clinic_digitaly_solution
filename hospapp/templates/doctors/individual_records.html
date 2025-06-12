@@ -721,7 +721,7 @@
                                 <div class="section-card">
                                     <h5 class="section-title">
                                         <i class="fas fa-flask me-2"></i>
-                                        Laboratory Tests
+                                        IVF Cycles
                                     </h5>
                                     
                                     ${data.lab_tests.length > 0 ? 
@@ -729,15 +729,18 @@
                                             <div class="record-item">
                                                 <div class="d-flex justify-content-between">
                                                     <div>
-                                                        <strong>${test.test_name}</strong>
-                                                        <span class="badge ms-2 ${test.status === 'completed' ? 'bg-success' : 'bg-warning'}">
-                                                            ${test.status}
-                                                        </span>
+                                                    <p><strong>Category:</strong> ${test.category}</p>
+                                                        
                                                     </div>
                                                     <small class="record-date">Requested: ${test.requested_at}</small>
                                                 </div>
                                                 <div class="record-content">
-                                                    <p><strong>Category:</strong> ${test.category}</p>
+
+
+                                             <strong>${test.test_name}</strong>
+                                           <span class="badge ms-2 ${test.status === 'completed' ? 'bg-success' : 'bg-warning'}"> ${test.status}</span>
+
+                                                    
                                                     ${test.result_value ? `
                                                         <p><strong>Result:</strong> ${test.result_value}</p>
                                                         <p><strong>Normal Range:</strong> ${test.normal_range || 'N/A'}</p>
