@@ -1,6 +1,253 @@
 {% extends "doctors/base.html" %}
 {% load static %}
 
+{% block title %}Lab | Test Results{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Test Results</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active">Test Results</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content" id="print-area">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+
+                <!-- Patient Information Card -->
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-user-injured mr-2"></i>
+                            Patient Information
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                {% if patient.photo %}
+                                <img src="{{ patient.photo.url }}" class="img-fluid img-circle elevation-2"
+                                    style="width: 120px; height: 120px; object-fit: cover;" alt="Patient Photo">
+                                {% else %}
+                                <img src="{% static 'dist/img/avatar.png' %}" class="img-fluid img-circle elevation-2"
+                                    style="width: 120px; height: 120px;" alt="No Photo">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-9">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>Name:</strong></td>
+                                        <td>{{ patient.full_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Address:</strong></td>
+                                        <td>{{ patient.address }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Phone:</strong></td>
+                                        <td>{{ patient.phone }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Age:</strong></td>
+                                        <td>45 years</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Results Form -->
+                <form method="post" action="{% url 'doc_test_comment' patient.id %}">
+                    {% csrf_token %}
+                    <div class="card card-success card-outline">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-flask mr-2"></i>
+                                Test Results Entry
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            {% if pending_tests %}
+                            {% for category, testlist in pending_tests.items %}
+                            <div class="mb-4">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-vial mr-2"></i>
+                                    {{ category }}
+                                </h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Test Name</th>
+                                                <th>Result Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for test in testlist %}
+                                            <tr>
+                                                <td>{{ test.test_name }}</td>
+                                                <td>
+                                                    <input type="text" value="{{ test.result_value|default:'' }}"
+                                                        class="form-control form-control-sm" readonly>
+                                                    <input type="hidden" name="ids" value="{{ test.id }}">
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                No pending test results found for this patient.
+                            </div>
+                            {% endif %}
+
+                            <!-- Doctor's Comments Section -->
+                            <div class="card card-info card-outline">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-comment-medical mr-2"></i>
+                                        Doctor's Comments
+                                    </h3>
+                                </div>
+                                <div class="card-body">
+                                    <textarea class="form-control" name="doctor_comment" rows="4"
+                                        placeholder="Enter your comments about the test results..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="text-center mt-4">
+                                <button type="button" class="btn btn-secondary no-print">
+                                    <i class="fas fa-print mr-2"></i>
+                                    Print Results
+                                </button>
+                                <button type="submit" class="btn btn-success no-print">
+                                    <i class="fas fa-save mr-2"></i>
+                                    Submit Test Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Uploaded Files Card -->
+                {% if uploaded_files %}
+                <div class="card card-warning card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-file-medical-alt mr-2"></i>
+                            Uploaded Lab Result Files
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>File Name</th>
+                                        <th>Upload Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in uploaded_files %}
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-file-pdf text-danger mr-2"></i>
+                                            {{ file.result_file.name|slice:"12:" }}
+                                        </td>
+                                        <td>{{ file.uploaded_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            <a href="{{ file.result_file.url }}" target="_blank"
+                                                class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye mr-1"></i>
+                                                View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Print Styles -->
+<style>
+    @media print {
+        .content-wrapper {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+        }
+
+        .card-body {
+            display: block !important;
+        }
+
+        .collapsed-card .card-body {
+            display: block !important;
+        }
+
+        .btn-tool {
+            display: none !important;
+        }
+
+        .content-header {
+            display: none !important;
+        }
+
+        body {
+            background: white !important;
+        }
+
+        .table {
+            border-collapse: collapse !important;
+        }
+
+        .table th,
+        .table td {
+            border: 1px solid #ddd !important;
+            padding: 8px !important;
+        }
+    }
+</style>
+
+{% endblock %}
+
+{% comment %} {% extends "doctors/base.html" %}
+{% load static %}
+
 {% block title %}Lab | Test details{% endblock %}
 
 {% block content %}
@@ -178,4 +425,4 @@
     </div>
 </div>
 
-{% endblock %}
+{% endblock %} {% endcomment %}

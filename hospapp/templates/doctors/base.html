@@ -394,54 +394,111 @@
     </script>
 
     <!-- Printing Function -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const printButton = document.querySelector(".btn.btn-secondary.print");
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const printButton = document.querySelector(".btn.btn-secondary.no-print");
 
-            if (printButton) {
-                printButton.addEventListener("click", function (e) {
-                    e.preventDefault();
+        if (printButton) {
+            printButton.addEventListener("click", function (e) {
+                e.preventDefault();
 
-                    const printContents = document.getElementById("print-area").innerHTML;
-                    const originalContents = document.body.innerHTML;
+                // Get patient name for file naming
+                const patientName = "{{ patient.full_name }}";
+                const sanitizedName = patientName.replace(/[^a-zA-Z0-9]/g, '_');
+                const fileName = `Test_Results_${sanitizedName}_${new Date().toISOString().split('T')[0]}`;
 
-                    // Create print window
-                    const printWindow = window.open('', '_blank', 'width=800,height=600');
-                    printWindow.document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <title>Print Document</title>
-                            <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
-                            <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
-                            <style>
-                                body {
-                                    font-family: 'Source Sans Pro', sans-serif;
-                                    padding: 20px;
-                                    background: white;
-                                }
-                                @media print {
-                                    body { margin: 0; }
-                                    .no-print { display: none !important; }
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            ${printContents}
-                        </body>
-                        </html>
-                    `);
-                    printWindow.document.close();
-                    
-                    // Wait for content to load then print
-                    printWindow.onload = function() {
-                        printWindow.print();
-                        printWindow.close();
-                    };
-                });
-            }
-        });
-    </script>
+                // Create print content
+                const printContent = document.getElementById("print-area").innerHTML;
+                
+                const printWindow = window.open('', '_blank', 'width=800,height=600');
+                printWindow.document.title = fileName;
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${fileName}</title>
+                        <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
+                        <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+                        <style>
+                            body {
+                                font-family: 'Source Sans Pro', sans-serif;
+                                padding: 20px;
+                                background: white;
+                                color: #333;
+                            }
+                            .card {
+                                margin-bottom: 20px;
+                                border: 1px solid #ddd;
+                                border-radius: 5px;
+                            }
+                            .card-header {
+                                background-color: #f8f9fa;
+                                padding: 10px 15px;
+                                border-bottom: 1px solid #ddd;
+                                font-weight: bold;
+                            }
+                            .card-body {
+                                padding: 15px;
+                            }
+                            .table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-bottom: 15px;
+                            }
+                            .table th, .table td {
+                                border: 1px solid #ddd;
+                                padding: 8px;
+                                text-align: left;
+                            }
+                            .table th {
+                                background-color: #f8f9fa;
+                                font-weight: bold;
+                            }
+                            .no-print, .content-header {
+                                display: none !important;
+                            }
+                            .img-circle {
+                                border-radius: 50%;
+                            }
+                            h1, h3, h5 {
+                                color: #333;
+                            }
+                            .text-center {
+                                text-align: center;
+                            }
+                            .border-bottom {
+                                border-bottom: 2px solid #007bff !important;
+                            }
+                            input[readonly] {
+                                background: transparent !important;
+                                border: none !important;
+                            }
+                            @page {
+                                margin: 1in;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1>Laboratory Test Results</h1>
+                            <p><strong>Patient: ${patientName}</strong></p>
+                            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                        ${printContent}
+                    </body>
+                    </html>
+                `);
+                
+                printWindow.document.close();
+                
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                }, 500);
+            });
+        }
+    });
+</script>
 
     <!-- Custom Scripts Block -->
     {% block extra_scripts %}
