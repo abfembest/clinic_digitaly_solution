@@ -1,8 +1,8 @@
 from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory
+from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -458,7 +458,7 @@ def get_patient_details(request, patient_id):
             'photo_url': patient.photo.url if patient.photo else None,
             'vitals': vitals,
             'prescriptions': prescriptions,
-            'lab_tests': lab_tests,
+            # 'lab_tests': lab_tests,
             'care_plan': care_plan_data,
             'nursing_notes': nursing_notes,
         })
@@ -2708,42 +2708,355 @@ from reportlab.pdfgen import canvas
 import io
 
 def fetch_patient_activity(request):
-    patient_id = request.POST.get('patient_id')
-    date_filter = request.POST.get('dateFilter')
-    start_date = request.POST.get('startDate')
-    end_date = request.POST.get('endDate')
-    export_format = request.POST.get('export')
-
+    """
+    Comprehensive AJAX view to fetch all patient medical records and activity
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Only GET method allowed'}, status=405)
+    
+    patient_id = request.GET.get('patient_id')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
     if not patient_id:
-        return JsonResponse({'error': 'No patient selected'}, status=400)
-
-    filters = {'id': patient_id}
-    if date_filter == 'between' and start_date and end_date:
-        filters['created_at__range'] = [start_date, end_date]
-
-    lab_tests = LabTest.objects.filter(**filters)
-    doctor_comments = DoctorComments.objects.filter(**filters)
-    vitals = Vitals.objects.filter(**filters)
-    payments = Payment.objects.filter(**filters)
-
-    if export_format == 'csv':
-        return export_to_csv(lab_tests, doctor_comments, vitals, payments)
-    elif export_format == 'pdf':
-        return export_to_pdf(lab_tests, doctor_comments, vitals, payments)
-
-    # Paginate
-    paginator = Paginator(lab_tests, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    return render(request, 'partials/activity_results.html', {
-        'lab_tests': page_obj,
-        'doctor_comments': doctor_comments,
-        'vitals': vitals,
-        'payments': payments,
-        'paginator': paginator,
-        'page_obj': page_obj
-    })
+        return JsonResponse({'error': 'Patient ID is required'}, status=400)
+    
+    try:
+        # Get patient with error handling
+        patient = get_object_or_404(Patient, id=patient_id)
+        
+        # Parse dates if provided
+        date_filter_from = None
+        date_filter_to = None
+        
+        if date_from:
+            try:
+                date_filter_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'error': 'Invalid from date format. Use YYYY-MM-DD'}, status=400)
+        
+        if date_to:
+            try:
+                date_filter_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'error': 'Invalid to date format. Use YYYY-MM-DD'}, status=400)
+        
+        # Build date filters for different models
+        def apply_date_filter(queryset, date_field):
+            if date_filter_from and date_filter_to:
+                return queryset.filter(**{
+                    f'{date_field}__date__gte': date_filter_from,
+                    f'{date_field}__date__lte': date_filter_to
+                })
+            elif date_filter_from:
+                return queryset.filter(**{f'{date_field}__date__gte': date_filter_from})
+            elif date_filter_to:
+                return queryset.filter(**{f'{date_field}__date__lte': date_filter_to})
+            return queryset
+        
+        # === FETCH ALL PATIENT DATA ===
+        
+        # 1. BASIC PATIENT INFO
+        patient_data = {
+            'id': patient.id,
+            'full_name': patient.full_name,
+            'gender': patient.gender,
+            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
+            'age': (date.today() - patient.date_of_birth).days // 365,
+            'blood_group': patient.blood_group,
+            'phone': patient.phone,
+            'email': patient.email or '',
+            'address': patient.address,
+            'marital_status': patient.marital_status,
+            'nationality': patient.nationality,
+            'state_of_origin': patient.state_of_origin or '',
+            'id_type': patient.id_type or '',
+            'id_number': patient.id_number or '',
+            'status': patient.status,
+            'is_inpatient': patient.is_inpatient,
+            'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+            
+            # Next of Kin Info
+            'next_of_kin_name': patient.next_of_kin_name,
+            'next_of_kin_phone': patient.next_of_kin_phone,
+            'next_of_kin_relationship': patient.next_of_kin_relationship or '',
+            'next_of_kin_email': patient.next_of_kin_email or '',
+            'next_of_kin_address': patient.next_of_kin_address or '',
+            
+            # Current Medical Status
+            'diagnosis': patient.diagnosis or '',
+            'medication': patient.medication or '',
+            'notes': patient.notes or '',
+            'referred_by': patient.referred_by or '',
+        }
+        
+        # 2. CONSULTATIONS
+        consultations_qs = apply_date_filter(
+            patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
+            'created_at'
+        )
+        consultations = []
+        for consultation in consultations_qs:
+            consultations.append({
+                'id': consultation.id,
+                'date': consultation.created_at.strftime('%Y-%m-%d %H:%M'),
+                'doctor': consultation.doctor.get_full_name() if consultation.doctor else 'Unknown',
+                'symptoms': consultation.symptoms,
+                'diagnosis_summary': consultation.diagnosis_summary,
+                'advice': consultation.advice,
+                'admission_id': consultation.admission.id if consultation.admission else None,
+            })
+        
+        # 3. PRESCRIPTIONS
+        prescriptions_qs = apply_date_filter(
+            patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
+            'created_at'
+        )
+        prescriptions = []
+        for prescription in prescriptions_qs:
+            prescriptions.append({
+                'id': prescription.id,
+                'medication': prescription.medication,
+                'instructions': prescription.instructions,
+                'start_date': prescription.start_date.strftime('%Y-%m-%d'),
+                'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'Unknown',
+                'created_at': prescription.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+        
+        # 4. VITALS
+        vitals_qs = apply_date_filter(
+            Vitals.objects.filter(patient=patient).order_by('-recorded_at'),
+            'recorded_at'
+        )
+        vitals = []
+        for vital in vitals_qs:
+            vitals.append({
+                'id': vital.id,
+                'recorded_at': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
+                'recorded_by': vital.recorded_by,
+                'temperature': vital.temperature,
+                'blood_pressure': vital.blood_pressure,
+                'pulse': vital.pulse,
+                'respiratory_rate': vital.respiratory_rate,
+                'weight': vital.weight,
+                'height': vital.height,
+                'bmi': vital.bmi,
+                'notes': vital.notes or '',
+            })
+        
+        # 5. LAB TESTS & RESULTS
+        lab_tests_qs = apply_date_filter(
+            patient.lab_tests.select_related('category', 'performed_by', 'requested_by').order_by('-requested_at'),
+            'requested_at'
+        )
+        lab_tests = []
+        for test in lab_tests_qs:
+            lab_tests.append({
+                'id': test.id,
+                'test_name': test.test_name,
+                'category': test.category.name if test.category else '',
+                'status': test.status,
+                'result_value': test.result_value or '',
+                'normal_range': test.normal_range or '',
+                'requested_at': test.requested_at.strftime('%Y-%m-%d %H:%M'),
+                'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else '',
+                'requested_by': test.requested_by.get_full_name() if test.requested_by else test.doctor_name,
+                'performed_by': test.performed_by.get_full_name() if test.performed_by else '',
+                'notes': test.notes or '',
+                'instructions': test.instructions or '',
+            })
+        
+        # 6. NURSING NOTES
+        nursing_notes_qs = apply_date_filter(
+            patient.nursing_notes.order_by('-note_datetime'),
+            'note_datetime'
+        )
+        nursing_notes = []
+        for note in nursing_notes_qs:
+            nursing_notes.append({
+                'id': note.id,
+                'note_datetime': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
+                'nurse': note.nurse,
+                'note_type': note.get_note_type_display(),
+                'notes': note.notes,
+                'patient_status': note.patient_status or '',
+                'follow_up': note.follow_up or '',
+            })
+        
+        # 7. ADMISSIONS
+        admissions_qs = apply_date_filter(
+            Admission.objects.filter(patient=patient).order_by('-admission_date'),
+            'admission_date'
+        )
+        admissions = []
+        for admission in admissions_qs:
+            admissions.append({
+                'id': admission.id,
+                'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
+                'admitted_by': admission.admitted_by or '',
+                'doctor_assigned': admission.doctor_assigned,
+                'status': admission.status,
+                'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else '',
+                'discharged_by': admission.discharged_by or '',
+                'discharge_notes': admission.discharge_notes or '',
+            })
+        
+        # 8. CARE PLANS
+        care_plans_qs = apply_date_filter(
+            CarePlan.objects.filter(patient=patient).select_related('created_by').order_by('-created_at'),
+            'created_at'
+        )
+        care_plans = []
+        for plan in care_plans_qs:
+            care_plans.append({
+                'id': plan.id,
+                'created_at': plan.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': plan.created_by.get_full_name() if plan.created_by else 'Unknown',
+                'clinical_findings': plan.clinical_findings,
+                'plan_of_care': plan.plan_of_care,
+            })
+        
+        # 9. REFERRALS
+        referrals_qs = Referral.objects.filter(patient=patient).select_related('department').order_by('-id')
+        referrals = []
+        for referral in referrals_qs:
+            referrals.append({
+                'id': referral.id,
+                'department': referral.department.name,
+                'notes': referral.notes,
+            })
+        
+        # 10. APPOINTMENTS
+        appointments_qs = apply_date_filter(
+            Appointment.objects.filter(patient=patient).select_related('department').order_by('-scheduled_time'),
+            'scheduled_time'
+        )
+        appointments = []
+        for appointment in appointments_qs:
+            appointments.append({
+                'id': appointment.id,
+                'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
+                'department': appointment.department.name,
+            })
+        
+        # 11. BILLS & PAYMENTS
+        bills_qs = apply_date_filter(
+            patient.bills.prefetch_related('items__service_type').order_by('-created_at'),
+            'created_at'
+        )
+        bills = []
+        for bill in bills_qs:
+            bill_items = []
+            for item in bill.items.all():
+                bill_items.append({
+                    'description': item.description,
+                    'service_type': item.service_type.name,
+                    'quantity': item.quantity,
+                    'unit_price': float(item.unit_price),
+                    'total_price': float(item.total_price),
+                })
+            
+            bills.append({
+                'id': bill.id,
+                'bill_number': bill.bill_number,
+                'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
+                'total_amount': float(bill.total_amount),
+                'discount_amount': float(bill.discount_amount),
+                'final_amount': float(bill.final_amount),
+                'amount_paid': float(bill.amount_paid()),
+                'outstanding_amount': float(bill.outstanding_amount()),
+                'status': bill.get_status_display(),
+                'items': bill_items,
+                'notes': bill.notes or '',
+            })
+        
+        # 12. PAYMENTS
+        payments_qs = apply_date_filter(
+            patient.payments.select_related('processed_by').order_by('-payment_date'),
+            'payment_date'
+        )
+        payments = []
+        for payment in payments_qs:
+            payments.append({
+                'id': payment.id,
+                'amount': float(payment.amount),
+                'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
+                'payment_method': payment.get_payment_method_display(),
+                'payment_reference': payment.payment_reference or '',
+                'status': payment.get_status_display(),
+                'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'Unknown',
+                'notes': payment.notes or '',
+            })
+        
+        # 13. HANDOVER LOGS
+        handover_logs_qs = apply_date_filter(
+            HandoverLog.objects.filter(patient=patient).select_related('author').order_by('-timestamp'),
+            'timestamp'
+        )
+        handover_logs = []
+        for log in handover_logs_qs:
+            handover_logs.append({
+                'id': log.id,
+                'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M'),
+                'author': log.author.get_full_name() if log.author else 'Unknown',
+                'notes': log.notes,
+            })
+        
+        # 14. LAB RESULT FILES
+        lab_files_qs = apply_date_filter(
+            LabResultFile.objects.filter(patient=patient).select_related('uploaded_by').order_by('-uploaded_at'),
+            'uploaded_at'
+        )
+        lab_files = []
+        for file in lab_files_qs:
+            lab_files.append({
+                'id': file.id,
+                'uploaded_at': file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+                'uploaded_by': file.uploaded_by.get_full_name() if file.uploaded_by else 'Unknown',
+                'file_url': file.result_file.url if file.result_file else '',
+                'file_name': file.result_file.name.split('/')[-1] if file.result_file else '',
+            })
+        
+        # Compile comprehensive response
+        response_data = {
+            'success': True,
+            'patient_info': patient_data,
+            'consultations': consultations,
+            'prescriptions': prescriptions,
+            'vitals': vitals,
+            'lab_tests': lab_tests,
+            'nursing_notes': nursing_notes,
+            'admissions': admissions,
+            'care_plans': care_plans,
+            'referrals': referrals,
+            'appointments': appointments,
+            'bills': bills,
+            'payments': payments,
+            'handover_logs': handover_logs,
+            'lab_files': lab_files,
+            
+            # Summary counts
+            'summary': {
+                'total_consultations': len(consultations),
+                'total_prescriptions': len(prescriptions),
+                'total_vitals': len(vitals),
+                'total_lab_tests': len(lab_tests),
+                'pending_lab_tests': len([t for t in lab_tests if t['status'] == 'pending']),
+                'total_nursing_notes': len(nursing_notes),
+                'total_admissions': len(admissions),
+                'current_admission': any(a['status'] == 'Admitted' for a in admissions),
+                'total_bills': len(bills),
+                'outstanding_bills': len([b for b in bills if b['outstanding_amount'] > 0]),
+                'total_payments': len(payments),
+            }
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Patient not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 def export_to_csv(lab_tests, doctor_comments, vitals, payments):
     response = HttpResponse(content_type='text/csv')

@@ -181,15 +181,6 @@ class Consultation(models.Model):
     def __str__(self):
         return f"Consultation for {self.patient.full_name} on {self.created_at:%Y-%m-%d}"
 
-class MedicalRecord(models.Model):
-    created_by = models.CharField(max_length=100)  # Consider FK to User in future
-    description = models.TextField()
-    patient = models.ForeignKey(Patient, related_name='medical_records', on_delete=models.CASCADE)
-    record_date = models.DateField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Medical Record - {self.patient.full_name} ({self.record_date})"
-
 class NursingNote(models.Model):
     NOTE_TYPE_CHOICES = [
         ('care_plan', 'Care Plan Update'),
