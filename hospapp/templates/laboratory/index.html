@@ -1,31 +1,11 @@
 {% extends "laboratory/base.html" %}
-
 {% load static %}
 
 {% block title %}HMS | Lab Dashboard{% endblock %}
 
 {% block content %}
-<!-- Content Header (Page header)
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0">Lab Dashboard</h1>
-                <p class="text-muted">Fertility Clinic Management System</p>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="#">Home</a></li>
-                    <li class="breadcrumb-item active">Lab Dashboard</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-</div>-->
-
-
-
 <style>
+    /* Your existing CSS styles go here */
     :root {
         --primary-color: #2c5aa0;
         --secondary-color: #f8f9fc;
@@ -121,24 +101,12 @@
             background: linear-gradient(135deg, #ffc107, #ff9800);
         }
 
-        .menu-icon.patients {
+        .menu-icon.patients { /* Reused for Dashboard card */
             background: linear-gradient(135deg, #2c5aa0, #1e3a8a);
         }
 
-        .menu-icon.completed {
+        .menu-icon.completed { /* Reused for Test Logs card */
             background: linear-gradient(135deg, #28a745, #20c997);
-        }
-
-        .menu-icon.upload {
-            background: linear-gradient(135deg, #17a2b8, #0dcaf0);
-        }
-
-        .menu-icon.update {
-            background: linear-gradient(135deg, #6f42c1, #8b5cf6);
-        }
-
-        .menu-icon.reports {
-            background: linear-gradient(135deg, #fd7e14, #ff6b35);
         }
 
     .menu-title {
@@ -227,105 +195,67 @@
         </div>
 
         <div class="row">
+            {# Dashboard Card (aligned with sidebar) #}
             <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="menu-card" onclick="handleMenuClick('pending')">
-                    <div class="stats-badge">24</div>
+                <div class="menu-card" onclick="handleMenuClick('dashboard', '{% url 'laboratory' %}')">
+                    {# Using total_patients_count as a relevant metric for the dashboard overview #}
+                    <div class="stats-badge">{{ total_patients_count|default:0 }}</div> 
+                    <div class="menu-icon patients"> 
+                        <i class="bi bi-speedometer"></i>
+                    </div>
+                    <div class="menu-title">Dashboard</div>
+                    <div class="menu-subtitle">Overview of laboratory operations and patient statistics</div>
+                </div>
+            </div>
+
+            {# Pending Tests Card (aligned with sidebar) #}
+            <div class="col-lg-4 col-md-6 col-sm-12">
+                <div class="menu-card" onclick="handleMenuClick('new_test_entry', '{% url 'lab_test_entry' %}')">
+                    <div class="stats-badge">{{ pending_count|default:0 }}</div>
                     <div class="menu-icon pending">
-                        <i class="bi bi-clock-history"></i>
+                        <i class="bi bi-flask"></i>
                     </div>
-                    <div class="menu-title">Pending IVF Tests</div>
-                    <div class="menu-subtitle">View and manage tests awaiting processing or results</div>
+                    <div class="menu-title">New Test Entry</div>
+                    <div class="menu-subtitle">Initiate a new IVF test request and patient details</div>
                 </div>
             </div>
 
+            {# Test Logs Card (aligned with sidebar) #}
             <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="menu-card" onclick="handleMenuClick('patients')">
-                    <div class="stats-badge">156</div>
-                    <div class="menu-icon patients">
-                        <i class="bi bi-people"></i>
+                <div class="menu-card" onclick="handleMenuClick('test_logs', '{% url 'lab_internal_logs' %}')">
+                    {# Showing completed count as a key log metric #}
+                    <div class="stats-badge">{{ completed_count|default:0 }}</div> 
+                    <div class="menu-icon completed"> 
+                        <i class="bi bi-journal"></i>
                     </div>
-                    <div class="menu-title">Total Patients</div>
-                    <div class="menu-subtitle">Complete patient database and treatment history</div>
-                </div>
-            </div>
-
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="menu-card" onclick="handleMenuClick('completed')">
-                    <div class="stats-badge">8</div>
-                    <div class="menu-icon completed">
-                        <i class="bi bi-check-circle"></i>
-                    </div>
-                    <div class="menu-title">Completed Today</div>
-                    <div class="menu-subtitle">Tests completed and processed in the last 24 hours</div>
-                </div>
-            </div>
-
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="menu-card" onclick="handleMenuClick('upload')">
-                    <div class="menu-icon upload">
-                        <i class="bi bi-cloud-upload"></i>
-                    </div>
-                    <div class="menu-title">Upload Results</div>
-                    <div class="menu-subtitle">Upload lab results, images, and test documentation</div>
-                </div>
-            </div>
-
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="menu-card" onclick="handleMenuClick('update')">
-                    <div class="menu-icon update">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </div>
-                    <div class="menu-title">Update IVF Tests</div>
-                    <div class="menu-subtitle">Modify existing test parameters and patient information</div>
-                </div>
-            </div>
-
-            <div class="col-lg-4 col-md-6 col-sm-12">
-                <div class="menu-card" onclick="handleMenuClick('reports')">
-                    <div class="menu-icon reports">
-                        <i class="bi bi-graph-up-arrow"></i>
-                    </div>
-                    <div class="menu-title">IVF Reports</div>
-                    <div class="menu-subtitle">Generate comprehensive reports and analytics</div>
+                    <div class="menu-title">Test Logs</div>
+                    <div class="menu-subtitle">Access detailed records and history of all IVF tests</div>
                 </div>
             </div>
         </div>
 
         <div class="quick-actions">
             <h5 class="mb-3">Quick Actions</h5>
-            <button class="btn action-btn"><i class="bi bi-plus-circle me-2"></i>New Patient</button>
-            <button class="btn action-btn"><i class="bi bi-calendar-plus me-2"></i>Schedule Test</button>
-            <button class="btn action-btn"><i class="bi bi-printer me-2"></i>Print Reports</button>
-            <button class="btn action-btn"><i class="bi bi-gear me-2"></i>Settings</button>
+            <a href="{% url lab_test_entry_url %}" class="btn action-btn"><i class="bi bi-plus-circle me-2"></i>New Test Entry</a>
+            <a href="{% url pending_tests_url %}?status=pending" class="btn action-btn"><i class="bi bi-calendar-plus me-2"></i>View Pending</a>
+            <a href="{% url test_logs_url %}" class="btn action-btn"><i class="bi bi-printer me-2"></i>View All Test Logs</a>
+            <a href="{% url logout_url %}" class="btn action-btn"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
         </div>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
-    function handleMenuClick(section) {
+    function handleMenuClick(section, url) {
         // Add click animation
         event.currentTarget.style.transform = 'scale(0.95)';
         setTimeout(() => {
             event.currentTarget.style.transform = 'translateY(-5px)';
         }, 150);
 
-        // Handle navigation (you can replace this with actual navigation logic)
-        console.log(`Navigating to: ${section}`);
-
-        // Show a simple alert for demo purposes
-        const sectionNames = {
-            'pending': 'Pending IVF Tests',
-            'patients': 'Total Patients',
-            'completed': 'Completed Today',
-            'upload': 'Upload Results',
-            'update': 'Update IVF Tests',
-            'reports': 'IVF Reports'
-        };
-
-        setTimeout(() => {
-            alert(`Opening ${sectionNames[section]} section...`);
-        }, 300);
+        // Handle navigation
+        console.log(`Navigating to: ${section} at ${url}`);
+        window.location.href = url; // Redirect to the provided URL
     }
 
     // Add some interactive feedback
@@ -339,39 +269,30 @@
         });
     });
 
-    // Update stats periodically (demo)
+    // Update stats periodically (demo) - This is for visual effect, actual data changes come from backend
     function updateStats() {
         const badges = document.querySelectorAll('.stats-badge');
         badges.forEach(badge => {
-            if (Math.random() > 0.8) {
-                const currentValue = parseInt(badge.textContent);
-                badge.textContent = currentValue + Math.floor(Math.random() * 3);
-                badge.style.animation = 'pulse 0.5s ease-in-out';
-                setTimeout(() => badge.style.animation = '', 500);
-            }
+            badge.style.animation = 'pulse 0.5s ease-in-out';
+            setTimeout(() => badge.style.animation = '', 500);
         });
     }
 
-    // Update stats every 30 seconds
+    // Update stats every 30 seconds (triggers visual pulse)
     setInterval(updateStats, 30000);
 </script>
-</body>
-</html>
 
 
-
-<!-- Main content -->
 <section class="content">
     <div class="container-fluid">
 
-        <!-- Alert for Pending Tests -->
         {% if pending_count > 0 %}
         <div class="row">
             <div class="col-12">
                 <div class="callout callout-warning">
                     <h5><i class="fas fa-exclamation-triangle"></i> Attention Required!</h5>
-                    You have <span class="badge badge-warning">{{ pending_count }}</span> tests awaiting completion.
-                    <a href="{% url 'lab_internal_logs' %}?status=pending" class="btn btn-warning btn-sm ml-2">
+                    You have <span class="badge badge-warning">{{ pending_count|default:0 }}</span> tests awaiting completion.
+                    <a href="{% url pending_tests_url %}?status=pending" class="btn btn-warning btn-sm ml-2">
                         <i class="fas fa-eye"></i> View Pending Tests
                     </a>
                 </div>
@@ -379,7 +300,6 @@
         </div>
         {% endif %}
 
-        <!-- Info boxes -->
         <div class="row">
             <div class="col-12 col-sm-6 col-md-3">
                 <div class="info-box">
@@ -388,10 +308,10 @@
                         <span class="info-box-text">Tests Today</span>
                         <span class="info-box-number">{{ test_today|default:0 }}</span>
                         <div class="progress">
-                            <div class="progress-bar bg-info" style="width: 70%"></div>
+                            <div class="progress-bar bg-info" style="width: {% widthratio test_today test_today 100 %}%;"></div>
                         </div>
                         <span class="progress-description">
-                            <a href="{% url 'lab_internal_logs' %}" class="text-info">View Details</a>
+                            <a href="{% url test_logs_url %}" class="text-info">View Details</a>
                         </span>
                     </div>
                 </div>
@@ -404,10 +324,16 @@
                         <span class="info-box-text">Pending Tests</span>
                         <span class="info-box-number">{{ pending_count|default:0 }}</span>
                         <div class="progress">
-                            <div class="progress-bar bg-warning" style="width: 50%"></div>
+                            {% with total_tests=completed_count|add:pending_count|add:in_progress_count %}
+                                {% if total_tests > 0 %}
+                                    <div class="progress-bar bg-warning" style="width: {% widthratio pending_count total_tests 100 %}%;"></div>
+                                {% else %}
+                                    <div class="progress-bar bg-warning" style="width: 0%;"></div>
+                                {% endif %}
+                            {% endwith %}
                         </div>
                         <span class="progress-description">
-                            <a href="{% url 'lab_internal_logs' %}?status=pending" class="text-warning">Process Now</a>
+                            <a href="{% url pending_tests_url %}?status=pending" class="text-warning">Process Now</a>
                         </span>
                     </div>
                 </div>
@@ -420,37 +346,41 @@
                         <span class="info-box-text">Completed</span>
                         <span class="info-box-number">{{ completed_count|default:0 }}</span>
                         <div class="progress">
-                            <div class="progress-bar bg-success" style="width: 80%"></div>
+                             {% with total_tests=completed_count|add:pending_count|add:in_progress_count %}
+                                {% if total_tests > 0 %}
+                                    <div class="progress-bar bg-success" style="width: {% widthratio completed_count total_tests 100 %}%;"></div>
+                                {% else %}
+                                    <div class="progress-bar bg-success" style="width: 0%;"></div>
+                                {% endif %}
+                            {% endwith %}
                         </div>
                         <span class="progress-description">
-                            <a href="{% url 'lab_internal_logs' %}?status=completed" class="text-success">View Results</a>
+                            <a href="{% url test_logs_url %}?status=completed" class="text-success">View Results</a>
                         </span>
                     </div>
                 </div>
             </div>
 
+            {# Total Patients Info Box #}
             <div class="col-12 col-sm-6 col-md-3">
                 <div class="info-box mb-3">
-                    <span class="info-box-icon bg-primary elevation-1"><i class="fas fa-upload"></i></span>
+                    <span class="info-box-icon bg-primary elevation-1"><i class="fas fa-users"></i></span>
                     <div class="info-box-content">
-                        <span class="info-box-text">Uploaded</span>
-                        <span class="info-box-number">{{ uploaded_results|default:0 }}</span>
+                        <span class="info-box-text">Total Patients</span>
+                        <span class="info-box-number">{{ total_patients_count|default:0 }}</span>
                         <div class="progress">
-                            <div class="progress-bar bg-primary" style="width: 60%"></div>
+                            <div class="progress-bar bg-primary" style="width: 100%;"></div>
                         </div>
                         <span class="progress-description">
-                            <a href="{% url 'lab_result_upload' %}" class="text-primary">Upload More</a>
+                            <a href="{% url dashboard_url %}" class="text-primary">View Patients</a> {# Adjust this URL to your actual patient list view #}
                         </span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main row -->
         <div class="row">
-            <!-- Left col -->
             <section class="col-lg-7 connectedSortable">
-                <!-- Lab Activity Chart -->
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -480,7 +410,6 @@
                     </div>
                 </div>
 
-                <!-- Today's Test Status -->
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Today's Test Status</h3>
@@ -503,85 +432,53 @@
                                     <th>Patient</th>
                                     <th>Test Type</th>
                                     <th>Status</th>
-                                    <th>Priority</th>
+                                    <th>Requested At</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>LAB001</td>
-                                    <td>Patient #001</td>
-                                    <td>Blood Test</td>
-                                    <td><span class="badge badge-success">Completed</span></td>
-                                    <td><span class="badge badge-info">Normal</span></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
-                                            <button type="button" class="btn btn-success"><i class="fas fa-download"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>LAB002</td>
-                                    <td>Patient #002</td>
-                                    <td>Hormone Panel</td>
-                                    <td><span class="badge badge-warning">Pending</span></td>
-                                    <td><span class="badge badge-danger">High</span></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-warning"><i class="fas fa-play"></i></button>
-                                            <button type="button" class="btn btn-info"><i class="fas fa-edit"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>LAB003</td>
-                                    <td>Patient #003</td>
-                                    <td>Fertility Test</td>
-                                    <td><span class="badge badge-info">In Progress</span></td>
-                                    <td><span class="badge badge-info">Normal</span></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-primary"><i class="fas fa-sync"></i></button>
-                                            <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>LAB004</td>
-                                    <td>Patient #004</td>
-                                    <td>CBC Test</td>
-                                    <td><span class="badge badge-success">Completed</span></td>
-                                    <td><span class="badge badge-success">Low</span></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-info"><i class="fas fa-eye"></i></button>
-                                            <button type="button" class="btn btn-success"><i class="fas fa-download"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>LAB005</td>
-                                    <td>Patient #005</td>
-                                    <td>Lipid Profile</td>
-                                    <td><span class="badge badge-warning">Pending</span></td>
-                                    <td><span class="badge badge-warning">Medium</span></td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-warning"><i class="fas fa-play"></i></button>
-                                            <button type="button" class="btn btn-info"><i class="fas fa-edit"></i></button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                {% if today_tests_details %}
+                                    {% for test in today_tests_details %}
+                                    <tr>
+                                        <td>{{ test.test_request_id|stringformat:"s"|slice:":8" }}...</td>
+                                        <td>{{ test.patient.full_name }}</td>
+                                        <td>{{ test.test_name }} ({{ test.category.name }})</td>
+                                        <td>
+                                            {% if test.status == 'completed' %}
+                                                <span class="badge badge-success">{{ test.get_status_display }}</span>
+                                            {% elif test.status == 'pending' %}
+                                                <span class="badge badge-warning">{{ test.get_status_display }}</span>
+                                            {% elif test.status == 'in_progress' %}
+                                                <span class="badge badge-info">{{ test.get_status_display }}</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ test.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ test.requested_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="#" class="btn btn-info"><i class="fas fa-eye"></i></a> {# Link to test detail page if available #}
+                                                {% if test.status == 'pending' %}
+                                                    <a href="#" class="btn btn-warning"><i class="fas fa-play"></i></a> {# Link to a page to start processing the test #}
+                                                {% elif test.status == 'completed' %}
+                                                    <a href="#" class="btn btn-success"><i class="fas fa-download"></i></a> {# Link to download results #}
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">No tests requested today.</td>
+                                    </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- Right col -->
             <section class="col-lg-5 connectedSortable">
-                <!-- Quick Actions -->
                 <div class="card bg-gradient-primary">
                     <div class="card-header border-0">
                         <h3 class="card-title">
@@ -597,55 +494,61 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <a href="{% url 'lab_test_entry' %}" class="btn btn-light btn-lg btn-block">
+                                <a href="{% url lab_test_entry_url %}" class="btn btn-light btn-lg btn-block">
                                     <i class="fas fa-plus mr-2"></i>Enter New Test
                                 </a>
                             </div>
+                            
                             <div class="col-6">
-                                <a href="{% url 'lab_result_upload' %}" class="btn btn-outline-light btn-block">
-                                    <i class="fas fa-upload mr-1"></i>Upload
+                                <a href="{% url test_logs_url %}" class="btn btn-outline-light btn-block">
+                                    <i class="fas fa-list mr-1"></i>View Logs
                                 </a>
                             </div>
                             <div class="col-6">
-                                <a href="{% url 'lab_internal_logs' %}" class="btn btn-outline-light btn-block">
-                                    <i class="fas fa-list mr-1"></i>View Logs
+                                <a href="{% url pending_tests_url %}?status=pending" class="btn btn-outline-light btn-block">
+                                    <i class="fas fa-clock mr-1"></i>View Pending
+                                </a>
+                            </div>
+                            <div class="col-12 mt-3"> {# Added Logout button here as per quick actions #}
+                                <a href="{% url logout_url %}" class="btn btn-danger btn-block">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pending Tests -->
-                {% if pending %}
+                {% if awaiting_tests %}
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Awaiting Tests</h3>
                         <div class="card-tools">
-                            <span class="badge badge-danger">{{ pending|length }}</span>
+                            <span class="badge badge-danger">{{ pending_count|default:0 }}</span>
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <ul class="users-list clearfix">
-                            {% for p in pending %}
-                            <li>
-                                {% if p.patient_id.photo %}
-                                <img src="{{ p.patient_id.photo }}" alt="User Image">
-                                {% else %}
-                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Cpath fill='%23007bff' d='M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64 64-28.7 64-64S99.3 0 64 0z'/%3E%3Cpath fill='white' d='M64 16c13.2 0 24 10.8 24 24S77.2 64 64 64 40 53.2 40 40s10.8-24 24-24z'/%3E%3Cpath fill='white' d='M64 72c-17.6 0-32 14.4-32 32v8c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-8c0-17.6-14.4-32-32-32z'/%3E%3C/svg%3E" alt="Default Avatar">
-                                {% endif %}
-                                <a class="users-list-name" href="#">{{ p.patient_id }}</a>
-                                <span class="users-list-date">{{ p.category }}</span>
+                        <ul class="list-group list-group-flush">
+                            {% for test in awaiting_tests %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ test.patient.full_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ test.test_name }} ({{ test.category.name }})</small>
+                                </div>
+                                <span class="badge bg-warning rounded-pill">{{ test.requested_at|date:"M d, H:i" }}</span>
                             </li>
                             {% endfor %}
+                            {% if not awaiting_tests %}
+                            <li class="list-group-item text-center text-muted">No tests currently awaiting processing.</li>
+                            {% endif %}
                         </ul>
                     </div>
                 </div>
                 {% endif %}
 
-                <!-- Recent Activity -->
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Recent Activity</h3>
@@ -660,42 +563,27 @@
                             <div class="time-label">
                                 <span class="bg-danger">Today</span>
                             </div>
-                            <div>
-                                <i class="fas fa-vial bg-primary"></i>
-                                <div class="timeline-item">
-                                    <span class="time"><i class="far fa-clock"></i> 2 mins</span>
-                                    <h3 class="timeline-header"><a href="#">Blood Test</a> completed</h3>
-                                    <div class="timeline-body">
-                                        Patient #001 - All parameters within normal range
-                                    </div>
-                                    <div class="timeline-footer">
-                                        <a href="#" class="btn btn-primary btn-sm">View Report</a>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <i class="fas fa-upload bg-success"></i>
-                                <div class="timeline-item">
-                                    <span class="time"><i class="far fa-clock"></i> 15 mins</span>
-                                    <h3 class="timeline-header"><a href="#">Lab Results</a> uploaded</h3>
-                                    <div class="timeline-body">
-                                        Patient #002 - Hormone Panel results available
+                            {% if recent_activities %}
+                                {% for activity in recent_activities %}
+                                <div>
+                                    <i class="{{ activity.icon }} {{ activity.bg_color }}"></i>
+                                    <div class="timeline-item">
+                                        <span class="time"><i class="far fa-clock"></i> {{ activity.timestamp|timesince }} ago</span>
+                                        <h3 class="timeline-header"><a href="#">{{ activity.header }}</a></h3>
+                                        <div class="timeline-body">
+                                            {{ activity.body }}
+                                        </div>
+                                        {% if activity.link %}
+                                        <div class="timeline-footer">
+                                            <a href="{{ activity.link }}" class="btn btn-primary btn-sm">View Details</a>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
-                            </div>
-                            <div>
-                                <i class="fas fa-clock bg-warning"></i>
-                                <div class="timeline-item">
-                                    <span class="time"><i class="far fa-clock"></i> 1 hour</span>
-                                    <h3 class="timeline-header"><a href="#">Test Pending</a></h3>
-                                    <div class="timeline-body">
-                                        Patient #003 - Fertility Panel awaiting processing
-                                    </div>
-                                    <div class="timeline-footer">
-                                        <a href="#" class="btn btn-warning btn-sm">Process Now</a>
-                                    </div>
-                                </div>
-                            </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center">No recent activity.</div>
+                            {% endif %}
                             <div>
                                 <i class="far fa-clock bg-gray"></i>
                             </div>
@@ -703,7 +591,6 @@
                     </div>
                 </div>
 
-                <!-- Calendar -->
                 <div class="card bg-gradient-success">
                     <div class="card-header border-0">
                         <h3 class="card-title">
@@ -737,9 +624,7 @@
     </div>
 </section>
 
-<!-- ChartJS -->
 <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
-<!-- jQuery UI 1.11.4 -->
 <script src="{% static 'plugins/jquery-ui/jquery-ui.min.js' %}"></script>
 
 <script>
@@ -754,6 +639,7 @@ $(function () {
   var mode = 'index'
   var intersect = true
 
+  // Sales Chart (Donut Chart) - Test Status Distribution
   var $salesChart = $('#sales-chart-canvas')
   var salesChart = new Chart($salesChart, {
     type: 'doughnut',
@@ -765,7 +651,7 @@ $(function () {
       ],
       datasets: [
         {
-          data: [{{ completed_count|default:0 }}, {{ pending_count|default:0 }}, 5],
+          data: [{{ completed_count|default:0 }}, {{ pending_count|default:0 }}, {{ in_progress_count|default:0 }}],
           backgroundColor: ['#00a65a', '#f39c12', '#00c0ef'],
         }
       ]
@@ -782,26 +668,29 @@ $(function () {
     }
   })
 
+  // Revenue Chart (Area/Line Chart) - Weekly Lab Activity
   var $visitorsChart = $('#revenue-chart-canvas')
   var visitorsChart = new Chart($visitorsChart, {
     data: {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      labels: JSON.parse('{{ weekly_labels|safe }}'), // Data from Django context
       datasets: [{
         type: 'line',
-        data: [12, 19, 7, 14, 10, 8, 15],
+        data: JSON.parse('{{ weekly_tests_data_completed|safe }}'), // Completed tests
         backgroundColor: 'transparent',
         borderColor: '#007bff',
         pointBorderColor: '#007bff',
         pointBackgroundColor: '#007bff',
-        fill: false
+        fill: false,
+        label: 'Completed Tests'
       }, {
         type: 'line',
-        data: [3, 5, 2, 8, 4, 2, 5],
-        backgroundColor: 'tansparent',
+        data: JSON.parse('{{ weekly_tests_data_total|safe }}'), // Total tests performed
+        backgroundColor: 'transparent',
         borderColor: '#ced4da',
         pointBorderColor: '#ced4da',
         pointBackgroundColor: '#ced4da',
-        fill: false
+        fill: false,
+        label: 'Total Tests'
       }]
     },
     options: {
@@ -815,7 +704,7 @@ $(function () {
         intersect: intersect
       },
       legend: {
-        display: false
+        display: true // Display legend for multi-line chart
       },
       scales: {
         yAxes: [{
@@ -827,7 +716,8 @@ $(function () {
           },
           ticks: $.extend({
             beginAtZero: true,
-            suggestedMax: 25
+            // Dynamically set suggestedMax based on the highest value in total tests data
+            suggestedMax: Math.max(...JSON.parse('{{ weekly_tests_data_total|safe }}')) + 5
           }, ticksStyle)
         }],
         xAxes: [{
@@ -849,7 +739,7 @@ $(function () {
 
 })
 
-// Refresh function
+// Refresh function (for toasts, if still used)
 function refreshTestStatus() {
   $(document).Toasts('create', {
     class: 'bg-info',

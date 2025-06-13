@@ -847,33 +847,132 @@ def ae(request):
     return render(request, 'ae/base.html')
 
 # Lab views
-@login_required(login_url='home')                        
+@login_required(login_url='home')
 def laboratory(request):
-    #pending_test = TestSelection.objects.filter(status='pending').select_related('patient_id')
-    labtest = LabTest.objects.all()
+    # Get current date for filtering
+    today = date.today()
+    start_of_day = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+    end_of_day = timezone.make_aware(datetime.combine(today, datetime.max.time()))
+
+    # --- Dashboard Counts ---
+    # Tests completed/performed today
+    test_today = LabTest.objects.filter(
+        date_performed__range=(start_of_day, end_of_day),
+        status='completed' # Assuming 'date_performed' is set upon completion
+    ).count()
+
+    # Pending Tests Count (overall)
     pending_count = LabTest.objects.filter(status='pending').count()
+
+    # Completed Tests Count (overall)
     completed_count = LabTest.objects.filter(status='completed').count()
-    uploaded_results = LabResultFile.objects.all().count()
 
-    start_of_day = now().replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = start_of_day + timedelta(days=1)
+    # In Progress Tests Count (overall) - Used for the donut chart
+    in_progress_count = LabTest.objects.filter(status='in_progress').count()
 
-    test_today = LabTest.objects.filter(date_performed__range=(start_of_day, end_of_day)).count()
+    # Total Patients Count
+    total_patients_count = Patient.objects.count()
+
+    # Total Uploaded Results Files Count
+    uploaded_results_count = LabResultFile.objects.count()
+
+    # --- Data for Today's Test Status Table (Latest 5 tests requested today) ---
+    today_tests_details = LabTest.objects.filter(
+        requested_at__range=(start_of_day, end_of_day)
+    ).select_related('patient', 'category').order_by('-requested_at')[:5] # Limit to 5 for dashboard snippet
+
+    # --- Data for Awaiting Tests (Pending Tests List) ---
+    awaiting_tests = LabTest.objects.filter(status='pending').select_related('patient', 'category').order_by('-requested_at')[:8] # Limit for quick view
+
+    # --- Data for Weekly Lab Activity Chart (Last 7 days) ---
+    weekly_labels = [] # e.g., ['Mon', 'Tue', 'Wed', ...]
+    weekly_tests_data_total = [0] * 7 # Total tests performed each day
+    weekly_tests_data_completed = [0] * 7 # Completed tests each day
+
+    for i in range(7):
+        day = today - timedelta(days=6 - i) # Calculate date for each of the last 7 days
+        weekly_labels.append(day.strftime('%a')) # Format day name (e.g., 'Mon')
+
+        day_start = timezone.make_aware(datetime.combine(day, datetime.min.time()))
+        day_end = timezone.make_aware(datetime.combine(day, datetime.max.time()))
+
+        total_on_day = LabTest.objects.filter(
+            date_performed__range=(day_start, day_end)
+        ).count()
+        completed_on_day = LabTest.objects.filter(
+            status='completed',
+            date_performed__range=(day_start, day_end)
+        ).count()
+
+        weekly_tests_data_total[i] = total_on_day
+        weekly_tests_data_completed[i] = completed_on_day
+
+    # --- Recent Activity (Timeline) ---
+    # Fetch recent LabTests to populate the timeline. You can extend this to include other activities.
+    recent_activities = []
+    recent_lab_tests = LabTest.objects.all().select_related('patient').order_by('-requested_at')[:5] # Get top 5 recent tests
+
+    for test in recent_lab_tests:
+        if test.status == 'completed':
+            icon_class = 'fas fa-vial'
+            bg_color = 'bg-primary'
+            header_text = f"{test.test_name} completed"
+            body_text = f"Patient {test.patient.full_name} - All parameters within normal range."
+            # Assuming a detail URL for a completed test
+            link_url = "" # Replace with actual URL for test details if available
+        elif test.status == 'pending':
+            icon_class = 'fas fa-clock'
+            bg_color = 'bg-warning'
+            header_text = f"{test.test_name} Pending"
+            body_text = f"Patient {test.patient.full_name} - Awaiting processing."
+            # Assuming a process URL for pending test
+            link_url = "" # Replace with actual URL to process test if available
+        else: # For 'in_progress' or 'cancelled'
+            icon_class = 'fas fa-hourglass-half'
+            bg_color = 'bg-info'
+            header_text = f"{test.test_name} in progress"
+            body_text = f"Patient {test.patient.full_name} - Currently being processed."
+            link_url = ""
+
+        recent_activities.append({
+            'timestamp': test.requested_at,
+            'icon': icon_class,
+            'bg_color': bg_color,
+            'header': header_text,
+            'body': body_text,
+            'link': link_url
+        })
+    
+    # Sort by timestamp in descending order (most recent first)
+    recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+
+
     context = {
-        'labtest' : labtest,
-        'test_today' : test_today,
-        'pending_count' : pending_count,
-        'completed_count' : completed_count,
-        'uploaded_results' : uploaded_results
-        }
+        'test_today': test_today,
+        'pending_count': pending_count,
+        'completed_count': completed_count,
+        'in_progress_count': in_progress_count,
+        'total_patients_count': total_patients_count,
+        'uploaded_results_count': uploaded_results_count,
+
+        'today_tests_details': today_tests_details,
+        'awaiting_tests': awaiting_tests,
+
+        'weekly_labels': weekly_labels,
+        'weekly_tests_data_total': weekly_tests_data_total,
+        'weekly_tests_data_completed': weekly_tests_data_completed,
+        'recent_activities': recent_activities,
+
+        # URLs for navigation - these should match your urls.py names
+        'dashboard_url': 'laboratory', # The name of this current view
+        'pending_tests_url': 'lab_internal_logs', # Used for 'View Pending Tests' link
+        'test_logs_url': 'lab_internal_logs', # Used for 'View Details' and 'View Logs' links
+        'lab_test_entry_url': 'lab_test_entry', # Used for 'Enter New Test' link
+        'logout_url': 'logout', # Standard Django logout URL name
+    }
     return render(request, 'laboratory/index.html', context)
 
-
-
-
-
 @login_required(login_url='home')
-
 def lab_test_entry(request):
     if request.method == 'POST':
         test_id = request.POST.get('test_id')
@@ -973,8 +1072,6 @@ def lab_test_entry(request):
     }
 
     return render(request, 'laboratory/test_entry.html', context)
-
-
 
 @login_required(login_url='home')
 def patient_tests_ajax(request, patient_id):
@@ -1214,46 +1311,6 @@ def patient_search(request):
         results = [{'id': p.id, 'full_name': p.full_name} for p in patients[:10]]
 
     return JsonResponse({'results': results})
-
-@login_required(login_url='home')
-def lab_result_upload(request):
-    # Get only patients who have a referral
-    referred_patient_ids = Referral.objects.values_list('patient_id', flat=True).distinct()
-    patients = Patient.objects.filter(id__in=referred_patient_ids).order_by('full_name')
-    
-    selected_patient = None
-    lab_tests = []
-    uploaded_files = []
-
-    if request.method == "POST":
-        patient_id = request.POST.get('patient_id')
-        patient = get_object_or_404(Patient, id=patient_id)
-        result_file = request.FILES.get('result_file')
-
-        if result_file:
-            LabResultFile.objects.create(
-                patient=patient,
-                uploaded_by=request.user,
-                result_file=result_file
-            )
-            messages.success(request, "Lab result file uploaded successfully.")
-            return redirect(f"{request.path}?patient_id={patient_id}")
-        else:
-            messages.error(request, "Please upload a valid file.")
-
-    selected_patient_id = request.GET.get('patient_id')
-    if selected_patient_id:
-        selected_patient = get_object_or_404(Patient, id=selected_patient_id)
-        lab_tests = LabTest.objects.filter(patient=selected_patient).order_by('-date_performed')
-        uploaded_files = LabResultFile.objects.filter(patient=selected_patient).order_by('-uploaded_at')
-
-    context = {
-        'patients': patients,
-        'selected_patient': selected_patient,
-        'lab_tests': lab_tests,
-        'uploaded_files': uploaded_files,
-    }
-    return render(request, 'laboratory/result_upload.html', context)
 
 @login_required(login_url='home')
 def lab_internal_logs(request):
@@ -2418,7 +2475,7 @@ def submit_test_results(request, patient_id):
                 )
             except Exception as e:
                 messages.error(request, f'File upload failed: {str(e)}')
-                return render(request, 'laboratory/test_entry.html')
+                return redirect('lab_test_entry')
         
         # Process individual test results
         for test_id in test_ids:
@@ -2447,11 +2504,10 @@ def submit_test_results(request, patient_id):
         else:
             messages.warning(request, 'No tests were selected for update.')
         
-        return render(request, 'laboratory/test_entry.html')
-    
-    return render(request, 'laboratory/test_entry.html')
- 
+        return redirect('lab_test_entry')
 
+    return redirect('lab_test_entry')
+ 
 
  #Doctor's fetching test results that were recommended
 
