@@ -538,7 +538,7 @@ def patient_history_ajax(request, patient_id):
     admissions = patient.admission_set.order_by('-admission_date')[:5]
     vitals = patient.vitals_set.order_by('-recorded_at')[:5]
     notes = patient.nursing_notes.order_by('-note_datetime')[:5]
-    records = patient.medical_records.order_by('-record_date')[:5]
+    #records = patient.medical_records.order_by('-record_date')[:5]
     prescriptions = patient.prescriptions.order_by('-created_at')[:5]
 
     return render(request, 'doctors/history.html', {
