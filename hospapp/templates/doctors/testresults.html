@@ -4,425 +4,575 @@
 {% block title %}Lab | Test Results{% endblock %}
 
 {% block content %}
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0">Test Results</h1>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="#">Home</a></li>
-                    <li class="breadcrumb-item active">Test Results</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-</div>
 
-<section class="content" id="print-area">
-    <div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-md-10">
 
-                <!-- Patient Information Card -->
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-user-injured mr-2"></i>
-                            Patient Information
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 text-center">
-                                {% if patient.photo %}
-                                <img src="{{ patient.photo.url }}" class="img-fluid img-circle elevation-2"
-                                    style="width: 120px; height: 120px; object-fit: cover;" alt="Patient Photo">
-                                {% else %}
-                                <img src="{% static 'dist/img/avatar.png' %}" class="img-fluid img-circle elevation-2"
-                                    style="width: 120px; height: 120px;" alt="No Photo">
-                                {% endif %}
-                            </div>
-                            <div class="col-md-9">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <td><strong>Name:</strong></td>
-                                        <td>{{ patient.full_name }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Address:</strong></td>
-                                        <td>{{ patient.address }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Phone:</strong></td>
-                                        <td>{{ patient.phone }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Age:</strong></td>
-                                        <td>45 years</td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Test Results Form -->
-                <form method="post" action="{% url 'doc_test_comment' patient.id %}">
-                    {% csrf_token %}
-                    <div class="card card-success card-outline">
-                        <div class="card-header">
-                            <h3 class="card-title">
-                                <i class="fas fa-flask mr-2"></i>
-                                Test Results Entry
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            {% if pending_tests %}
-                            {% for category, testlist in pending_tests.items %}
-                            <div class="mb-4">
-                                <h5 class="text-primary border-bottom pb-2">
-                                    <i class="fas fa-vial mr-2"></i>
-                                    {{ category }}
-                                </h5>
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-hover">
-                                        <thead class="thead-light">
-                                            <tr>
-                                                <th>Test Name</th>
-                                                <th>Result Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for test in testlist %}
-                                            <tr>
-                                                <td>{{ test.test_name }}</td>
-                                                <td>
-                                                    <input type="text" value="{{ test.result_value|default:'' }}"
-                                                        class="form-control form-control-sm" readonly>
-                                                    <input type="hidden" name="ids" value="{{ test.id }}">
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            {% else %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                No pending test results found for this patient.
-                            </div>
-                            {% endif %}
-
-                            <!-- Doctor's Comments Section -->
-                            <div class="card card-info card-outline">
-                                <div class="card-header">
-                                    <h3 class="card-title">
-                                        <i class="fas fa-comment-medical mr-2"></i>
-                                        Doctor's Comments
-                                    </h3>
-                                </div>
-                                <div class="card-body">
-                                    <textarea class="form-control" name="doctor_comment" rows="4"
-                                        placeholder="Enter your comments about the test results..."></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="text-center mt-4">
-                                <button type="button" class="btn btn-secondary no-print">
-                                    <i class="fas fa-print mr-2"></i>
-                                    Print Results
-                                </button>
-                                <button type="submit" class="btn btn-success no-print">
-                                    <i class="fas fa-save mr-2"></i>
-                                    Submit Test Details
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-
-                <!-- Uploaded Files Card -->
-                {% if uploaded_files %}
-                <div class="card card-warning card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-file-medical-alt mr-2"></i>
-                            Uploaded Lab Result Files
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>File Name</th>
-                                        <th>Upload Date</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for file in uploaded_files %}
-                                    <tr>
-                                        <td>
-                                            <i class="fas fa-file-pdf text-danger mr-2"></i>
-                                            {{ file.result_file.name|slice:"12:" }}
-                                        </td>
-                                        <td>{{ file.uploaded_at|date:"M d, Y H:i" }}</td>
-                                        <td>
-                                            <a href="{{ file.result_file.url }}" target="_blank"
-                                                class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye mr-1"></i>
-                                                View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Print Styles -->
-<style>
-    @media print {
-        .content-wrapper {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        .no-print {
-            display: none !important;
-        }
-
-        .card {
-            box-shadow: none !important;
-            border: 1px solid #ddd !important;
-        }
-
-        .card-body {
-            display: block !important;
-        }
-
-        .collapsed-card .card-body {
-            display: block !important;
-        }
-
-        .btn-tool {
-            display: none !important;
-        }
-
-        .content-header {
-            display: none !important;
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --info-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
 
         body {
-            background: white !important;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .content-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.75rem 0;
+            margin-bottom: 1rem;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+            .content-header h1 {
+                font-weight: 600;
+                margin: 0;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            }
+
+        .breadcrumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            padding: 0.5rem 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .breadcrumb-item a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: white;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+            .card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+            }
+
+        .card-primary {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+        }
+
+        .card-success {
+            background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+        }
+
+        .card-info {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);
+        }
+
+        .card-warning {
+            background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 0.75rem 1rem;
+        }
+
+        .card-primary .card-header {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .card-success .card-header {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .card-info .card-header {
+            background: var(--info-gradient);
+            color: white;
+        }
+
+        .card-warning .card-header {
+            background: var(--warning-gradient);
+            color: white;
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        .patient-photo {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        }
+
+        .patient-info-table {
+            margin-top: 0;
+        }
+
+            .patient-info-table td {
+                padding: 0.15rem 0;
+                border: none;
+                vertical-align: middle;
+                font-size: 0.85rem;
+                line-height: 1.2;
+            }
+
+                .patient-info-table td:first-child {
+                    font-weight: 600;
+                    color: #495057;
+                    width: 30%;
+                }
+
+        .test-category-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
         .table {
-            border-collapse: collapse !important;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
         }
 
-        .table th,
-        .table td {
-            border: 1px solid #ddd !important;
-            padding: 8px !important;
+            .table thead th {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border: none;
+                font-weight: 600;
+                color: #495057;
+                padding: 0.6rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .table tbody td {
+                border: 1px solid #e9ecef;
+                padding: 0.5rem;
+                vertical-align: middle;
+            }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,123,255,0.05);
         }
-    }
-</style>
+
+        .form-control {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+            .form-control:focus {
+                border-color: #667eea;
+                box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            }
+
+        .form-control-sm {
+            font-size: 0.8rem;
+            padding: 0.35rem 0.5rem;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 70px;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            border-radius: 20px;
+            padding: 0.4rem 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-outline-primary {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            box-shadow: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+        }
+
+        .compact-spacing {
+            margin-bottom: 1rem;
+        }
+
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(135deg, transparent 0%, #667eea 50%, transparent 100%);
+            margin: 2rem 0;
+            border: none;
+        }
+
+        /* Compact adjustments */
+        .container-fluid {
+            padding: 0 0.5rem;
+        }
+
+        .row.justify-content-center .col-md-10 {
+            max-width: 98%;
+        }
+
+        .mb-3 {
+            margin-bottom: 0.75rem !important;
+        }
+
+        .mt-4 {
+            margin-top: 1rem !important;
+        }
+
+        @media (max-width: 768px) {
+            .content-header {
+                padding: 0.5rem 0;
+                margin-bottom: 0.5rem;
+            }
+
+            .card-body {
+                padding: 0.75rem;
+            }
+
+            .patient-photo {
+                width: 75px;
+                height: 75px;
+            }
+
+            .btn {
+                padding: 0.35rem 0.75rem;
+                font-size: 0.7rem;
+                margin: 0.2rem;
+            }
+
+            .patient-info-table td {
+                font-size: 0.8rem;
+            }
+
+            .table {
+                font-size: 0.8rem;
+            }
+
+            .test-category-header {
+                font-size: 0.85rem;
+                padding: 0.4rem 0.6rem;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+            }
+
+            .content-wrapper {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .card {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                break-inside: avoid;
+            }
+
+            .card-body {
+                display: block !important;
+            }
+
+            .collapsed-card .card-body {
+                display: block !important;
+            }
+
+            .btn-tool {
+                display: none !important;
+            }
+
+            .content-header {
+                background: none !important;
+                color: black !important;
+            }
+
+            .table {
+                border-collapse: collapse !important;
+            }
+
+                .table th,
+                .table td {
+                    border: 1px solid #ddd !important;
+                    padding: 8px !important;
+                }
+        }
+    </style>
+
+    
+
+    <section class="content" id="print-area">
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-md-10">
+
+                    <!-- Patient Information Card -->
+                    <div class="card card-primary card-outline compact-spacing">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-user-injured me-2"></i>
+                                Patient Information
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-4 text-center">
+                                    <!-- Django template logic preserved -->
+                                    {% if patient.photo %}
+                                    <img src="{{ patient.photo.url }}" class="patient-photo" alt="Patient Photo">
+                                    {% else %}
+                                    <img src="{% static 'dist/img/avatar.png' %}" class="patient-photo" alt="No Photo">
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-borderless patient-info-table">
+                                        <tr>
+                                            <td><strong>Name:</strong></td>
+                                            <td>{{ patient.full_name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Address:</strong></td>
+                                            <td>{{ patient.address }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Phone:</strong></td>
+                                            <td>{{ patient.phone }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Age:</strong></td>
+                                            <td>45 years</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test Results Form -->
+                    <form method="post" action="{% url 'doc_test_comment' patient.id %}">
+                        {% csrf_token %}
+                        <div class="card card-success card-outline compact-spacing">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-flask me-2"></i>
+                                    Test Results Entry
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                {% if pending_tests %}
+                                {% for category, testlist in pending_tests.items %}
+                                <div class="mb-2">
+                                    <div class="test-category-header">
+                                        <i class="fas fa-vial me-2"></i>
+                                        {{ category }}
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 60%;">Test Name</th>
+                                                    <th style="width: 40%;">Result Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for test in testlist %}
+                                                <tr>
+                                                    <td>{{ test.test_name }}</td>
+                                                    <td>
+                                                        <input type="text" value="{{ test.result_value|default:'' }}"
+                                                               class="form-control form-control-sm" readonly>
+                                                        <input type="hidden" name="ids" value="{{ test.id }}">
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No pending test results found for this patient.
+                                </div>
+                                {% endif %}
+
+                                <hr class="section-divider">
+
+                                <!-- Uploaded Files Card -->
+                                {% if uploaded_files %}
+                                <div class="card card-warning card-outline compact-spacing">
+                                    <div class="card-header">
+                                        <h3 class="card-title">
+                                            <i class="fas fa-file-medical-alt me-2"></i>
+                                            Uploaded Lab Result Files
+                                        </h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 50%;">File Name</th>
+                                                        <th style="width: 30%;">Upload Date</th>
+                                                        <th style="width: 20%;">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for file in uploaded_files %}
+                                                    <tr>
+                                                        <td>
+                                                            <i class="fas fa-file-pdf text-danger me-2"></i>
+                                                            {{ file.result_file.name|slice:"12:" }}
+                                                        </td>
+                                                        <td>{{ file.uploaded_at|date:"M d, Y H:i" }}</td>
+                                                        <td>
+                                                            <a href="{{ file.result_file.url }}" target="_blank"
+                                                               class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-eye me-1"></i>
+                                                                View
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="section-divider">
+                                {% endif %}
+
+
+                                <!-- Doctor's Comments Section -->
+                                <div class="card card-info card-outline">
+                                    <div class="card-header">
+                                        <h3 class="card-title">
+                                            <i class="fas fa-comment-medical me-2"></i>
+                                            Doctor's Comments
+                                        </h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <textarea class="form-control" name="doctor_comment" rows="4"
+                                                  placeholder="Enter your comments about the test results..."></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="text-center mt-3">
+                                    <button type="button" class="btn btn-secondary no-print me-2">
+                                        <i class="fas fa-print me-1"></i>
+                                        Print Results
+                                    </button>
+                                    <button type="submit" class="btn btn-success no-print">
+                                        <i class="fas fa-save me-1"></i>
+                                        Submit Test Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Print functionality
+        document.querySelector('.btn-secondary').addEventListener('click', function () {
+            window.print();
+        });
+
+        // Add smooth animations on load
+        document.addEventListener('DOMContentLoaded', function () {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
 
 {% endblock %}
 
-{% comment %} {% extends "doctors/base.html" %}
-{% load static %}
 
-{% block title %}Lab | Test details{% endblock %}
-
-{% block content %}
-
-<style>
-    .compact-form {
-        max-width: 700px;
-        margin: 15px auto;
-    }
-
-    .card {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .card-header {
-        padding: 0.5rem 1rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-
-    .card-body {
-        padding: 1rem;
-    }
-
-    .category-header {
-        background: #f8f9fa;
-        border-left: 3px solid #007bff;
-        padding: 0.4rem 0.8rem;
-        margin: 0.5rem 0 0.3rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #495057;
-    }
-
-    .test-row {
-        padding: 0.4rem 0.8rem;
-        border-bottom: 1px solid #e9ecef;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .test-row:last-child {
-        border-bottom: none;
-    }
-
-    .test-label {
-        flex: 1;
-        margin: 0;
-        font-size: 0.875rem;
-        color: #495057;
-    }
-
-    .test-input {
-        width: 45%;
-        padding: 0.3rem 0.6rem;
-        font-size: 0.875rem;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
-    }
-
-    .test-input:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
-        outline: 0;
-    }
-
-    .btn-submit {
-        padding: 0.6rem 1.5rem;
-        font-weight: 500;
-    }
-
-    h5 {
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-
-    .form-container {
-        background: white;
-        border-radius: 0.375rem;
-        overflow: hidden;
-    }
-</style>
-<div class="container-fluid" id="print-area">
-    <div class="compact-form">
-
-        <!-- Patient Information Card -->
-        <div class="card mb-3">
-            <div class="card-body d-flex p-3">
-                {% if patient.photo %}
-                <img src="{{ patient.photo.url }}" class="img-thumbnail mr-3" width="150" height="150"
-                    alt="Patient Photo">
-                <div>
-                    <p class="mb-2"><strong>Name:</strong> {{ patient.full_name }}</p>
-                    <p class="mb-2"><strong>Address:</strong> {{ patient.address }} : {{ patient.phone }}</p>
-                    <p class="mb-0"><strong>Age:</strong> 45 years</p>
-
-                </div>
-                {%else%}
-                <img src="" class="img-thumbnail mr-3" width="150" height="150" alt="No Photo">
-                <div>
-                    <p class="mb-2"><strong>Name:</strong> {{ patient.name }}</p>
-                    <p class="mb-2"><strong>Address:</strong> {{ patient.address }} : {{ patient.phone }}</p>
-                    <p class="mb-0"><strong>Age:</strong> 45 years</p>
-
-                </div>
-
-            </div>
-
-            {%endif%}
-        </div>
-
-        <form method="post" action="{% url 'doc_test_comment' patient.id %}">
-            {% csrf_token %}
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Test Results Entry</h5>
-                </div>
-                <div class="card-body">
-                    {% for cat, testlist in pending_tests.items %}
-                    <div class="category-header bg-secondary">{{ cat }}</div>
-
-                    {% for test in testlist %}
-                    <div class="test-row">
-                        <label class="test-label">{{ test.test_name }}:</label>
-                        <input type="text" value="{{ test.result_value }}" class="test-input" readonly>
-                        <input type="hidden" name="ids" value="{{ test.id }}" class="test-input"
-                            placeholder="Enter text id" />
-                    </div>
-                    {% endfor %}
-                    {% endfor %}
-
-                    <div class="category-header bg-secondary">Doctor's comments</div>
-                    <textarea class="form-control" name="doctor_comment"></textarea>
-
-                    <div class="text-center mt-3">
-                        <button class="btn btn-secondary print">Print test result</button>
-                        <button type="submit" class="btn btn-primary btn-submit">Submit Test Details</button>
-                    </div>
-                </div>
-
-
-            </div>
-        </form>
-
-        {% if selected_patient %}
-        <!-- Uploaded Files Card -->
-        <div class="card card-secondary shadow-sm mt-5">
-            <div class="card-header border-0">
-                <h4 class="card-title mb-0">
-                    <i class="fas fa-file-medical-alt mr-2 text-info"></i> Uploaded Lab Result Files for <span
-                        class="text-white font-weight-bold">{{ selected_patient.full_name }}</span>
-                </h4>
-            </div>
-            <div class="card-body">
-                {% if uploaded_files %}
-                <ul class="list-group">
-                    {% for file in uploaded_files %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <a href="{{ file.result_file.url }}" target="_blank" class="text-dark font-weight-normal">
-                            <i class="fas fa-file-pdf text-danger mr-2"></i>
-                            {{ file.result_file.name|slice:"12:" }}
-                        </a>
-                        <small class="text-muted">Uploaded: {{ file.uploaded_at|date:"M d, Y H:i" }}</small>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-muted font-italic">No uploaded files for this patient yet.</p>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-
-    </div>
-</div>
-
-{% endblock %} {% endcomment %}
