@@ -13,227 +13,363 @@
 
 <section class="content">
     <div class="container-fluid">
-        <div class="card card-primary card-outline w">
-            <div class="card-header p-2">
-                <ul class="nav nav-pills" id="doctorTabs">
-                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#diagnosis">Consultation &
-                            Diagnosis</a>
-                    </li>
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#prescription">Prescription</a>
-                    </li>
-                    <!--li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tests">Request Tests</a></li>-->
-                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#plan">Care Plan</a></li>
-                </ul>
-            </div>
+        <div class="row"> {# Start of the main row for two-column layout #}
 
-            <div class="card-body">
-                <div class="tab-content">
-
-                    <!-- Diagnosis Tab (Combined with Consultation) -->
-                    <div class="tab-pane fade show active" id="diagnosis">
-                        <form method="POST" action="{% url 'save_consultation' %}">
-                            {% csrf_token %}
-
-                            <!-- Patient Selector -->
-                            <div class="form-group">
-                                <label>Select Patient</label>
-                                <select class="form-control" name="patient_id" id="patient-select" required>
-                                    <option value="" disabled selected>-- Choose Patient --</option>
-                                    {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <!-- Patient History Display (populated via AJAX) -->
-                            <div id="patient-history" class="border rounded p-3 bg-light mb-3" style="display: none;">
-                                <strong>Patient Medical History</strong>
-                                <div id="history-content" class="mt-2 text-muted small">
-                                    <!-- AJAX-loaded content -->
-                                </div>
-                            </div>
-
-                            <!-- Symptoms -->
-                            <div class="form-group">
-                                <label>Symptoms / Complaints</label>
-                                <textarea class="form-control" name="symptoms" rows="3" required
-                                    placeholder="Enter patient symptoms and complaints..."></textarea>
-                            </div>
-
-                            <!-- Diagnosis Summary -->
-                            <div class="form-group">
-                                <label>Diagnosis Summary</label>
-                                <textarea class="form-control" name="diagnosis_summary" rows="3" required
-                                    placeholder="Enter diagnosis details..."></textarea>
-                            </div>
-
-                            <!-- Doctor Advice -->
-                            <div class="form-group">
-                                <label>Doctor's Advice & Notes</label>
-                                <textarea class="form-control" name="advice" rows="3" required
-                                    placeholder="Advice, recommendations, or additional notes..."></textarea>
-                            </div>
-
-                            <div class="form-group text-center">
-                                <button type="submit" class="btn btn-primary">Save Consultation</button>
-                            </div>
-                        </form>
+            <div class="col-lg-4 col-md-5"> {# Column for Patient Selection and History #}
+                <div class="card card-primary card-outline mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title">Select Patient for Consultation</h3>
                     </div>
-
-
-                    <!-- Prescription Tab -->
-                    <div class="tab-pane fade" id="prescription">
-                        <form method="POST" action="{% url 'add_prescription' %}">
-                            {% csrf_token %}
-
-                            <!-- Patient Selector -->
-                            <div class="form-group">
-                                <label>Select Patient</label>
-                                <select name="patient_id" class="form-control" required>
-                                    <option value="" disabled selected>-- Choose Patient --</option>
-                                    {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <!-- Patient History Display (populated via AJAX) -->
-                            <div id="prescription-patient-history" class="border rounded p-3 bg-light mb-3"
-                                style="display: none;">
-                                <strong>Patient Medical History</strong>
-                                <div id="prescription-history-content" class="mt-2 text-muted small">
-                                    <!-- AJAX-loaded content -->
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Medication Name</label>
-                                <input type="text" name="medication" class="form-control" placeholder="e.g., Metformin"
-                                    required>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Dosage & Instructions</label>
-                                <textarea name="instructions" class="form-control" rows="2"
-                                    placeholder="e.g., 500mg twice daily after meals" required></textarea>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Start Date</label>
-                                <input type="date" name="start_date" class="form-control" required>
-                            </div>
-
-                            <div class="form-group text-center">
-                                <button type="submit" class="btn btn-success">Add Prescription</button>
-                            </div>
-                        </form>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="main-patient-select-input">Patient Name</label>
+                            <input class="form-control" list="patients-datalist" id="main-patient-select-input"
+                                placeholder="Type to search patient..." required>
+                            <datalist id="patients-datalist">
+                                {% for patient in patients %}
+                                <option value="{{ patient.full_name }}" data-id="{{ patient.id }}"></option>
+                                {% endfor %}
+                            </datalist>
+                        </div>
                     </div>
-
-                    <!-- Request Tests Tab -->
-                    <div class="tab-pane fade" id="tests">
-                        <form method="POST" action="{% url 'request_tests' %}">
-                            {% csrf_token %}
-                            <!-- Patient Selector -->
-                            <div class="form-group">
-                                <label>Select Patient</label>
-                                <select class="form-control" name="patient_id" id="test-patient-select" required>
-                                    <option value="" disabled selected>-- Choose Patient --</option>
-                                    {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Select Tests to Request</label>
-                                <select class="form-control" name="test">
-                                    <option value="" selected disabled>-- Select Test --</option>
-                                    <option>Fertility Hormone Panel</option>
-                                    <option>Ultrasound Scan</option>
-                                    <option>Blood Count</option>
-                                    <option>Thyroid Function Test</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Additional Instructions</label>
-                                <textarea class="form-control" rows="2" name="instructions"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-warning">Request Tests</button>
-                        </form>
-                    </div>
-
-                    <div class="tab-pane fade" id="plan">
-                        <form method="POST" action="{% url 'save_care_plan' %}">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label>Select Patient</label>
-                                <select class="form-control" name="patient_id" id="plan-patient-select" required>
-                                    <option value="" disabled selected>-- Choose Patient --</option>
-                                    {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Clinical Findings</label>
-                                <textarea class="form-control" name="clinical_findings" rows="3" required></textarea>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Plan of Care</label>
-                                <textarea class="form-control" name="plan_of_care" rows="3"
-                                    placeholder="Next steps, referrals, follow-up..." required></textarea>
-                            </div>
-
-                            <button type="submit" class="btn btn-info">Save Care Plan</button>
-                        </form>
-                    </div>
-
                 </div>
-            </div>
-        </div>
+
+                <div id="patient-history" class="card card-info card-outline mb-3" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title">Patient Medical History (<span id="history-patient-name"></span>)</h3>
+                    </div>
+                    <div class="card-body" id="history-content">
+                        </div>
+                </div>
+            </div> {# End of col-lg-4 #}
+
+            <div class="col-lg-8 col-md-7"> {# Column for Tabs #}
+                <div class="card card-primary card-outline">
+                    <div class="card-header p-2">
+                        <ul class="nav nav-pills" id="doctorTabs">
+                            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#diagnosis">Consultation &
+                                    Diagnosis</a>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#prescription">Prescription</a>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#plan">Care Plan</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="tab-content">
+
+                            <div class="tab-pane fade show active" id="diagnosis">
+                                <form method="POST" action="{% url 'save_consultation' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="patient_id" id="diagnosis-patient-id" required>
+
+                                    <div class="form-group">
+                                        <label>Symptoms / Complaints</label>
+                                        <textarea class="form-control" name="symptoms" rows="3" required
+                                            placeholder="Enter patient symptoms and complaints..."></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Diagnosis Summary</label>
+                                        <textarea class="form-control" name="diagnosis_summary" rows="3" required
+                                            placeholder="Enter diagnosis details..."></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Doctor's Advice & Notes</label>
+                                        <textarea class="form-control" name="advice" rows="3" required
+                                            placeholder="Advice, recommendations, or additional notes..."></textarea>
+                                    </div>
+
+                                    <div class="form-group text-center">
+                                        <button type="submit" class="btn btn-primary">Save Consultation</button>
+                                    </div>
+                                </form>
+                            </div>
+
+
+                            <div class="tab-pane fade" id="prescription">
+                                <form method="POST" action="{% url 'add_prescription' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="patient_id" id="prescription-patient-id" required>
+
+                                    <div class="form-group">
+                                        <label>Medication Name</label>
+                                        <input type="text" name="medication" class="form-control" placeholder="e.g., Metformin"
+                                            required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Dosage & Instructions</label>
+                                        <textarea name="instructions" class="form-control" rows="2"
+                                            placeholder="e.g., 500mg twice daily after meals" required></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Start Date</label>
+                                        <input type="date" name="start_date" class="form-control" required>
+                                    </div>
+
+                                    <div class="form-group text-center">
+                                        <button type="submit" class="btn btn-success">Add Prescription</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="tab-pane fade" id="plan">
+                                <form method="POST" action="{% url 'save_care_plan' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="patient_id" id="plan-patient-id" required>
+
+                                    <div class="form-group">
+                                        <label>Clinical Findings</label>
+                                        <textarea class="form-control" name="clinical_findings" rows="3" required></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Plan of Care</label>
+                                        <textarea class="form-control" name="plan_of_care" rows="3"
+                                            placeholder="Next steps, referrals, follow-up..." required></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-info">Save Care Plan</button>
+                                </form>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div> {# End of col-lg-8 #}
+
+        </div> {# End of row #}
     </div>
 </section>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Function to set up patient history loading
-        function setupPatientHistoryLoading(selectId, historyContainerId, historyContentId) {
-            const patientSelect = document.getElementById(selectId);
-            const historyContainer = document.getElementById(historyContainerId);
-            const historyContent = document.getElementById(historyContentId);
+        const mainPatientSelectInput = document.getElementById('main-patient-select-input');
+        const patientsDatalist = document.getElementById('patients-datalist');
+        const historyContainer = document.getElementById('patient-history');
+        const historyContent = document.getElementById('history-content');
+        const historyPatientNameSpan = document.getElementById('history-patient-name');
 
-            if (!patientSelect) return;
 
-            // Get base URL from Django template
-            const baseUrl = "{% url 'patient_history_ajax' 0 %}".replace('/0/', '/');  // remove dummy 0
+        // Hidden patient ID inputs for each form
+        const diagnosisPatientIdInput = document.getElementById('diagnosis-patient-id');
+        const prescriptionPatientIdInput = document.getElementById('prescription-patient-id');
+        const planPatientIdInput = document.getElementById('plan-patient-id');
 
-            patientSelect.addEventListener('change', function () {
-                const patientId = this.value;
+        // Get base URL from Django template for AJAX
+        const baseUrl = "{% url 'patient_history_ajax' 0 %}".replace('/0/', '/'); // remove dummy 0
 
-                if (patientId) {
-                    fetch(`${baseUrl}${patientId}/`)
-                        .then(response => response.text())
-                        .then(data => {
-                            historyContent.innerHTML = data;
-                            historyContainer.style.display = 'block';
-                        })
-                        .catch(error => {
-                            historyContent.innerHTML = "<p class='text-danger'>Failed to load history.</p>";
-                            historyContainer.style.display = 'block';
-                        });
-                } else {
-                    historyContainer.style.display = 'none';
-                }
-            });
+        mainPatientSelectInput.addEventListener('input', function () {
+            const selectedOption = patientsDatalist.querySelector(`option[value="${this.value}"]`);
+            let patientId = null;
+            let patientName = null;
+
+            if (selectedOption) {
+                patientId = selectedOption.dataset.id;
+                patientName = this.value; // Get the full name from the input value
+
+                // Set the patient_id in all hidden inputs
+                diagnosisPatientIdInput.value = patientId;
+                prescriptionPatientIdInput.value = patientId;
+                planPatientIdInput.value = patientId;
+
+                // Update the patient name in the history display header
+                historyPatientNameSpan.textContent = patientName;
+
+                fetch(`${baseUrl}${patientId}/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json(); // Corrected: Expect JSON response
+                    })
+                    .then(data => {
+                        renderPatientHistory(data); // Call function to render history
+                        historyContainer.style.display = 'block';
+                    })
+                    .catch(error => {
+                        historyContent.innerHTML = "<p class='text-danger'>Failed to load history.</p>";
+                        historyContainer.style.display = 'block';
+                        console.error('Error fetching patient history:', error);
+                    });
+            } else {
+                // Clear hidden inputs and hide history if no valid patient is selected
+                diagnosisPatientIdInput.value = '';
+                prescriptionPatientIdInput.value = '';
+                planPatientIdInput.value = '';
+                historyPatientNameSpan.textContent = ''; // Clear patient name
+                historyContainer.style.display = 'none';
+                historyContent.innerHTML = ''; // Clear content
+            }
+        });
+
+        function renderPatientHistory(data) {
+            let html = '';
+
+            if (!data || !data.patient) {
+                html = '<p class="text-info">No patient data available.</p>';
+                historyContent.innerHTML = html;
+                return;
+            }
+
+            // Patient Demographics
+            html += `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Full Name:</strong> ${data.patient.full_name || 'N/A'}</p>
+                        <p><strong>Date of Birth:</strong> ${data.patient.date_of_birth || 'N/A'}</p>
+                        <p><strong>Gender:</strong> ${data.patient.gender || 'N/A'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Phone:</strong> ${data.patient.phone || 'N/A'}</p>
+                        <p><strong>Blood Group:</strong> ${data.patient.blood_group || 'N/A'}</p>
+                        <p><strong>Status:</strong> ${data.patient.status || 'N/A'}</p>
+                    </div>
+                </div>
+                <hr>
+            `;
+
+            // Recent Consultations
+            html += '<div class="row">';
+            html += '<div class="col-md-12">'; // Changed to col-md-12 for full width within this section
+            html += '<h5>Recent Consultations</h5>';
+            if (data.consultations && data.consultations.length > 0) {
+                html += '<ul class="list-group list-group-flush">';
+                data.consultations.forEach(consultation => {
+                    html += `
+                        <li class="list-group-item">
+                            <strong>Date:</strong> ${consultation.created_at_formatted || 'N/A'}<br>
+                            <strong>Symptoms:</strong> ${consultation.symptoms || 'N/A'}<br>
+                            <strong>Diagnosis:</strong> ${consultation.diagnosis_summary || 'N/A'}<br>
+                            <strong>Advice:</strong> ${consultation.advice || 'N/A'}
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            } else {
+                html += '<p class="text-muted">No recent consultations.</p>';
+            }
+            html += '</div>'; // End col-md-12
+            html += '</div>'; // End row
+            html += '<hr>';
+
+            // Recent Prescriptions
+            html += '<div class="row">';
+            html += '<div class="col-md-12">'; // Changed to col-md-12
+            html += '<h5>Recent Prescriptions</h5>';
+            if (data.prescriptions && data.prescriptions.length > 0) {
+                html += '<ul class="list-group list-group-flush">';
+                data.prescriptions.forEach(prescription => {
+                    html += `
+                        <li class="list-group-item">
+                            <strong>Date:</strong> ${prescription.created_at_formatted || 'N/A'}<br>
+                            <strong>Medication:</strong> ${prescription.medication || 'N/A'}<br>
+                            <strong>Instructions:</strong> ${prescription.instructions || 'N/A'}<br>
+                            <strong>Start Date:</strong> ${prescription.start_date_formatted || 'N/A'}
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            } else {
+                html += '<p class="text-muted">No recent prescriptions.</p>';
+            }
+            html += '</div>'; // End col-md-12
+            html += '</div>'; // End row
+            html += '<hr>';
+
+            // Recent Lab Tests (Tabulated)
+            html += '<h5>Recent Lab Tests</h5>';
+            if (data.lab_tests && data.lab_tests.length > 0) {
+                html += `
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Test Name</th>
+                                    <th>Result</th>
+                                    <th>Normal Range</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                data.lab_tests.forEach(test => {
+                    html += `
+                                <tr>
+                                    <td>${test.requested_at_formatted || 'N/A'}</td>
+                                    <td>${test.category_name || 'N/A'}</td>
+                                    <td>${test.test_name || 'N/A'}</td>
+                                    <td>${test.result_value || 'N/A'}</td>
+                                    <td>${test.normal_range || 'N/A'}</td>
+                                </tr>
+                    `;
+                });
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                html += '<p class="text-muted">No recent lab tests.</p>';
+            }
+            html += '<hr>';
+
+            // Recent Vitals & Nursing Notes (arranged side-by-side)
+            html += '<div class="row">';
+            html += '<div class="col-md-6">'; // Column for Vitals
+            html += '<h5>Recent Vitals</h5>';
+            if (data.vitals && data.vitals.length > 0) {
+                html += '<ul class="list-group list-group-flush">';
+                data.vitals.forEach(vital => {
+                    html += `
+                        <li class="list-group-item">
+                            <strong>Recorded At:</strong> ${vital.recorded_at_formatted || 'N/A'}<br>
+                            <strong>BP:</strong> ${vital.blood_pressure || 'N/A'},
+                            <strong>Temp:</strong> ${vital.temperature || 'N/A'}°C,
+                            <strong>Pulse:</strong> ${vital.pulse || 'N/A'},
+                            <strong>RR:</strong> ${vital.respiratory_rate || 'N/A'}<br>
+                            <strong>Weight:</strong> ${vital.weight || 'N/A'} kg,
+                            <strong>Height:</strong> ${vital.height || 'N/A'} cm,
+                            <strong>BMI:</strong> ${vital.bmi || 'N/A'}<br>
+                            <strong>Notes:</strong> ${vital.notes || 'N/A'}
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            } else {
+                html += '<p class="text-muted">No recent vitals.</p>';
+            }
+            html += '</div>'; // End col-md-6
+
+            html += '<div class="col-md-6">'; // Column for Nursing Notes
+            html += '<h5>Recent Nursing Notes</h5>';
+            if (data.nursing_notes && data.nursing_notes.length > 0) {
+                html += '<ul class="list-group list-group-flush">';
+                data.nursing_notes.forEach(note => {
+                    html += `
+                        <li class="list-group-item">
+                            <strong>Date/Time:</strong> ${note.note_datetime_formatted || 'N/A'}<br>
+                            <strong>Type:</strong> ${note.note_type_display || 'N/A'}<br>
+                            <strong>Notes:</strong> ${note.notes || 'N/A'}<br>
+                            <strong>Status:</strong> ${note.patient_status || 'N/A'}
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            } else {
+                html += '<p class="text-muted">No recent nursing notes.</p>';
+            }
+            html += '</div>'; // End col-md-6
+            html += '</div>'; // End row
+
+
+            historyContent.innerHTML = html;
         }
-
-        // Set up history loading for main diagnosis tab
-        setupPatientHistoryLoading('patient-select', 'patient-history', 'history-content');
-
-        // Apply the same patient history loading to other tabs that need it
-        // You may need to create the corresponding HTML elements in those tabs
     });
 </script>
 

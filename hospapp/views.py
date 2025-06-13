@@ -505,125 +505,228 @@ def doctors(request):
 
 @login_required(login_url='home')
 def doctor_consultation(request):
-    context = {'patients': Patient.objects.all(),}
+    """Main consultation page with patient list"""
+    context = {
+        'patients': Patient.objects.all().order_by('full_name'),
+    }
     return render(request, 'doctors/consultation.html', context)
 
+
 @login_required(login_url='home')
+@csrf_exempt
 def save_consultation(request):
+    """Save consultation data"""
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
-        symptoms = request.POST.get('symptoms')
-        diagnosis_summary = request.POST.get('diagnosis_summary')
-        advice = request.POST.get('advice')
+        symptoms = request.POST.get('symptoms', '').strip()
+        diagnosis_summary = request.POST.get('diagnosis_summary', '').strip()
+        advice = request.POST.get('advice', '').strip()
         
-        patient = get_object_or_404(Patient, id=patient_id)
+        # Validation
+        if not patient_id or not symptoms or not diagnosis_summary or not advice:
+            messages.error(request, "Please fill in all required fields.")
+            return redirect('doctor_consultation')
         
-        Consultation.objects.create(
-            patient=patient,
-            doctor=request.user,
-            symptoms=symptoms,
-            diagnosis_summary=diagnosis_summary,
-            advice=advice
-        )
+        try:
+            patient = get_object_or_404(Patient, id=patient_id)
+            
+            Consultation.objects.create(
+                patient=patient,
+                doctor=request.user,
+                symptoms=symptoms,
+                diagnosis_summary=diagnosis_summary,
+                advice=advice
+            )
+            
+            messages.success(request, f"Consultation saved for {patient.full_name}.")
+        except Exception as e:
+            messages.error(request, f"Error saving consultation: {str(e)}")
         
-        messages.success(request, f"Consultation saved for {patient.full_name}.")
-        return redirect('doctor_consultation')  # Or wherever you want to land after saving
+        return redirect('doctor_consultation')
+    
+    return redirect('doctor_consultation')
 
 
 @csrf_exempt
 def patient_history_ajax(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-
-    consultations = patient.consultations.order_by('-created_at')[:5]
-    admissions = patient.admission_set.order_by('-admission_date')[:5]
-    vitals = patient.vitals_set.order_by('-recorded_at')[:5]
-    notes = patient.nursing_notes.order_by('-note_datetime')[:5]
-    #records = patient.medical_records.order_by('-record_date')[:5]
-    prescriptions = patient.prescriptions.order_by('-created_at')[:5]
-
-    return render(request, 'doctors/history.html', {
-        'patient': patient,
-        'consultations': consultations,
-        'admissions': admissions,
-        'vitals': vitals,
-        'nursing_notes': notes,
-        'medical_records': records,
-        'prescriptions': prescriptions,
-    })
-
-@csrf_exempt
-def add_prescription(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        medication = request.POST.get('medication')
-        instructions = request.POST.get('instructions')
-        start_date = request.POST.get('start_date')
-
-        patient = get_object_or_404(Patient, id=patient_id)
-
-        Prescription.objects.create(
-            patient=patient,
-            medication=medication,
-            instructions=instructions,
-            start_date=start_date,
-            prescribed_by=request.user
-        )
-
-        messages.success(request, f"Prescription added for {patient.full_name}.")
-        return redirect('doctor_consultation')  # Or wherever appropriate
-
-    return redirect('home')
-
-@csrf_exempt
-def request_tests(request):
-    if request.method == "POST":
-        patient_id = request.POST.get('patient_id')
-        tests = request.POST.getlist('test')
-        instructions = request.POST.get('instructions', '').strip()
-
-        if not patient_id or not tests:
-            messages.error(request, "Please select a patient and at least one test.")
-            return redirect(request.META.get('HTTP_REFERER', 'doctor_consultation'))
-
+    """Return patient history as JSON for AJAX requests"""
+    try:
         patient = get_object_or_404(Patient, id=patient_id)
         
-        test_request = LabTest.objects.create(
-            patient=patient,
-            requested_by=request.user,
-            instructions=instructions
-        )
-        test_request.tests.set(tests)  # assuming 'tests' is a list of LabTestType IDs
+        # Get recent consultations
+        consultations = patient.consultations.order_by('-created_at')[:5]
+        consultations_data = []
+        for consultation in consultations:
+            consultations_data.append({
+                'created_at_formatted': consultation.created_at.strftime('%Y-%m-%d %H:%M'),
+                'symptoms': consultation.symptoms,
+                'diagnosis_summary': consultation.diagnosis_summary,
+                'advice': consultation.advice,
+                'doctor_name': consultation.doctor.get_full_name() if consultation.doctor else 'N/A'
+            })
+        
+        # Get recent prescriptions
+        prescriptions = patient.prescriptions.order_by('-created_at')[:5]
+        prescriptions_data = []
+        for prescription in prescriptions:
+            prescriptions_data.append({
+                'created_at_formatted': prescription.created_at.strftime('%Y-%m-%d'),
+                'medication': prescription.medication,
+                'instructions': prescription.instructions,
+                'start_date_formatted': prescription.start_date.strftime('%Y-%m-%d'),
+                'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'N/A'
+            })
+        
+        # Get recent lab tests
+        lab_tests = patient.lab_tests.select_related('category').order_by('-requested_at')[:10]
+        lab_tests_data = []
+        for test in lab_tests:
+            lab_tests_data.append({
+                'requested_at_formatted': test.requested_at.strftime('%Y-%m-%d'),
+                'category_name': test.category.name if test.category else 'N/A',
+                'test_name': test.test_name,
+                'result_value': test.result_value or 'Pending',
+                'normal_range': test.normal_range or 'N/A',
+                'status': test.get_status_display()
+            })
+        
+        # Get recent vitals
+        vitals = patient.vitals_set.order_by('-recorded_at')[:5]
+        vitals_data = []
+        for vital in vitals:
+            vitals_data.append({
+                'recorded_at_formatted': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
+                'blood_pressure': vital.blood_pressure,
+                'temperature': vital.temperature,
+                'pulse': vital.pulse,
+                'respiratory_rate': vital.respiratory_rate,
+                'weight': vital.weight,
+                'height': vital.height,
+                'bmi': vital.bmi,
+                'notes': vital.notes,
+                'recorded_by': vital.recorded_by
+            })
+        
+        # Get recent nursing notes
+        nursing_notes = patient.nursing_notes.order_by('-note_datetime')[:5]
+        nursing_notes_data = []
+        for note in nursing_notes:
+            nursing_notes_data.append({
+                'note_datetime_formatted': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
+                'note_type_display': note.get_note_type_display(),
+                'notes': note.notes,
+                'patient_status': note.patient_status,
+                'nurse': note.nurse,
+                'follow_up': note.follow_up
+            })
+        
+        # Get recent admissions
+        admissions = patient.admission_set.order_by('-admission_date')[:3]
+        admissions_data = []
+        for admission in admissions:
+            admissions_data.append({
+                'admission_date_formatted': admission.admission_date.strftime('%Y-%m-%d'),
+                'doctor_assigned': admission.doctor_assigned,
+                'status': admission.get_status_display(),
+                'discharge_date_formatted': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else 'N/A',
+                'discharge_notes': admission.discharge_notes or 'N/A'
+            })
+        
+        # Prepare response data
+        data = {
+            'patient': {
+                'full_name': patient.full_name,
+                'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
+                'gender': patient.gender,
+                'phone': patient.phone,
+                'blood_group': patient.blood_group,
+                'status': patient.get_status_display(),
+                'marital_status': patient.marital_status,
+                'nationality': patient.nationality,
+                'next_of_kin_name': patient.next_of_kin_name,
+                'next_of_kin_phone': patient.next_of_kin_phone
+            },
+            'consultations': consultations_data,
+            'prescriptions': prescriptions_data,
+            'lab_tests': lab_tests_data,
+            'vitals': vitals_data,
+            'nursing_notes': nursing_notes_data,
+            'admissions': admissions_data
+        }
+        
+        return JsonResponse(data, safe=False)
+        
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Patient not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
-        messages.success(request, "Test request submitted successfully.")
+
+@login_required(login_url='home')
+@csrf_exempt
+def add_prescription(request):
+    """Add prescription for a patient"""
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        medication = request.POST.get('medication', '').strip()
+        instructions = request.POST.get('instructions', '').strip()
+        start_date = request.POST.get('start_date')
+        
+        # Validation
+        if not patient_id or not medication or not instructions or not start_date:
+            messages.error(request, "Please fill in all required fields.")
+            return redirect('doctor_consultation')
+        
+        try:
+            patient = get_object_or_404(Patient, id=patient_id)
+            
+            Prescription.objects.create(
+                patient=patient,
+                medication=medication,
+                instructions=instructions,
+                start_date=start_date,
+                prescribed_by=request.user
+            )
+            
+            messages.success(request, f"Prescription added for {patient.full_name}.")
+        except Exception as e:
+            messages.error(request, f"Error adding prescription: {str(e)}")
+        
         return redirect('doctor_consultation')
-
-    # If GET or other method, redirect or raise error
+    
     return redirect('doctor_consultation')
 
+
+@login_required(login_url='home')
 @csrf_exempt
 def save_care_plan(request):
+    """Save care plan for a patient"""
     if request.method == "POST":
         patient_id = request.POST.get('patient_id')
         clinical_findings = request.POST.get('clinical_findings', '').strip()
         plan_of_care = request.POST.get('plan_of_care', '').strip()
-
+        
+        # Validation
         if not patient_id or not clinical_findings or not plan_of_care:
             messages.error(request, "Please fill in all required fields.")
-            return redirect(request.META.get('HTTP_REFERER', 'doctor_consultation'))
-
-        patient = get_object_or_404(Patient, id=patient_id)
-
-        CarePlan.objects.create(
-            patient=patient,
-            clinical_findings=clinical_findings,
-            plan_of_care=plan_of_care,
-            created_by=request.user
-        )
-
-        messages.success(request, "Care plan saved successfully.")
+            return redirect('doctor_consultation')
+        
+        try:
+            patient = get_object_or_404(Patient, id=patient_id)
+            
+            CarePlan.objects.create(
+                patient=patient,
+                clinical_findings=clinical_findings,
+                plan_of_care=plan_of_care,
+                created_by=request.user
+            )
+            
+            messages.success(request, f"Care plan saved successfully for {patient.full_name}.")
+        except Exception as e:
+            messages.error(request, f"Error saving care plan: {str(e)}")
+        
         return redirect('doctor_consultation')
-
-    # For GET or other methods, redirect somewhere appropriate
+    
     return redirect('doctor_consultation')
 
 @login_required(login_url='home')
