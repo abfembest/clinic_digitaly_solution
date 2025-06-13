@@ -2543,6 +2543,7 @@ def recomended_tests(request):
 
     # Fetch all lab tests
     lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
+    total_patients = Patient.objects.count()
 
     # Group tests by status (corrected 'pending' typo)
     tests_by_status = {
@@ -2588,6 +2589,7 @@ def recomended_tests(request):
     # Statistics
     today = timezone.now().date()
     stats = {
+        'total_patients':total_patients,
         'total_tests': lab_tests.count(),
         'total_pending_tests': tests_by_status['pending'].count(),
         'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
@@ -2597,6 +2599,7 @@ def recomended_tests(request):
     }
 
     context = {
+        "total_patients": total_patients,
         'tests_data': tests_data,
         'test_categories': TestCategory.objects.all(),
         'unique_patients_with_tests': patient_map.values(),  # Only with status='completed' and doctor_comments==0
