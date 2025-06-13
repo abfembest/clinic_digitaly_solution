@@ -6,17 +6,46 @@
 {% block page_title %}Patient Records{% endblock %}
 
 {% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
     <li class="breadcrumb-item active">Patient Records</li>
 {% endblock %}
 
 {% block content %}
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0"><i class="fas fa-notes-medical mr-2"></i>Patient Records</h1>
+                </div><!-- /.col -->
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'access_medical_records' %}">Medical Records</a></li>
+                        <li class="breadcrumb-item active">Patient Records</li>
+                    </ol>
+                </div><!-- /.col -->
+            </div><!-- /.row -->
+        </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.content-header -->
+
     <section class="content">
         <div class="container-fluid">
-            <div class="card">
+            <div class="card card-primary card-outline">
                 <div class="card-header">
-                    <h3 class="card-title">List of All Patients</h3>
+                    <h3 class="card-title"><i class="fas fa-users mr-1"></i> List of All Patients</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-success btn-sm" id="printSelectedRecord" style="display: none;">
+                            <i class="fas fa-print mr-1"></i> Print Full Record (Selected)
+                        </button>
+                    </div>
                     <div class="table-responsive">
                         <table id="patientRecordsTable" class="table table-bordered table-hover text-nowrap mb-0">
                             <thead class="thead-light">
@@ -24,22 +53,42 @@
                                     <th style="width: 50px;">#</th>
                                     <th>Patient Name</th>
                                     <th>Gender</th>
+                                    <th>Date of Birth</th>
+                                    <th>Phone</th>
                                     <th>Blood Group</th>
                                     <th>Status</th>
-                                    <th style="width: 160px;">Actions</th>
+                                    <th style="width: 180px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for patient in patients %}
-                                <tr>
+                                <tr data-patient-id="{{ patient.id }}"> {# Added data-patient-id #}
                                     <td>{{ forloop.counter }}</td>
                                     <td>{{ patient.full_name }}</td>
                                     <td>{{ patient.gender }}</td>
-                                    <td>{{ patient.blood_group }}</td>
-                                    <td>{{ patient.status }}</td>
+                                    <td>{{ patient.date_of_birth }}</td>
+                                    <td>{{ patient.phone|default:"N/A" }}</td>
                                     <td>
-                                        <button class="btn btn-info btn-sm mr-1" data-toggle="modal" data-target="#overviewModal" onclick="loadOverview({{ patient.id }})">Overview</button>
-                                        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#monitoringModal" onclick="loadMonitoring({{ patient.id }})">Monitor</button>
+                                        <span class="badge 
+                                            {% if patient.blood_group == 'A+' %}bg-danger{% elif patient.blood_group == 'B+' %}bg-info{% elif patient.blood_group == 'AB+' %}bg-warning{% elif patient.blood_group == 'O+' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ patient.blood_group }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if patient.status == 'Active' %}bg-success{% elif patient.status == 'Stable' %}bg-info{% elif patient.status == 'Critical' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ patient.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#overviewModal" onclick="loadOverview({{ patient.id }})">
+                                                <i class="fas fa-eye mr-1"></i> Overview
+                                            </button>
+                                            <button class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#monitoringModal" onclick="loadMonitoring({{ patient.id }})">
+                                                <i class="fas fa-chart-line mr-1"></i> Monitor
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -47,23 +96,31 @@
                         </table>
                     </div>
                 </div>
+                <!-- /.card-body -->
             </div>
+            <!-- /.card -->
         </div>
+        <!-- /.container-fluid -->
     </section>
 
+    <!-- Overview Modal -->
     <div class="modal fade" id="overviewModal" tabindex="-1" role="dialog" aria-labelledby="overviewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="overviewModalLabel">Patient Overview</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="overviewModalLabel"><i class="fas fa-user-circle mr-2"></i>Patient Overview</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div id="overviewContent">
-                        <p>Loading patient overview...</p>
-                        <div class="text-center"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div></div>
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-info" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading patient overview...</p>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -73,19 +130,24 @@
         </div>
     </div>
 
+    <!-- Monitoring Modal -->
     <div class="modal fade" id="monitoringModal" tabindex="-1" role="dialog" aria-labelledby="monitoringModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="monitoringModalLabel">Patient Monitoring</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="monitoringModalLabel"><i class="fas fa-heartbeat mr-2"></i>Patient Monitoring Data</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div id="monitorContent">
-                        <p>Loading patient monitoring data...</p>
-                        <div class="text-center"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div></div>
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading patient monitoring data...</p>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -99,9 +161,11 @@
 
 {% block extra_js %}
     <script>
+        let selectedPatientId = null; // Variable to store the ID of the currently selected patient
+
         $(document).ready(function () {
             // DataTables initialization for AdminLTE 3
-            // Check if DataTable is already initialized on this table
+            // Note: DataTables buttons only export visible table data, not modal content.
             if (!$.fn.DataTable.isDataTable('#patientRecordsTable')) {
                 $('#patientRecordsTable').DataTable({
                     "responsive": true,
@@ -115,13 +179,45 @@
                     "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
                 }).buttons().container().appendTo('#patientRecordsTable_wrapper .col-md-6:eq(0)');
             }
+
+            // Event listener for row clicks to enable "Print Full Record" button
+            $('#patientRecordsTable tbody').on('click', 'tr', function() {
+                // Remove 'selected' class from all rows
+                $('#patientRecordsTable tbody tr').removeClass('table-active');
+                // Add 'selected' class to the clicked row
+                $(this).addClass('table-active');
+                
+                selectedPatientId = $(this).data('patient-id');
+                if (selectedPatientId) {
+                    $('#printSelectedRecord').show();
+                } else {
+                    $('#printSelectedRecord').hide();
+                }
+            });
+
+            // Handle click on "Print Full Record" button
+            $('#printSelectedRecord').on('click', function() {
+                if (selectedPatientId) {
+                    printFullMedicalRecord(selectedPatientId);
+                } else {
+                    alert('Please select a patient row first to print their full record.');
+                }
+            });
         });
 
+        // Function to load overview data and display in modal
         function loadOverview(patientId) {
+            selectedPatientId = patientId; // Set selectedPatientId when overview modal is opened
+            $('#printSelectedRecord').show(); // Show print button
+            
             const url = "{% url 'patient_overview' 0 %}".replace('/0', '/' + patientId);
             document.getElementById("overviewContent").innerHTML = `
-                <p>Loading patient overview...</p>
-                <div class="text-center"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div></div>
+                <div class="text-center p-5">
+                    <div class="spinner-border text-info" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading patient overview...</p>
+                </div>
             `;
 
             fetch(url)
@@ -134,61 +230,119 @@
                 .then(data => {
                     let html = `
                         <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Full Name:</strong> ${data.name}</p>
-                                <p><strong>Gender:</strong> ${data.gender}</p>
-                                <p><strong>Blood Group:</strong> ${data.blood_group}</p>
-                                <p><strong>Date of Birth:</strong> ${data.date_of_birth}</p>
-                                <p><strong>Phone:</strong> ${data.phone || 'N/A'}</p>
-                                <p><strong>Address:</strong> ${data.address || 'N/A'}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>Overall Status:</strong> ${data.status}</p>
-                                <p><strong>Is Inpatient:</strong> ${data.is_inpatient ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</p>
-                                <p><strong>Ward:</strong> ${data.ward}</p>
-                                <p><strong>Bed:</strong> ${data.bed}</p>
-                                <p><strong>Diagnosis:</strong> ${data.diagnosis || 'N/A'}</p>
-                                <p><strong>Medication:</strong> ${data.medication || 'N/A'}</p>
-                                <p><strong>Notes:</strong> ${data.notes || 'N/A'}</p>
-                                <p><strong>Referred By:</strong> ${data.referred_by || 'N/A'}</p>
+                            <div class="col-md-12">
+                                <!-- Timeline for Overview -->
+                                <div class="timeline">
+                                    <!-- Patient Demographics -->
+                                    <div>
+                                        <i class="fas fa-user bg-info"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-info-circle"></i> Demographics</span>
+                                            <h3 class="timeline-header"><a href="#">Patient Personal Information</a></h3>
+                                            <div class="timeline-body">
+                                                <p><strong>Full Name:</strong> ${data.name}</p>
+                                                <p><strong>Gender:</strong> ${data.gender}</p>
+                                                <p><strong>Blood Group:</strong> <span class="badge 
+                                                    ${data.blood_group === 'A+' ? 'bg-danger' : 
+                                                      data.blood_group === 'B+' ? 'bg-info' : 
+                                                      data.blood_group === 'AB+' ? 'bg-warning' : 
+                                                      data.blood_group === 'O+' ? 'bg-success' : 'bg-secondary'}">
+                                                    ${data.blood_group}
+                                                </span></p>
+                                                <p><strong>Date of Birth:</strong> ${data.date_of_birth}</p>
+                                                <p><strong>Phone:</strong> ${data.phone || 'N/A'}</p>
+                                                <p><strong>Address:</strong> ${data.address || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- End Patient Demographics -->
+
+                                    <!-- Medical Status -->
+                                    <div>
+                                        <i class="fas fa-stethoscope bg-purple"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clipboard-check"></i> Status</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Medical Status</a></h3>
+                                            <div class="timeline-body">
+                                                <p><strong>Overall Status:</strong> <span class="badge 
+                                                    ${data.status === 'Active' ? 'bg-success' : 
+                                                      data.status === 'Stable' ? 'bg-info' : 
+                                                      data.status === 'Critical' ? 'bg-danger' : 'bg-secondary'}">
+                                                    ${data.status}
+                                                </span></p>
+                                                <p><strong>Is Inpatient:</strong> ${data.is_inpatient ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</p>
+                                                <p><strong>Ward:</strong> ${data.ward || 'N/A'}</p>
+                                                <p><strong>Bed:</strong> ${data.bed || 'N/A'}</p>
+                                                <p><strong>Diagnosis:</strong> ${data.diagnosis || 'N/A'}</p>
+                                                <p><strong>Medication:</strong> ${data.medication || 'N/A'}</p>
+                                                <p><strong>Notes:</strong> ${data.notes || 'N/A'}</p>
+                                                <p><strong>Referred By:</strong> ${data.referred_by || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- End Medical Status -->
+
+                                    ${data.last_vitals ? `
+                                    <!-- Last Vitals -->
+                                    <div>
+                                        <i class="fas fa-heartbeat bg-success"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Last Vitals</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Latest Vital Signs</a></h3>
+                                            <div class="timeline-body">
+                                                <p><strong>Recorded At:</strong> ${data.last_vitals.date}</p>
+                                                <p><strong>Temperature:</strong> ${data.last_vitals.temperature}°C</p>
+                                                <p><strong>Blood Pressure:</strong> ${data.last_vitals.blood_pressure}</p>
+                                                <p><strong>Pulse:</strong> ${data.last_vitals.pulse} bpm</p>
+                                                <p><strong>Respiratory Rate:</strong> ${data.last_vitals.respiratory_rate}</p>
+                                                <p><strong>Weight:</strong> ${data.last_vitals.weight} kg</p>
+                                                <p><strong>Height:</strong> ${data.last_vitals.height} cm</p>
+                                                <p><strong>BMI:</strong> ${data.last_vitals.bmi}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- End Last Vitals -->
+                                    ` : `
+                                    <div>
+                                        <i class="fas fa-exclamation-triangle bg-warning"></i>
+                                        <div class="timeline-item">
+                                            <h3 class="timeline-header no-border"><a href="#">No Recent Vital Signs</a></h3>
+                                            <div class="timeline-body">
+                                                <p class="alert alert-warning mb-0"><i class="fas fa-info-circle mr-2"></i>No recent vital signs recorded for this patient.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    `}
+                                    
+                                    <div>
+                                        <i class="fas fa-clock bg-gray"></i>
+                                    </div>
+                                </div>
+                                <!-- /.timeline -->
                             </div>
                         </div>
                     `;
-                    
-                    if (data.last_vitals) {
-                        html += `
-                            <h4 class="mt-4">Last Vitals:</h4>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Recorded At:</strong> ${data.last_vitals.date}</p>
-                                    <p><strong>Temperature:</strong> ${data.last_vitals.temperature}°C</p>
-                                    <p><strong>Blood Pressure:</strong> ${data.last_vitals.blood_pressure}</p>
-                                    <p><strong>Pulse:</strong> ${data.last_vitals.pulse} bpm</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Respiratory Rate:</strong> ${data.last_vitals.respiratory_rate}</p>
-                                    <p><strong>Weight:</strong> ${data.last_vitals.weight} kg</p>
-                                    <p><strong>Height:</strong> ${data.last_vitals.height} cm</p>
-                                    <p><strong>BMI:</strong> ${data.last_vitals.bmi}</p>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        html += `<p class="mt-4 alert alert-warning">No recent vital signs recorded for this patient.</p>`;
-                    }
                     document.getElementById("overviewContent").innerHTML = html;
                 })
                 .catch(error => {
-                    document.getElementById("overviewContent").innerHTML = `<p class="alert alert-danger">Error loading overview data: ${error.message}. Please try again.</p>`;
+                    document.getElementById("overviewContent").innerHTML = `<p class="alert alert-danger"><i class="fas fa-times-circle mr-2"></i>Error loading overview data: ${error.message}. Please try again.</p>`;
                     console.error("Error fetching patient overview:", error);
                 });
         }
 
+        // Function to load monitoring data and display in modal
         function loadMonitoring(patientId) {
+            selectedPatientId = patientId; // Set selectedPatientId when monitoring modal is opened
+            $('#printSelectedRecord').show(); // Show print button
+
             const url = "{% url 'patient_monitor' 0 %}".replace('/0', '/' + patientId);
             document.getElementById("monitorContent").innerHTML = `
-                <p>Loading patient monitoring data...</p>
-                <div class="text-center"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div></div>
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading patient monitoring data...</p>
+                </div>
             `;
 
             fetch(url)
@@ -201,156 +355,532 @@
                 .then(data => {
                     let html = `
                         <div class="row">
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Consultations:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.consultations && data.consultations.length > 0) {
-                        data.consultations.forEach(c => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">Consultation Date: ${c.date}</h5>
+                            <div class="col-md-12">
+                                <!-- Timeline -->
+                                <div class="timeline">
+                                    ${data.consultations && data.consultations.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-comments bg-blue"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Consultations</span>
+                                            <h3 class="timeline-header"><a href="#">Patient Consultations</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.consultations.map(c => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <div class="d-flex w-100 justify-content-between">
+                                                                <h5 class="mb-1 text-primary">Consultation Date: ${c.date}</h5>
+                                                                <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>${c.date}</small>
+                                                            </div>
+                                                            <p class="mb-1"><strong>Diagnosis Summary:</strong> ${c.diagnosis_summary || 'N/A'}</p>
+                                                            <p class="mb-1"><small class="text-muted"><strong>Symptoms:</strong> ${c.symptoms || 'N/A'}</small></p>
+                                                            <p class="mb-0"><small class="text-muted"><strong>Advice:</strong> ${c.advice || 'N/A'}</small></p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p class="mb-1"><strong>Diagnosis Summary:</strong> ${c.diagnosis_summary || 'N/A'}</p>
-                                    <small class="text-muted"><strong>Symptoms:</strong> ${c.symptoms || 'N/A'}</small><br>
-                                    <small class="text-muted"><strong>Advice:</strong> ${c.advice || 'N/A'}</small>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No consultations recorded.</div>`;
-                    }
-                    html += `</div>
-                            </div>
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Prescriptions:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.prescriptions && data.prescriptions.length > 0) {
-                        data.prescriptions.forEach(p => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">Prescription Date: ${p.date}</h5>
-                                    </div>
-                                    <p class="mb-1"><strong>Medication:</strong> ${p.medication || 'N/A'}</p>
-                                    <small class="text-muted"><strong>Instructions:</strong> ${p.instructions || 'N/A'}</small><br>
-                                    <small class="text-muted"><strong>Start Date:</strong> ${p.start_date || 'N/A'}</small>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No prescriptions recorded.</div>`;
-                    }
-                    html += `</div>
-                            </div>
-                        </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
 
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Lab Tests:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.lab_tests && data.lab_tests.length > 0) {
-                        data.lab_tests.forEach(lt => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">Test: ${lt.test_name || 'N/A'}</h5>
-                                        <small class="text-${lt.status === 'completed' ? 'success' : 'warning'}">${lt.status}</small>
+                                    ${data.prescriptions && data.prescriptions.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-prescription-bottle-alt bg-success"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Prescriptions</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Patient Prescriptions</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.prescriptions.map(p => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <div class="d-flex w-100 justify-content-between">
+                                                                <h5 class="mb-1 text-success">Prescription Date: ${p.date}</h5>
+                                                                <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>${p.date}</small>
+                                                            </div>
+                                                            <p class="mb-1"><strong>Medication:</strong> ${p.medication || 'N/A'}</p>
+                                                            <p class="mb-1"><small class="text-muted"><strong>Instructions:</strong> ${p.instructions || 'N/A'}</small></p>
+                                                            <p class="mb-0"><small class="text-muted"><strong>Start Date:</strong> ${p.start_date || 'N/A'}</small></p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p class="mb-1"><strong>Category:</strong> ${lt.category || 'N/A'}</p>
-                                    <p class="mb-1"><strong>Result:</strong> ${lt.result_value || 'N/A'}</p>
-                                    <small class="text-muted"><strong>Requested At:</strong> ${lt.requested_at || 'N/A'}</small><br>
-                                    <small class="text-muted"><strong>Date Performed:</strong> ${lt.date_performed || 'N/A'}</small>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No lab tests recorded.</div>`;
-                    }
-                    html += `</div>
-                            </div>
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Nursing Notes:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.nursing_notes && data.nursing_notes.length > 0) {
-                        data.nursing_notes.forEach(nn => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">Note Type: ${nn.note_type || 'N/A'}</h5>
-                                        <small class="text-muted">Date: ${nn.date}</small>
-                                    </div>
-                                    <p class="mb-1"><strong>Notes:</strong> ${nn.notes || 'N/A'}</p>
-                                    <small class="text-muted"><strong>Patient Status:</strong> ${nn.patient_status || 'N/A'}</small>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No nursing notes recorded.</div>`;
-                    }
-                    html += `</div>
-                            </div>
-                        </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
 
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Care Plans:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.care_plans && data.care_plans.length > 0) {
-                        data.care_plans.forEach(cp => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">Created At: ${cp.created_at}</h5>
+                                    ${data.lab_tests && data.lab_tests.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-flask bg-warning"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Lab Tests</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Patient Lab Tests</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.lab_tests.map(lt => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <div class="d-flex w-100 justify-content-between">
+                                                                <h5 class="mb-1 text-warning">Test: ${lt.test_name || 'N/A'}</h5>
+                                                                <small class="text-${lt.status === 'completed' ? 'success' : 'warning'}"><i class="fas fa-info-circle mr-1"></i>${lt.status}</small>
+                                                            </div>
+                                                            <p class="mb-1"><strong>Category:</strong> ${lt.category || 'N/A'}</p>
+                                                            <p class="mb-1"><strong>Result:</strong> ${lt.result_value || 'N/A'}</p>
+                                                            <p class="mb-1"><small class="text-muted"><strong>Requested At:</strong> ${lt.requested_at || 'N/A'}</small></p>
+                                                            <p class="mb-0"><small class="text-muted"><strong>Date Performed:</strong> ${lt.date_performed || 'N/A'}</small></p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p class="mb-1"><strong>Clinical Findings:</strong> ${cp.clinical_findings || 'N/A'}</p>
-                                    <small class="text-muted"><strong>Plan of Care:</strong> ${cp.plan_of_care || 'N/A'}</small>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No care plans recorded.</div>`;
-                    }
-                    html += `</div>
-                            </div>
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Referrals:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.referrals && data.referrals.length > 0) {
-                        data.referrals.forEach(r => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <h5 class="mb-1">Department: ${r.department || 'N/A'}</h5>
-                                    <p class="mb-1"><strong>Notes:</strong> ${r.notes || 'N/A'}</p>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No referrals recorded.</div>`;
-                    }
-                    html += `</div>
-                            </div>
-                        </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
 
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <h4 class="mb-3">Appointments:</h4>
-                                <div class="list-group mb-4">`;
-                    if (data.appointments && data.appointments.length > 0) {
-                        data.appointments.forEach(a => {
-                            html += `
-                                <div class="list-group-item list-group-item-action flex-column align-items-start">
-                                    <h5 class="mb-1">Department: ${a.department || 'N/A'}</h5>
-                                    <p class="mb-1"><strong>Scheduled Time:</strong> ${a.scheduled_time || 'N/A'}</p>
-                                </div>`;
-                        });
-                    } else {
-                        html += `<div class="list-group-item alert alert-info">No appointments recorded.</div>`;
-                    }
-                    html += `</div>
+                                    ${data.nursing_notes && data.nursing_notes.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-notes-medical bg-danger"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Nursing Notes</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Nursing Notes</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.nursing_notes.map(nn => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <div class="d-flex w-100 justify-content-between">
+                                                                <h5 class="mb-1 text-danger">Note Type: ${nn.note_type || 'N/A'}</h5>
+                                                                <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>Date: ${nn.date}</small>
+                                                            </div>
+                                                            <p class="mb-1"><strong>Notes:</strong> ${nn.notes || 'N/A'}</p>
+                                                            <p class="mb-0"><small class="text-muted"><strong>Patient Status:</strong> ${nn.patient_status || 'N/A'}</small></p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
+
+                                    ${data.care_plans && data.care_plans.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-clipboard-list bg-fuchsia"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Care Plans</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Care Plans</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.care_plans.map(cp => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <div class="d-flex w-100 justify-content-between">
+                                                                <h5 class="mb-1 text-fuchsia">Created At: ${cp.created_at}</h5>
+                                                                <small class="text-muted"><i class="fas fa-calendar-alt mr-1"></i>${cp.created_at}</small>
+                                                            </div>
+                                                            <p class="mb-1"><strong>Clinical Findings:</strong> ${cp.clinical_findings || 'N/A'}</p>
+                                                            <p class="mb-0"><small class="text-muted"><strong>Plan of Care:</strong> ${cp.plan_of_care || 'N/A'}</small></p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
+
+                                    ${data.referrals && data.referrals.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-share-square bg-teal"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Referrals</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Patient Referrals</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.referrals.map(r => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <h5 class="mb-1 text-teal">Department: ${r.department || 'N/A'}</h5>
+                                                            <p class="mb-0"><strong>Notes:</strong> ${r.notes || 'N/A'}</p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
+
+                                    ${data.appointments && data.appointments.length > 0 ? `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="fas fa-calendar-check bg-purple"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> Appointments</span>
+                                            <h3 class="timeline-header no-border"><a href="#">Scheduled Appointments</a></h3>
+                                            <div class="timeline-body">
+                                                <div class="list-group">
+                                                    ${data.appointments.map(a => `
+                                                        <div class="list-group-item list-group-item-action flex-column align-items-start mb-2 rounded">
+                                                            <h5 class="mb-1 text-purple">Department: ${a.department || 'N/A'}</h5>
+                                                            <p class="mb-0"><strong>Scheduled Time:</strong> ${a.scheduled_time || 'N/A'}</p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END timeline item -->
+                                    ` : ''}
+                                    
+                                    <div>
+                                        <i class="fas fa-clock bg-gray"></i>
+                                    </div>
+                                </div>
+                                <!-- /.timeline -->
                             </div>
                         </div>
                     `;
                     document.getElementById("monitorContent").innerHTML = html;
                 })
                 .catch(error => {
-                    document.getElementById("monitorContent").innerHTML = `<p class="alert alert-danger">Error loading monitoring data: ${error.message}. Please try again.</p>`;
+                    document.getElementById("monitorContent").innerHTML = `<p class="alert alert-danger"><i class="fas fa-times-circle mr-2"></i>Error loading monitoring data: ${error.message}. Please try again.</p>`;
                     console.error("Error fetching patient monitoring data:", error);
                 });
+        }
+
+        // Function to print the full medical record
+        async function printFullMedicalRecord(patientId) {
+            const overviewUrl = "{% url 'patient_overview' 0 %}".replace('/0', '/' + patientId);
+            const monitorUrl = "{% url 'patient_monitor' 0 %}".replace('/0', '/' + patientId);
+
+            try {
+                const [overviewRes, monitorRes] = await Promise.all([
+                    fetch(overviewUrl),
+                    fetch(monitorUrl)
+                ]);
+
+                if (!overviewRes.ok) throw new Error('Overview data network response was not ok ' + overviewRes.statusText);
+                if (!monitorRes.ok) throw new Error('Monitoring data network response was not ok ' + monitorRes.statusText);
+
+                const overviewData = await overviewRes.json();
+                const monitorData = await monitorRes.json();
+
+                let printContentHtml = `
+                    <style>
+                        body { font-family: 'Source Sans Pro', sans-serif; padding: 20px; color: #333; margin: 0; }
+                        h1, h2, h3, h4 { color: #333; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+                        .section-title { font-size: 20px; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+                        .sub-section-title { font-size: 18px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        table th { background-color: #f2f2f2; font-weight: bold; }
+                        .badge { display: inline-block; padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+                        .bg-danger { background-color: #dc3545!important; color: #fff; }
+                        .bg-info { background-color: #17a2b8!important; color: #fff; }
+                        .bg-warning { background-color: #ffc107!important; color: #1f2d3d; }
+                        .bg-success { background-color: #28a745!important; color: #fff; }
+                        .bg-secondary { background-color: #6c757d!important; color: #fff; }
+                        .text-muted { color: #6c757d !important; }
+                        .alert { padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: .25rem; }
+                        .alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
+                        .alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+                        .mb-0 { margin-bottom: 0!important; }
+                        .mr-2 { margin-right: .5rem!important; }
+
+                        @page { size: A4; margin: 2cm; }
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; margin: 0; padding: 0; }
+                            .no-print { display: none !important; }
+                            .badge { color: #fff !important; }
+                            .bg-danger { background-color: #dc3545!important; }
+                            .bg-info { background-color: #17a2b8!important; }
+                            .bg-warning { background-color: #ffc107!important; }
+                            .bg-success { background-color: #28a745!important; }
+                            .bg-secondary { background-color: #6c757d!important; }
+                        }
+                    </style>
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1>Full Medical Record: ${overviewData.name}</h1>
+                        <p>Generated on: ${new Date().toLocaleDateString()}</p>
+                    </div>
+
+                    <div class="record-section">
+                        <h2 class="section-title"><i class="fas fa-user-circle mr-2"></i>Patient Overview</h2>
+                        <h3>Demographics</h3>
+                        <table>
+                            <tr><th>Full Name</th><td>${overviewData.name}</td></tr>
+                            <tr><th>Gender</th><td>${overviewData.gender}</td></tr>
+                            <tr><th>Blood Group</th><td><span class="badge 
+                                ${overviewData.blood_group === 'A+' ? 'bg-danger' : 
+                                  overviewData.blood_group === 'B+' ? 'bg-info' : 
+                                  overviewData.blood_group === 'AB+' ? 'bg-warning' : 
+                                  overviewData.blood_group === 'O+' ? 'bg-success' : 'bg-secondary'}">
+                                ${overviewData.blood_group}
+                            </span></td></tr>
+                            <tr><th>Date of Birth</th><td>${overviewData.date_of_birth}</td></tr>
+                            <tr><th>Phone</th><td>${overviewData.phone || 'N/A'}</td></tr>
+                            <tr><th>Address</th><td>${overviewData.address || 'N/A'}</td></tr>
+                        </table>
+
+                        <h3>Medical Status</h3>
+                        <table>
+                            <tr><th>Overall Status</th><td><span class="badge 
+                                ${overviewData.status === 'Active' ? 'bg-success' : 
+                                  overviewData.status === 'Stable' ? 'bg-info' : 
+                                  overviewData.status === 'Critical' ? 'bg-danger' : 'bg-secondary'}">
+                                ${overviewData.status}
+                            </span></td></tr>
+                            <tr><th>Is Inpatient</th><td>${overviewData.is_inpatient ? 'Yes' : 'No'}</td></tr>
+                            <tr><th>Ward</th><td>${overviewData.ward || 'N/A'}</td></tr>
+                            <tr><th>Bed</th><td>${overviewData.bed || 'N/A'}</td></tr>
+                            <tr><th>Diagnosis</th><td>${overviewData.diagnosis || 'N/A'}</td></tr>
+                            <tr><th>Medication</th><td>${overviewData.medication || 'N/A'}</td></tr>
+                            <tr><th>Notes</th><td>${overviewData.notes || 'N/A'}</td></tr>
+                            <tr><th>Referred By</th><td>${overviewData.referred_by || 'N/A'}</td></tr>
+                        </table>
+
+                        <h3>Latest Vital Signs</h3>
+                        ${overviewData.last_vitals ? `
+                        <table>
+                            <tr><th>Recorded At</th><td>${overviewData.last_vitals.date}</td></tr>
+                            <tr><th>Temperature</th><td>${overviewData.last_vitals.temperature}°C</td></tr>
+                            <tr><th>Blood Pressure</th><td>${overviewData.last_vitals.blood_pressure}</td></tr>
+                            <tr><th>Pulse</th><td>${overviewData.last_vitals.pulse} bpm</td></tr>
+                            <tr><th>Respiratory Rate</th><td>${overviewData.last_vitals.respiratory_rate}</td></tr>
+                            <tr><th>Weight</th><td>${overviewData.last_vitals.weight} kg</td></tr>
+                            <tr><th>Height</th><td>${overviewData.last_vitals.height} cm</td></tr>
+                            <tr><th>BMI</th><td>${overviewData.last_vitals.bmi}</td></tr>
+                        </table>
+                        ` : `<p class="alert alert-warning mb-0"><i class="fas fa-info-circle mr-2"></i>No recent vital signs recorded for this patient.</p>`}
+                    </div>
+
+                    <div class="record-section" style="margin-top: 40px;">
+                        <h2 class="section-title"><i class="fas fa-history mr-2"></i>Patient Monitoring History</h2>
+                        
+                        ${monitorData.consultations && monitorData.consultations.length > 0 ? `
+                        <h3 class="sub-section-title">Consultations</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Diagnosis Summary</th>
+                                    <th>Symptoms</th>
+                                    <th>Advice</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.consultations.map(c => `
+                                    <tr>
+                                        <td>${c.date}</td>
+                                        <td>${c.diagnosis_summary || 'N/A'}</td>
+                                        <td>${c.symptoms || 'N/A'}</td>
+                                        <td>${c.advice || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No consultations recorded.</p>`}
+
+                        ${monitorData.prescriptions && monitorData.prescriptions.length > 0 ? `
+                        <h3 class="sub-section-title">Prescriptions</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Medication</th>
+                                    <th>Instructions</th>
+                                    <th>Start Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.prescriptions.map(p => `
+                                    <tr>
+                                        <td>${p.date}</td>
+                                        <td>${p.medication || 'N/A'}</td>
+                                        <td>${p.instructions || 'N/A'}</td>
+                                        <td>${p.start_date || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No prescriptions recorded.</p>`}
+
+                        ${monitorData.lab_tests && monitorData.lab_tests.length > 0 ? `
+                        <h3 class="sub-section-title">Lab Tests</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Test Name</th>
+                                    <th>Category</th>
+                                    <th>Result</th>
+                                    <th>Status</th>
+                                    <th>Requested At</th>
+                                    <th>Performed At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.lab_tests.map(lt => `
+                                    <tr>
+                                        <td>${lt.test_name || 'N/A'}</td>
+                                        <td>${lt.category || 'N/A'}</td>
+                                        <td>${lt.result_value || 'N/A'}</td>
+                                        <td><span class="badge ${lt.status === 'completed' ? 'bg-success' : 'bg-warning'}">${lt.status}</span></td>
+                                        <td>${lt.requested_at || 'N/A'}</td>
+                                        <td>${lt.date_performed || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No lab tests recorded.</p>`}
+
+                        ${monitorData.nursing_notes && monitorData.nursing_notes.length > 0 ? `
+                        <h3 class="sub-section-title">Nursing Notes</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Note Type</th>
+                                    <th>Notes</th>
+                                    <th>Patient Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.nursing_notes.map(nn => `
+                                    <tr>
+                                        <td>${nn.date}</td>
+                                        <td>${nn.note_type || 'N/A'}</td>
+                                        <td>${nn.notes || 'N/A'}</td>
+                                        <td>${nn.patient_status || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No nursing notes recorded.</p>`}
+
+                        ${monitorData.care_plans && monitorData.care_plans.length > 0 ? `
+                        <h3 class="sub-section-title">Care Plans</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Created At</th>
+                                    <th>Clinical Findings</th>
+                                    <th>Plan of Care</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.care_plans.map(cp => `
+                                    <tr>
+                                        <td>${cp.created_at}</td>
+                                        <td>${cp.clinical_findings || 'N/A'}</td>
+                                        <td>${cp.plan_of_care || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No care plans recorded.</p>`}
+
+                        ${monitorData.referrals && monitorData.referrals.length > 0 ? `
+                        <h3 class="sub-section-title">Referrals</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.referrals.map(r => `
+                                    <tr>
+                                        <td>${r.department || 'N/A'}</td>
+                                        <td>${r.notes || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No referrals recorded.</p>`}
+
+                        ${monitorData.appointments && monitorData.appointments.length > 0 ? `
+                        <h3 class="sub-section-title">Appointments</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Scheduled Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${monitorData.appointments.map(a => `
+                                    <tr>
+                                        <td>${a.department || 'N/A'}</td>
+                                        <td>${a.scheduled_time || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<p class="alert alert-info">No appointments recorded.</p>`}
+                    </div>
+                `;
+                
+                const printWindow = window.open('', '_blank', 'width=900,height=800,scrollbars=yes');
+                printWindow.document.write('<!DOCTYPE html><html><head><title>Full Medical Record - ' + overviewData.name + '</title>');
+                // Include necessary CSS for styling the printout
+                printWindow.document.write(`
+                    <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
+                    <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+                    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Source Sans Pro', sans-serif; padding: 20px; color: #333; margin: 0; }
+                        h1, h2, h3, h4 { color: #333; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+                        .section-title { font-size: 20px; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+                        .sub-section-title { font-size: 18px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        table th { background-color: #f2f2f2; font-weight: bold; }
+                        .badge { display: inline-block; padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+                        .bg-danger { background-color: #dc3545!important; color: #fff; }
+                        .bg-info { background-color: #17a2b8!important; color: #fff; }
+                        .bg-warning { background-color: #ffc107!important; color: #1f2d3d; }
+                        .bg-success { background-color: #28a745!important; color: #fff; }
+                        .bg-secondary { background-color: #6c757d!important; color: #fff; }
+                        .text-muted { color: #6c757d !important; }
+                        .alert { padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent; border-radius: .25rem; }
+                        .alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
+                        .alert-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; } /* Added alert-info for print styles */
+                        .alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+                        .mb-0 { margin-bottom: 0!important; }
+                        .mr-2 { margin-right: .5rem!important; }
+
+                        @page { size: A4; margin: 2cm; }
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; margin: 0; padding: 0; }
+                            .no-print { display: none !important; }
+                            .badge { color: #fff !important; }
+                            .bg-danger { background-color: #dc3545!important; }
+                            .bg-info { background-color: #17a2b8!important; }
+                            .bg-warning { background-color: #ffc107!important; }
+                            .bg-success { background-color: #28a745!important; }
+                            .bg-secondary { background-color: #6c757d!important; }
+                        }
+                    </style>
+                `);
+                printWindow.document.write('</head><body>' + printContentHtml + '</body></html>');
+                printWindow.document.close();
+
+                // Wait for styles to apply before printing
+                printWindow.onload = function() {
+                    printWindow.print();
+                    printWindow.close();
+                };
+
+            } catch (error) {
+                console.error("Error printing full medical record:", error);
+                // Using alert for immediate user feedback on print error
+                alert(`Error generating full medical record for print: ${error.message}. Please try again.`);
+            }
         }
     </script>
 {% endblock %}

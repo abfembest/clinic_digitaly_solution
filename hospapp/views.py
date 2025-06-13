@@ -2811,6 +2811,51 @@ import csv
 from reportlab.pdfgen import canvas
 import io
 
+def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_datetime_field=True):
+    """
+    Applies date range filtering to a queryset based on a specified date/datetime field.
+
+    Args:
+        queryset: The Django queryset to filter.
+        date_from_str (str): The start date string in YYYY-MM-DD format (can be None).
+        date_to_str (str): The end date string in YYYY-MM-DD format (can be None).
+        date_field_name (str): The name of the date/datetime field on the model to filter by.
+        is_datetime_field (bool): Whether the field is a DateTimeField (True) or DateField (False).
+    """
+    parsed_date_from = None
+    parsed_date_to = None
+
+    if date_from_str:
+        try:
+            parsed_date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError(f"Invalid start date format '{date_from_str}'. Use YYYY-MM-DD.")
+    
+    if date_to_str:
+        try:
+            parsed_date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError(f"Invalid end date format '{date_to_str}'. Use YYYY-MM-DD.")
+
+    if parsed_date_from:
+        if is_datetime_field:
+            # Use __date for DateTimeField to filter by the date part only
+            queryset = queryset.filter(**{f"{date_field_name}__date__gte": parsed_date_from})
+        else:
+            # Direct comparison for DateField
+            queryset = queryset.filter(**{f"{date_field_name}__gte": parsed_date_from})
+    
+    if parsed_date_to:
+        if is_datetime_field:
+            # Use __date for DateTimeField to filter by the date part only
+            queryset = queryset.filter(**{f"{date_field_name}__date__lte": parsed_date_to})
+        else:
+            # Direct comparison for DateField
+            queryset = queryset.filter(**{f"{date_field_name}__lte": parsed_date_to})
+
+    return queryset
+
+
 def fetch_patient_activity(request):
     """
     Comprehensive AJAX view to fetch all patient medical records and activity
@@ -2819,8 +2864,8 @@ def fetch_patient_activity(request):
         return JsonResponse({'error': 'Only GET method allowed'}, status=405)
 
     patient_id = request.GET.get('patient_id')
-    date_from_param = request.GET.get('date_from') # Get raw string from request
-    date_to_param = request.GET.get('date_to')     # Get raw string from request
+    date_from_param = request.GET.get('date_from')
+    date_to_param = request.GET.get('date_to')
 
     if not patient_id:
         return JsonResponse({'error': 'Patient ID is required'}, status=400)
@@ -2829,47 +2874,9 @@ def fetch_patient_activity(request):
         # Get patient with error handling
         patient = get_object_or_404(Patient, id=patient_id)
 
-        # --- IMPORTANT: Handle default date_to here ---
         # If date_to is not provided, set it to today's date as a string
         if not date_to_param:
             date_to_param = date.today().strftime('%Y-%m-%d')
-        # --- END IMPORTANT ---
-
-        # The apply_date_filter function. Keeping it nested as per your code,
-        # but generally for reusability, it's better defined at the module level.
-        def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name):
-            """
-            Applies date range filtering to a queryset based on a specified date/datetime field.
-
-            Args:
-                queryset: The Django queryset to filter.
-                date_from_str (str): The start date string in YYYY-MM-DD format (can be None).
-                date_to_str (str): The end date string in YYYY-MM-DD format (can be None).
-                date_field_name (str): The name of the date/datetime field on the model to filter by.
-            """
-            parsed_date_from = None
-            parsed_date_to = None
-
-            if date_from_str:
-                try:
-                    parsed_date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
-                except ValueError:
-                    raise ValueError(f"Invalid start date format '{date_from_str}'. Use YYYY-MM-DD.")
-            if date_to_str:
-                try:
-                    parsed_date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
-                except ValueError:
-                    raise ValueError(f"Invalid end date format '{date_to_str}'. Use YYYY-MM-DD.")
-
-            if parsed_date_from:
-                # Use __date for DateTimeField to filter by the date part only
-                # If date_field_name refers to a DateField, __date is harmless but redundant.
-                queryset = queryset.filter(**{f"{date_field_name}__date__gte": parsed_date_from})
-            if parsed_date_to:
-                # Use __date for DateTimeField to filter by the date part only
-                queryset = queryset.filter(**{f"{date_field_name}__date__lte": parsed_date_to})
-
-            return queryset
 
         # === FETCH ALL PATIENT DATA ===
 
@@ -2923,13 +2930,13 @@ def fetch_patient_activity(request):
             'referred_by': patient.referred_by or '',
         }
 
-        # --- CORRECTED CALLS TO apply_date_filter ---
         # 2. CONSULTATIONS
         consultations_qs = apply_date_filter(
             patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
-            date_from_param,  # Pass the raw date string from request
-            date_to_param,    # Pass the raw date string from request (will be today if not provided)
-            'created_at'
+            date_from_param,
+            date_to_param,
+            'created_at',
+            is_datetime_field=True
         )
         consultations = []
         for consultation in consultations_qs:
@@ -2948,7 +2955,8 @@ def fetch_patient_activity(request):
             patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
             date_from_param,
             date_to_param,
-            'created_at'
+            'created_at',
+            is_datetime_field=True
         )
         prescriptions = []
         for prescription in prescriptions_qs:
@@ -2966,7 +2974,8 @@ def fetch_patient_activity(request):
             Vitals.objects.filter(patient=patient).order_by('-recorded_at'),
             date_from_param,
             date_to_param,
-            'recorded_at'
+            'recorded_at',
+            is_datetime_field=True
         )
         vitals = []
         for vital in vitals_qs:
@@ -2984,15 +2993,13 @@ def fetch_patient_activity(request):
                 'notes': vital.notes or '',
             })
 
-        # ====================================================================
         # 5. LAB TESTS & RESULTS (Grouped by test_request_id UUID)
-        # ====================================================================
-
         lab_tests_qs = apply_date_filter(
             patient.lab_tests.select_related('category', 'performed_by', 'requested_by', 'recorded_by').order_by('-requested_at'),
             date_from_param,
             date_to_param,
-            'requested_at'
+            'requested_at',
+            is_datetime_field=True
         )
 
         # Group tests by the UUID (test_request_id)
@@ -3096,16 +3103,13 @@ def fetch_patient_activity(request):
 
         lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True)
 
-        # ====================================================================
-        # END OF LAB TEST GROUPING LOGIC
-        # ====================================================================
-
         # 6. NURSING NOTES
         nursing_notes_qs = apply_date_filter(
             patient.nursing_notes.order_by('-note_datetime'),
             date_from_param,
             date_to_param,
-            'note_datetime'
+            'note_datetime',
+            is_datetime_field=True
         )
         nursing_notes = []
         for note in nursing_notes_qs:
@@ -3126,7 +3130,8 @@ def fetch_patient_activity(request):
             Admission.objects.filter(patient=patient).order_by('-admission_date'),
             date_from_param,
             date_to_param,
-            'admission_date'
+            'admission_date',
+            is_datetime_field=False  # admission_date is DateField
         )
         admissions = []
         for admission in admissions_qs:
@@ -3148,7 +3153,8 @@ def fetch_patient_activity(request):
             CarePlan.objects.filter(patient=patient).select_related('created_by').order_by('-created_at'),
             date_from_param,
             date_to_param,
-            'created_at'
+            'created_at',
+            is_datetime_field=True
         )
         care_plans = []
         for plan in care_plans_qs:
@@ -3160,20 +3166,14 @@ def fetch_patient_activity(request):
                 'plan_of_care': plan.plan_of_care,
             })
 
-        # 9. REFERRALS (Assuming 'created_at' for this model too, adjust if different)
-        referrals_qs = apply_date_filter(
-            Referral.objects.filter(patient=patient).select_related('department').order_by('-created_at'),
-            date_from_param,
-            date_to_param,
-            'created_at' # Ensure 'created_at' exists on Referral model
-        )
+        # 9. REFERRALS (No date filtering since Referral model doesn't have created_at)
         referrals = []
+        referrals_qs = Referral.objects.filter(patient=patient).select_related('department')
         for referral in referrals_qs:
             referrals.append({
                 'id': referral.id,
                 'department': referral.department.name,
                 'notes': referral.notes,
-                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(referral, 'created_at') else '',
             })
 
         # 10. APPOINTMENTS
@@ -3181,7 +3181,8 @@ def fetch_patient_activity(request):
             Appointment.objects.filter(patient=patient).select_related('department').order_by('-scheduled_time'),
             date_from_param,
             date_to_param,
-            'scheduled_time'
+            'scheduled_time',
+            is_datetime_field=True
         )
         appointments = []
         for appointment in appointments_qs:
@@ -3196,7 +3197,8 @@ def fetch_patient_activity(request):
             patient.bills.prefetch_related('items__service_type').order_by('-created_at'),
             date_from_param,
             date_to_param,
-            'created_at'
+            'created_at',
+            is_datetime_field=True
         )
         bills = []
         for bill in bills_qs:
@@ -3230,7 +3232,8 @@ def fetch_patient_activity(request):
             patient.payments.select_related('processed_by', 'bill').order_by('-payment_date'),
             date_from_param,
             date_to_param,
-            'payment_date'
+            'payment_date',
+            is_datetime_field=True
         )
         payments = []
         for payment in payments_qs:
@@ -3253,7 +3256,8 @@ def fetch_patient_activity(request):
             HandoverLog.objects.filter(patient=patient).select_related('author').order_by('-timestamp'),
             date_from_param,
             date_to_param,
-            'timestamp'
+            'timestamp',
+            is_datetime_field=True
         )
         handover_logs = []
         for log in handover_logs_qs:
@@ -3313,7 +3317,7 @@ def fetch_patient_activity(request):
 
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
-    except ValueError as e: # Catch specific ValueError from date parsing in apply_date_filter
+    except ValueError as e:
         return JsonResponse({'error': f'Date format error: {str(e)}'}, status=400)
     except Exception as e:
         logger.error(f"Error in fetch_patient_activity: {str(e)}", exc_info=True)
