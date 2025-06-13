@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
+from uuid import uuid4
 
 # =============================================================================
 # CORE SYSTEM MODELS (Alphabetical)
@@ -244,12 +245,16 @@ class LabResultFile(models.Model):
 
 class LabTest(models.Model):
     """Main lab test model - consolidated from multiple test models"""
+
     STATUS_CHOICES = [
         ('cancelled', 'Cancelled'),
         ('completed', 'Completed'),
         ('in_progress', 'In Progress'),
         ('pending', 'Pending'),
     ]
+
+    # Optional grouping field for bulk requests
+    test_request_id = models.UUIDField(default=uuid4, editable=False, db_index=True)
 
     # Test identification
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='lab_tests')

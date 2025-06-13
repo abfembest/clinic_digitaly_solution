@@ -5,66 +5,46 @@
 
 {% block content %}
 
-    
-
-    <!-- Patient Records Table -->
     <section class="content">
         <div class="container-fluid">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Patient records</h3>
                 </div>
-                <!-- /.card-header -->
                 <div class="card-body">
-                    <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
-                        <thead class="thead-light">
-                            <tr>
-                                <th style="width: 50px;">#</th>
-                                <th>Patient Name</th>
-                                <th>Gender</th>
-                                <th>Blood Group</th>
-                                <th>Status</th>
-                                <th style="width: 160px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for patient in patients %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>{{ patient.full_name }}</td>
-                                <td>{{ patient.gender }}</td>
-                                <td>{{ patient.blood_group }}</td>
-                                <td>
-                                    <span class="badge badge-{% if patient.status == 'active' %}success{% elif patient.status == 'critical' %}danger{% else %}secondary{% endif %}">
-                                        {{ patient.get_status_display }}
-                                    </span>
-                                </td>
-                                <td colspan="2">
-                                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ patient.id }})"><i class="fas fa-folder-open"></i> View</button>
-                                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#monitorModal" onclick="loadMonitor({{ patient.id }})"><i class="fas fa-chart-line"></i> Monitor</button>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No patients found.</td>
-                            </tr>
-                            {% endfor %}
-
-
-
-                        </tbody>
-
-                    </table>
+                    <div class="table-responsive">
+                        <table id="example1" class="table table-bordered table-hover text-nowrap mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Patient Name</th>
+                                    <th>Gender</th>
+                                    <th>Blood Group</th>
+                                    <th>Status</th>
+                                    <th style="width: 160px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in patients %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ patient.full_name }}</td>
+                                    <td>{{ patient.gender }}</td>
+                                    <td>{{ patient.blood_group }}</td>
+                                    <td>{{ patient.status }}</td>
+                                    <td>
+                                        <button class="btn btn-info btn-sm mr-1" data-bs-toggle="modal" data-bs-target="#overviewModal" onclick="loadOverview({{ patient.id }})">Overview</button>
+                                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#monitoringModal" onclick="loadMonitoring({{ patient.id }})">Monitor</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-
-                <!-- /.card-body -->
+                </div>
             </div>
-            <!-- /.card -->
-        </div>
-        <!-- /.container-fluid -->
-    </section>
-    <!-- /.content -->
-    <!-- Overview Modal -->
+        </section>
     <div class="modal fade" id="overviewModal" tabindex="-1" aria-labelledby="overviewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -72,7 +52,11 @@
                     <h5 class="modal-title" id="overviewModalLabel">Patient Overview</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="overviewContent">Loading...</div>
+                <div class="modal-body">
+                    <div id="overviewContent">
+                        Loading patient overview...
+                    </div>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
@@ -80,15 +64,18 @@
         </div>
     </div>
 
-    <!-- Monitor Modal -->
-    <div class="modal fade" id="monitorModal" tabindex="-1" aria-labelledby="monitorModalLabel" aria-hidden="true">
+    <div class="modal fade" id="monitoringModal" tabindex="-1" aria-labelledby="monitoringModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="monitorModalLabel">Patient Monitoring</h5>
+                    <h5 class="modal-title" id="monitoringModalLabel">Patient Monitoring</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="monitorContent">Loading...</div>
+                <div class="modal-body">
+                    <div id="monitorContent">
+                        Loading patient monitoring data...
+                    </div>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
@@ -96,47 +83,63 @@
         </div>
     </div>
 
+    {% endblock %}
 
-
-
-
-    <!-- URL Templates -->
+{% block extra_js %}
     <script>
-        const urlOverviewTemplate = "{% url 'patient_overview' 0 %}".replace("0", "__ID__");
-        const urlMonitorTemplate = "{% url 'patient_monitor' 0 %}".replace("0", "__ID__");
+        $(function () {
+            // DataTables initialization for AdminLTE 3
+            $("#example1").DataTable({
+                "responsive": true,
+                "autoWidth": false,
+                "paging": true,
+                "lengthChange": true,
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "scrollX": true, // Enable horizontal scrolling for larger tables if text-nowrap isn't enough
+                "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"] // Example buttons, ensure DataTables Buttons plugin is linked
+            }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+        });
 
         function loadOverview(patientId) {
-            const url = urlOverviewTemplate.replace("__ID__", patientId);
+            // Corrected URL pattern name: 'patient_overview' instead of 'get_patient_overview'
+            const url = "{% url 'patient_overview' 0 %}".replace('/0', '/' + patientId);
             document.getElementById("overviewContent").innerHTML = "Loading...";
 
             fetch(url)
                 .then(res => res.json())
                 .then(data => {
-                    let html = `<strong>Name:</strong> ${data.name}<br>
-                        <strong>Gender:</strong> ${data.gender}<br>
-                        <strong>Status:</strong> ${data.status}<br>
-                        <strong>Ward:</strong> ${data.ward || 'N/A'}<br>
-                        <strong>Bed:</strong> ${data.bed || 'N/A'}<br><hr>
-                        <strong>Last Vitals:</strong><ul>`;
-
-                    if (data.last_vitals && data.last_vitals.length > 0) {
-                        data.last_vitals.forEach(v => {
-                            html += `<li>${v.date}: BP=${v.bp || 'N/A'}, HR=${v.hr || 'N/A'}, Temp=${v.temp || 'N/A'}°C</li>`;
-                        });
-                    } else {
-                        html += `<li>No vitals recorded</li>`;
+                    let html = `<p><strong>Name:</strong> ${data.name}</p>`;
+                    html += `<p><strong>Gender:</strong> ${data.gender}</p>`;
+                    html += `<p><strong>Status:</strong> ${data.status}</p>`;
+                    if (data.ward) {
+                        html += `<p><strong>Ward:</strong> ${data.ward}</p>`;
                     }
-                    html += "</ul>";
+                    if (data.bed) {
+                        html += `<p><strong>Bed:</strong> ${data.bed}</p>`;
+                    }
+                    if (data.last_vitals) {
+                        html += `<h4>Last Vitals:</h4>`;
+                        html += `<p><strong>Date:</strong> ${data.last_vitals.date}</p>`;
+                        html += `<p><strong>Temperature:</strong> ${data.last_vitals.temperature}°C</p>`;
+                        html += `<p><strong>Blood Pressure:</strong> ${data.last_vitals.blood_pressure}</p>`;
+                        html += `<p><strong>Pulse:</strong> ${data.last_vitals.pulse} bpm</p>`;
+                        // Add more vital signs if needed
+                    } else {
+                        html += `<p>No recent vital signs recorded.</p>`;
+                    }
                     document.getElementById("overviewContent").innerHTML = html;
                 })
                 .catch(error => {
-                    document.getElementById("overviewContent").innerHTML = "Error loading patient data.";
+                    document.getElementById("overviewContent").innerHTML = "Error loading overview data.";
                     console.error("Error:", error);
                 });
         }
 
-        function loadMonitor(patientId) {
-            const url = urlMonitorTemplate.replace("__ID__", patientId);
+        function loadMonitoring(patientId) {
+            // Corrected URL pattern name: 'patient_monitor' instead of 'get_patient_monitor'
+            const url = "{% url 'patient_monitor' 0 %}".replace('/0', '/' + patientId);
             document.getElementById("monitorContent").innerHTML = "Loading...";
 
             fetch(url)

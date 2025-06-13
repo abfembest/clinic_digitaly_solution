@@ -6,8 +6,7 @@
 {%block content%}
 
 
-<!-- Main content -->
-    <style>
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -309,7 +308,6 @@
         </div>
 
         <div class="content">
-            <!-- Patient Selector -->
             <div class="form-group">
                 <h3 id="selectpatient"></h3>
                 <div id="results" class="results">
@@ -336,7 +334,6 @@
         </div>
     </div>
 
-    <!-- Dynamically insert testCategories using Django template syntax -->
     <script>
     const testCategories = {
         {% for cat in categories %}
@@ -384,8 +381,7 @@
     <div id="subcategories-${sectionCounter}" class="subcategories">
         <h4>Available Tests:</h4>
         <div id="subcategory-list-${sectionCounter}" class="checkbox-grid">
-            <!-- Subcategories will be populated here -->
-        </div>
+            </div>
     </div>
     `;
 
@@ -455,178 +451,109 @@
     }
     }
     
-        function submitSelection() {
-            const results = [];
-            const sections = document.querySelectorAll('.test-section');
-            const patientId = document.getElementById('patient-select').value;
-            const patienteror = document.getElementById('selectpatient');
-            if (!patientId) {
-                patienteror.innerHTML = '<p style="color: #e53e3e; font-style: italic;">Please select at least one patient .</p>';
-                return;
-            }
-                sections.forEach(section => {
-                    const sectionId = section.id.split('-')[1];
-                    const categorySelect = document.getElementById(`category-${sectionId}`);
-                    const selectedCategory = categorySelect.value;
+    // ====================================================================
+    // START OF CORRECTED CODE
+    // ====================================================================
+    function submitSelection() {
+        const results = [];
+        const sections = document.querySelectorAll('.test-section');
+        const patientId = document.getElementById('patient-select').value;
+        const patientError = document.getElementById('selectpatient');
+        const resultContent = document.getElementById('resultContent');
+        const resultsDiv = document.getElementById('results');
 
-                    if (selectedCategory) {
-                        const checkedBoxes = section.querySelectorAll('input[type="checkbox"]:checked');
-                        const selectedTests = Array.from(checkedBoxes).map(cb => cb.value);
-
-                        if (selectedTests.length > 0) {
-                            results.push({
-                                category: selectedCategory,
-                                tests: selectedTests
-                            });
-                        }
-                    }
-                });
+        // Clear previous error/success messages
+        patientError.innerHTML = '';
+        resultContent.innerHTML = '';
+        resultsDiv.classList.remove('show');
 
 
+        if (!patientId) {
+            patientError.innerHTML = '<p style="color: #e53e3e; font-style: italic;">Please select a patient.</p>';
+            return;
+        }
 
-            
-            /*function displayResults(results) {
-                const resultsDiv = document.getElementById('results');
-                const resultContent = document.getElementById('resultContent');*/
+        sections.forEach(section => {
+            const sectionId = section.id.split('-')[1];
+            const categorySelect = document.getElementById(`category-${sectionId}`);
+            const selectedCategory = categorySelect.value;
 
-                if (results.length === 0) {
-                    resultContent.innerHTML = '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
-                    return;
-                }
-                    
+            if (selectedCategory) {
+                const checkedBoxes = section.querySelectorAll('input[type="checkbox"]:checked');
+                const selectedTests = Array.from(checkedBoxes).map(cb => cb.value);
 
-                function getCSRFToken() {
-                    const name = 'csrftoken';
-                    const cookies = document.cookie.split(';');
-                    for (let cookie of cookies) {
-                        if (cookie.trim().startsWith(name + '=')) {
-                            return cookie.trim().substring(name.length + 1);
-                        }
-                    }
-                    return '';
-                }
-
-                // Submit to Django via fetch
-                fetch("/submit-selection/", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": getCSRFToken(),  // optional if you remove @csrf_exempt
-                    },
-                    body: JSON.stringify({ patient_id: patientId, selections: results }),
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            displayResults(results);
-                        } else {
-                            alert("Submission failed.");
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert("An error occurred while submitting.");
+                if (selectedTests.length > 0) {
+                    results.push({
+                        category: selectedCategory,
+                        tests: selectedTests
                     });
-
+                }
             }
+        });
 
-            function displayResults(results) {
-                const resultsDiv = document.getElementById('results');
-                const resultContent = document.getElementById('resultContent');
+        if (results.length === 0) {
+            resultContent.innerHTML = '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
+            resultsDiv.classList.add('show');
+            return;
+        }
 
-                if (results.length === 0) {
-                    resultContent.innerHTML = '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
-                } else {
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                if (cookie.trim().startsWith(name + '=')) {
+                    return cookie.trim().substring(name.length + 1);
+                }
+            }
+            return '';
+        }
 
-                    resultContent.innerHTML = results.map(result => `
+        // Submit to Django via fetch
+        fetch("/submit-selection/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCSRFToken(),
+            },
+            body: JSON.stringify({ patient_id: patientId, selections: results }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Check the response from the server
+            if (data.status === "success") {
+                // If successful, call displayResults
+                displayResults(results);
+            } else {
+                // If not successful, show an alert
+                alert("Submission failed. Server response: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("An error occurred while submitting. Check the console for details.");
+        });
+    }
+
+    function displayResults(results) {
+        const resultsDiv = document.getElementById('results');
+        const resultContent = document.getElementById('resultContent');
+
+        resultContent.innerHTML = results.map(result => `
             <div class="result-item">
-            <div class="result-category"></div>
                 <div class="result-category">${result.category}</div>
                 <div class="result-tests">${result.tests.join(', ')}</div>
             </div>
         `).join('');
-                }
 
-                resultsDiv.classList.add('show');
-                resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        resultsDiv.classList.add('show');
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
 
-                // Also log to console for development/debugging
-                console.log('Selected Medical Tests:', results);
-
-            }
-
-
-        
-
-
-/*function submitSelection() {
-    const results = [];
-    const sections = document.querySelectorAll('.test-section');
-    const patientId = document.getElementById('patient-select').value;
-
-    if (!patientId) {
-        alert("Please select a patient before submitting.");
-        return;
+        // Also log to console for development/debugging
+        console.log('Selected Medical Tests:', results);
     }
-
-    sections.forEach(section => {
-        const sectionId = section.id.split('-')[1];
-        const categorySelect = document.getElementById(`category-${sectionId}`);
-        const selectedCategory = categorySelect.value;
-
-        if (selectedCategory) {
-            const checkedBoxes = section.querySelectorAll('input[type="checkbox"]:checked');
-            const selectedTests = Array.from(checkedBoxes).map(cb => cb.value);
-
-            if (selectedTests.length > 0) {
-                results.push({
-                    category: selectedCategory,
-                    tests: selectedTests
-                });
-            }
-        }
-    });
-
-    if (results.length === 0) {
-        document.getElementById('resultContent').innerHTML =
-            '<p style="color: #e53e3e; font-style: italic;">No tests selected. Please select at least one test from any category.</p>';
-        return;
-    }
-
-    function getCSRFToken() {
-        const name = 'csrftoken';
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            if (cookie.trim().startsWith(name + '=')) {
-                return cookie.trim().substring(name.length + 1);
-            }
-        }
-        return '';
-    }
-
-    // Submit to Django
-    fetch("/submit-selection/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCSRFToken(),
-        },
-        body: JSON.stringify({ patient_id: patientId, selections: results }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === "success") {
-            displayResults(results);
-        } else {
-            alert("Submission failed.");
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alert("An error occurred while submitting.");
-    });
-}*/
-
+    // ====================================================================
+    // END OF CORRECTED CODE
+    // ====================================================================
 
     </script>
 

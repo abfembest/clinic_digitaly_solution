@@ -5,7 +5,6 @@
 
 {% block content %}
 
-<!-- Page Header -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -127,7 +126,7 @@
     }
 
     @media (max-width: 768px) {
-        .container {
+        .container-fluid {
             padding: 0 15px;
         }
 
@@ -158,9 +157,11 @@
     .profile-avatar {
         width: 120px;
         height: 120px;
+        border-radius: 50%;
         border: 4px solid #fff;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease;
+        object-fit: cover; /* Ensures the image covers the area */
     }
 
     .profile-avatar:hover {
@@ -267,11 +268,42 @@
         font-size: 3rem;
         font-weight: bold;
     }
+
+    .lab-group {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+
+    .lab-group-header {
+        background: rgba(79, 172, 254, 0.1);
+        padding: 12px 15px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .lab-group-body {
+        padding: 15px;
+    }
+
+    .lab-test-item {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 10px 0;
+    }
+
+    .lab-test-item:last-child {
+        border-bottom: none;
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
 </style>
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-lg-6 col-md-8 col-sm-10">
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-3 col-md-4 mb-4">
             <div class="card filter-card mx-auto">
                 <div class="card-header">
                     <h5 class="mb-0">
@@ -281,7 +313,6 @@
                 </div>
                 <div class="card-body p-3">
                     <form id="activityFilterForm">
-                        <!-- Patient Selection -->
                         <div class="filter-section">
                             <div class="mb-2">
                                 <label for="patientSelect" class="form-label">
@@ -296,7 +327,6 @@
                             </div>
                         </div>
 
-                        <!-- Date Filter Section -->
                         <div class="filter-section">
                             <div class="mb-2">
                                 <label class="form-label">
@@ -349,7 +379,6 @@
                             </div>
                         </div>
 
-                        <!-- Search Button -->
                         <div class="text-center mt-2">
                             <button type="submit" class="btn btn-search">
                                 <i class="fas fa-search me-1"></i>
@@ -360,42 +389,48 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-lg-9 col-md-8">
+            <div id="resultsContainer">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i> Select a patient and click "Load Records" to view their activity.
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Results Container -->
-<div class="container mt-4" id="resultsContainer">
-    <!-- Patient records will be loaded here via AJAX -->
-</div>
+<script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'dist/js/adminlte.min.js' %}"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    $(document).ready(function() {
         // Date filter toggle
-        const allDatesRadio = document.getElementById('allDates');
-        const betweenDatesRadio = document.getElementById('betweenDates');
-        const dateInputs = document.getElementById('dateInputs');
+        const allDatesRadio = $('#allDates');
+        const betweenDatesRadio = $('#betweenDates');
+        const dateInputs = $('#dateInputs');
         
         function toggleDateInputs() {
-            if (betweenDatesRadio.checked) {
-                dateInputs.classList.add('enabled');
+            if (betweenDatesRadio.is(':checked')) {
+                dateInputs.addClass('enabled');
             } else {
-                dateInputs.classList.remove('enabled');
+                dateInputs.removeClass('enabled');
             }
         }
         
-        allDatesRadio.addEventListener('change', toggleDateInputs);
-        betweenDatesRadio.addEventListener('change', toggleDateInputs);
+        allDatesRadio.on('change', toggleDateInputs);
+        betweenDatesRadio.on('change', toggleDateInputs);
         toggleDateInputs(); // Initialize
         
         // Form submission handler
-        document.getElementById('activityFilterForm').addEventListener('submit', function(e) {
+        $('#activityFilterForm').on('submit', function(e) {
             e.preventDefault();
-            const form = e.target;
-            const submitBtn = form.querySelector('button[type="submit"]');
+            const form = $(this);
+            const submitBtn = form.find('button[type="submit"]');
             
             // Get form data
-            const formData = new FormData(form);
+            const formData = new FormData(form[0]);
             const params = new URLSearchParams();
             
             for (const [key, value] of formData.entries()) {
@@ -403,38 +438,40 @@
             }
             
             // Show loading state
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Loading...';
-            submitBtn.disabled = true;
+            submitBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Loading...');
+            submitBtn.prop('disabled', true);
             
             // Fetch patient records
-            fetch(`{% url 'fetch_patient_activity' %}?${params.toString()}`, {
+            $.ajax({
+                url: '{% url "fetch_patient_activity" %}?' + params.toString(),
+                type: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(data) {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    renderPatientRecords(data);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    let errorMessage = error;
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    const errorHtml = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading patient records: ${errorMessage}
+                        </div>
+                    `;
+                    $('#resultsContainer').html(errorHtml);
+                },
+                complete: function() {
+                    submitBtn.html('<i class="fas fa-search me-1"></i> Load Records');
+                    submitBtn.prop('disabled', false);
                 }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                renderPatientRecords(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                const errorHtml = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error loading patient records: ${error.message}
-                    </div>
-                `;
-                document.getElementById('resultsContainer').innerHTML = errorHtml;
-            })
-            .finally(() => {
-                submitBtn.innerHTML = '<i class="fas fa-search me-1"></i> Load Records';
-                submitBtn.disabled = false;
             });
         });
         
@@ -467,10 +504,13 @@
             const html = `
                 <div class="profile-card card mb-4">
                     <div class="card-body">
-                        <!-- Patient Header -->
                         <div class="row align-items-center mb-4">
                             <div class="col-auto">
-                                <div class="avatar-initials">${initials}</div>
+                                ${patient.photo_url ? `
+                                    <img src="${patient.photo_url}" class="profile-avatar" alt="Patient Photo">
+                                ` : `
+                                    <div class="avatar-initials">${initials}</div>
+                                `}
                             </div>
                             <div class="col">
                                 <h2 class="mb-1">${patient.full_name}</h2>
@@ -491,7 +531,6 @@
                             </div>
                         </div>
                         
-                        <!-- Quick Stats -->
                         <div class="row mb-4">
                             <div class="col-md-3 col-6">
                                 <div class="stats-card">
@@ -507,8 +546,8 @@
                             </div>
                             <div class="col-md-3 col-6">
                                 <div class="stats-card">
-                                    <h4 class="mb-1 text-warning">${data.summary.total_lab_tests}</h4>
-                                    <small class="text-muted">Lab Tests</small>
+                                    <h4 class="mb-1 text-warning">${data.summary.total_lab_test_groups}</h4>
+                                    <small class="text-muted">Lab Test Groups</small>
                                 </div>
                             </div>
                             <div class="col-md-3 col-6">
@@ -519,31 +558,51 @@
                             </div>
                         </div>
                         
-                        <!-- Tabs Navigation -->
                         <ul class="nav nav-tabs" id="patientRecordsTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+                            <li class="nav-item">
+                                <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab">Overview</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultations" type="button" role="tab">Consultations (${data.consultations.length})</button>
+                            <li class="nav-item">
+                                <a class="nav-link" id="consultations-tab" data-toggle="tab" href="#consultations" role="tab">Consultations (${data.consultations.length})</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="prescriptions-tab" data-bs-toggle="tab" data-bs-target="#prescriptions" type="button" role="tab">Prescriptions (${data.prescriptions.length})</button>
+                            <li class="nav-item">
+                                <a class="nav-link" id="prescriptions-tab" data-toggle="tab" href="#prescriptions" role="tab">Prescriptions (${data.prescriptions.length})</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitals" type="button" role="tab">Vitals (${data.vitals.length})</button>
+                            <li class="nav-item">
+                                <a class="nav-link" id="vitals-tab" data-toggle="tab" href="#vitals" role="tab">Vitals (${data.vitals.length})</a>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="lab-tab" data-bs-toggle="tab" data-bs-target="#lab" type="button" role="tab">Lab Tests (${data.lab_tests.length})</button>
+                            <li class="nav-item">
+                                <a class="nav-link" id="lab-tab" data-toggle="tab" href="#lab" role="tab">Lab Tests (${data.lab_test_groups.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="nursing-notes-tab" data-toggle="tab" href="#nursing-notes" role="tab">Nursing Notes (${data.nursing_notes.length})</a>
+                            </li>
+                             <li class="nav-item">
+                                <a class="nav-link" id="admissions-tab" data-toggle="tab" href="#admissions" role="tab">Admissions (${data.admissions.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="care-plans-tab" data-toggle="tab" href="#care-plans" role="tab">Care Plans (${data.care_plans.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="referrals-tab" data-toggle="tab" href="#referrals" role="tab">Referrals (${data.referrals.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="appointments-tab" data-toggle="tab" href="#appointments" role="tab">Appointments (${data.appointments.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="bills-tab" data-toggle="tab" href="#bills" role="tab">Bills (${data.bills.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="payments-tab" data-toggle="tab" href="#payments" role="tab">Payments (${data.payments.length})</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="handover-logs-tab" data-toggle="tab" href="#handover-logs" role="tab">Handover Logs (${data.handover_logs.length})</a>
                             </li>
                         </ul>
                         
-                        <!-- Tab Content -->
                         <div class="tab-content" id="patientRecordsTabContent">
-                            <!-- Overview Tab -->
                             <div class="tab-pane fade show active" id="overview" role="tabpanel">
                                 <div class="row">
-                                    <!-- Patient Info -->
                                     <div class="col-md-6">
                                         <div class="section-card">
                                             <h5 class="section-title">
@@ -573,7 +632,6 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Medical Summary -->
                                     <div class="col-md-6">
                                         <div class="section-card">
                                             <h5 class="section-title">
@@ -604,7 +662,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Consultations Tab -->
                             <div class="tab-pane fade" id="consultations" role="tabpanel">
                                 <div class="section-card">
                                     <h5 class="section-title">
@@ -639,7 +696,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Prescriptions Tab -->
                             <div class="tab-pane fade" id="prescriptions" role="tabpanel">
                                 <div class="section-card">
                                     <h5 class="section-title">
@@ -672,7 +728,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Vitals Tab -->
                             <div class="tab-pane fade" id="vitals" role="tabpanel">
                                 <div class="section-card">
                                     <h5 class="section-title">
@@ -691,6 +746,7 @@
                                                         <th>Temp (°C)</th>
                                                         <th>Weight (kg)</th>
                                                         <th>BMI</th>
+                                                        <th>Recorded By</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -702,58 +758,432 @@
                                                             <td>${vital.temperature || 'N/A'}</td>
                                                             <td>${vital.weight || 'N/A'}</td>
                                                             <td>${vital.bmi || 'N/A'}</td>
+                                                            <td>${vital.recorded_by || 'N/A'}</td>
                                                         </tr>
                                                     `).join('')}
                                                 </tbody>
                                             </table>
                                         </div>` :
-                                        `<div class="empty-state">
-                                            <i class="fas fa-heartbeat"></i>
-                                            <h5>No Vital Records</h5>
-                                            <p>No vital signs history found for this patient.</p>
+                                        `<div class="empty-state"><i class="fas fa-heartbeat"></i>
+                                            <h5>No Vital Signs</h5>
+                                            <p>No vital signs recorded for this patient.</p>
                                         </div>`
                                     }
                                 </div>
                             </div>
                             
-                            <!-- Lab Tests Tab -->
                             <div class="tab-pane fade" id="lab" role="tabpanel">
                                 <div class="section-card">
                                     <h5 class="section-title">
-                                        <i class="fas fa-flask me-2"></i>
-                                        IVF Cycles
+                                        <i class="fas fa-vial me-2"></i>
+                                        Laboratory Test Results
                                     </h5>
                                     
-                                    ${data.lab_tests.length > 0 ? 
-                                        data.lab_tests.map(test => `
-                                            <div class="record-item">
-                                                <div class="d-flex justify-content-between">
-                                                    <div>
-                                                    <p><strong>Category:</strong> ${test.category}</p>
-                                                        
+                                    ${data.lab_test_groups.length > 0 ? 
+                                        data.lab_test_groups.map(group => `
+                                            <div class="lab-group">
+                                                <div class="lab-group-header">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <strong>Test Request ID: ${group.request_id}</strong>
+                                                            <small class="text-muted ms-2">
+                                                                <i class="fas fa-calendar me-1"></i>
+                                                                ${group.requested_at}
+                                                            </small>
+                                                        </div>
+                                                        <div>
+                                                            <span class="badge status-badge ${
+                                                                group.group_status === 'completed' ? 'bg-success' : 
+                                                                group.group_status === 'in_progress' ? 'bg-warning' : 
+                                                                group.group_status === 'mixed' ? 'bg-info' : 'bg-secondary'
+                                                            }">
+                                                                ${group.group_status.replace('_', ' ').toUpperCase()}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <small class="record-date">Requested: ${test.requested_at}</small>
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-user-md me-1"></i>
+                                                            Requested by: ${group.requested_by || group.doctor_name}
+                                                            <span class="mx-2">|</span>
+                                                            <i class="fas fa-flask me-1"></i>
+                                                            ${group.tests_count} tests
+                                                            <span class="mx-2">|</span>
+                                                            <i class="fas fa-check-circle me-1"></i>
+                                                            ${group.completed_tests}/${group.tests_count} completed
+                                                        </small>
+                                                    </div>
                                                 </div>
-                                                <div class="record-content">
-
-
-                                             <strong>${test.test_name}</strong>
-                                           <span class="badge ms-2 ${test.status === 'completed' ? 'bg-success' : 'bg-warning'}"> ${test.status}</span>
-
+                                                <div class="lab-group-body">
+                                                    ${group.tests.map(test => `
+                                                        <div class="lab-test-item">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div class="flex-grow-1">
+                                                                    <h6 class="mb-1">${test.test_name}</h6>
+                                                                    <small class="text-muted">${test.category}</small>
+                                                                    
+                                                                    ${test.result_value ? `
+                                                                        <div class="mt-2">
+                                                                            <strong>Result:</strong> ${test.result_value}
+                                                                            ${test.normal_range ? `
+                                                                                <small class="text-muted ms-2">(Normal: ${test.normal_range})</small>
+                                                                            ` : ''}
+                                                                        </div>
+                                                                    ` : ''}
+                                                                    
+                                                                    ${test.notes ? `
+                                                                        <div class="mt-1">
+                                                                            <small><strong>Notes:</strong> ${test.notes}</small>
+                                                                        </div>
+                                                                    ` : ''}
+                                                                    
+                                                                    ${test.date_performed ? `
+                                                                        <div class="mt-1">
+                                                                            <small class="text-muted">
+                                                                                <i class="fas fa-calendar-check me-1"></i>
+                                                                                Performed: ${test.date_performed}
+                                                                            </small>
+                                                                        </div>
+                                                                    ` : ''}
+                                                                </div>
+                                                                <div class="ms-3">
+                                                                    <span class="badge status-badge ${
+                                                                        test.status_code === 'completed' ? 'bg-success' : 
+                                                                        test.status_code === 'in_progress' ? 'bg-warning' : 
+                                                                        test.status_code === 'cancelled' ? 'bg-danger' : 'bg-secondary'
+                                                                    }">
+                                                                        ${test.status}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `).join('')}
                                                     
-                                                    ${test.result_value ? `
-                                                        <p><strong>Result:</strong> ${test.result_value}</p>
-                                                        <p><strong>Normal Range:</strong> ${test.normal_range || 'N/A'}</p>
+                                                    ${group.doctor_comment ? `
+                                                        <div class="mt-3 p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                                                            <h6 class="mb-2">
+                                                                <i class="fas fa-comment-medical me-2"></i>
+                                                                Doctor's Comment
+                                                            </h6>
+                                                            <p class="mb-1">${group.doctor_comment.comment}</p>
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-user-md me-1"></i>
+                                                                ${group.doctor_comment.doctor_name}
+                                                                <span class="mx-2">|</span>
+                                                                <i class="fas fa-calendar me-1"></i>
+                                                                ${group.doctor_comment.date}
+                                                            </small>
+                                                        </div>
                                                     ` : ''}
-                                                    ${test.notes ? `<p><strong>Notes:</strong> ${test.notes}</p>` : ''}
-                                                    ${test.performed_by ? `<p><strong>Performed by:</strong> ${test.performed_by}</p>` : ''}
+                                                    
+                                                    ${group.result_file ? `
+                                                        <div class="mt-3 p-3" style="background-color: #e8f4f8; border-radius: 8px;">
+                                                            <h6 class="mb-2">
+                                                                <i class="fas fa-file-medical me-2"></i>
+                                                                Lab Result File
+                                                            </h6>
+                                                            <div class="d-flex align-items-center">
+                                                                <a href="${group.result_file.file_url}" 
+                                                                   class="btn btn-sm btn-outline-primary me-3" 
+                                                                   target="_blank">
+                                                                    <i class="fas fa-eye me-1"></i>
+                                                                    View ${group.result_file.file_name}
+                                                                </a>
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-upload me-1"></i>
+                                                                    Uploaded by ${group.result_file.uploaded_by} on ${group.result_file.uploaded_at}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                    ` : ''}
                                                 </div>
                                             </div>
                                         `).join('') :
                                         `<div class="empty-state">
-                                            <i class="fas fa-flask"></i>
-                                            <h5>No Lab Test Records</h5>
-                                            <p>No laboratory test history found for this patient.</p>
+                                            <i class="fas fa-vial"></i>
+                                            <h5>No Laboratory Tests</h5>
+                                            <p>No laboratory test records found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="nursing-notes" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-notes-medical me-2"></i>
+                                        Nursing Notes History
+                                    </h5>
+                                    
+                                    ${data.nursing_notes.length > 0 ? 
+                                        data.nursing_notes.map(note => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>${note.note_type}</strong>
+                                                        <span class="badge bg-secondary ms-2">Nurse: ${note.nurse}</span>
+                                                    </div>
+                                                    <small class="record-date">${note.note_datetime}</small>
+                                                </div>
+                                                <div class="record-content">
+                                                    <p><strong>Notes:</strong> ${note.notes || 'No notes'}</p>
+                                                    <p><strong>Patient Status:</strong> ${note.patient_status || 'N/A'}</p>
+                                                    <p><strong>Follow-up:</strong> ${note.follow_up || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-notes-medical"></i>
+                                            <h5>No Nursing Notes</h5>
+                                            <p>No nursing notes found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="admissions" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-hospital-user me-2"></i>
+                                        Admission History
+                                    </h5>
+                                    
+                                    ${data.admissions.length > 0 ? 
+                                        data.admissions.map(admission => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>Admission Date: ${admission.admission_date}</strong>
+                                                        <span class="badge bg-info ms-2">${admission.status}</span>
+                                                    </div>
+                                                    <small class="record-date">${admission.admitted_on}</small>
+                                                </div>
+                                                <div class="record-content">
+                                                    <p><strong>Admitted By:</strong> ${admission.admitted_by || 'N/A'}</p>
+                                                    <p><strong>Doctor Assigned:</strong> ${admission.doctor_assigned || 'N/A'}</p>
+                                                    ${admission.discharge_date ? `<p><strong>Discharge Date:</strong> ${admission.discharge_date}</p>` : ''}
+                                                    ${admission.discharged_by ? `<p><strong>Discharged By:</strong> ${admission.discharged_by}</p>` : ''}
+                                                    ${admission.discharge_notes ? `<p><strong>Discharge Notes:</strong> ${admission.discharge_notes}</p>` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-hospital-alt"></i>
+                                            <h5>No Admission Records</h5>
+                                            <p>No admission records found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                             <div class="tab-pane fade" id="care-plans" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-clipboard-list me-2"></i>
+                                        Care Plans
+                                    </h5>
+                                    
+                                    ${data.care_plans.length > 0 ? 
+                                        data.care_plans.map(plan => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>Created By: ${plan.created_by}</strong>
+                                                    </div>
+                                                    <small class="record-date">${plan.created_at}</small>
+                                                </div>
+                                                <div class="record-content">
+                                                    <p><strong>Clinical Findings:</strong> ${plan.clinical_findings || 'N/A'}</p>
+                                                    <p><strong>Plan of Care:</strong> ${plan.plan_of_care || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-clipboard"></i>
+                                            <h5>No Care Plans</h5>
+                                            <p>No care plans found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="referrals" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-share-square me-2"></i>
+                                        Referrals
+                                    </h5>
+                                    
+                                    ${data.referrals.length > 0 ? 
+                                        data.referrals.map(referral => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>Department: ${referral.department}</strong>
+                                                    </div>
+                                                    <small class="record-date"></small> </div>
+                                                <div class="record-content">
+                                                    <p><strong>Notes:</strong> ${referral.notes || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-share-alt"></i>
+                                            <h5>No Referrals</h5>
+                                            <p>No referral records found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="appointments" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-calendar-check me-2"></i>
+                                        Appointments
+                                    </h5>
+                                    
+                                    ${data.appointments.length > 0 ? 
+                                        data.appointments.map(appointment => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>Department: ${appointment.department}</strong>
+                                                    </div>
+                                                    <small class="record-date">${appointment.scheduled_time}</small>
+                                                </div>
+                                                <div class="record-content">
+                                                    </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-calendar-plus"></i>
+                                            <h5>No Appointments</h5>
+                                            <p>No appointment records found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="bills" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-file-invoice-dollar me-2"></i>
+                                        Bills
+                                    </h5>
+                                    
+                                    ${data.bills.length > 0 ? 
+                                        data.bills.map(bill => `
+                                            <div class="lab-group"> <div class="lab-group-header">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <strong>Bill No: ${bill.bill_number}</strong>
+                                                            <small class="text-muted ms-2">
+                                                                <i class="fas fa-calendar me-1"></i>
+                                                                ${bill.created_at}
+                                                            </small>
+                                                        </div>
+                                                        <div>
+                                                            <span class="badge status-badge ${
+                                                                bill.status_code === 'paid' ? 'bg-success' : 
+                                                                bill.status_code === 'pending' ? 'bg-warning' : 
+                                                                bill.status_code === 'cancelled' ? 'bg-danger' : 'bg-secondary'
+                                                            }">
+                                                                ${bill.status.toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">
+                                                            Total: $${bill.total_amount.toFixed(2)} | 
+                                                            Paid: $${bill.amount_paid.toFixed(2)} | 
+                                                            Outstanding: $${bill.outstanding_amount.toFixed(2)}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="lab-group-body">
+                                                    <h6>Items:</h6>
+                                                    <ul class="list-group list-group-flush">
+                                                        ${bill.items.map(item => `
+                                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                <div>${item.description} <small class="text-muted">(${item.service_type})</small></div>
+                                                                <span>${item.quantity} x $${item.unit_price.toFixed(2)} = $${item.total_price.toFixed(2)}</span>
+                                                            </li>
+                                                        `).join('')}
+                                                    </ul>
+                                                    ${bill.notes ? `<p class="mt-2"><small><strong>Notes:</strong> ${bill.notes}</small></p>` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-file-invoice"></i>
+                                            <h5>No Bills</h5>
+                                            <p>No bill records found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="payments" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-money-bill-wave me-2"></i>
+                                        Payments
+                                    </h5>
+                                    
+                                    ${data.payments.length > 0 ? 
+                                        data.payments.map(payment => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>Amount: $${payment.amount.toFixed(2)}</strong>
+                                                        <span class="badge bg-success ms-2">${payment.status}</span>
+                                                    </div>
+                                                    <small class="record-date">${payment.payment_date}</small>
+                                                </div>
+                                                <div class="record-content">
+                                                    <p><strong>Method:</strong> ${payment.payment_method || 'N/A'}</p>
+                                                    <p><strong>Processed By:</strong> ${payment.processed_by || 'N/A'}</p>
+                                                    ${payment.bill_number ? `<p><strong>Bill No:</strong> ${payment.bill_number}</p>` : ''}
+                                                    ${payment.payment_reference ? `<p><strong>Reference:</strong> ${payment.payment_reference}</p>` : ''}
+                                                    ${payment.notes ? `<p><strong>Notes:</strong> ${payment.notes}</p>` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-receipt"></i>
+                                            <h5>No Payments</h5>
+                                            <p>No payment records found for this patient.</p>
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="handover-logs" role="tabpanel">
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-exchange-alt me-2"></i>
+                                        Handover Logs
+                                    </h5>
+                                    
+                                    ${data.handover_logs.length > 0 ? 
+                                        data.handover_logs.map(log => `
+                                            <div class="record-item">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        <strong>Author: ${log.author}</strong>
+                                                    </div>
+                                                    <small class="record-date">${log.timestamp}</small>
+                                                </div>
+                                                <div class="record-content">
+                                                    <p><strong>Notes:</strong> ${log.notes || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        `).join('') :
+                                        `<div class="empty-state">
+                                            <i class="fas fa-history"></i>
+                                            <h5>No Handover Logs</h5>
+                                            <p>No handover log records found for this patient.</p>
                                         </div>`
                                     }
                                 </div>
@@ -763,15 +1193,13 @@
                 </div>
             `;
             
-            document.getElementById('resultsContainer').innerHTML = html;
+            $('#resultsContainer').html(html);
             
-            // Initialize Bootstrap tabs if they exist
-            if (typeof bootstrap !== 'undefined') {
-                const tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
-                tabElms.forEach(tabEl => {
-                    new bootstrap.Tab(tabEl);
-                });
-            }
+            // Initialize Bootstrap tabs
+            $('#patientRecordsTab a').on('click', function(e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
         }
     });
 </script>

@@ -33,7 +33,8 @@ today = timezone.now().date()
 from django.urls import reverse
 import csv
 from reportlab.pdfgen import canvas
-
+from uuid import uuid4
+from django.core.files.storage import default_storage
 
 import logging
 
@@ -628,52 +629,49 @@ def save_care_plan(request):
 @login_required(login_url='home')
 def access_medical_records(request):
     view_type = request.GET.get('view')
+    patients = Patient.objects.all()
+    
     if view_type == 'individual':
-        patients = Patient.objects.all()
         return render(request, 'doctors/individual_records.html', {'patients': patients})
-
     elif view_type == 'all':
-        patients = Patient.objects.all()
         return render(request, 'doctors/all_records.html', {'patients': patients})
-
-    # Default page with the two links
-    return render(request, 'doctors/access_medical_records.html')
+    
+    # Default page with the two options
+    return render(request, 'doctors/access_medical_records.html', {'patients': patients})
 
 @login_required(login_url='home')
+@require_GET
 def get_patient_overview(request, patient_id):
     try:
-        patient = Patient.objects.get(id=patient_id)
-        # Get the latest admission for this patient, if any
-        admission = Admission.objects.filter(patient=patient).order_by('-admission_date').first()
-        
-        # Get the latest vitals for this patient, limited to 5
-        vitals = Vitals.objects.filter(patient=patient).order_by('-recorded_at')[:5]
-        
-        # Calculate age from date_of_birth (implement as needed)
-        # For simplicity, we're not calculating age here, but you would typically do:
-        # from datetime import date
-        # age = (date.today() - patient.date_of_birth).days // 365
-        
-        return JsonResponse({
-            "name": patient.full_name,
-            "gender": patient.gender,
-            "status": patient.status,
-            "ward": admission.ward.name if admission and admission.ward else None,
-            "bed": str(admission.bed) if admission and admission.bed else None,
-            "last_vitals": [
-                {
-                    "bp": vital.blood_pressure, 
-                    "hr": vital.pulse, 
-                    "temp": vital.temperature,
-                    "date": vital.recorded_at.strftime("%Y-%m-%d %H:%M")
-                } 
-                for vital in vitals
-            ],
-        })
-    except Patient.DoesNotExist:
-        return JsonResponse({"error": "Patient not found"}, status=404)
+        patient = get_object_or_404(Patient, id=patient_id)
+        latest_admission = Admission.objects.filter(patient=patient).order_by('-admission_date').first()
+        latest_vitals = Vitals.objects.filter(patient=patient).order_by('-recorded_at').first()
+
+        overview_data = {
+            'name': patient.full_name,
+            'gender': patient.gender,
+            'status': patient.status,
+            'ward': latest_admission.ward if latest_admission else 'N/A',
+            'bed': latest_admission.bed_number if latest_admission else 'N/A',
+            'last_vitals': None
+        }
+
+        if latest_vitals:
+            overview_data['last_vitals'] = {
+                'date': latest_vitals.recorded_at.strftime('%Y-%m-%d %H:%M'),
+                'temperature': str(latest_vitals.temperature),
+                'blood_pressure': latest_vitals.blood_pressure,
+                'pulse': str(latest_vitals.pulse_rate),
+                'respiration_rate': str(latest_vitals.respiration_rate),
+                'oxygen_saturation': str(latest_vitals.oxygen_saturation),
+                'weight': str(latest_vitals.weight),
+                'height': str(latest_vitals.height),
+                'bmi': str(latest_vitals.bmi),
+            }
+
+        return JsonResponse(overview_data)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)
     
 
 
@@ -2093,29 +2091,78 @@ def medical_test_selection(request):
     categories = TestCategory.objects.prefetch_related('subcategories').all()
     return render(request, 'requesttest.html', {'categories': categories})
 
+# def submit_test_selection(request):
+#     if request.method == 'POST':
+#         try:
+#             data = json.loads(request.body)
+#             patient_id = data.get('patient_id')
+#             selections = data.get('selections', [])
+#             patient_id1 = int(patient_id)
+#             if not patient_id or not selections:
+#                 return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
+#             patient = Patient.objects.get(id=patient_id1)            
+#             for item in selections:
+#                 category = item.get('category')
+#                 tests = item.get('tests', [])
+#                 for test in tests:
+#                     category_name = TestCategory.objects.get(name=category)
+#                     print(category,  test)
+#                     LabTest.objects.create(patient=patient, category=category_name, test_name=test)
+                    
+#             return JsonResponse({'status': 'success', 'message': 'Selections saved.'})
+#         except DatabaseError as e:
+#             print("Database error:", str(e))  # Generic DB errors
+#     return JsonResponse({'status': 'error', 'message': 'Database error: ' + str(e)})
+
 def submit_test_selection(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             patient_id = data.get('patient_id')
             selections = data.get('selections', [])
-            patient_id1 = int(patient_id)
+            
             if not patient_id or not selections:
                 return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
-            patient = Patient.objects.get(id=patient_id1)            
+            
+            patient = Patient.objects.get(id=int(patient_id))
+            
+            # Generate a single UUID for this test request
+            test_request_uuid = uuid4()
+            
+            created_tests = []
             for item in selections:
                 category = item.get('category')
                 tests = item.get('tests', [])
+                
+                try:
+                    category_obj = TestCategory.objects.get(name=category)
+                except TestCategory.DoesNotExist:
+                    continue
+                
                 for test in tests:
-                    category_name = TestCategory.objects.get(name=category)
-                    print(category,  test)
-                    LabTest.objects.create(patient=patient, category=category_name, test_name=test)
-                    
-            return JsonResponse({'status': 'success', 'message': 'Selections saved.'})
+                    lab_test = LabTest.objects.create(
+                        patient=patient,
+                        category=category_obj,
+                        test_name=test,
+                        test_request_id=test_request_uuid,  # Same UUID for all tests in this request
+                        requested_by=request.user,
+                        doctor_name=request.user.get_full_name() or request.user.username
+                    )
+                    created_tests.append(lab_test.id)
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Selections saved.',
+                'test_request_id': str(test_request_uuid),
+                'created_tests': created_tests
+            })
+            
+        except Patient.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Patient not found'})
         except DatabaseError as e:
-            print("Database error:", str(e))  # Generic DB errors
-    return JsonResponse({'status': 'error', 'message': 'Database error: ' + str(e)})
-       
+            return JsonResponse({'status': 'error', 'message': f'Database error: {str(e)}'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'An error occurred: {str(e)}'})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
@@ -2713,56 +2760,84 @@ def fetch_patient_activity(request):
     """
     if request.method != 'GET':
         return JsonResponse({'error': 'Only GET method allowed'}, status=405)
-    
+
     patient_id = request.GET.get('patient_id')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    
+    date_from_param = request.GET.get('date_from') # Get raw string from request
+    date_to_param = request.GET.get('date_to')     # Get raw string from request
+
     if not patient_id:
         return JsonResponse({'error': 'Patient ID is required'}, status=400)
-    
+
     try:
         # Get patient with error handling
         patient = get_object_or_404(Patient, id=patient_id)
-        
-        # Parse dates if provided
-        date_filter_from = None
-        date_filter_to = None
-        
-        if date_from:
-            try:
-                date_filter_from = datetime.strptime(date_from, '%Y-%m-%d').date()
-            except ValueError:
-                return JsonResponse({'error': 'Invalid from date format. Use YYYY-MM-DD'}, status=400)
-        
-        if date_to:
-            try:
-                date_filter_to = datetime.strptime(date_to, '%Y-%m-%d').date()
-            except ValueError:
-                return JsonResponse({'error': 'Invalid to date format. Use YYYY-MM-DD'}, status=400)
-        
-        # Build date filters for different models
-        def apply_date_filter(queryset, date_field):
-            if date_filter_from and date_filter_to:
-                return queryset.filter(**{
-                    f'{date_field}__date__gte': date_filter_from,
-                    f'{date_field}__date__lte': date_filter_to
-                })
-            elif date_filter_from:
-                return queryset.filter(**{f'{date_field}__date__gte': date_filter_from})
-            elif date_filter_to:
-                return queryset.filter(**{f'{date_field}__date__lte': date_filter_to})
+
+        # --- IMPORTANT: Handle default date_to here ---
+        # If date_to is not provided, set it to today's date as a string
+        if not date_to_param:
+            date_to_param = date.today().strftime('%Y-%m-%d')
+        # --- END IMPORTANT ---
+
+        # The apply_date_filter function. Keeping it nested as per your code,
+        # but generally for reusability, it's better defined at the module level.
+        def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name):
+            """
+            Applies date range filtering to a queryset based on a specified date/datetime field.
+
+            Args:
+                queryset: The Django queryset to filter.
+                date_from_str (str): The start date string in YYYY-MM-DD format (can be None).
+                date_to_str (str): The end date string in YYYY-MM-DD format (can be None).
+                date_field_name (str): The name of the date/datetime field on the model to filter by.
+            """
+            parsed_date_from = None
+            parsed_date_to = None
+
+            if date_from_str:
+                try:
+                    parsed_date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError(f"Invalid start date format '{date_from_str}'. Use YYYY-MM-DD.")
+            if date_to_str:
+                try:
+                    parsed_date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError(f"Invalid end date format '{date_to_str}'. Use YYYY-MM-DD.")
+
+            if parsed_date_from:
+                # Use __date for DateTimeField to filter by the date part only
+                # If date_field_name refers to a DateField, __date is harmless but redundant.
+                queryset = queryset.filter(**{f"{date_field_name}__date__gte": parsed_date_from})
+            if parsed_date_to:
+                # Use __date for DateTimeField to filter by the date part only
+                queryset = queryset.filter(**{f"{date_field_name}__date__lte": parsed_date_to})
+
             return queryset
-        
+
         # === FETCH ALL PATIENT DATA ===
-        
+
         # 1. BASIC PATIENT INFO
+        # Calculate age properly
+        today = date.today()
+        age = today.year - patient.date_of_birth.year - ((today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day))
+
+        # Handle patient photo
+        photo_url = ''
+        if patient.photo and hasattr(patient.photo, 'url'):
+            try:
+                # Check if file exists
+                if default_storage.exists(patient.photo.name):
+                    photo_url = patient.photo.url
+            except Exception as e:
+                logger.warning(f"Error accessing patient photo for patient {patient.id}: {e}")
+                pass
+
         patient_data = {
             'id': patient.id,
             'full_name': patient.full_name,
             'gender': patient.gender,
             'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
-            'age': (date.today() - patient.date_of_birth).days // 365,
+            'age': age,
             'blood_group': patient.blood_group,
             'phone': patient.phone,
             'email': patient.email or '',
@@ -2775,24 +2850,28 @@ def fetch_patient_activity(request):
             'status': patient.status,
             'is_inpatient': patient.is_inpatient,
             'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
-            
+            'photo_url': photo_url,
+
             # Next of Kin Info
             'next_of_kin_name': patient.next_of_kin_name,
             'next_of_kin_phone': patient.next_of_kin_phone,
             'next_of_kin_relationship': patient.next_of_kin_relationship or '',
             'next_of_kin_email': patient.next_of_kin_email or '',
             'next_of_kin_address': patient.next_of_kin_address or '',
-            
+
             # Current Medical Status
             'diagnosis': patient.diagnosis or '',
             'medication': patient.medication or '',
             'notes': patient.notes or '',
             'referred_by': patient.referred_by or '',
         }
-        
+
+        # --- CORRECTED CALLS TO apply_date_filter ---
         # 2. CONSULTATIONS
         consultations_qs = apply_date_filter(
             patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
+            date_from_param,  # Pass the raw date string from request
+            date_to_param,    # Pass the raw date string from request (will be today if not provided)
             'created_at'
         )
         consultations = []
@@ -2806,10 +2885,12 @@ def fetch_patient_activity(request):
                 'advice': consultation.advice,
                 'admission_id': consultation.admission.id if consultation.admission else None,
             })
-        
+
         # 3. PRESCRIPTIONS
         prescriptions_qs = apply_date_filter(
             patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
             'created_at'
         )
         prescriptions = []
@@ -2822,10 +2903,12 @@ def fetch_patient_activity(request):
                 'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'Unknown',
                 'created_at': prescription.created_at.strftime('%Y-%m-%d %H:%M'),
             })
-        
+
         # 4. VITALS
         vitals_qs = apply_date_filter(
             Vitals.objects.filter(patient=patient).order_by('-recorded_at'),
+            date_from_param,
+            date_to_param,
             'recorded_at'
         )
         vitals = []
@@ -2843,32 +2926,128 @@ def fetch_patient_activity(request):
                 'bmi': vital.bmi,
                 'notes': vital.notes or '',
             })
-        
-        # 5. LAB TESTS & RESULTS
+
+        # ====================================================================
+        # 5. LAB TESTS & RESULTS (Grouped by test_request_id UUID)
+        # ====================================================================
+
         lab_tests_qs = apply_date_filter(
-            patient.lab_tests.select_related('category', 'performed_by', 'requested_by').order_by('-requested_at'),
+            patient.lab_tests.select_related('category', 'performed_by', 'requested_by', 'recorded_by').order_by('-requested_at'),
+            date_from_param,
+            date_to_param,
             'requested_at'
         )
-        lab_tests = []
+
+        # Group tests by the UUID (test_request_id)
+        grouped_lab_tests = defaultdict(list)
         for test in lab_tests_qs:
-            lab_tests.append({
-                'id': test.id,
-                'test_name': test.test_name,
-                'category': test.category.name if test.category else '',
-                'status': test.status,
-                'result_value': test.result_value or '',
-                'normal_range': test.normal_range or '',
-                'requested_at': test.requested_at.strftime('%Y-%m-%d %H:%M'),
-                'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else '',
-                'requested_by': test.requested_by.get_full_name() if test.requested_by else test.doctor_name,
-                'performed_by': test.performed_by.get_full_name() if test.performed_by else '',
-                'notes': test.notes or '',
-                'instructions': test.instructions or '',
+            grouped_lab_tests[test.test_request_id].append(test)
+
+        lab_test_groups = []
+        for request_id, tests_in_group in grouped_lab_tests.items():
+            first_test = tests_in_group[0]
+
+            # Fetch Doctor Comment
+            doctor_comment_data = None
+            if first_test.doctor_comments:
+                try:
+                    comment = DoctorComments.objects.get(id=first_test.doctor_comments)
+                    doctor_comment_data = {
+                        "id": comment.id,
+                        "comment": comment.comments,
+                        "doctor_name": comment.doctor_name,
+                        "labtech_name": comment.labtech_name,
+                        "date": comment.date.strftime('%Y-%m-%d %H:%M')
+                    }
+                except DoctorComments.DoesNotExist:
+                    doctor_comment_data = None
+
+            # Fetch Lab Result File
+            lab_file_data = None
+            if first_test.labresulttestid:
+                try:
+                    lab_file = LabResultFile.objects.select_related('uploaded_by').get(id=first_test.labresulttestid)
+                    file_url = ''
+                    file_name = ''
+                    if lab_file.result_file and hasattr(lab_file.result_file, 'url'):
+                        try:
+                            if default_storage.exists(lab_file.result_file.name):
+                                file_url = lab_file.result_file.url
+                                file_name = lab_file.result_file.name.split('/')[-1]
+                        except Exception as e:
+                            logger.warning(f"Error accessing lab result file {lab_file.id}: {e}")
+                            pass
+                    
+                    lab_file_data = {
+                        "id": lab_file.id,
+                        "file_url": file_url,
+                        "file_name": file_name,
+                        "uploaded_at": lab_file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+                        "uploaded_by": lab_file.uploaded_by.get_full_name() if lab_file.uploaded_by else 'Unknown'
+                    }
+                except LabResultFile.DoesNotExist:
+                    lab_file_data = None
+
+            # Prepare individual tests data
+            tests_data = []
+            for test in tests_in_group:
+                tests_data.append({
+                    'id': test.id,
+                    'test_name': test.test_name,
+                    'category': test.category.name if test.category else '',
+                    'status': test.get_status_display(),
+                    'status_code': test.status,
+                    'result_value': test.result_value or '',
+                    'normal_range': test.normal_range or '',
+                    'notes': test.notes or '',
+                    'instructions': test.instructions or '',
+                    'doctor_name': test.doctor_name or '',
+                    'performed_by': test.performed_by.get_full_name() if test.performed_by else '',
+                    'requested_by': test.requested_by.get_full_name() if test.requested_by else '',
+                    'recorded_by': test.recorded_by.get_full_name() if test.recorded_by else '',
+                    'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else '',
+                    'submitted_on': test.submitted_on.strftime('%Y-%m-%d'),
+                    'testcompleted': test.testcompleted,
+                })
+
+            tests_data.sort(key=lambda x: x['test_name'])
+
+            group_statuses = [test.status for test in tests_in_group]
+            if all(status == 'completed' for status in group_statuses):
+                group_status = 'completed'
+            elif any(status == 'in_progress' for status in group_statuses):
+                group_status = 'in_progress'
+            elif any(status == 'cancelled' for status in group_statuses):
+                group_status = 'mixed'
+            else:
+                group_status = 'pending'
+
+            lab_test_groups.append({
+                "request_id": str(request_id),
+                "requested_at": first_test.requested_at.strftime('%Y-%m-%d %H:%M'),
+                "submitted_on": first_test.submitted_on.strftime('%Y-%m-%d'),
+                "doctor_name": first_test.doctor_name or '',
+                "requested_by": first_test.requested_by.get_full_name() if first_test.requested_by else '',
+                "group_status": group_status,
+                "tests_count": len(tests_in_group),
+                "completed_tests": len([t for t in tests_in_group if t.status == 'completed']),
+                "pending_tests": len([t for t in tests_in_group if t.status == 'pending']),
+                "doctor_comment": doctor_comment_data,
+                "result_file": lab_file_data,
+                "tests": tests_data
             })
-        
+
+        lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True)
+
+        # ====================================================================
+        # END OF LAB TEST GROUPING LOGIC
+        # ====================================================================
+
         # 6. NURSING NOTES
         nursing_notes_qs = apply_date_filter(
             patient.nursing_notes.order_by('-note_datetime'),
+            date_from_param,
+            date_to_param,
             'note_datetime'
         )
         nursing_notes = []
@@ -2878,14 +3057,18 @@ def fetch_patient_activity(request):
                 'note_datetime': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
                 'nurse': note.nurse,
                 'note_type': note.get_note_type_display(),
+                'note_type_code': note.note_type,
                 'notes': note.notes,
                 'patient_status': note.patient_status or '',
                 'follow_up': note.follow_up or '',
+                'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
             })
-        
+
         # 7. ADMISSIONS
         admissions_qs = apply_date_filter(
             Admission.objects.filter(patient=patient).order_by('-admission_date'),
+            date_from_param,
+            date_to_param,
             'admission_date'
         )
         admissions = []
@@ -2893,17 +3076,21 @@ def fetch_patient_activity(request):
             admissions.append({
                 'id': admission.id,
                 'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
+                'admitted_on': admission.admitted_on.strftime('%Y-%m-%d'),
                 'admitted_by': admission.admitted_by or '',
                 'doctor_assigned': admission.doctor_assigned,
                 'status': admission.status,
                 'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else '',
                 'discharged_by': admission.discharged_by or '',
                 'discharge_notes': admission.discharge_notes or '',
+                'time': admission.time.strftime('%H:%M') if admission.time else '',
             })
-        
+
         # 8. CARE PLANS
         care_plans_qs = apply_date_filter(
             CarePlan.objects.filter(patient=patient).select_related('created_by').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
             'created_at'
         )
         care_plans = []
@@ -2915,20 +3102,28 @@ def fetch_patient_activity(request):
                 'clinical_findings': plan.clinical_findings,
                 'plan_of_care': plan.plan_of_care,
             })
-        
-        # 9. REFERRALS
-        referrals_qs = Referral.objects.filter(patient=patient).select_related('department').order_by('-id')
+
+        # 9. REFERRALS (Assuming 'created_at' for this model too, adjust if different)
+        referrals_qs = apply_date_filter(
+            Referral.objects.filter(patient=patient).select_related('department').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
+            'created_at' # Ensure 'created_at' exists on Referral model
+        )
         referrals = []
         for referral in referrals_qs:
             referrals.append({
                 'id': referral.id,
                 'department': referral.department.name,
                 'notes': referral.notes,
+                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(referral, 'created_at') else '',
             })
-        
+
         # 10. APPOINTMENTS
         appointments_qs = apply_date_filter(
             Appointment.objects.filter(patient=patient).select_related('department').order_by('-scheduled_time'),
+            date_from_param,
+            date_to_param,
             'scheduled_time'
         )
         appointments = []
@@ -2938,10 +3133,12 @@ def fetch_patient_activity(request):
                 'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
                 'department': appointment.department.name,
             })
-        
-        # 11. BILLS & PAYMENTS
+
+        # 11. BILLS
         bills_qs = apply_date_filter(
             patient.bills.prefetch_related('items__service_type').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
             'created_at'
         )
         bills = []
@@ -2955,7 +3152,7 @@ def fetch_patient_activity(request):
                     'unit_price': float(item.unit_price),
                     'total_price': float(item.total_price),
                 })
-            
+
             bills.append({
                 'id': bill.id,
                 'bill_number': bill.bill_number,
@@ -2966,13 +3163,16 @@ def fetch_patient_activity(request):
                 'amount_paid': float(bill.amount_paid()),
                 'outstanding_amount': float(bill.outstanding_amount()),
                 'status': bill.get_status_display(),
+                'status_code': bill.status,
                 'items': bill_items,
                 'notes': bill.notes or '',
             })
-        
+
         # 12. PAYMENTS
         payments_qs = apply_date_filter(
-            patient.payments.select_related('processed_by').order_by('-payment_date'),
+            patient.payments.select_related('processed_by', 'bill').order_by('-payment_date'),
+            date_from_param,
+            date_to_param,
             'payment_date'
         )
         payments = []
@@ -2982,15 +3182,20 @@ def fetch_patient_activity(request):
                 'amount': float(payment.amount),
                 'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
                 'payment_method': payment.get_payment_method_display(),
+                'payment_method_code': payment.payment_method,
                 'payment_reference': payment.payment_reference or '',
                 'status': payment.get_status_display(),
+                'status_code': payment.status,
                 'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'Unknown',
+                'bill_number': payment.bill.bill_number if payment.bill else '',
                 'notes': payment.notes or '',
             })
-        
+
         # 13. HANDOVER LOGS
         handover_logs_qs = apply_date_filter(
             HandoverLog.objects.filter(patient=patient).select_related('author').order_by('-timestamp'),
+            date_from_param,
+            date_to_param,
             'timestamp'
         )
         handover_logs = []
@@ -3001,22 +3206,13 @@ def fetch_patient_activity(request):
                 'author': log.author.get_full_name() if log.author else 'Unknown',
                 'notes': log.notes,
             })
-        
-        # 14. LAB RESULT FILES
-        lab_files_qs = apply_date_filter(
-            LabResultFile.objects.filter(patient=patient).select_related('uploaded_by').order_by('-uploaded_at'),
-            'uploaded_at'
-        )
-        lab_files = []
-        for file in lab_files_qs:
-            lab_files.append({
-                'id': file.id,
-                'uploaded_at': file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
-                'uploaded_by': file.uploaded_by.get_full_name() if file.uploaded_by else 'Unknown',
-                'file_url': file.result_file.url if file.result_file else '',
-                'file_name': file.result_file.name.split('/')[-1] if file.result_file else '',
-            })
-        
+
+        # Calculate summary statistics
+        total_lab_test_groups = len(lab_test_groups)
+        total_individual_lab_tests = sum(len(group['tests']) for group in lab_test_groups)
+        pending_lab_test_groups = len([g for g in lab_test_groups if g['group_status'] in ['pending', 'in_progress']])
+        completed_lab_test_groups = len([g for g in lab_test_groups if g['group_status'] == 'completed'])
+
         # Compile comprehensive response
         response_data = {
             'success': True,
@@ -3024,7 +3220,7 @@ def fetch_patient_activity(request):
             'consultations': consultations,
             'prescriptions': prescriptions,
             'vitals': vitals,
-            'lab_tests': lab_tests,
+            'lab_test_groups': lab_test_groups,
             'nursing_notes': nursing_notes,
             'admissions': admissions,
             'care_plans': care_plans,
@@ -3033,30 +3229,38 @@ def fetch_patient_activity(request):
             'bills': bills,
             'payments': payments,
             'handover_logs': handover_logs,
-            'lab_files': lab_files,
-            
+
             # Summary counts
             'summary': {
                 'total_consultations': len(consultations),
                 'total_prescriptions': len(prescriptions),
                 'total_vitals': len(vitals),
-                'total_lab_tests': len(lab_tests),
-                'pending_lab_tests': len([t for t in lab_tests if t['status'] == 'pending']),
+                'total_lab_test_groups': total_lab_test_groups,
+                'total_individual_lab_tests': total_individual_lab_tests,
+                'pending_lab_test_groups': pending_lab_test_groups,
+                'completed_lab_test_groups': completed_lab_test_groups,
                 'total_nursing_notes': len(nursing_notes),
                 'total_admissions': len(admissions),
                 'current_admission': any(a['status'] == 'Admitted' for a in admissions),
                 'total_bills': len(bills),
                 'outstanding_bills': len([b for b in bills if b['outstanding_amount'] > 0]),
                 'total_payments': len(payments),
+                'total_referrals': len(referrals),
+                'total_appointments': len(appointments),
+                'total_care_plans': len(care_plans),
+                'total_handover_logs': len(handover_logs),
             }
         }
-        
+
         return JsonResponse(response_data)
-        
+
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
+    except ValueError as e: # Catch specific ValueError from date parsing in apply_date_filter
+        return JsonResponse({'error': f'Date format error: {str(e)}'}, status=400)
     except Exception as e:
-        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+        logger.error(f"Error in fetch_patient_activity: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 def export_to_csv(lab_tests, doctor_comments, vitals, payments):
     response = HttpResponse(content_type='text/csv')
