@@ -129,13 +129,13 @@
                         </li>
                         
                         <!-- Treatment & Monitoring -->
-                        <li class="nav-header">TREATMENT & MONITORING</li>
+                        {% comment %} <li class="nav-header">TREATMENT & MONITORING</li>
                         <li class="nav-item">
                             <a href="{% url 'monitoring' %}" class="nav-link {% if request.resolver_match.url_name == 'monitoring' %}active{% endif %}">
                                 <i class="nav-icon fas fa-chart-line"></i>
                                 <p>Treatment Monitoring</p>
                             </a>
-                        </li>
+                        </li> {% endcomment %}
                         <!-- Account -->
                         <li class="nav-header">ACCOUNT</li>
                         <li class="nav-item">

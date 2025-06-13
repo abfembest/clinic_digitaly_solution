@@ -650,9 +650,18 @@ def get_patient_overview(request, patient_id):
         overview_data = {
             'name': patient.full_name,
             'gender': patient.gender,
+            'blood_group': patient.blood_group,
+            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
+            'phone': patient.phone,
+            'address': patient.address,
             'status': patient.status,
-            'ward': latest_admission.ward if latest_admission else 'N/A',
-            'bed': latest_admission.bed_number if latest_admission else 'N/A',
+            'is_inpatient': patient.is_inpatient,
+            'diagnosis': patient.diagnosis,
+            'medication': patient.medication,
+            'notes': patient.notes,
+            'referred_by': patient.referred_by,
+            'ward': 'N/A',  # Admission model does not have 'ward' or 'bed_number'
+            'bed': 'N/A',   # These fields are not in the provided models.py
             'last_vitals': None
         }
 
@@ -661,9 +670,8 @@ def get_patient_overview(request, patient_id):
                 'date': latest_vitals.recorded_at.strftime('%Y-%m-%d %H:%M'),
                 'temperature': str(latest_vitals.temperature),
                 'blood_pressure': latest_vitals.blood_pressure,
-                'pulse': str(latest_vitals.pulse_rate),
-                'respiration_rate': str(latest_vitals.respiration_rate),
-                'oxygen_saturation': str(latest_vitals.oxygen_saturation),
+                'pulse': str(latest_vitals.pulse),
+                'respiratory_rate': str(latest_vitals.respiratory_rate),
                 'weight': str(latest_vitals.weight),
                 'height': str(latest_vitals.height),
                 'bmi': str(latest_vitals.bmi),
@@ -672,6 +680,88 @@ def get_patient_overview(request, patient_id):
         return JsonResponse(overview_data)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+@login_required(login_url='home')
+def get_patient_monitor(request, patient_id):
+    try:
+        patient = Patient.objects.get(id=patient_id)
+        
+        consultations = Consultation.objects.filter(patient=patient).order_by('-created_at')
+        prescriptions = Prescription.objects.filter(patient=patient).order_by('-created_at')
+        lab_tests = LabTest.objects.filter(patient=patient).order_by('-requested_at')
+        nursing_notes = NursingNote.objects.filter(patient=patient).order_by('-created_at')
+        care_plans = CarePlan.objects.filter(patient=patient).order_by('-created_at')
+        referrals = Referral.objects.filter(patient=patient).order_by('-id')
+        appointments = Appointment.objects.filter(patient=patient).order_by('-scheduled_time')
+
+
+        return JsonResponse({
+            "consultations": [
+                {
+                    "diagnosis_summary": c.diagnosis_summary,
+                    "advice": c.advice,
+                    "symptoms": c.symptoms,
+                    "date": c.created_at.strftime("%Y-%m-%d %H:%M")
+                } 
+                for c in consultations
+            ],
+            "prescriptions": [
+                {
+                    "medication": p.medication,
+                    "instructions": p.instructions,
+                    "start_date": p.start_date.strftime("%Y-%m-%d"),
+                    "date": p.created_at.strftime("%Y-%m-%d %H:%M")
+                } 
+                for p in prescriptions
+            ],
+            "lab_tests": [
+                {
+                    "test_name": lt.test_name,
+                    "category": lt.category.name,
+                    "status": lt.status,
+                    "result_value": lt.result_value,
+                    "date_performed": lt.date_performed.strftime("%Y-%m-%d %H:%M") if lt.date_performed else 'N/A',
+                    "requested_at": lt.requested_at.strftime("%Y-%m-%d %H:%M")
+                }
+                for lt in lab_tests
+            ],
+            "nursing_notes": [
+                {
+                    "note_type": nn.note_type,
+                    "notes": nn.notes,
+                    "patient_status": nn.patient_status,
+                    "date": nn.note_datetime.strftime("%Y-%m-%d %H:%M")
+                }
+                for nn in nursing_notes
+            ],
+            "care_plans": [
+                {
+                    "clinical_findings": cp.clinical_findings,
+                    "plan_of_care": cp.plan_of_care,
+                    "created_at": cp.created_at.strftime("%Y-%m-%d %H:%M")
+                }
+                for cp in care_plans
+            ],
+            "referrals": [
+                {
+                    "department": r.department.name,
+                    "notes": r.notes,
+                    "patient_name": r.patient.full_name
+                }
+                for r in referrals
+            ],
+            "appointments": [
+                {
+                    "department": a.department.name,
+                    "scheduled_time": a.scheduled_time.strftime("%Y-%m-%d %H:%M")
+                }
+                for a in appointments
+            ]
+        })
+    except Patient.DoesNotExist:
+        return JsonResponse({"error": "Patient not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
     
 
 
@@ -732,39 +822,6 @@ def notification_data(request):
             },
         ]
     })"""
-
-
-@login_required(login_url='home')
-def get_patient_monitor(request, patient_id):
-    try:
-        patient = Patient.objects.get(id=patient_id)
-        # Get consultations for this patient, ordered by most recent first
-        consultations = Consultation.objects.filter(patient=patient).order_by('-created_at')
-        
-        # Get prescriptions for this patient, ordered by most recent first
-        prescriptions = Prescription.objects.filter(patient=patient).order_by('-created_at')
-        
-        return JsonResponse({
-            "consultations": [
-                {
-                    "notes": c.diagnosis_summary,  # Using diagnosis_summary instead of notes
-                    "date": c.created_at.strftime("%Y-%m-%d")
-                } 
-                for c in consultations
-            ],
-            "prescriptions": [
-                {
-                    "drug": p.medication,  # Using medication instead of drug
-                    "dosage": p.instructions,  # Using instructions instead of dosage
-                    "date": p.created_at.strftime("%Y-%m-%d")
-                } 
-                for p in prescriptions
-            ],
-        })
-    except Patient.DoesNotExist:
-        return JsonResponse({"error": "Patient not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
 
 @login_required(login_url='home')
 def monitoring(request):
