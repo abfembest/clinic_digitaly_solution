@@ -520,7 +520,21 @@
     });
 
     </script>
+    <script>
+        document.getElementById('patientInput').addEventListener('input', function () {
+            const input = this.value;
+            const options = document.querySelectorAll('#patients-datalist option');
+            let matchedId = '';
 
+            options.forEach(option => {
+                if (option.value === input) {
+                    matchedId = option.getAttribute('data-id');
+                }
+            });
+
+            document.getElementById('selectedPatientId').value = matchedId;
+        });
+    </script>
 
     <!-- Custom Scripts Block -->
     {% block extra_scripts %}
