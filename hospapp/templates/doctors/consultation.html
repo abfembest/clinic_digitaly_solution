@@ -228,175 +228,146 @@
     }
 </style>
 <div class="medical-consultation-container">
-<section class="content">
-    <div class="container-fluid">
-        <div class="row">
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                {# Start of the main row for two-column layout #}
 
-            <div class="col-lg-4 col-md-5">
-                <div class="card patient-select-card card-outline mb-3">
-                    <div class="card-header">
-                        <h3 class="card-title">Select Patient for Consultation</h3>
-                    </div>
-                    <div class="card-body compact-form">
-                        <div class="form-group">
-                            <label for="main-patient-select-input">
-                                <i class="fas fa-user-injured medical-icon"></i>Patient Name
-                            </label>
-                            <input class="form-control shadow-sm" list="patients-datalist" id="main-patient-select-input"
-                                   placeholder="Type to search patient..." required>
-                            <datalist id="patients-datalist">
-                                <!-- Sample patients for demo -->
-                                <option value="John Doe" data-id="1"></option>
-                                <option value="Jane Smith" data-id="2"></option>
-                                <option value="Robert Johnson" data-id="3"></option>
-                            </datalist>
+                <div class="col-lg-4 col-md-5">
+                    {# Column for Patient Selection and History #}
+                    <div class="card card-primary card-outline mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">Select Patient for Consultation</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="main-patient-select-input">Patient Name</label>
+                                <input class="form-control" list="patients-datalist" id="main-patient-select-input"
+                                       placeholder="Type to search patient..." required>
+                                <datalist id="patients-datalist">
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.full_name }}" data-id="{{ patient.id }}" class="select2"></option>
+                                    {% endfor %}
+                                </datalist>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div id="patient-history" class="card card-outline mb-3" style="display: none;">
-                    <div class="card-header">
-                        <h3 class="card-title">Patient Medical History (<span id="history-patient-name"></span>)</h3>
-                    </div>
-                    <div class="card-body" id="history-content">
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-8 col-md-7">
-                <div class="card card-outline">
-                    <div class="card-header p-2">
-                        <ul class="nav nav-pills" id="doctorTabs">
-                            <li class="nav-item">
-                                <a class="nav-link active" data-toggle="tab" href="#diagnosis">
-                                    <i class="fas fa-stethoscope mr-1"></i>Consultation & Diagnosis
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-toggle="tab" href="#prescription">
-                                    <i class="fas fa-prescription-bottle-alt mr-1"></i>Prescription
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-toggle="tab" href="#plan">
-                                    <i class="fas fa-clipboard-list mr-1"></i>Care Plan
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="card-body">
-                        <div class="tab-content">
-
-                            <div class="tab-pane fade show active" id="diagnosis">
-                                <form method="POST" action="#" class="compact-form">
-                                    <input type="hidden" name="patient_id" id="diagnosis-patient-id" required>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-heartbeat medical-icon"></i>Symptoms / Complaints
-                                        </label>
-                                        <textarea class="form-control shadow-sm" name="symptoms" rows="3" required
-                                                  placeholder="Enter patient symptoms and complaints..."></textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-diagnoses medical-icon"></i>Diagnosis Summary
-                                        </label>
-                                        <textarea class="form-control shadow-sm" name="diagnosis_summary" rows="3" required
-                                                  placeholder="Enter diagnosis details..."></textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-user-md medical-icon"></i>Doctor's Advice & Notes
-                                        </label>
-                                        <textarea class="form-control shadow-sm" name="advice" rows="3" required
-                                                  placeholder="Advice, recommendations, or additional notes..."></textarea>
-                                    </div>
-
-                                    <div class="section-divider"></div>
-                                    <div class="form-group text-center">
-                                        <button type="submit" class="btn btn-primary shadow">
-                                            <i class="fas fa-save mr-2"></i>Save Consultation
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            <div class="tab-pane fade" id="prescription">
-                                <form method="POST" action="#" class="compact-form">
-                                    <input type="hidden" name="patient_id" id="prescription-patient-id" required>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-pills medical-icon"></i>Medication Name
-                                        </label>
-                                        <input type="text" name="medication" class="form-control shadow-sm"
-                                               placeholder="e.g., Metformin" required>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-prescription medical-icon"></i>Dosage & Instructions
-                                        </label>
-                                        <textarea name="instructions" class="form-control shadow-sm" rows="2"
-                                                  placeholder="e.g., 500mg twice daily after meals" required></textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-calendar-alt medical-icon"></i>Start Date
-                                        </label>
-                                        <input type="date" name="start_date" class="form-control shadow-sm" required>
-                                    </div>
-
-                                    <div class="section-divider"></div>
-                                    <div class="form-group text-center">
-                                        <button type="submit" class="btn btn-success shadow">
-                                            <i class="fas fa-plus mr-2"></i>Add Prescription
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            <div class="tab-pane fade" id="plan">
-                                <form method="POST" action="#" class="compact-form">
-                                    <input type="hidden" name="patient_id" id="plan-patient-id" required>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-microscope medical-icon"></i>Clinical Findings
-                                        </label>
-                                        <textarea class="form-control shadow-sm" name="clinical_findings" rows="3" required
-                                                  placeholder="Enter clinical findings and observations..."></textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>
-                                            <i class="fas fa-route medical-icon"></i>Plan of Care
-                                        </label>
-                                        <textarea class="form-control shadow-sm" name="plan_of_care" rows="3"
-                                                  placeholder="Next steps, referrals, follow-up..." required></textarea>
-                                    </div>
-
-                                    <div class="section-divider"></div>
-                                    <div class="form-group text-center">
-                                        <button type="submit" class="btn btn-info shadow">
-                                            <i class="fas fa-clipboard-check mr-2"></i>Save Care Plan
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
+                    <div id="patient-history" class="card card-info card-outline mb-3" style="display: none;">
+                        <div class="card-header">
+                            <h3 class="card-title">Patient Medical History (<span id="history-patient-name"></span>)</h3>
+                        </div>
+                        <div class="card-body" id="history-content">
                         </div>
                     </div>
-                </div>
-            </div>
+                </div> {# End of col-lg-4 #}
 
+                <div class="col-lg-8 col-md-7">
+                    {# Column for Tabs #}
+                    <div class="card card-primary card-outline">
+                        <div class="card-header p-2">
+                            <ul class="nav nav-pills" id="doctorTabs">
+                                <li class="nav-item">
+                                    <a class="nav-link active" data-toggle="tab" href="#diagnosis">
+                                        Consultation &
+                                        Diagnosis
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#prescription">Prescription</a>
+                                </li>
+                                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#plan">Care Plan</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="tab-content">
+
+                                <div class="tab-pane fade show active" id="diagnosis">
+                                    <form method="POST" action="{% url 'save_consultation' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="patient_id" id="diagnosis-patient-id" required>
+
+                                        <div class="form-group">
+                                            <label>Symptoms / Complaints</label>
+                                            <textarea class="form-control" name="symptoms" rows="3" required
+                                                      placeholder="Enter patient symptoms and complaints..."></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Diagnosis Summary</label>
+                                            <textarea class="form-control" name="diagnosis_summary" rows="3" required
+                                                      placeholder="Enter diagnosis details..."></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Doctor's Advice & Notes</label>
+                                            <textarea class="form-control" name="advice" rows="3" required
+                                                      placeholder="Advice, recommendations, or additional notes..."></textarea>
+                                        </div>
+
+                                        <div class="form-group text-center">
+                                            <button type="submit" class="btn btn-primary">Save Consultation</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+
+                                <div class="tab-pane fade" id="prescription">
+                                    <form method="POST" action="{% url 'add_prescription' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="patient_id" id="prescription-patient-id" required>
+
+                                        <div class="form-group">
+                                            <label>Medication Name</label>
+                                            <input type="text" name="medication" class="form-control" placeholder="e.g., Metformin"
+                                                   required>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Dosage & Instructions</label>
+                                            <textarea name="instructions" class="form-control" rows="2"
+                                                      placeholder="e.g., 500mg twice daily after meals" required></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Start Date</label>
+                                            <input type="date" name="start_date" class="form-control" required>
+                                        </div>
+
+                                        <div class="form-group text-center">
+                                            <button type="submit" class="btn btn-success">Add Prescription</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="tab-pane fade" id="plan">
+                                    <form method="POST" action="{% url 'save_care_plan' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="patient_id" id="plan-patient-id" required>
+
+                                        <div class="form-group">
+                                            <label>Clinical Findings</label>
+                                            <textarea class="form-control" name="clinical_findings" rows="3" required></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Plan of Care</label>
+                                            <textarea class="form-control" name="plan_of_care" rows="3"
+                                                      placeholder="Next steps, referrals, follow-up..." required></textarea>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-info">Save Care Plan</button>
+                                    </form>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div> {# End of col-lg-8 #}
+
+            </div> {# End of row #}
         </div>
-    </div>
     </section>
 </div>
 
@@ -626,6 +597,20 @@
             historyContent.innerHTML = html;
         }
     });
+</script>
+<!--Select2-->
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+<script>
+
+    //Select2
+    $(function () {
+        //Initialize Select2 Elements
+        $('.select2').select2()
+
+        //Initialize Select2 Elements
+        $('.select2bs4').select2({
+            theme: 'bootstrap4'
+        })
 </script>
 
 {% endblock %}

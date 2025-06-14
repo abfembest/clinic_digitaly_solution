@@ -315,7 +315,7 @@
                     <div id="resultContent"></div>
                 </div>
                 <label>Select Patient</label>
-                <select class="form-control" name="patient_id" id="patient-select" required>
+                <select class="form-control select2" name="patient_id" id="patient-select" required>
                     <option value="" disabled selected>-- Choose Patient --</option>
                     {% for patient in patients %}
                     <option value="{{ patient.id }}">{{ patient.id }}-{{ patient.full_name }}</option>

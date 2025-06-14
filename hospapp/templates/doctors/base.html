@@ -21,6 +21,8 @@
     <link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/datatables-buttons/css/buttons.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
     <!-- Google Font: Source Sans Pro -->
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
 </head>
@@ -56,12 +58,11 @@
             </ul>
         </nav>
         <!-- /.navbar -->
-
         <!-- Main Sidebar Container -->
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
             <!-- Brand Logo -->
             <a href="{% url 'doctors' %}" class="brand-link">
-                <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo" 
+                <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
                      class="brand-image img-circle elevation-3" style="opacity: .8">
                 <span class="brand-text font-weight-medium text-uppercase">Doctors</span>
             </a>
@@ -98,7 +99,7 @@
                                 <p>Dashboard</p>
                             </a>
                         </li>
-                        
+
                         <!-- Patient Management -->
                         <li class="nav-header">PATIENT MANAGEMENT</li>
                         <li class="nav-item">
@@ -113,7 +114,7 @@
                                 <p>Medical Records</p>
                             </a>
                         </li>
-                        
+
                         <!-- Laboratory & Tests -->
                         <li class="nav-header">LABORATORY & TESTS</li>
                         <li class="nav-item">
@@ -128,9 +129,10 @@
                                 <p>Recommended IVF</p>
                             </a>
                         </li>
-                        
+
                         <!-- Treatment & Monitoring -->
-                        {% comment %} <li class="nav-header">TREATMENT & MONITORING</li>
+                        {% comment %}
+                        <li class="nav-header">TREATMENT & MONITORING</li>
                         <li class="nav-item">
                             <a href="{% url 'monitoring' %}" class="nav-link {% if request.resolver_match.url_name == 'monitoring' %}active{% endif %}">
                                 <i class="nav-icon fas fa-chart-line"></i>
@@ -155,33 +157,32 @@
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             {% block content %}
-            
+
             {% endblock %}
         </div>
         <!-- /.content-wrapper -->
-
         <!-- Toast notifications for Django messages -->
         <div aria-live="polite" aria-atomic="true" style="position: fixed; top: 1rem; right: 1rem; z-index: 1080;">
             <div id="toast-container">
                 {% if messages %}
                 {% for message in messages %}
-                    <div class="toast bg-{{ message.tags|default:"info" }} text-white mb-3" role="alert" data-delay="5000" data-autohide="true">
-                        <div class="toast-header bg-{{ message.tags|default:"info" }} text-white border-0">
-                            <i class="mr-2 fas fa-{{ 
-                            "check-circle" if message.tags == "success" 
-                            else "exclamation-triangle" if message.tags == "warning" 
-                            else "times-circle" if message.tags == "error" 
+                <div class="toast bg-{{ message.tags|default:"info" }} text-white mb-3" role="alert" data-delay="5000" data-autohide="true">
+                    <div class="toast-header bg-{{ message.tags|default:"info" }} text-white border-0">
+                        <i class="mr-2 fas fa-{{
+                            "check-circle" if message.tags == "success"
+                            else "exclamation-triangle" if message.tags == "warning"
+                            else "times-circle" if message.tags == "error"
                             else "info-circle"
                             }}"></i>
-                            <strong class="mr-auto text-capitalize">{{ message.tags|default:"Info" }}</strong>
-                            <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <div class="toast-body">
-                            {{ message }}
-                        </div>
+                        <strong class="mr-auto text-capitalize">{{ message.tags|default:"Info" }}</strong>
+                        <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
+                    <div class="toast-body">
+                        {{ message }}
+                    </div>
+                </div>
                 {% endfor %}
                 {% endif %}
             </div>
@@ -228,7 +229,6 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
-
     <!-- jQuery -->
     <script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
     <!-- Bootstrap 4 -->
@@ -248,6 +248,22 @@
     <script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
     <!-- AdminLTE App -->
     <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
+
+    <!--Select2-->
+
+    <script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+    <script>
+
+        //Select2
+        $(function () {
+            //Initialize Select2 Elements
+            $('.select2').select2()
+
+            //Initialize Select2 Elements
+            $('.select2bs4').select2({
+                theme: 'bootstrap4'
+            })
+    </script>
     {% block extra_js%}
 
     {% endblock %}
@@ -256,12 +272,12 @@
     <script>
         $(function () {
             $("#example1").DataTable({
-                "responsive": true, 
-                "lengthChange": false, 
+                "responsive": true,
+                "lengthChange": false,
                 "autoWidth": false,
                 "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
             }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
-            
+
             $('#example2').DataTable({
                 "paging": true,
                 "lengthChange": false,
@@ -321,7 +337,7 @@
 
                         // Show/hide bell icon based on notification count
                         bell.style.display = hasNotifications ? "block" : "none";
-                        
+
                         // Update count badge
                         if (totalCount > 0) {
                             countBadge.textContent = totalCount > 99 ? '99+' : totalCount;
@@ -342,26 +358,26 @@
                                 const li = document.createElement("li");
                                 li.className = "list-group-item d-flex justify-content-between align-items-center";
                                 li.innerHTML = `
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-circle text-primary mr-2" style="font-size: 6px;"></i>
-                                        <span>${item.title}</span>
-                                    </div>
-                                    <span class="badge badge-primary badge-pill">${item.count}</span>
-                                `;
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-circle text-primary mr-2" style="font-size: 6px;"></i>
+                                                <span>${item.title}</span>
+                                            </div>
+                                            <span class="badge badge-primary badge-pill">${item.count}</span>
+                                        `;
                                 li.style.cursor = "pointer";
                                 li.onclick = () => {
                                     window.location.href = item.url;
                                     panel.style.display = "none";
                                 };
-                                
+
                                 // Add hover effect
-                                li.addEventListener('mouseenter', function() {
+                                li.addEventListener('mouseenter', function () {
                                     this.style.backgroundColor = '#f8f9fa';
                                 });
-                                li.addEventListener('mouseleave', function() {
+                                li.addEventListener('mouseleave', function () {
                                     this.style.backgroundColor = '';
                                 });
-                                
+
                                 list.appendChild(li);
                             });
                         }
@@ -398,7 +414,7 @@
     </script>
 
     <!-- Printing Function -->
-<script>
+    <script>
     document.addEventListener("DOMContentLoaded", function () {
         const printButton = document.querySelector(".btn.btn-secondary.no-print");
 
@@ -413,7 +429,7 @@
 
                 // Create print content
                 const printContent = document.getElementById("print-area").innerHTML;
-                
+
                 const printWindow = window.open('', '_blank', 'width=800,height=600');
                 printWindow.document.title = fileName;
                 printWindow.document.write(`
@@ -492,9 +508,9 @@
                     </body>
                     </html>
                 `);
-                
+
                 printWindow.document.close();
-                
+
                 setTimeout(() => {
                     printWindow.print();
                     printWindow.close();
@@ -502,7 +518,9 @@
             });
         }
     });
-</script>
+
+    </script>
+
 
     <!-- Custom Scripts Block -->
     {% block extra_scripts %}
