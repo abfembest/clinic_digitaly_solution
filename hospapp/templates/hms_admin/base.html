@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{% block title %}HMS | {% if user.is_authenticated and user.staff.role %}{{ user.staff.role|capfirst }}{% else %}Hospital Management System{% endif %}{% endblock %}</title>
+    <title>{% block title %}HMS | Administration{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
@@ -20,6 +20,13 @@
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
     {% comment %} This block was added in the previous turn and is retained to allow for extra CSS. {% endcomment %}
     {% block extra_css %}
+    <style>
+        .user-panel .image img {
+            width: 48px; /* Fixed width for the profile picture */
+            height: 48px; /* Fixed height for the profile picture */
+            object-fit: cover; /* Ensures the image covers the area without distortion, cropping if necessary */
+        }
+    </style>
     {% endblock %}
 </head>
 
@@ -31,27 +38,7 @@
                     <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
                 </li>
                 <li class="nav-item d-none d-sm-inline-block">
-                    {% if user.is_authenticated %}
-                        {% if user.staff.role == 'admin' %}
-                            <a href="{% url 'hms_admin' %}" class="nav-link">Home (Admin)</a>
-                        {% elif user.staff.role == 'doctor' %}
-                            <a href="{% url 'doctors' %}" class="nav-link">Home (Doctor)</a>
-                        {% elif user.staff.role == 'receptionist' %}
-                            <a href="{% url 'receptionist' %}" class="nav-link">Home (Receptionist)</a>
-                        {% elif user.staff.role == 'nurse' %}
-                            <a href="{% url 'nurse' %}" class="nav-link">Home (Nurse)</a>
-                        {% elif user.staff.role == 'lab' %}
-                            <a href="{% url 'lab_test_entry' %}" class="nav-link">Home (Lab)</a>
-                        {% elif user.staff.role == 'account' %}
-                            <a href="{% url 'patient_payment_tracker' %}" class="nav-link">Home (Accounts)</a>
-                        {% elif user.staff.role == 'hr' %}
-                            <a href="{% url 'staff_profiles' %}" class="nav-link">Home (HR)</a>
-                        {% else %}
-                            <a href="{% url 'home' %}" class="nav-link">Home</a>
-                        {% endif %}
-                    {% else %}
-                        <a href="{% url 'home' %}" class="nav-link">Home</a>
-                    {% endif %}
+                    <a href="{% url 'hms_admin' %}" class="nav-link">Home (Admin)</a>
                 </li>
             </ul>
 
@@ -70,55 +57,11 @@
             </ul>
         </nav>
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
-            {% if user.is_authenticated and user.staff.role == 'admin' %}
-                <a href="{% url 'hms_admin' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Administration</span>
-                </a>
-            {% elif user.is_authenticated and user.staff.role == 'doctor' %}
-                <a href="{% url 'doctors' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Doctors</span>
-                </a>
-            {% elif user.is_authenticated and user.staff.role == 'receptionist' %}
-                <a href="{% url 'receptionist' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Receptionist</span>
-                </a>
-            {% elif user.is_authenticated and user.staff.role == 'nurse' %}
-                <a href="{% url 'nurse' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Nursing</span>
-                </a>
-            {% elif user.is_authenticated and user.staff.role == 'lab' %}
-                <a href="{% url 'lab_test_entry' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Laboratory</span>
-                </a>
-            {% elif user.is_authenticated and user.staff.role == 'account' %}
-                <a href="{% url 'patient_payment_tracker' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Accounts</span>
-                </a>
-            {% elif user.is_authenticated and user.staff.role == 'hr' %}
-                <a href="{% url 'staff_profiles' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">Human Resources</span>
-                </a>
-            {% else %}
-                <a href="{% url 'home' %}" class="brand-link">
-                    <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
-                         class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-medium text-uppercase">HMS</span>
-                </a>
-            {% endif %}
+            <a href="{% url 'hms_admin' %}" class="brand-link">
+                <img src="{% static 'dist/img/ayologo.jpg' %}" alt="HMS Logo"
+                     class="brand-image img-circle elevation-3" style="opacity: .8">
+                <span class="brand-text font-weight-medium text-uppercase">Administration</span>
+            </a>
 
             <div class="sidebar">
                 <div class="mt-3 mb-3">
@@ -142,60 +85,12 @@
                 <nav class="mt-0">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                         <li class="nav-item">
-                            {% if user.is_authenticated %}
-                                {% if user.staff.role == 'admin' %}
-                                    <a href="{% url 'hms_admin' %}" class="nav-link {% if request.resolver_match.url_name == 'hms_admin' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (Admin)</p>
-                                    </a>
-                                {% elif user.staff.role == 'doctor' %}
-                                    <a href="{% url 'doctors' %}" class="nav-link {% if request.resolver_match.url_name == 'doctors' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (Doctor)</p>
-                                    </a>
-                                {% elif user.staff.role == 'receptionist' %}
-                                    <a href="{% url 'receptionist' %}" class="nav-link {% if request.resolver_match.url_name == 'receptionist' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (Receptionist)</p>
-                                    </a>
-                                {% elif user.staff.role == 'nurse' %}
-                                    <a href="{% url 'nurse' %}" class="nav-link {% if request.resolver_match.url_name == 'nurse' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (Nurse)</p>
-                                    </a>
-                                {% elif user.staff.role == 'lab' %}
-                                    <a href="{% url 'lab_test_entry' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_test_entry' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (Lab)</p>
-                                    </a>
-                                {% elif user.staff.role == 'account' %}
-                                    <a href="{% url 'patient_payment_tracker' %}" class="nav-link {% if request.resolver_match.url_name == 'patient_payment_tracker' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (Accounts)</p>
-                                    </a>
-                                {% elif user.staff.role == 'hr' %}
-                                    <a href="{% url 'staff_profiles' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_profiles' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard (HR)</p>
-                                    </a>
-                                {% else %}
-                                    {# Fallback for other roles or non-staff users #}
-                                    <a href="{% url 'home' %}" class="nav-link">
-                                        <i class="nav-icon fas fa-tachometer-alt"></i>
-                                        <p>Dashboard</p>
-                                    </a>
-                                {% endif %}
-                            {% else %}
-                                {# If not authenticated, direct to a generic home page or login #}
-                                <a href="{% url 'home' %}" class="nav-link">
-                                    <i class="nav-icon fas fa-tachometer-alt"></i>
-                                    <p>Home</p>
-                                </a>
-                            {% endif %}
+                            <a href="{% url 'hms_admin' %}" class="nav-link {% if request.resolver_match.url_name == 'hms_admin' %}active{% endif %}">
+                                <i class="nav-icon fas fa-tachometer-alt"></i>
+                                <p>Dashboard (Admin)</p>
+                            </a>
                         </li>
 
-                        {% comment %} Admin Specific Sections (retained from previous turn's full base.html solution) {% endcomment %}
-                        {% if user.is_authenticated and user.staff.role == 'admin' %}
                         <li class="nav-item">
                             <a href="{% url 'director_operations' %}" class="nav-link {% if request.resolver_match.url_name == 'director_operations' %}active{% endif %}">
                                 <i class="nav-icon fas fa-cogs"></i>
@@ -216,11 +111,9 @@
                                 <p>User Management</p>
                             </a>
                         </li>
-                        {% endif %}
 
                         <li class="nav-header">DEPARTMENTS</li>
 
-                        {% if user.is_authenticated and user.staff.role == 'doctor' or user.staff.role == 'admin' %}
                         <li class="nav-item has-treeview">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-user-md"></i>
@@ -263,9 +156,7 @@
                                 </li>
                             </ul>
                         </li>
-                        {% endif %}
 
-                        {% if user.is_authenticated and user.staff.role == 'receptionist' or user.staff.role == 'admin' %}
                         <li class="nav-item has-treeview">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-user-tie"></i>
@@ -284,9 +175,7 @@
                                 </li>
                             </ul>
                         </li>
-                        {% endif %}
 
-                        {% if user.is_authenticated and user.staff.role == 'nurse' or user.staff.role == 'admin' %}
                         <li class="nav-item has-treeview">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-user-nurse"></i>
@@ -311,9 +200,7 @@
                                 </li>
                             </ul>
                         </li>
-                        {% endif %}
 
-                        {% if user.is_authenticated and user.staff.role == 'lab' or user.staff.role == 'admin' %}
                         <li class="nav-item has-treeview">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-vial"></i>
@@ -344,11 +231,9 @@
                                 </li>
                             </ul>
                         </li>
-                        {% endif %}
 
                         {% comment %} Pharmacy Station - Kept commented as per original {% endcomment %}
 
-                        {% if user.is_authenticated and user.staff.role == 'account' or user.staff.role == 'admin' %}
                         <li class="nav-item has-treeview">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-wallet"></i>
@@ -388,9 +273,7 @@
                                 </li>
                             </ul>
                         </li>
-                        {% endif %}
 
-                        {% if user.is_authenticated and user.staff.role == 'hr' or user.staff.role == 'admin' %}
                         <li class="nav-item has-treeview">
                             <a href="#" class="nav-link">
                                 <i class="nav-icon fas fa-users"></i>
@@ -427,7 +310,6 @@
                                 </li>
                             </ul>
                         </li>
-                        {% endif %}
 
                         <li class="nav-header">ACCOUNT</li>
                         <li class="nav-item">
@@ -567,7 +449,7 @@
     </script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener("DOMContentLoaded", function () {
             const hash = window.location.hash;
             if (hash) {
                 const tabTrigger = document.querySelector(`a[href="${hash}"]`);
@@ -680,109 +562,109 @@
     </script>
 
     <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const printButton = document.querySelector(".btn.btn-secondary.no-print");
+        document.addEventListener("DOMContentLoaded", function () {
+            const printButton = document.querySelector(".btn.btn-secondary.no-print");
 
-        if (printButton) {
-            printButton.addEventListener("click", function (e) {
-                e.preventDefault();
+            if (printButton) {
+                printButton.addEventListener("click", function (e) {
+                    e.preventDefault();
 
-                // Get patient name for file naming
-                const patientName = "{{ patient.full_name }}";
-                const sanitizedName = patientName.replace(/[^a-zA-Z0-9]/g, '_');
-                const fileName = `Test_Results_${sanitizedName}_${new Date().toISOString().split('T')[0]}`;
+                    // Get patient name for file naming
+                    const patientName = "{{ patient.full_name }}";
+                    const sanitizedName = patientName.replace(/[^a-zA-Z0-9]/g, '_');
+                    const fileName = `Test_Results_${sanitizedName}_${new Date().toISOString().split('T')[0]}`;
 
-                // Create print content
-                const printContent = document.getElementById("print-area").innerHTML;
+                    // Create print content
+                    const printContent = document.getElementById("print-area").innerHTML;
 
-                const printWindow = window.open('', '_blank', 'width=800,height=600');
-                printWindow.document.title = fileName;
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>${fileName}</title>
-                        <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
-                        <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
-                        <style>
-                            body {
-                                font-family: 'Source Sans Pro', sans-serif;
-                                padding: 20px;
-                                background: white;
-                                color: #333;
-                            }
-                            .card {
-                                margin-bottom: 20px;
-                                border: 1px solid #ddd;
-                                border-radius: 5px;
-                            }
-                            .card-header {
-                                background-color: #f8f9fa;
-                                padding: 10px 15px;
-                                border-bottom: 1px solid #ddd;
-                                font-weight: bold;
-                            }
-                            .card-body {
-                                padding: 15px;
-                            }
-                            .table {
-                                width: 100%;
-                                border-collapse: collapse;
-                                margin-bottom: 15px;
-                            }
-                            .table th, .table td {
-                                border: 1px solid #ddd;
-                                padding: 8px;
-                                text-align: left;
-                            }
-                            .table th {
-                                background-color: #f8f9fa;
-                                font-weight: bold;
-                            }
-                            .no-print, .content-header {
-                                display: none !important;
-                            }
-                            .img-circle {
-                                border-radius: 50%;
-                            }
-                            h1, h3, h5 {
-                                color: #333;
-                            }
-                            .text-center {
-                                text-align: center;
-                            }
-                            .border-bottom {
-                                border-bottom: 2px solid #007bff !important;
-                            }
-                            input[readonly] {
-                                background: transparent !important;
-                                border: none !important;
-                            }
-                            @page {
-                                margin: 1in;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <h1>Laboratory Test Results</h1>
-                            <p><strong>Patient: ${patientName}</strong></p>
-                            <p>Generated on: ${new Date().toLocaleDateString()}</p>
-                        </div>
-                        ${printContent}
-                    </body>
-                    </html>
-                `);
+                    const printWindow = window.open('', '_blank', 'width=800,height=600');
+                    printWindow.document.title = fileName;
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>${fileName}</title>
+                            <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
+                            <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+                            <style>
+                                body {
+                                    font-family: 'Source Sans Pro', sans-serif;
+                                    padding: 20px;
+                                    background: white;
+                                    color: #333;
+                                }
+                                .card {
+                                    margin-bottom: 20px;
+                                    border: 1px solid #ddd;
+                                    border-radius: 5px;
+                                }
+                                .card-header {
+                                    background-color: #f8f9fa;
+                                    padding: 10px 15px;
+                                    border-bottom: 1px solid #ddd;
+                                    font-weight: bold;
+                                }
+                                .card-body {
+                                    padding: 15px;
+                                }
+                                .table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin-bottom: 15px;
+                                }
+                                .table th, .table td {
+                                    border: 1px solid #ddd;
+                                    padding: 8px;
+                                    text-align: left;
+                                }
+                                .table th {
+                                    background-color: #f8f9fa;
+                                    font-weight: bold;
+                                }
+                                .no-print, .content-header {
+                                    display: none !important;
+                                }
+                                .img-circle {
+                                    border-radius: 50%;
+                                }
+                                h1, h3, h5 {
+                                    color: #333;
+                                }
+                                .text-center {
+                                    text-align: center;
+                                }
+                                .border-bottom {
+                                    border-bottom: 2px solid #007bff !important;
+                                }
+                                input[readonly] {
+                                    background: transparent !important;
+                                    border: none !important;
+                                }
+                                @page {
+                                    margin: 1in;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <h1>Laboratory Test Results</h1>
+                                <p><strong>Patient: ${patientName}</strong></p>
+                                <p>Generated on: ${new Date().toLocaleDateString()}</p>
+                            </div>
+                            ${printContent}
+                        </body>
+                        </html>
+                    `);
 
-                printWindow.document.close();
+                    printWindow.document.close();
 
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.close();
-                }, 500);
-            });
-        }
-    });
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                });
+            }
+        });
 
     </script>
     <script>
