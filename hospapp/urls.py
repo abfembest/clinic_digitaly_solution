@@ -107,7 +107,7 @@ urlpatterns = [
 
     path('inventory/', views.inventory, name='inventory'),
 
-    path('ad/home', views.hms_admin, name='hms_adgimin'),
+    path('ad/home', views.hms_admin, name='hms_admin'),
     path('ad/operations', views.director_operations, name='director_operations'),
     path('ad/reports', views.director_reports, name='director_reports'),
     path('ad/accounts', views.user_accounts, name='user_accounts'),
