@@ -35,6 +35,18 @@ import csv
 from reportlab.pdfgen import canvas
 from uuid import uuid4
 from django.core.files.storage import default_storage
+import csv
+from io import BytesIO
+import string
+import secrets
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from django.db.models import Q
+from django.http import HttpResponse # Ensure HttpResponse is imported
+from django.views.decorators.http import require_GET, require_POST
+
 
 import logging
 
@@ -2472,65 +2484,411 @@ def director_reports(request):
 
 @login_required(login_url='home')
 def user_accounts(request):
+    """
+    Displays and manages user accounts, excluding superusers.
+    Handles search filtering and provides statistics.
+    """
     # Get search query if provided
-    search_query = request.GET.get('search', '')
-    
+    search_query = request.GET.get('search', '').strip()
+
     # Filter users (exclude superusers and get related staff info)
-    users = User.objects.filter(is_superuser=False).select_related('staff')
-    
+    users_qs = User.objects.filter(is_superuser=False).select_related('staff')
+
     # Apply search filter if query exists
     if search_query:
-        users = users.filter(
+        users_qs = users_qs.filter(
             Q(username__icontains=search_query) |
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query) |
             Q(email__icontains=search_query) |
             Q(staff__role__icontains=search_query)
         )
-    
+
     # Get statistics for dashboard cards
-    total_users = User.objects.filter(is_superuser=False).count()
-    active_users = User.objects.filter(is_superuser=False, is_active=True).count()
+    total_users = users_qs.count() # Use the filtered queryset for total count
+    active_users = users_qs.filter(is_active=True).count()
     inactive_users = total_users - active_users
-    
+
     # Count users by role
     role_counts = {}
-    for choice in Staff.ROLE_CHOICES:
-        role_key = choice[0]
-        role_name = choice[1]
-        count = Staff.objects.filter(role=role_key).count()
-        role_counts[role_name] = count
-    
+    for choice_key, choice_name in Staff.ROLE_CHOICES:
+        # Use the role key to filter Staff objects
+        count = users_qs.filter(staff__role=choice_key).count()
+        role_counts[choice_name] = count # Store with display name
+
     context = {
-        'users': users,
+        'users': users_qs, # Pass the filtered queryset to the template
         'search_query': search_query,
         'total_users': total_users,
         'active_users': active_users,
         'inactive_users': inactive_users,
         'role_counts': role_counts,
+        'Staff': Staff, # Pass the Staff model to access ROLE_CHOICES in template
     }
-    
+
     return render(request, 'hms_admin/user_accounts.html', context)
 
-@login_required(login_url='home')
-def toggle_user_status(request, user_id):
-    """Toggle user active status"""
-    if request.method == 'POST':
-        user = get_object_or_404(User, id=user_id, is_superuser=False)
-        user.is_active = not user.is_active
-        user.save()
-        
-        status = "activated" if user.is_active else "deactivated"
-        messages.success(request, f'User {user.username} has been {status} successfully.')
-    
-    return redirect('user_accounts')
 
 @login_required(login_url='home')
-def edit_user(request, user_id):
-    """Redirect to user edit page - implement as needed"""
-    # This should redirect to your user edit form
-    messages.info(request, 'User edit functionality to be implemented.')
-    return redirect('user_accounts')
+@require_POST # Ensure only POST requests are accepted
+@csrf_exempt # Important for AJAX POST requests without explicit CSRF handling in JS
+def toggle_user_status(request, user_id):
+    """
+    Toggles a user's active status. Accessible via AJAX.
+    """
+    try:
+        # Ensure only non-superusers can be toggled
+        user_to_toggle = get_object_or_404(User, id=user_id, is_superuser=False)
+        user_to_toggle.is_active = not user_to_toggle.is_active
+        user_to_toggle.save()
+
+        status_msg = "activated" if user_to_toggle.is_active else "deactivated"
+        messages.success(request, f'User {user_to_toggle.username} has been {status_msg} successfully.')
+        return JsonResponse({'success': True, 'message': f'User {user_to_toggle.username} status toggled successfully.'})
+
+    except User.DoesNotExist:
+        messages.error(request, "User not found or cannot be toggled.")
+        return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
+    except Exception as e:
+        logger.error(f"Error toggling user status for {user_id}: {e}")
+        messages.error(request, f"An error occurred: {e}")
+        return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
+
+
+@login_required(login_url='home')
+@require_POST
+@csrf_exempt
+def edit_user_endpoint(request):
+    """
+    Handles updating user details via AJAX from the edit user modal.
+    """
+    user_id = request.POST.get('user_id')
+    username = request.POST.get('username')
+    email = request.POST.get('email')
+    first_name = request.POST.get('first_name')
+    last_name = request.POST.get('last_name')
+    role_key = request.POST.get('role') # This is the role key, e.g., 'doctor'
+    phone_number = request.POST.get('phone_number')
+    is_active = request.POST.get('is_active') == 'true' # Convert string 'true'/'false' to boolean
+
+    try:
+        user = get_object_or_404(User, id=user_id, is_superuser=False)
+        staff_profile = get_object_or_404(Staff, user=user)
+
+        # Update User model fields
+        user.username = username
+        user.email = email
+        user.first_name = first_name
+        user.last_name = last_name
+        user.is_active = is_active
+        user.save()
+
+        # Update Staff profile fields
+        staff_profile.role = role_key
+        staff_profile.phone_number = phone_number
+        staff_profile.save()
+
+        messages.success(request, f"User {user.username} updated successfully.")
+        return JsonResponse({'success': True, 'message': 'User updated successfully.'})
+
+    except (User.DoesNotExist, Staff.DoesNotExist):
+        messages.error(request, "User or staff profile not found.")
+        return JsonResponse({'success': False, 'message': 'User or staff profile not found.'}, status=404)
+    except Exception as e:
+        logger.error(f"Error editing user {user_id}: {e}")
+        messages.error(request, f"An error occurred: {e}")
+        return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
+
+
+@login_required(login_url='home')
+@require_POST
+@csrf_exempt
+def add_user_endpoint(request):
+    """
+    Handles adding a new user and staff profile via AJAX.
+    """
+    username = request.POST.get('username')
+    email = request.POST.get('email')
+    password = request.POST.get('password')
+    first_name = request.POST.get('first_name')
+    last_name = request.POST.get('last_name')
+    role_key = request.POST.get('role')
+    phone_number = request.POST.get('phone_number')
+    is_active = request.POST.get('is_active') == 'true'
+
+    if not all([username, password, role_key]):
+        return JsonResponse({'success': False, 'message': 'Username, password, and role are required.'}, status=400)
+
+    try:
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'message': 'Username already exists.'}, status=409)
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=is_active
+        )
+
+        Staff.objects.create(
+            user=user,
+            role=role_key,
+            phone_number=phone_number
+            # department and photo fields could be added here if needed from form
+        )
+
+        messages.success(request, f"New user {user.username} added successfully.")
+        return JsonResponse({'success': True, 'message': 'User added successfully.'})
+
+    except Exception as e:
+        logger.error(f"Error adding new user: {e}")
+        messages.error(request, f"An error occurred: {e}")
+        return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
+
+
+@login_required(login_url='home')
+@require_POST
+@csrf_exempt
+def reset_user_password_endpoint(request):
+    """
+    Resets a user's password to a new randomly generated one.
+    Returns the new password to the client.
+    """
+    user_id = request.POST.get('user_id')
+    try:
+        user_to_reset = get_object_or_404(User, id=user_id, is_superuser=False)
+
+        # Generate a strong, random temporary password
+        characters = string.ascii_letters + string.digits + string.punctuation
+        new_password = ''.join(secrets.choice(characters) for i in range(12)) # 12 characters is a good length
+
+        user_to_reset.set_password(new_password)
+        user_to_reset.save()
+
+        messages.success(request, f"Password for {user_to_reset.username} has been reset.")
+        return JsonResponse({
+            'success': True,
+            'message': f'Password for {user_to_reset.username} reset successfully.',
+            'new_password': new_password # Send the new password back to the frontend
+        })
+    except User.DoesNotExist:
+        messages.error(request, "User not found or cannot reset password for superuser.")
+        return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
+    except Exception as e:
+        logger.error(f"Error resetting password for user {user_id}: {e}")
+        messages.error(request, f"An error occurred: {e}")
+        return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
+
+
+@login_required(login_url='home')
+@require_POST
+@csrf_exempt
+def delete_user_endpoint(request):
+    """
+    Deletes a user and their associated staff profile.
+    """
+    user_id = request.POST.get('user_id')
+    try:
+        # Ensure only non-superusers can be deleted
+        user_to_delete = get_object_or_404(User, id=user_id, is_superuser=False)
+        username = user_to_delete.username # Store username before deleting
+        user_to_delete.delete()
+
+        messages.success(request, f"User {username} and associated staff profile deleted successfully.")
+        return JsonResponse({'success': True, 'message': f'User {username} deleted successfully.'})
+
+    except User.DoesNotExist:
+        messages.error(request, "User not found or cannot delete superuser.")
+        return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting user {user_id}: {e}")
+        messages.error(request, f"An error occurred: {e}")
+        return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
+    
+@login_required(login_url='home')
+@require_GET
+def export_users_csv_view(request):
+    """
+    Exports filtered user account data to a CSV file.
+    Filters based on search query, role, and status from GET parameters.
+    """
+    search_query = request.GET.get('search', '').strip()
+    role_filter = request.GET.get('role', '').strip() # This will be the display name (e.g., 'Doctor')
+    status_filter = request.GET.get('status', '').strip() # 'Active' or 'Inactive'
+
+    # Start with all non-superuser users and prefetch staff for efficiency
+    users_to_export = User.objects.filter(is_superuser=False).select_related('staff')
+
+    # Apply search filter
+    if search_query:
+        users_to_export = users_to_export.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(staff__role__icontains=search_query) # Search by role key for Staff model
+        )
+
+    # Apply role filter (by display name, then map to role key)
+    if role_filter:
+        # Find the role key corresponding to the display name
+        role_key = None
+        for key, display_name in Staff.ROLE_CHOICES:
+            if display_name == role_filter:
+                role_key = key
+                break
+        if role_key:
+            users_to_export = users_to_export.filter(staff__role=role_key)
+        else:
+            # If an invalid role display name is provided, return empty or handle error
+            return HttpResponse("Invalid role filter.", status=400)
+
+
+    # Apply status filter
+    if status_filter:
+        if status_filter.lower() == 'active':
+            users_to_export = users_to_export.filter(is_active=True)
+        elif status_filter.lower() == 'inactive':
+            users_to_export = users_to_export.filter(is_active=False)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="user_accounts_export.csv"'
+
+    writer = csv.writer(response)
+    # Define CSV header
+    writer.writerow([
+        'Username', 'Full Name', 'Email', 'Role', 'Department',
+        'Phone Number', 'Status', 'Date Joined'
+    ])
+
+    # Write data rows
+    for user in users_to_export:
+        staff_profile = getattr(user, 'staff', None) # Safely get staff profile
+
+        full_name = user.get_full_name() or "Not provided"
+        role_display = staff_profile.get_role_display() if staff_profile else "N/A"
+        department_name = staff_profile.department.name if staff_profile and staff_profile.department else "N/A"
+        phone_number = staff_profile.phone_number if staff_profile else "N/A"
+        status = "Active" if user.is_active else "Inactive"
+        date_joined = user.date_joined.strftime('%Y-%m-%d') if user.date_joined else "N/A"
+
+        writer.writerow([
+            user.username,
+            full_name,
+            user.email,
+            role_display,
+            department_name,
+            phone_number,
+            status,
+            date_joined,
+        ])
+    return response
+
+
+@login_required(login_url='home')
+@require_GET
+def export_users_pdf_view(request):
+    """
+    Exports filtered user account data to a PDF file.
+    Filters based on search query, role, and status from GET parameters.
+    """
+    search_query = request.GET.get('search', '').strip()
+    role_filter = request.GET.get('role', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    users_to_export = User.objects.filter(is_superuser=False).select_related('staff')
+
+    # Apply search filter
+    if search_query:
+        users_to_export = users_to_export.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(staff__role__icontains=search_query)
+        )
+
+    # Apply role filter
+    if role_filter:
+        role_key = None
+        for key, display_name in Staff.ROLE_CHOICES:
+            if display_name == role_filter:
+                role_key = key
+                break
+        if role_key:
+            users_to_export = users_to_export.filter(staff__role=role_key)
+        else:
+            return HttpResponse("Invalid role filter.", status=400)
+
+    # Apply status filter
+    if status_filter:
+        if status_filter.lower() == 'active':
+            users_to_export = users_to_export.filter(is_active=True)
+        elif status_filter.lower() == 'inactive':
+            users_to_export = users_to_export.filter(is_active=False)
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    # Title
+    elements.append(Paragraph("User Accounts Report", styles['h1']))
+    elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+    elements.append(Paragraph(f"Filters applied: Search='{search_query}', Role='{role_filter}', Status='{status_filter}'", styles['Normal']))
+    elements.append(Paragraph("<br/>", styles['Normal'])) # Spacer
+
+    # Table Data
+    data = [
+        ['Username', 'Full Name', 'Email', 'Role', 'Department', 'Phone', 'Status', 'Date Joined']
+    ]
+    for user in users_to_export:
+        staff_profile = getattr(user, 'staff', None)
+
+        full_name = user.get_full_name() or "Not provided"
+        role_display = staff_profile.get_role_display() if staff_profile else "N/A"
+        department_name = staff_profile.department.name if staff_profile and staff_profile.department else "N/A"
+        phone_number = staff_profile.phone_number if staff_profile else "N/A"
+        status = "Active" if user.is_active else "Inactive"
+        date_joined = user.date_joined.strftime('%Y-%m-%d') if user.date_joined else "N/A"
+
+        data.append([
+            user.username,
+            full_name,
+            user.email,
+            role_display,
+            department_name,
+            phone_number,
+            status,
+            date_joined,
+        ])
+
+    table_style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+    ])
+
+    # Calculate column widths dynamically or set fixed ones
+    # A4 width is 8.27 inches = 595.3 points. Margins often total ~72 points per side.
+    # Usable width ~ 450-500 points.
+    col_widths = [70, 90, 100, 60, 80, 70, 50, 70] # Adjusted widths
+    
+    user_table = Table(data, colWidths=col_widths)
+    user_table.setStyle(table_style)
+    elements.append(user_table)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return HttpResponse(buffer, content_type='application/pdf')
 
 ''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
 

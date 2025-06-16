@@ -116,7 +116,16 @@ urlpatterns = [
     path('ad/accounts', views.user_accounts, name='user_accounts'),
     path('user-accounts/', views.user_accounts, name='user_accounts'),
     path('toggle-user-status/<int:user_id>/', views.toggle_user_status, name='toggle_user_status'),
-    path('edit-user/<int:user_id>/', views.edit_user, name='edit_user'),
+    path('admin/users/edit/', views.edit_user_endpoint, name='edit_user_endpoint'),
+    path('admin/users/add/', views.add_user_endpoint, name='add_user_endpoint'),
+    path('admin/users/reset-password/', views.reset_user_password_endpoint, name='reset_user_password_endpoint'),
+    path('admin/users/delete/', views.delete_user_endpoint, name='delete_user_endpoint'),
+    
+    path('admin/users/export/csv/', views.export_users_csv_view, name='export_users_csv'),
+    path('admin/users/export/pdf/', views.export_users_pdf_view, name='export_users_pdf'),
+    
+    path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
+
 
     ########################### Receptionist URLS #################################
     path('r/home', views.receptionist, name='receptionist'),
