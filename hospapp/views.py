@@ -1951,15 +1951,514 @@ def inventory(request):
 # HMS Admin Views
 @login_required(login_url='home')
 def hms_admin(request):
-    return render(request, 'hms_admin/index.html')
+    """
+    Renders the Admin Dashboard with dynamic data.
+
+    Fetches key metrics from the database related to:
+    - Staff (active, by role)
+    - Patients (total, admitted, new registrations)
+    - Lab Tests (pending)
+    - Financials (pending bills, monthly revenue, monthly expenses)
+    - Appointments (recent)
+
+    The data is then passed to the 'hms_admin/index.html' template
+    to display a dynamic and informative dashboard.
+    """
+    
+    # Ensure only 'admin' role can access this dashboard
+    if not hasattr(request.user, 'staff') or request.user.staff.role != 'admin':
+        # Redirect to a generic home or unauthorized page, or show an error
+        # For now, let's redirect to a general home page
+        return redirect('home') # Assuming 'home' is a general entry point
+
+    current_month = date.today().month
+    current_year = date.today().year
+    
+    # 1. Staff Statistics
+    staff_active_count = Staff.objects.filter(user__is_active=True).count()
+    total_doctors = Staff.objects.filter(role='doctor', user__is_active=True).count()
+    total_nurses = Staff.objects.filter(role='nurse', user__is_active=True).count()
+    total_lab_techs = Staff.objects.filter(role='lab', user__is_active=True).count()
+    
+    # 2. Patient Statistics
+    total_patients = Patient.objects.count()
+    patients_admitted = Admission.objects.filter(status='Admitted').count()
+    
+    # Calculate new patient registrations for the last 30 days
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    new_patients_last_30_days = Patient.objects.filter(date_registered__gte=thirty_days_ago).count()
+
+    # 3. Lab & Appointments
+    pending_lab_tests = LabTest.objects.filter(status='pending').count()
+    upcoming_appointments_today = Appointment.objects.filter(
+        scheduled_time__date=date.today()
+    ).count()
+
+    # 4. Financials
+    pending_bills = PatientBill.objects.filter(status='pending').count()
+    
+    # Monthly Revenue
+    monthly_revenue = Payment.objects.filter(
+        status='completed',
+        payment_date__year=current_year,
+        payment_date__month=current_month
+    ).aggregate(total_amount=Sum('amount'))['total_amount'] or 0.00
+
+    # Monthly Expenses
+    monthly_expenses = Expense.objects.filter(
+        status='approved',
+        expense_date__year=current_year,
+        expense_date__month=current_month
+    ).aggregate(total_amount=Sum('amount'))['total_amount'] or 0.00
+
+    # Recent Data for Lists/Tables
+    # Fetch top 5 recently registered patients
+    recent_patients = Patient.objects.order_by('-date_registered')[:5]
+    
+    # Fetch top 5 upcoming appointments
+    recent_appointments = Appointment.objects.filter(
+        scheduled_time__gte=timezone.now()
+    ).order_by('scheduled_time')[:5]
+
+    # Data for Charts (e.g., monthly patient registrations)
+    # This is an example; you might need to adjust based on specific chart requirements
+    # For a sales chart, you might aggregate payments by month.
+    
+    # Example: Monthly patient registrations for the last 6 months
+    monthly_registrations = {}
+    for i in range(6):
+        month = (current_month - i - 1 + 12) % 12 + 1 # Handles year rollover
+        year = current_year if (current_month - i) > 0 else current_year - 1
+        
+        count = Patient.objects.filter(
+            date_registered__year=year,
+            date_registered__month=month
+        ).count()
+        monthly_registrations[f"{month}/{year}"] = count
+
+    # Reverse the order for chart display
+    monthly_registrations_labels = list(monthly_registrations.keys())[::-1]
+    monthly_registrations_data = list(monthly_registrations.values())[::-1]
+
+
+    context = {
+        # Overview Stats
+        'staff_active_count': staff_active_count,
+        'total_patients': total_patients,
+        'patients_admitted': patients_admitted,
+        'pending_lab_tests': pending_lab_tests,
+        'pending_bills': pending_bills,
+        'monthly_revenue': monthly_revenue,
+        'monthly_expenses': monthly_expenses,
+        'total_doctors': total_doctors,
+        'total_nurses': total_nurses,
+        'total_lab_techs': total_lab_techs,
+        'new_patients_last_30_days': new_patients_last_30_days,
+        'upcoming_appointments_today': upcoming_appointments_today,
+
+        # Recent Lists
+        'recent_patients': recent_patients,
+        'recent_appointments': recent_appointments,
+
+        # Chart Data (convert to JSON string for JS)
+        'monthly_registrations_labels_json': json.dumps(monthly_registrations_labels),
+        'monthly_registrations_data_json': json.dumps(monthly_registrations_data),
+    }
+
+    return render(request, 'hms_admin/index.html', context)
 
 @login_required(login_url='home')
 def director_operations(request):
     return render(request, 'hms_admin/operations.html')
 
 @login_required(login_url='home')
+def director_operations(request):
+    # 1. Fetches data for 'Pending Discharges' table
+    pending_discharges = Admission.objects.filter(status='Admitted')
+
+    # 2. Fetches data for 'Expenses Approval' table
+    pending_expenses = Expense.objects.filter(status='pending')
+
+    # 3. Fetches data for 'Staff Transitions' table
+    # Note: If StaffTransition needs approval, you'd add a status field to the model.
+    # Currently, it fetches recent ones for display.
+    pending_transitions = StaffTransition.objects.all().order_by('-created_at')[:10]
+
+    # 4. Fetches data for 'Budget Overview' table
+    current_year = timezone.now().year
+    budgets = Budget.objects.filter(year=current_year).order_by('category__name', 'month')
+
+    # 5. Fetches data for 'Emergency Alerts' table
+    recent_alerts = EmergencyAlert.objects.all().order_by('-timestamp')[:10]
+
+    context = {
+        'pending_discharges': pending_discharges,
+        'pending_expenses': pending_expenses,
+        'pending_transitions': pending_transitions,
+        'budgets': budgets,
+        'recent_alerts': recent_alerts,
+    }
+    return render(request, 'hms_admin/operations.html', context)
+
+# --- Existing Approval Views (as provided in previous response, kept for completeness) ---
+
+@login_required(login_url='home')
+def approve_discharge(request, d_id):
+    try:
+        admission_to_discharge = Admission.objects.get(id=d_id)
+        admission_to_discharge.status = 'Discharged'
+        admission_to_discharge.discharge_date = timezone.now().date()
+        admission_to_discharge.discharged_by = request.user.get_full_name() or request.user.username
+        admission_to_discharge.save()
+        messages.success(request, f"Discharge for {admission_to_discharge.patient.full_name} approved successfully.")
+    except Admission.DoesNotExist:
+        messages.error(request, "Discharge request not found.")
+    return redirect('director_operations')
+
+@login_required(login_url='home')
+def approve_expense(request, exp_id):
+    try:
+        expense_to_approve = Expense.objects.get(id=exp_id)
+        expense_to_approve.status = 'approved'
+        expense_to_approve.approved_by = request.user # Set the approving user
+        expense_to_approve.save()
+        messages.success(request, f"Expense '{expense_to_approve.description}' approved successfully.")
+    except Expense.DoesNotExist:
+        messages.error(request, "Expense request not found.")
+    return redirect('director_operations')
+
+# --- New Views for Proposed Functionalities ---
+
+@login_required(login_url='home')
+def acknowledge_alert(request, alert_id):
+    try:
+        alert = EmergencyAlert.objects.get(id=alert_id)
+        alert.acknowledged_by.add(request.user) # Add current user to acknowledged_by
+        alert.save()
+        messages.success(request, "Emergency alert acknowledged.")
+    except EmergencyAlert.DoesNotExist:
+        messages.error(request, "Emergency alert not found.")
+    return redirect('director_operations')
+
+# Note: For Staff Transitions and Budget, direct 'approval' views
+# would require adding 'status' fields to their respective models if not present,
+# and defining specific approval logic. For now, the 'director_operations' view
+# will just display them. If you want to add approval for staff transitions or budget,
+# you would need to modify the models first to include a 'status' field like 'pending'.
+
+@login_required(login_url='home')
 def director_reports(request):
-    return render(request, 'hms_admin/reports.html')
+
+    # Get date ranges for filtering - using timezone.now() for consistency
+    today_aware = timezone.now()
+    today_date = today_aware.date() # For operations that need just a date
+
+    current_month_start_aware = today_aware.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_start_aware = (current_month_start_aware - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    current_year = today_aware.year
+    last_year = current_year - 1
+    thirty_days_ago_aware = today_aware - timedelta(days=30)
+    seven_days_ago_aware = today_aware - timedelta(days=7)
+
+    # ==================== Overall Hospital Statistics ====================
+    total_patients = Patient.objects.count()
+    total_staff = Staff.objects.count()
+    current_admitted_patients = Admission.objects.filter(status='Admitted').count()
+    total_admissions = Admission.objects.count()
+    total_discharges = Admission.objects.filter(status='Discharged').count()
+    total_appointments = Appointment.objects.count()
+
+    # New patients this month
+    new_patients_this_month = Patient.objects.filter(
+        date_registered__gte=current_month_start_aware
+    ).count()
+
+    # Admissions this month
+    admissions_this_month = Admission.objects.filter(
+        admission_date__gte=current_month_start_aware
+    ).count()
+
+    # Average length of stay
+    completed_admissions = Admission.objects.filter(
+        status='Discharged',
+        discharge_date__isnull=False
+    )
+    avg_length_of_stay = 0
+    if completed_admissions.exists():
+        # Ensure that admission.discharge_date and admission.admission_date are timezone-aware
+        # and delta calculation is robust
+        total_days = sum([
+            (admission.discharge_date - admission.admission_date).days
+            for admission in completed_admissions
+        ])
+        avg_length_of_stay = round(total_days / completed_admissions.count(), 1)
+
+    # ==================== Patient Demographics & Analytics ====================
+    patients_by_gender = Patient.objects.values('gender').annotate(count=Count('gender')).order_by('gender')
+    patients_by_blood_group = Patient.objects.values('blood_group').annotate(count=Count('blood_group')).order_by('blood_group')
+    patients_by_marital_status = Patient.objects.values('marital_status').annotate(count=Count('marital_status')).order_by('marital_status')
+
+    # Age distribution
+    patients_by_age_group = []
+    age_groups = [
+        ('0-18', 0, 18),
+        ('19-30', 19, 30),
+        ('31-50', 31, 50),
+        ('51-70', 51, 70),
+        ('70+', 71, 150)
+    ]
+
+    for group_name, min_age, max_age in age_groups:
+        # Calculate birth dates relative to today_date (a date object)
+        min_birth_date = today_date - timedelta(days=max_age*365)
+        max_birth_date = today_date - timedelta(days=min_age*365)
+        count = Patient.objects.filter(
+            date_of_birth__gte=min_birth_date,
+            date_of_birth__lte=max_birth_date
+        ).count()
+        patients_by_age_group.append({'age_group': group_name, 'count': count})
+
+    # Patient status distribution
+    patients_by_status = Patient.objects.values('status').annotate(count=Count('status')).order_by('status')
+
+    # ==================== Financial Reports ====================
+    # Income Analysis
+    total_income = Payment.objects.filter(status='completed').aggregate(total=Sum('amount'))['total'] or 0
+    income_this_month = Payment.objects.filter(
+        status='completed',
+        payment_date__gte=current_month_start_aware
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    income_last_month = Payment.objects.filter(
+        status='completed',
+        payment_date__gte=last_month_start_aware,
+        payment_date__lt=current_month_start_aware
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    # Outstanding payments
+    outstanding_bills = PatientBill.objects.filter(
+        status__in=['pending', 'partial']
+    ).aggregate(total=Sum('final_amount'))['total'] or 0
+
+    # Expense Analysis
+    total_expenses_incurred = Expense.objects.aggregate(total=Sum('amount'))['total'] or 0
+    total_approved_expenses = Expense.objects.filter(status='approved').aggregate(total=Sum('amount'))['total'] or 0
+    expenses_this_month = Expense.objects.filter(
+        expense_date__gte=current_month_start_aware
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    expenses_by_category = Expense.objects.filter(status='approved').values('category__name').annotate(
+        total_amount=Sum('amount')
+    ).order_by('-total_amount')
+
+    # Payment methods analysis
+    payment_methods = Payment.objects.filter(status='completed').values('payment_method').annotate(
+        count=Count('payment_method'),
+        total_amount=Sum('amount')
+    ).order_by('-total_amount')
+
+    # Budget Analysis
+    budgets_data = Budget.objects.filter(year=current_year).order_by('category__name', 'month')
+
+    # Calculate budget utilization
+    budget_summary = {
+        'total_allocated': budgets_data.aggregate(total=Sum('allocated_amount'))['total'] or 0,
+        'total_spent': budgets_data.aggregate(total=Sum('spent_amount'))['total'] or 0,
+    }
+    if budget_summary['total_allocated'] > 0:
+        budget_summary['utilization_percentage'] = round(
+            (budget_summary['total_spent'] / budget_summary['total_allocated']) * 100, 2
+        )
+    else:
+        budget_summary['utilization_percentage'] = 0
+
+    # ==================== Staff Analytics ====================
+    staff_by_role = Staff.objects.values('role').annotate(count=Count('role')).order_by('role')
+    staff_by_department = Staff.objects.values('department__name').annotate(count=Count('department__name')).order_by('department__name')
+
+    # Attendance Analysis
+    attendance_summary = Attendance.objects.filter(date__gte=thirty_days_ago_aware).values('status').annotate(
+        count=Count('status')
+    ).order_by('status')
+
+    # Weekly attendance trend
+    weekly_attendance = []
+    for i in range(4):
+        week_start = today_aware - timedelta(days=(i+1)*7)
+        week_end = today_aware - timedelta(days=i*7)
+        week_data = Attendance.objects.filter(
+            date__range=[week_start.date(), week_end.date()] # Use .date() if Attendance.date is a DateField
+        ).values('status').annotate(count=Count('status'))
+        weekly_attendance.append({
+            'week': f"Week {4-i}",
+            'data': list(week_data) # Convert queryset to list
+        })
+
+    staff_transitions_summary = StaffTransition.objects.values('transition_type').annotate(count=Count('transition_type')).order_by('transition_type')
+
+    # Recent transitions (last 30 days)
+    recent_transitions = StaffTransition.objects.filter(
+        date__gte=thirty_days_ago_aware
+    ).order_by('-date')[:10]
+
+    # ==================== Clinical & Laboratory Analytics ====================
+    total_lab_tests = LabTest.objects.count()
+    lab_tests_by_status = LabTest.objects.values('status').annotate(count=Count('status')).order_by('status')
+    lab_tests_by_category = LabTest.objects.values('category__name').annotate(count=Count('category__name')).order_by('category__name')
+
+    # Lab test completion rate
+    completed_tests = LabTest.objects.filter(status='completed').count()
+    lab_completion_rate = round((completed_tests / total_lab_tests * 100), 2) if total_lab_tests > 0 else 0
+
+    # Tests this month
+    lab_tests_this_month = LabTest.objects.filter(
+        requested_at__gte=current_month_start_aware
+    ).count()
+
+    # Average test completion time (for completed tests)
+    avg_completion_time = "N/A"
+    completed_tests_with_dates = LabTest.objects.filter(
+        status='completed',
+        date_performed__isnull=False
+    )
+    if completed_tests_with_dates.exists():
+        total_hours = sum([
+            (test.date_performed - test.requested_at).total_seconds() / 3600
+            for test in completed_tests_with_dates
+        ])
+        avg_completion_time = f"{round(total_hours / completed_tests_with_dates.count(), 1)} hours"
+
+    # Prescription Analysis
+    total_prescriptions = Prescription.objects.count()
+    prescriptions_this_month = Prescription.objects.filter(
+        created_at__gte=current_month_start_aware
+    ).count()
+
+    # Most prescribed medications
+    top_medications = Prescription.objects.values('medication').annotate(
+        count=Count('medication')
+    ).order_by('-count')[:10]
+
+    # ==================== Emergency & Critical Care ====================
+    critical_patients = Patient.objects.filter(status='critical').count()
+    emergency_alerts = EmergencyAlert.objects.filter(
+        timestamp__gte=seven_days_ago_aware
+    ).count()
+
+    # ==================== Occupancy & Capacity ====================
+    bed_occupancy_rate = 0
+    if current_admitted_patients > 0:
+        estimated_capacity = 100  # This should come from your Hospital/Ward capacity model
+        bed_occupancy_rate = round((current_admitted_patients / estimated_capacity) * 100, 2)
+
+    # ==================== Monthly Trends ====================
+    monthly_trends = []
+    for i in range(6):  # Last 6 months
+        # Calculate month start/end for filtering against DateTimeFields
+        month_start_dt = (today_aware.replace(day=1) - timedelta(days=i*30)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Calculate month_end for the last microsecond of the last day of the month
+        month_end_dt = (month_start_dt.replace(day=1) + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+
+        monthly_data = {
+            'month': month_start_dt.strftime('%B %Y'),
+            'patients': Patient.objects.filter(date_registered__range=[month_start_dt, month_end_dt]).count(),
+            'admissions': Admission.objects.filter(admission_date__range=[month_start_dt, month_end_dt]).count(),
+            'income': Payment.objects.filter(
+                status='completed',
+                payment_date__range=[month_start_dt, month_end_dt]
+            ).aggregate(total=Sum('amount'))['total'] or 0,
+            'lab_tests': LabTest.objects.filter(requested_at__range=[month_start_dt, month_end_dt]).count(),
+        }
+        monthly_trends.append(monthly_data)
+
+    monthly_trends.reverse()  # Show oldest to newest
+
+    # ==================== Quality Metrics ====================
+    # Readmission rates: Replaced problematic query with a robust two-step approach
+    # Step 1: Get distinct patient IDs who had a discharge in the last 30 days
+    recent_discharge_patient_ids = Admission.objects.filter(
+        discharge_date__gte=thirty_days_ago_aware, # Use the aware datetime
+        status='Discharged'
+    ).values_list('patient_id', flat=True).distinct()
+
+    # Step 2: Count *all* admissions for these recently discharged patients
+    # (This reflects the apparent intent of your original problematic query's outer filter)
+    readmissions = Admission.objects.filter(
+        patient_id__in=recent_discharge_patient_ids
+    ).count()
+
+    readmission_rate = 0
+    if total_discharges > 0:
+        readmission_rate = round((readmissions / total_discharges) * 100, 2)
+
+
+    context = {
+        # Basic Statistics
+        'total_patients': total_patients,
+        'total_staff': total_staff,
+        'current_admitted_patients': current_admitted_patients,
+        'total_admissions': total_admissions,
+        'total_discharges': total_discharges,
+        'total_appointments': total_appointments,
+        'new_patients_this_month': new_patients_this_month,
+        'admissions_this_month': admissions_this_month,
+        'avg_length_of_stay': avg_length_of_stay,
+
+        # Patient Analytics
+        'patients_by_gender': patients_by_gender,
+        'patients_by_blood_group': patients_by_blood_group,
+        'patients_by_marital_status': patients_by_marital_status,
+        'patients_by_age_group': patients_by_age_group,
+        'patients_by_status': patients_by_status,
+
+        # Financial Data
+        'total_income': total_income,
+        'income_this_month': income_this_month,
+        'income_last_month': income_last_month,
+        'outstanding_bills': outstanding_bills,
+        'total_expenses_incurred': total_expenses_incurred,
+        'total_approved_expenses': total_approved_expenses,
+        'expenses_this_month': expenses_this_month,
+        'expenses_by_category': expenses_by_category,
+        'payment_methods': payment_methods,
+        'budgets_data': budgets_data,
+        'budget_summary': budget_summary,
+
+        # Staff Data
+        'staff_by_role': staff_by_role,
+        'staff_by_department': staff_by_department,
+        'attendance_summary': attendance_summary,
+        'weekly_attendance': weekly_attendance,
+        'staff_transitions_summary': staff_transitions_summary,
+        'recent_transitions': recent_transitions,
+
+        # Clinical Data
+        'total_lab_tests': total_lab_tests,
+        'lab_tests_by_status': lab_tests_by_status,
+        'lab_tests_by_category': lab_tests_by_category,
+        'lab_completion_rate': lab_completion_rate,
+        'lab_tests_this_month': lab_tests_this_month,
+        'avg_completion_time': avg_completion_time,
+        'total_prescriptions': total_prescriptions,
+        'prescriptions_this_month': prescriptions_this_month,
+        'top_medications': top_medications,
+
+        # Emergency & Critical
+        'critical_patients': critical_patients,
+        'emergency_alerts': emergency_alerts,
+
+        # Capacity & Trends
+        'bed_occupancy_rate': bed_occupancy_rate,
+        'monthly_trends': monthly_trends,
+        'readmission_rate': readmission_rate,
+
+        # Report Metadata
+        'report_generated_date': timezone.now(),
+        'report_period': f"{current_month_start_aware.strftime('%B %Y')} - Current",
+        'current_year': current_year,
+    }
+
+    return render(request, 'hms_admin/reports.html', context)
 
 @login_required(login_url='home')
 def user_accounts(request):

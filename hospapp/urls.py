@@ -109,6 +109,9 @@ urlpatterns = [
 
     path('ad/home', views.hms_admin, name='hms_admin'),
     path('ad/operations', views.director_operations, name='director_operations'),
+    path('ad/acknowledge_alert/<int:alert_id>/', views.acknowledge_alert, name='acknowledge_alert'),
+    path('ad/approve_discharge/<int:d_id>/', views.approve_discharge, name='approve_discharge'),
+    path('ad/approve_expense/<int:exp_id>/', views.approve_expense, name='approve_expense'),
     path('ad/reports', views.director_reports, name='director_reports'),
     path('ad/accounts', views.user_accounts, name='user_accounts'),
 

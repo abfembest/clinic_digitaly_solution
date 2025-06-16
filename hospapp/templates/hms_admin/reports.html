@@ -1,128 +1,979 @@
 {% extends "hms_admin/base.html" %}
 
-{% block title %}HMS | Full Reports{% endblock %}
+{% load custom_filters %}
+
+{% block title %}HMS | Comprehensive Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+    .no-print { display: none !important; }
+    .print-break { page-break-before: always; }
+    .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    body { font-size: 12px; }
+    .table { font-size: 11px; }
+    .btn { display: none; }
+    .nav-tabs { display: none; }
+    .tab-content > .tab-pane { display: block !important; opacity: 1 !important; }
+    .container-fluid { padding: 0; }
+    .content-header { margin-bottom: 10px; }
+}
+
+.report-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.metric-label {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.trend-up { color: #28a745; }
+.trend-down { color: #dc3545; }
+.trend-neutral { color: #6c757d; }
+
+.section-title {
+    border-left: 4px solid #007bff;
+    padding-left: 15px;
+    margin: 30px 0 20px 0;
+}
+
+.mini-stat {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.mini-stat h3 {
+    margin: 0;
+    color: #495057;
+    font-size: 1.8rem;
+}
+
+.mini-stat p {
+    margin: 5px 0 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin: 20px 0;
+}
+
+.summary-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 0 5px 5px 0;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.kpi-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-top: 4px solid #007bff;
+}
+
+.kpi-card.success { border-top-color: #28a745; }
+.kpi-card.warning { border-top-color: #ffc107; }
+.kpi-card.danger { border-top-color: #dc3545; }
+.kpi-card.info { border-top-color: #17a2b8; }
+</style>
+{% endblock %}
 
 {% block content %}
-
-<!-- Content Header (Page header) -->
-<div class="content-header">
+<div class="content-header no-print">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Full Reports</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+                <h1 class="m-0 text-dark">Comprehensive Hospital Reports</h1>
+            </div>
+            <div class="col-sm-6">
+                <button onclick="window.print()" class="btn btn-primary float-right">
+                    <i class="bi bi-printer"></i> Print Report
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
-<!-- /.content-header -->
 
-<!-- 🌟 Departmental Reports Icons -->
-<section class="dashboard-icons py-4 bg-light rounded">
-  <div class="container">
-    <div class="row g-3 justify-content-center">
-
-      <!-- Reception -->
-      <div class="col-auto">
-        <a href="{ url 'reception_reports' %}" class="btn btn-primary d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-person-lines-fill fs-3 mb-1"></i>
-          <span class="small text-nowrap">Reception</span>
-        </a>
-      </div>
-
-      <!-- Nursing -->
-      <div class="col-auto">
-        <a href="{ url 'nurse_reports' %}" class="btn btn-success d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-heart-pulse fs-3 mb-1"></i>
-          <span class="small text-nowrap">Nursing</span>
-        </a>
-      </div>
-
-      <!-- Doctors -->
-      <div class="col-auto">
-        <a href="{ url 'doctor_reports' %}" class="btn btn-info d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-clipboard-pulse fs-3 mb-1"></i>
-          <span class="small text-nowrap">Doctors</span>
-        </a>
-      </div>
-
-      <!-- Laboratory -->
-      <div class="col-auto">
-        <a href="{ url 'lab_reports' %}" class="btn btn-warning d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-eyedropper fs-3 mb-1"></i>
-          <span class="small text-nowrap">Lab</span>
-        </a>
-      </div>
-
-      <!-- Pharmacy -->
-      <div class="col-auto">
-        <a href="{ url 'pharmacy_reports' %}" class="btn btn-danger d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-capsule fs-3 mb-1"></i>
-          <span class="small text-nowrap">Pharmacy</span>
-        </a>
-      </div>
-
-      <!-- Accounting -->
-      <div class="col-auto">
-        <a href="{ url 'accounts_reports' %}" class="btn btn-secondary d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-cash-coin fs-3 mb-1"></i>
-          <span class="small text-nowrap">Accounts</span>
-        </a>
-      </div>
-
-      <!-- HR -->
-      <div class="col-auto">
-        <a href="{ url 'hr_reports' %}" class="btn btn-dark d-flex flex-column align-items-center justify-content-center p-3 rounded shadow"
-          style="width: 100px; height: 100px;">
-          <i class="bi bi-people fs-3 mb-1"></i>
-          <span class="small text-nowrap">HR</span>
-        </a>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-
-
-<section class="content">
-    <div class="container-fluid">
-      <div class="card card-outline card-info">
-        <div class="card-header">
-          <h3 class="card-title">System-Wide Reports</h3>
+<!-- Report Header -->
+<div class="report-header">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Hospital Management System - Director's Report</h2>
+            <p>Report Period: {{ report_period }}</p>
+            <p>Generated: {{ report_generated_date|date:"F d, Y \a\t g:i A" }}</p>
         </div>
-        <div class="card-body">
-          <ul class="nav nav-tabs mb-3">
-            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#lab">Lab</a></li>
-            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#finance">Accounts</a></li>
-            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#hr">HR</a></li>
-          </ul>
-  
-          <div class="tab-content">
-            <div class="tab-pane fade show active" id="lab">
-              <div class="alert alert-info text-center">Clinical reports coming soon.</div>
-            </div>
-            <div class="tab-pane fade" id="finance">
-              <div class="alert alert-warning text-center">Financial report not yet available.</div>
-            </div>
-            <div class="tab-pane fade" id="hr">
-              <div class="alert alert-secondary text-center">HR reports will be shown here.</div>
-            </div>            
-          </div>
+        <div class="col-md-4 text-right">
+            <h3>{{ current_year }} Annual Report</h3>
+            <p>Comprehensive Analytics Dashboard</p>
         </div>
-      </div>
     </div>
-  </section>
+</div>
+
+<!-- Executive Summary -->
+<div class="card">
+    <div class="card-header">
+        <h3>Executive Summary</h3>
+    </div>
+    <div class="card-body">
+        <div class="kpi-grid">
+            <div class="kpi-card info">
+                <div class="metric-value">{{ total_patients }}</div>
+                <div class="metric-label">Total Patients</div>
+                <small class="text-muted">+{{ new_patients_this_month }} this month</small>
+            </div>
+            <div class="kpi-card success">
+                <div class="metric-value">{{ current_admitted_patients }}</div>
+                <div class="metric-label">Current Admissions</div>
+                <small class="text-muted">{{ bed_occupancy_rate }}% occupancy</small>
+            </div>
+            <div class="kpi-card warning">
+                <div class="metric-value">{{ total_staff }}</div>
+                <div class="metric-label">Total Staff</div>
+                <small class="text-muted">Across all departments</small>
+            </div>
+            <div class="kpi-card danger">
+                <div class="metric-value">₦{{ total_income|floatformat:0 }}</div>
+                <div class="metric-label">Total Revenue</div>
+                <small class="text-muted">₦{{ income_this_month|floatformat:0 }} this month</small>
+            </div>
+        </div>
+
+        <div class="summary-box">
+            <h5>Key Performance Indicators</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Average Length of Stay:</strong> {{ avg_length_of_stay }} days
+                </div>
+                <div class="col-md-3">
+                    <strong>Lab Completion Rate:</strong> {{ lab_completion_rate }}%
+                </div>
+                <div class="col-md-3">
+                    <strong>Budget Utilization:</strong> {{ budget_summary.utilization_percentage }}%
+                </div>
+                <div class="col-md-3">
+                    <strong>Readmission Rate:</strong> {{ readmission_rate }}%
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="card no-print">
+    <div class="card-body">
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#overview">Overview</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#patients">Patient Analytics</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#finance">Financial Analysis</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#staff">Staff Management</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#clinical">Clinical Operations</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#trends">Trends & Analytics</a></li>
+        </ul>
+    </div>
+</div>
+
+<div class="tab-content">
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active" id="overview">
+        <div class="print-break"></div>
+        <h2 class="section-title">Hospital Overview</h2>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mini-stat">
+                    <h3>{{ total_admissions }}</h3>
+                    <p>Total Admissions</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mini-stat">
+                    <h3>{{ total_discharges }}</h3>
+                    <p>Total Discharges</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mini-stat">
+                    <h3>{{ total_appointments }}</h3>
+                    <p>Total Appointments</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Critical Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Critical Patients:</strong> {{ critical_patients }}</p>
+                        <p><strong>Emergency Alerts (7 days):</strong> {{ emergency_alerts }}</p>
+                        <p><strong>Outstanding Bills:</strong> ₦{{ outstanding_bills|floatformat:2 }}</p>
+                        <p><strong>Lab Tests Pending:</strong> 
+                            {% for status in lab_tests_by_status %}
+                                {% if status.status == 'pending' %}{{ status.count }}{% endif %}
+                            {% endfor %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Monthly Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>New Patients:</strong> {{ new_patients_this_month }}</p>
+                        <p><strong>Admissions:</strong> {{ admissions_this_month }}</p>
+                        <p><strong>Lab Tests:</strong> {{ lab_tests_this_month }}</p>
+                        <p><strong>Prescriptions:</strong> {{ prescriptions_this_month }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Analytics Tab -->
+    <div class="tab-pane fade" id="patients">
+        <div class="print-break"></div>
+        <h2 class="section-title">Patient Demographics & Analytics</h2>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Patients by Gender</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Gender</th><th>Count</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in patients_by_gender %}
+                                <tr>
+                                    <td>{{ item.gender }}</td>
+                                    <td>{{ item.count }}</td>
+                                    <td>{{ item.count|floatformat:0|mul:100|div:total_patients|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Age Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Age Group</th><th>Count</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in patients_by_age_group %}
+                                <tr>
+                                    <td>{{ item.age_group }}</td>
+                                    <td>{{ item.count }}</td>
+                                    <td>{{ item.count|floatformat:0|mul:100|div:total_patients|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Blood Group Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Blood Group</th><th>Count</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in patients_by_blood_group %}
+                                <tr>
+                                    <td>{{ item.blood_group }}</td>
+                                    <td>{{ item.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Patient Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Status</th><th>Count</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in patients_by_status %}
+                                <tr>
+                                    <td>{{ item.status|title }}</td>
+                                    <td>{{ item.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Analysis Tab -->
+    <div class="tab-pane fade" id="finance">
+        <div class="print-break"></div>
+        <h2 class="section-title">Financial Analysis</h2>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value text-success">₦{{ total_income|floatformat:0 }}</div>
+                    <div class="metric-label">Total Revenue</div>
+                    <small>₦{{ income_this_month|floatformat:0 }} this month</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value text-danger">₦{{ total_approved_expenses|floatformat:0 }}</div>
+                    <div class="metric-label">Total Expenses</div>
+                    <small>₦{{ expenses_this_month|floatformat:0 }} this month</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value text-info">₦{{ budget_summary.total_allocated|floatformat:0 }}</div>
+                    <div class="metric-label">Budget Allocated</div>
+                    <small>{{ budget_summary.utilization_percentage }}% utilized</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Revenue by Payment Method</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Payment Method</th><th>Count</th><th>Amount</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for method in payment_methods %}
+                                <tr>
+                                    <td>{{ method.payment_method|title }}</td>
+                                    <td>{{ method.count }}</td>
+                                    <td>₦{{ method.total_amount|floatformat:0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Expenses by Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Category</th><th>Amount</th><th>%</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in expenses_by_category %}
+                                <tr>
+                                    <td>{{ expense.category__name }}</td>
+                                    <td>₦{{ expense.total_amount|floatformat:0 }}</td>
+                                    <td>{{ expense.total_amount|floatformat:0|mul:100|div:total_approved_expenses|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Budget Performance by Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Month</th>
+                                    <th>Allocated</th>
+                                    <th>Spent</th>
+                                    <th>Remaining</th>
+                                    <th>Utilization %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for budget in budgets_data %}
+                                <tr>
+                                    <td>{{ budget.category.name }}</td>
+                                    <td>{{ budget.month }}/{{ budget.year }}</td>
+                                    <td>₦{{ budget.allocated_amount|floatformat:0 }}</td>
+                                    <td>₦{{ budget.spent_amount|floatformat:0 }}</td>
+                                    <td>₦{{ budget.remaining_amount|floatformat:0 }}</td>
+                                    <td>
+                                        {% if budget.allocated_amount > 0 %}
+                                            {{ budget.spent_amount|floatformat:0|mul:100|div:budget.allocated_amount|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Management Tab -->
+    <div class="tab-pane fade" id="staff">
+        <div class="print-break"></div>
+        <h2 class="section-title">Staff Management Analytics</h2>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Staff by Role</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Role</th><th>Count</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for staff in staff_by_role %}
+                                <tr>
+                                    <td>{{ staff.role|title }}</td>
+                                    <td>{{ staff.count }}</td>
+                                    <td>{{ staff.count|floatformat:0|mul:100|div:total_staff|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Staff by Department</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Department</th><th>Count</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for dept in staff_by_department %}
+                                <tr>
+                                    <td>{{ dept.department__name }}</td>
+                                    <td>{{ dept.count }}</td>
+                                    <td>{{ dept.count|floatformat:0|mul:100|div:total_staff|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Attendance Summary (Last 30 Days)</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Status</th><th>Count</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for attendance in attendance_summary %}
+                                <tr>
+                                    <td>{{ attendance.status|title }}</td>
+                                    <td>{{ attendance.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Staff Transitions</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Transition Type</th><th>Count</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for transition in staff_transitions_summary %}
+                                <tr>
+                                    <td>{{ transition.transition_type|title }}</td>
+                                    <td>{{ transition.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Recent Staff Transitions (Last 30 Days)</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Staff</th>
+                                    <th>Transition Type</th>
+                                    <th>Date</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transition in recent_transitions %}
+                                <tr>
+                                    <td>{{ transition.staff.first_name }} {{ transition.staff.last_name }}</td>
+                                    <td>{{ transition.transition_type|title }}</td>
+                                    <td>{{ transition.date|date:"M d, Y" }}</td>
+                                    <td>{{ transition.notes|truncatewords:10 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clinical Operations Tab -->
+    <div class="tab-pane fade" id="clinical">
+        <div class="print-break"></div>
+        <h2 class="section-title">Clinical Operations & Laboratory</h2>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mini-stat">
+                    <h3>{{ total_lab_tests }}</h3>
+                    <p>Total Lab Tests</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mini-stat">
+                    <h3>{{ lab_completion_rate }}%</h3>
+                    <p>Completion Rate</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mini-stat">
+                    <h3>{{ avg_completion_time }}</h3>
+                    <p>Avg Completion Time</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Lab Tests by Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Status</th><th>Count</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for test in lab_tests_by_status %}
+                                <tr>
+                                    <td>{{ test.status|title }}</td>
+                                    <td>{{ test.count }}</td>
+                                    <td>{{ test.count|floatformat:0|mul:100|div:total_lab_tests|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Lab Tests by Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for category in lab_tests_by_category %}
+                                <tr>
+                                    <td>{{ category.category__name }}</td>
+                                    <td>{{ category.count }}</td>
+                                    <td>{{ category.count|floatformat:0|mul:100|div:total_lab_tests|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Prescription Analytics</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Total Prescriptions:</strong> {{ total_prescriptions }}</p>
+                        <p><strong>This Month:</strong> {{ prescriptions_this_month }}</p>
+                        <p><strong>Growth Rate:</strong> 
+                            {% if total_prescriptions > 0 %}
+                                {{ prescriptions_this_month|floatformat:0|mul:100|div:total_prescriptions|floatformat:1 }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Critical Care Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Critical Patients:</strong> {{ critical_patients }}</p>
+                        <p><strong>Emergency Alerts (7 days):</strong> {{ emergency_alerts }}</p>
+                        <p><strong>Bed Occupancy:</strong> {{ bed_occupancy_rate }}%</p>
+                        <p><strong>Readmission Rate:</strong> {{ readmission_rate }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Top 10 Prescribed Medications</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Medication</th><th>Frequency</th><th>Percentage</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for med in top_medications %}
+                                <tr>
+                                    <td>{{ med.medication }}</td>
+                                    <td>{{ med.count }}</td>
+                                    <td>{{ med.count|floatformat:0|mul:100|div:total_prescriptions|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trends & Analytics Tab -->
+    <div class="tab-pane fade" id="trends">
+        <div class="print-break"></div>
+        <h2 class="section-title">Trends & Performance Analytics</h2>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>6-Month Trends Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>New Patients</th>
+                                    <th>Admissions</th>
+                                    <th>Revenue</th>
+                                    <th>Lab Tests</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trend in monthly_trends %}
+                                <tr>
+                                    <td>{{ trend.month }}</td>
+                                    <td>{{ trend.patients }}</td>
+                                    <td>{{ trend.admissions }}</td>
+                                    <td>₦{{ trend.income|floatformat:0 }}</td>
+                                    <td>{{ trend.lab_tests }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Quality Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Average Length of Stay:</strong> {{ avg_length_of_stay }} days</p>
+                        <p><strong>Readmission Rate:</strong> {{ readmission_rate }}%</p>
+                        <p><strong>Lab Completion Rate:</strong> {{ lab_completion_rate }}%</p>
+                        <p><strong>Bed Occupancy Rate:</strong> {{ bed_occupancy_rate }}%</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Performance Indicators</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Revenue Growth:</strong> 
+                            {% if income_last_month > 0 %}
+                                {% with growth_rate=income_this_month|sub:income_last_month|mul:100|div:income_last_month %}
+                                    <span class="{% if growth_rate > 0 %}trend-up{% elif growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                                        {{ growth_rate|floatformat:1 }}%
+                                    </span>
+                                {% endwith %}
+                            {% else %}
+                                <span class="trend-neutral">N/A</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Patient Volume Growth:</strong> 
+                            <span class="trend-up">{{ new_patients_this_month }} new patients</span>
+                        </p>
+                        <p><strong>Budget Utilization:</strong> 
+                            <span class="{% if budget_summary.utilization_percentage > 80 %}trend-down{% elif budget_summary.utilization_percentage > 60 %}trend-neutral{% else %}trend-up{% endif %}">
+                                {{ budget_summary.utilization_percentage }}%
+                            </span>
+                        </p>
+                        <p><strong>Outstanding Bills:</strong> 
+                            <span class="trend-down">₦{{ outstanding_bills|floatformat:0 }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Weekly Attendance Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>Week</th><th>Present</th><th>Absent</th><th>Late</th><th>On Leave</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for week in weekly_attendance %}
+                                <tr>
+                                    <td>{{ week.week }}</td>
+                                    {% for status in week.data %}
+                                        <td>{{ status.count }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Footer -->
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Report Summary</h6>
+                <p class="text-muted">
+                    This comprehensive report covers all major aspects of hospital operations including 
+                    patient demographics, financial performance, staff management, clinical operations, 
+                    and performance trends. Data is current as of {{ report_generated_date|date:"F d, Y" }}.
+                </p>
+            </div>
+            <div class="col-md-6 text-right">
+                <h6>Key Recommendations</h6>
+                <ul class="text-muted" style="list-style: none; padding-left: 0;">
+                    {% if bed_occupancy_rate > 85 %}
+                        <li>• Consider capacity expansion - High occupancy rate</li>
+                    {% endif %}
+                    {% if outstanding_bills > 500000 %}
+                        <li>• Focus on bill collection - High outstanding amount</li>
+                    {% endif %}
+                    {% if lab_completion_rate < 80 %}
+                        <li>• Improve lab efficiency - Low completion rate</li>
+                    {% endif %}
+                    {% if readmission_rate > 10 %}
+                        <li>• Review discharge protocols - High readmission rate</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <small class="text-muted">
+                Hospital Management System | Generated on {{ report_generated_date|date:"F d, Y \a\t g:i A" }} | 
+                Confidential Document
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js for potential future charts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+// Print functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-show all tabs when printing
+    window.addEventListener('beforeprint', function() {
+        // Show all tab content for printing
+        document.querySelectorAll('.tab-pane').forEach(function(pane) {
+            pane.classList.add('show', 'active');
+        });
+    });
+    
+    window.addEventListener('afterprint', function() {
+        // Restore original tab state
+        document.querySelectorAll('.tab-pane').forEach(function(pane, index) {
+            if (index === 0) {
+                pane.classList.add('show', 'active');
+            } else {
+                pane.classList.remove('show', 'active');
+            }
+        });
+    });
+});
+
+// Tab functionality
+document.querySelectorAll('.nav-link').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Remove active class from all tabs and content
+        document.querySelectorAll('.nav-link').forEach(function(navLink) {
+            navLink.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-pane').forEach(function(pane) {
+            pane.classList.remove('show', 'active');
+        });
+        
+        // Add active class to clicked tab
+        this.classList.add('active');
+        
+        // Show corresponding content
+        const target = this.getAttribute('href');
+        const targetPane = document.querySelector(target);
+        if (targetPane) {
+            targetPane.classList.add('show', 'active');
+        }
+    });
+});
+</script>
 
 {% endblock %}

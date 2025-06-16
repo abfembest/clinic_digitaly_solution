@@ -4,24 +4,12 @@
 
 {% block content %}
 
-<!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
                 <h1 class="m-0 text-dark">Operations & Approvals</h1>
-            </div><!-- /.col -->
-            <!-- <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Dashboard</li>
-                </ol>
-            </div> -->
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
-</div>
-<!-- /.content-header -->
-
+            </div></div></div></div>
 <section class="content">
     <div class="container-fluid">
       <div class="card card-outline card-warning">
@@ -32,10 +20,12 @@
           <ul class="nav nav-pills mb-3">
             <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#discharges">Pending Discharges</a></li>
             <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#expenses">Expenses Approval</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#staff_transitions">Staff Transitions</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#budgets">Budget Overview</a></li>
+            <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#alerts">Emergency Alerts</a></li>
           </ul>
-  
+
           <div class="tab-content">
-            <!-- Pending Discharges -->
             <div class="tab-pane fade show active" id="discharges">
               <table class="table table-bordered">
                 <thead>
@@ -45,8 +35,8 @@
                   {% for d in pending_discharges %}
                   <tr>
                     <td>{{ d.patient.full_name }}</td>
-                    <td>{{ d.requested_by }}</td>
-                    <td>{{ d.date }}</td>
+                    <td>{{ d.admitted_by|default:'N/A' }}</td> {# Corrected line #}
+                    <td>{{ d.admission_date }}</td>
                     <td><a href="{% url 'approve_discharge' d.id %}" class="btn btn-sm btn-success">Approve</a></td>
                   </tr>
                   {% empty %}
@@ -55,8 +45,7 @@
                 </tbody>
               </table>
             </div>
-  
-            <!-- Expenses -->
+
             <div class="tab-pane fade" id="expenses">
               <table class="table table-bordered">
                 <thead>
@@ -67,7 +56,7 @@
                   <tr>
                     <td>{{ exp.description }}</td>
                     <td>₦{{ exp.amount }}</td>
-                    <td>{{ exp.submitted_by }}</td>
+                    <td>{{ exp.requested_by.get_full_name|default:exp.requested_by.username|default:'N/A' }}</td> {# Corrected line, nested default #}
                     <td><a href="{% url 'approve_expense' exp.id %}" class="btn btn-sm btn-success">Approve</a></td>
                   </tr>
                   {% empty %}
@@ -76,10 +65,92 @@
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+
+            <div class="tab-pane fade" id="staff_transitions">
+              <table class="table table-bordered">
+                <thead>
+                  <tr><th>Staff Name</th><th>Transition Type</th><th>Date</th><th>Recorded By</th></tr>
+                </thead>
+                <tbody>
+                  {% for transition in pending_transitions %}
+                  <tr>
+                    <td>{{ transition.full_name }}</td>
+                    <td>{{ transition.get_transition_type_display }}</td>
+                    <td>{{ transition.date }}</td>
+                    <td>{{ transition.created_by.get_full_name|default:transition.created_by.username|default:'N/A' }}</td> {# Corrected line #}
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-center">No recent staff transitions</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <div class="text-right mt-3">
+                <a href="{% url 'staff_transitions' %}" class="btn btn-info">View All Staff Transitions</a>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="budgets">
+              <table class="table table-bordered">
+                <thead>
+                  <tr><th>Category</th><th>Month/Year</th><th>Allocated</th><th>Spent</th><th>Remaining</th><th>% Used</th></tr>
+                </thead>
+                <tbody>
+                  {% for budget in budgets %}
+                  <tr>
+                    <td>{{ budget.category.name }}</td>
+                    <td>{% if budget.month %}{{ budget.month }}/{% endif %}{{ budget.year }}</td>
+                    <td>₦{{ budget.allocated_amount|floatformat:2 }}</td>
+                    <td>₦{{ budget.spent_amount|floatformat:2 }}</td>
+                    <td>₦{{ budget.remaining_amount|floatformat:2 }}</td>
+                    <td>{{ budget.percentage_used|floatformat:2 }}%</td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="6" class="text-center">No budget data available for current year.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <div class="text-right mt-3">
+                <a href="{% url 'budget_planning' %}" class="btn btn-info">Manage Budgets</a>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="alerts">
+              <table class="table table-bordered">
+                <thead>
+                  <tr><th>Message</th><th>Triggered By</th><th>Timestamp</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {% for alert in recent_alerts %}
+                  <tr>
+                    <td>{{ alert.message }}</td>
+                    <td>{{ alert.triggered_by.get_full_name|default:alert.triggered_by.username|default:'System' }}</td> {# Corrected line #}
+                    <td>{{ alert.timestamp|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if request.user in alert.acknowledged_by.all %}
+                            <span class="badge badge-success">Acknowledged</span>
+                        {% else %}
+                            <span class="badge badge-warning">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if request.user not in alert.acknowledged_by.all %}
+                            <a href="{% url 'acknowledge_alert' alert.id %}" class="btn btn-sm btn-info">Acknowledge</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="5" class="text-center">No recent emergency alerts.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          </div>{# End tab-content #}
+        </div>{# End card-body #}
+      </div>{# End card #}
+    </div>{# End container-fluid #}
   </section>
 
 {% endblock %}
