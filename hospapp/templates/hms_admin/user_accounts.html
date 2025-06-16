@@ -1,5 +1,7 @@
 {% extends "hms_admin/base.html" %}
 
+{% load static %}
+
 {% block title %}HMS | User Management{% endblock %}
 
 {% block content %}
@@ -600,56 +602,10 @@ $(document).ready(function() {
             "infoEmpty": "No users available",
             "infoFiltered": "(filtered from _MAX_ total users)"
         },
-        "dom": 'Bfrtip',
-        "buttons": [
-            {
-                extend: 'copy',
-                className: 'btn btn-default btn-sm',
-                text: '<i class="fas fa-copy"></i> Copy',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5, 6, 7, 8] // Exclude # and Actions columns
-                }
-            },
-            {
-                extend: 'csv',
-                className: 'btn btn-default btn-sm',
-                text: '<i class="fas fa-file-csv"></i> CSV',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            {
-                extend: 'excel',
-                className: 'btn btn-default btn-sm',
-                text: '<i class="fas fa-file-excel"></i> Excel',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            {
-                extend: 'pdf',
-                className: 'btn btn-default btn-sm',
-                text: '<i class="fas fa-file-pdf"></i> PDF',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            },
-            {
-                extend: 'print',
-                className: 'btn btn-default btn-sm',
-                text: '<i class="fas fa-print"></i> Print',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5, 6, 7, 8]
-                }
-            }
-        ],
         "drawCallback": function(settings) {
             updateUserCount();
         }
     });
-
-    // Hide DataTable buttons (we'll use custom buttons)
-    $('.dt-buttons').hide();
 
     // Role filter functionality
     $('#roleFilter').on('change', function() {
@@ -685,40 +641,498 @@ $(document).ready(function() {
 
 // Custom filter function
 function filterTable() {
-    const roleFilter = $('#roleFilter').val().toLowerCase();
-    const statusFilter = $('#statusFilter').val().toLowerCase();
+    const roleFilter = $('#roleFilter').val();
+    const statusFilter = $('#statusFilter').val();
     
-    let searchTerm = '';
-    if (usersTable.search()) {
-        searchTerm = usersTable.search().toLowerCase();
+    // Clear existing search
+    usersTable.search('').columns().search('').draw();
+    
+    // Apply role filter
+    if (roleFilter) {
+        usersTable.column(4).search(roleFilter, false, false);
     }
     
-    usersTable.rows().every(function() {
-        const data = this.data();
-        const $row = $(this.node());
+    // Apply status filter
+    if (statusFilter) {
+        usersTable.column(7).search(statusFilter, false, false);
+    }
+    
+    usersTable.draw();
+    updateUserCount();
+}
+
+// Update active role card highlighting
+function updateActiveRoleCard(selectedRole) {
+    $('.role-filter-card .info-box-icon').removeClass('bg-warning').addClass('bg-primary');
+    if (selectedRole) {
+        $(`.role-filter-card[data-role="${selectedRole}"] .info-box-icon`).removeClass('bg-primary').addClass('bg-warning');
+    }
+}
+
+// Update user count display
+function updateUserCount() {
+    const info = usersTable.page.info();
+    const displayed = info.recordsDisplay;
+    const total = info.recordsTotal;
+    $('#userCount').text(`Showing ${displayed} of ${total} users`);
+}
+
+// View user profile function
+function viewUserProfile(userId) {
+    currentUserId = userId;
+    
+    // Reset modal content
+    $('#userProfileContent').html(`
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Loading profile...</p>
+        </div>
+    `);
+    
+    $('#userProfileModal').modal('show');
+    
+    // Simulate loading user profile (replace with actual AJAX call)
+    setTimeout(function() {
+        const $row = $(`tr[data-user-id="${userId}"]`);
+        const username = $row.find('td:eq(1)').text().trim();
+        const fullName = $row.find('td:eq(2)').text().trim();
+        const email = $row.find('td:eq(3) a').text() || $row.find('td:eq(3)').text().trim();
+        const role = $row.find('td:eq(4) .badge').text().trim();
+        const department = $row.find('td:eq(5)').text().trim();
+        const phone = $row.find('td:eq(6) a').text() || $row.find('td:eq(6)').text().trim();
+        const status = $row.find('td:eq(7) .badge').text().trim();
+        const dateJoined = $row.find('td:eq(8)').text().trim();
         
-        let showRow = true;
+        const profileHtml = `
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <img src="/static/img/default-avatar.png" alt="User Photo" class="img-circle elevation-2" style="width: 120px; height: 120px;">
+                    <h5 class="mt-2">${fullName || username}</h5>
+                    <span class="badge badge-${status.toLowerCase().includes('active') ? 'success' : 'secondary'}">${status}</span>
+                </div>
+                <div class="col-md-8">
+                    <table class="table table-borderless">
+                        <tr><td><strong>Username:</strong></td><td>${username}</td></tr>
+                        <tr><td><strong>Email:</strong></td><td>${email || 'Not provided'}</td></tr>
+                        <tr><td><strong>Role:</strong></td><td>${role}</td></tr>
+                        <tr><td><strong>Department:</strong></td><td>${department}</td></tr>
+                        <tr><td><strong>Phone:</strong></td><td>${phone || 'Not provided'}</td></tr>
+                        <tr><td><strong>Date Joined:</strong></td><td>${dateJoined}</td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
         
-        // Role filter
-        if (roleFilter && !$row.find('td:eq(4)').text().toLowerCase().includes(roleFilter)) {
-            showRow = false;
-        }
-        
-        // Status filter
-        if (statusFilter && !$row.find('td:eq(7)').text().toLowerCase().includes(statusFilter)) {
-            showRow = false;
-        }
-        
-        // Search term filter
-        if (searchTerm) {
-            const rowText = $row.text().toLowerCase();
-            if (!rowText.includes(searchTerm)) {
-                showRow = false;
+        $('#userProfileContent').html(profileHtml);
+    }, 1000);
+}
+
+// Edit user function
+function editUser(userId) {
+    currentUserId = userId;
+    
+    // Find user data from the table
+    const $row = $(`tr[data-user-id="${userId}"]`);
+    const username = $row.find('td:eq(1)').text().trim();
+    const fullName = $row.find('td:eq(2)').text().replace(/\s+/g, ' ').trim();
+    const email = $row.find('td:eq(3) a').text() || '';
+    const role = $row.find('td:eq(4) .badge').text().trim();
+    const phone = $row.find('td:eq(6) a').text() || '';
+    const isActive = $row.find('td:eq(7) .badge-success').length > 0;
+    
+    // Split full name
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    // Populate form
+    $('#editUsername').val(username);
+    $('#editEmail').val(email);
+    $('#editFirstName').val(firstName);
+    $('#editLastName').val(lastName);
+    $('#editRole').val(role === 'No Role' ? '' : role);
+    $('#editPhone').val(phone);
+    $('#editIsActive').prop('checked', isActive);
+    
+    $('#editUserModal').modal('show');
+}
+
+// In saveUserChanges() function
+function saveUserChanges() {
+    if (!validateEditForm()) {
+        return;
+    }
+
+    const userId = currentUserId;
+    const username = $('#editUsername').val();
+    const email = $('#editEmail').val();
+    const firstName = $('#editFirstName').val();
+    const lastName = $('#editLastName').val();
+    const role = $('#editRole').val();
+    const phone = $('#editPhone').val();
+    const isActive = $('#editIsActive').is(':checked');
+    const csrfToken = $('input[name="csrfmiddlewaretoken"]').val(); // Get CSRF token
+
+    $.ajax({
+        url: `/admin/users/${userId}/edit/`, // Your Django URL for editing a user
+        method: 'POST',
+        data: {
+            username: username,
+            email: email,
+            first_name: firstName,
+            last_name: lastName,
+            role: role,
+            phone_number: phone, // Assuming your model uses phone_number
+            is_active: isActive,
+            csrfmiddlewaretoken: csrfToken
+        },
+        success: function(response) {
+            if (response.success) { // Assuming your Django view sends a JSON response with success: true/false
+                showAlert('success', 'User updated successfully!');
+                $('#editUserModal').modal('hide');
+                updateTableRow(); // Update UI after successful server update
+            } else {
+                showAlert('danger', response.message || 'Failed to update user.');
             }
+        },
+        error: function(xhr, status, error) {
+            showAlert('danger', 'An error occurred while saving changes.');
+            console.error('AJAX Error:', status, error);
+        }
+    });
+}
+
+// Add new user function
+function addNewUser() {
+    // Reset form
+    $('#addUserForm')[0].reset();
+    $('#addIsActive').prop('checked', true);
+    $('#addUserModal').modal('show');
+}
+
+// Save new user
+function saveNewUser() {
+    if (!validateAddForm()) {
+        return;
+    }
+    
+    // Simulate saving (replace with actual AJAX call)
+    showAlert('success', 'User created successfully!');
+    $('#addUserModal').modal('hide');
+    
+    // Reload page or add new row to table
+    setTimeout(() => location.reload(), 1500);
+}
+
+// Toggle user status
+function toggleUserStatus(userId, username, isActive) {
+    currentUserId = userId;
+    const action = isActive ? 'disable' : 'enable';
+    const message = `Are you sure you want to ${action} user "${username}"?`;
+    
+    $('#modalMessage').text(message);
+    $('#statusToggleModal').modal('show');
+    
+    $('#confirmStatusToggle').off('click').on('click', function() {
+        // Simulate status toggle (replace with actual AJAX call)
+        showAlert('success', `User ${action}d successfully!`);
+        $('#statusToggleModal').modal('hide');
+        
+        // Update the status in the table
+        const $row = $(`tr[data-user-id="${userId}"]`);
+        const $statusCell = $row.find('td:eq(7)');
+        if (isActive) {
+            $statusCell.html('<span class="badge badge-secondary"><i class="fas fa-times mr-1"></i>Inactive</span>');
+        } else {
+            $statusCell.html('<span class="badge badge-success"><i class="fas fa-check mr-1"></i>Active</span>');
         }
         
-        // Show/hide row
-        if (showRow) {
-            $row.show();
+        // Update the action button
+        const $actionBtn = $row.find('button[onclick*="toggleUserStatus"]');
+        if (isActive) {
+            $actionBtn.attr('onclick', $actionBtn.attr('onclick').replace('true', 'false'));
+            $actionBtn.attr('title', 'Enable User');
+            $actionBtn.html('<i class="fas fa-user-check"></i>');
         } else {
-            $row.hide();
+            $actionBtn.attr('onclick', $actionBtn.attr('onclick').replace('false', 'true'));
+            $actionBtn.attr('title', 'Disable User');
+            $actionBtn.html('<i class="fas fa-user-slash"></i>');
+        }
+    });
+}
+
+// Reset password function
+function resetPassword(userId, username) {
+    currentUserId = userId;
+    $('#resetPasswordMessage').text(`Are you sure you want to reset the password for user "${username}"?`);
+    $('#resetPasswordModal').modal('show');
+    
+    $('#confirmPasswordReset').off('click').on('click', function() {
+        // Simulate password reset (replace with actual AJAX call)
+        const newPassword = generateRandomPassword();
+        showAlert('success', `Password reset successfully! New password: <strong>${newPassword}</strong>`);
+        $('#resetPasswordModal').modal('hide');
+    });
+}
+
+// Delete user function
+function deleteUser(userId, username) {
+    currentUserId = userId;
+    $('#deleteUserMessage').text(`Are you sure you want to delete user "${username}"?`);
+    $('#deleteUserModal').modal('show');
+    
+    $('#confirmUserDelete').off('click').on('click', function() {
+        // Simulate user deletion (replace with actual AJAX call)
+        showAlert('success', 'User deleted successfully!');
+        $('#deleteUserModal').modal('hide');
+        
+        // Remove the row from table
+        $(`tr[data-user-id="${userId}"]`).fadeOut(500, function() {
+            $(this).remove();
+            usersTable.draw();
+        });
+    });
+}
+
+// Export users function
+function exportUsers() {
+    const format = prompt('Choose export format:\n1. CSV\n2. Excel\n3. PDF\n\nEnter 1, 2, or 3:');
+    
+    let exportType = '';
+    switch(format) {
+        case '1':
+            exportType = 'CSV';
+            break;
+        case '2':
+            exportType = 'Excel';
+            break;
+        case '3':
+            exportType = 'PDF';
+            break;
+        default:
+            return;
+    }
+    
+    showAlert('info', `Exporting users to ${exportType} format...`);
+    // Simulate export (replace with actual export functionality)
+}
+
+// Print users function
+function printUsers() {
+    window.print();
+}
+
+// Update table row after edit
+function updateTableRow() {
+    const $row = $(`tr[data-user-id="${currentUserId}"]`);
+    const username = $('#editUsername').val();
+    const email = $('#editEmail').val();
+    const firstName = $('#editFirstName').val();
+    const lastName = $('#editLastName').val();
+    const role = $('#editRole').val();
+    const phone = $('#editPhone').val();
+    const isActive = $('#editIsActive').is(':checked');
+    
+    // Update table cells
+    $row.find('td:eq(1)').html(`<strong>${username}</strong>`);
+    $row.find('td:eq(2)').text(`${firstName} ${lastName}`.trim());
+    $row.find('td:eq(3)').html(email ? `<a href="mailto:${email}">${email}</a>` : '<span class="text-muted">Not provided</span>');
+    $row.find('td:eq(4)').html(`<span class="badge badge-info">${role || 'No Role'}</span>`);
+    $row.find('td:eq(6)').html(phone ? `<a href="tel:${phone}">${phone}</a>` : '<span class="text-muted">Not provided</span>');
+    $row.find('td:eq(7)').html(isActive ? 
+        '<span class="badge badge-success"><i class="fas fa-check mr-1"></i>Active</span>' : 
+        '<span class="badge badge-secondary"><i class="fas fa-times mr-1"></i>Inactive</span>'
+    );
+}
+
+// Form validation functions
+function validateEditForm() {
+    const username = $('#editUsername').val().trim();
+    const email = $('#editEmail').val().trim();
+    
+    if (!username) {
+        showAlert('warning', 'Username is required.');
+        $('#editUsername').focus();
+        return false;
+    }
+    
+    if (email && !isValidEmail(email)) {
+        showAlert('warning', 'Please enter a valid email address.');
+        $('#editEmail').focus();
+        return false;
+    }
+    
+    return true;
+}
+
+function validateAddForm() {
+    const username = $('#addUsername').val().trim();
+    const password = $('#addPassword').val();
+    const confirmPassword = $('#addConfirmPassword').val();
+    const email = $('#addEmail').val().trim();
+    const role = $('#addRole').val();
+    
+    if (!username) {
+        showAlert('warning', 'Username is required.');
+        $('#addUsername').focus();
+        return false;
+    }
+    
+    if (!password) {
+        showAlert('warning', 'Password is required.');
+        $('#addPassword').focus();
+        return false;
+    }
+    
+    if (password.length < 8) {
+        showAlert('warning', 'Password must be at least 8 characters long.');
+        $('#addPassword').focus();
+        return false;
+    }
+    
+    if (password !== confirmPassword) {
+        showAlert('warning', 'Passwords do not match.');
+        $('#addConfirmPassword').focus();
+        return false;
+    }
+    
+    if (!role) {
+        showAlert('warning', 'Please select a role.');
+        $('#addRole').focus();
+        return false;
+    }
+    
+    if (email && !isValidEmail(email)) {
+        showAlert('warning', 'Please enter a valid email address.');
+        $('#addEmail').focus();
+        return false;
+    }
+    
+    return true;
+}
+
+// Setup form validation
+function setupFormValidation() {
+    // Real-time validation for add user form
+    $('#addConfirmPassword').on('keyup blur', function() {
+        const password = $('#addPassword').val();
+        const confirmPassword = $(this).val();
+        
+        if (confirmPassword && password !== confirmPassword) {
+            $(this).addClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">Passwords do not match.</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+        }
+    });
+    
+    // Username validation
+    $('#addUsername, #editUsername').on('blur', function() {
+        const username = $(this).val().trim();
+        if (username && username.length < 3) {
+            $(this).addClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">Username must be at least 3 characters long.</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+        }
+    });
+    
+    // Email validation
+    $('#addEmail, #editEmail').on('blur', function() {
+        const email = $(this).val().trim();
+        if (email && !isValidEmail(email)) {
+            $(this).addClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">Please enter a valid email address.</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).siblings('.invalid-feedback').remove();
+        }
+    });
+}
+
+// Utility functions
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function showAlert(type, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    `;
+    
+    // Remove existing alerts
+    $('.alert:not(.alert-permanent)').remove();
+    
+    // Add new alert at the top of content
+    $('.content-header').after(alertHtml);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(function() {
+        $('.alert:not(.alert-permanent)').fadeOut('slow');
+    }, 5000);
+}
+
+// Generate random password
+function generateRandomPassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+// Password strength indicator
+function checkPasswordStrength(password) {
+    let strength = 0;
+    const checks = {
+        length: password.length >= 8,
+        lowercase: /[a-z]/.test(password),
+        uppercase: /[A-Z]/.test(password),
+        numbers: /\d/.test(password),
+        symbols: /[^A-Za-z0-9]/.test(password)
+    };
+    
+    strength = Object.values(checks).filter(Boolean).length;
+    
+    return {
+        score: strength,
+        checks: checks,
+        text: strength < 2 ? 'Weak' : strength < 4 ? 'Medium' : 'Strong'
+    };
+}
+
+// Add password strength indicator to add user form
+$(document).on('keyup', '#addPassword', function() {
+    const password = $(this).val();
+    if (password) {
+        const strength = checkPasswordStrength(password);
+        const color = strength.score < 2 ? 'danger' : strength.score < 4 ? 'warning' : 'success';
+        
+        $(this).siblings('.password-strength').remove();
+        $(this).after(`
+            <div class="password-strength">
+                <small class="text-${color}">
+                    Password strength: ${strength.text}
+                    ${strength.score < 3 ? '(Try adding uppercase, numbers, or symbols)' : ''}
+                </small>
+            </div>
+        `);
+    } else {
+        $(this).siblings('.password-strength').remove();
+    }
+});
+</script>
+{% endblock %}
