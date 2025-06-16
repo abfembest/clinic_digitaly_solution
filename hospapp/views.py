@@ -2168,6 +2168,11 @@ def director_reports(request):
     total_discharges = Admission.objects.filter(status='Discharged').count()
     total_appointments = Appointment.objects.count()
 
+    new_patients_target = 100
+    admissions_target = 50
+    lab_tests_target = 200
+    prescriptions_target = 150
+
     # New patients this month
     new_patients_this_month = Patient.objects.filter(
         date_registered__gte=current_month_start_aware
@@ -2456,16 +2461,76 @@ def director_reports(request):
         'report_generated_date': timezone.now(),
         'report_period': f"{current_month_start_aware.strftime('%B %Y')} - Current",
         'current_year': current_year,
+
+        'new_patients_target': new_patients_target,
+        'admissions_target': admissions_target,
+        'lab_tests_target': lab_tests_target,
+        'prescriptions_target': prescriptions_target,
     }
 
     return render(request, 'hms_admin/reports.html', context)
 
 @login_required(login_url='home')
 def user_accounts(request):
-    users = User.objects.filter(is_superuser=False)
-
-    context = {'users' : users }
+    # Get search query if provided
+    search_query = request.GET.get('search', '')
+    
+    # Filter users (exclude superusers and get related staff info)
+    users = User.objects.filter(is_superuser=False).select_related('staff')
+    
+    # Apply search filter if query exists
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(staff__role__icontains=search_query)
+        )
+    
+    # Get statistics for dashboard cards
+    total_users = User.objects.filter(is_superuser=False).count()
+    active_users = User.objects.filter(is_superuser=False, is_active=True).count()
+    inactive_users = total_users - active_users
+    
+    # Count users by role
+    role_counts = {}
+    for choice in Staff.ROLE_CHOICES:
+        role_key = choice[0]
+        role_name = choice[1]
+        count = Staff.objects.filter(role=role_key).count()
+        role_counts[role_name] = count
+    
+    context = {
+        'users': users,
+        'search_query': search_query,
+        'total_users': total_users,
+        'active_users': active_users,
+        'inactive_users': inactive_users,
+        'role_counts': role_counts,
+    }
+    
     return render(request, 'hms_admin/user_accounts.html', context)
+
+@login_required(login_url='home')
+def toggle_user_status(request, user_id):
+    """Toggle user active status"""
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id, is_superuser=False)
+        user.is_active = not user.is_active
+        user.save()
+        
+        status = "activated" if user.is_active else "deactivated"
+        messages.success(request, f'User {user.username} has been {status} successfully.')
+    
+    return redirect('user_accounts')
+
+@login_required(login_url='home')
+def edit_user(request, user_id):
+    """Redirect to user edit page - implement as needed"""
+    # This should redirect to your user edit form
+    messages.info(request, 'User edit functionality to be implemented.')
+    return redirect('user_accounts')
 
 ''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
 

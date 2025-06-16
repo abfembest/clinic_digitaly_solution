@@ -114,6 +114,9 @@ urlpatterns = [
     path('ad/approve_expense/<int:exp_id>/', views.approve_expense, name='approve_expense'),
     path('ad/reports', views.director_reports, name='director_reports'),
     path('ad/accounts', views.user_accounts, name='user_accounts'),
+    path('user-accounts/', views.user_accounts, name='user_accounts'),
+    path('toggle-user-status/<int:user_id>/', views.toggle_user_status, name='toggle_user_status'),
+    path('edit-user/<int:user_id>/', views.edit_user, name='edit_user'),
 
     ########################### Receptionist URLS #################################
     path('r/home', views.receptionist, name='receptionist'),
