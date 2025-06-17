@@ -100,6 +100,22 @@
                 </ol>
             </div>
         </div>
+
+
+        <div class="report-header">
+            <div class="row">
+                <div class="col-md-8">
+                    <h2><i class="fas fa-hospital mr-2"></i> Hospital Management System - Director's Report</h2>
+                    <p class="mb-1"><i class="far fa-calendar mr-1"></i> Report Period: {{ report_period }}</p>
+                    <p class="mb-1"><i class="far fa-clock mr-1"></i> Generated: {{ report_generated_date|date:"F d, Y \a\t g:i A" }}</p>
+                </div>
+                <div class="col-md-4 text-right">
+                    <h3><i class="fas fa-chart-line mr-2"></i> {{ current_year }} Annual Report</h3>
+                    <p>Comprehensive Analytics Dashboard</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -137,7 +153,7 @@
                                             <i class="far fa-calendar-alt"></i>
                                         </span>
                                     </div>
-                                    <input type="text" class="form-control float-right" id="reportDateRange">
+                                    <input type="datetime-local" class="form-control float-right" id="reportDateRange">
                                 </div>
                             </div>
                         </div>
@@ -179,19 +195,7 @@
             </div>
         </div>
 
-        <div class="report-header">
-            <div class="row">
-                <div class="col-md-8">
-                    <h2><i class="fas fa-hospital mr-2"></i> Hospital Management System - Director's Report</h2>
-                    <p class="mb-1"><i class="far fa-calendar mr-1"></i> Report Period: {{ report_period }}</p>
-                    <p class="mb-1"><i class="far fa-clock mr-1"></i> Generated: {{ report_generated_date|date:"F d, Y \a\t g:i A" }}</p>
-                </div>
-                <div class="col-md-4 text-right">
-                    <h3><i class="fas fa-chart-line mr-2"></i> {{ current_year }} Annual Report</h3>
-                    <p>Comprehensive Analytics Dashboard</p>
-                </div>
-            </div>
-        </div>
+       
 
         <div class="card no-print">
             <div class="card-header p-0">
