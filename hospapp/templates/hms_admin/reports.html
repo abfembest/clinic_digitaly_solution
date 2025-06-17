@@ -56,28 +56,35 @@
         body * {
             visibility: hidden;
         }
+
         .content-wrapper, .content-wrapper * {
             visibility: visible;
         }
+
         .content-wrapper {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
         }
+
         .no-print, .no-print * {
             display: none !important;
         }
+
         .print-break {
             page-break-before: always;
         }
+
         .tab-content > .tab-pane {
             display: block !important;
             opacity: 1 !important;
         }
+
         .nav-tabs {
             display: none;
         }
+
         .card {
             border: 1px solid #dee2e6 !important;
             box-shadow: none !important;
@@ -195,7 +202,7 @@
             </div>
         </div>
 
-       
+
 
         <div class="card no-print">
             <div class="card-header p-0">
@@ -233,7 +240,7 @@
             <div class="tab-pane fade show active" id="overview" role="tabpanel">
                 <div class="print-break"></div>
                 <h3 class="section-title">Hospital Overview</h3>
-                
+
                 <div class="row">
                     <div class="col-md-3 col-sm-6">
                         <div class="metric-card border-left-primary">
@@ -310,7 +317,7 @@
                                                 <span class="info-box-text">Lab Tests Pending</span>
                                                 <span class="info-box-number">
                                                     {% for status in lab_tests_by_status %}
-                                                        {% if status.status == 'pending' %}{{ status.count }}{% endif %}
+                                                    {% if status.status == 'pending' %}{{ status.count }}{% endif %}
                                                     {% endfor %}
                                                 </span>
                                             </div>
@@ -363,7 +370,7 @@
             <div class="tab-pane fade" id="patients" role="tabpanel">
                 <div class="print-break"></div>
                 <h3 class="section-title">Patient Demographics & Analytics</h3>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -394,7 +401,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
@@ -449,7 +456,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
@@ -481,7 +488,7 @@
             <div class="tab-pane fade" id="finance" role="tabpanel">
                 <div class="print-break"></div>
                 <h3 class="section-title">Financial Analysis</h3>
-                
+
                 <div class="row">
                     <div class="col-md-4">
                         <div class="metric-card border-left-primary">
@@ -533,7 +540,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
@@ -590,9 +597,9 @@
                                             <td>₦{{ budget.remaining_amount|floatformat:0 }}</td>
                                             <td>
                                                 {% if budget.allocated_amount > 0 %}
-                                                    {{ budget.spent_amount|floatformat:0|mul:100|div:budget.allocated_amount|floatformat:1 }}%
+                                                {{ budget.spent_amount|floatformat:0|mul:100|div:budget.allocated_amount|floatformat:1 }}%
                                                 {% else %}
-                                                    0%
+                                                0%
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -608,7 +615,7 @@
             <div class="tab-pane fade" id="staff" role="tabpanel">
                 <div class="print-break"></div>
                 <h3 class="section-title">Staff Management Analytics</h3>
-                
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -721,7 +728,7 @@
             <div class="tab-pane fade" id="clinical" role="tabpanel">
                 <div class="print-break"></div>
                 <h3 class="section-title">Clinical Operations & Laboratory</h3>
-                
+
                 <div class="row">
                     <div class="col-md-4">
                         <div class="info-box bg-gradient-info">
@@ -805,6 +812,373 @@
                     </div>
                 </div>
             </div>
+
+            <!--NEW TABLE FORMAT-->
+            <!-- Bootstrap CSS -->
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+            <!-- Bootstrap Icons -->
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+            <!-- jsPDF for PDF generation -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+            <style>
+                /* Scoped styles for the advanced table component only */
+                .advanced-table-container {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 0.75rem;
+                    border-radius: 10px;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+                    margin: 0.75rem 0;
+                }
+
+                .advanced-table-header {
+                    background: rgba(255,255,255,0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 8px;
+                    padding: 0.75rem;
+                    margin-bottom: 0.75rem;
+                    box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+                }
+
+                    .advanced-table-header h2 {
+                        color: #2d3748;
+                        font-weight: 700;
+                        margin-bottom: 0.2rem;
+                        font-size: 1.3rem;
+                        background: linear-gradient(135deg, #667eea, #764ba2);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                    }
+
+                .advanced-table-controls {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 0.5rem;
+                }
+
+                .advanced-search-box {
+                    position: relative;
+                    flex: 1;
+                    min-width: 150px;
+                    max-width: 300px;
+                }
+
+                    .advanced-search-box input {
+                        border: 1px solid #e2e8f0;
+                        border-radius: 18px;
+                        padding: 6px 12px 6px 30px;
+                        font-size: 0.85rem;
+                        transition: all 0.3s ease;
+                        background: rgba(255,255,255,0.9);
+                        backdrop-filter: blur(5px);
+                    }
+
+                        .advanced-search-box input:focus {
+                            border-color: #667eea;
+                            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                            background: white;
+                        }
+
+                    .advanced-search-box i {
+                        position: absolute;
+                        left: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #64748b;
+                        z-index: 2;
+                        font-size: 0.8rem;
+                    }
+
+                .advanced-table-wrapper {
+                    background: rgba(255,255,255,0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                }
+
+                .advanced-table {
+                    margin-bottom: 0;
+                    border: none;
+                }
+
+                    .advanced-table thead th {
+                        background: linear-gradient(135deg, #4a5568, #2d3748);
+                        color: white;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: 0.3px;
+                        padding: 0.6rem;
+                        border: none;
+                        position: relative;
+                        cursor: pointer;
+                        transition: background 0.3s ease;
+                        font-size: 0.75rem;
+                    }
+
+                        .advanced-table thead th:hover {
+                            background: linear-gradient(135deg, #2d3748, #1a202c);
+                        }
+
+                        .advanced-table thead th::after {
+                            content: '';
+                            position: absolute;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            height: 2px;
+                            background: linear-gradient(90deg, #667eea, #764ba2);
+                        }
+
+                    .advanced-table tbody tr {
+                        transition: all 0.3s ease;
+                        border: none;
+                    }
+
+                        .advanced-table tbody tr:nth-child(even) {
+                            background: rgba(248, 250, 252, 0.8);
+                        }
+
+                        .advanced-table tbody tr:hover {
+                            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+                            transform: translateY(-2px);
+                            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                        }
+
+                    .advanced-table tbody td {
+                        padding: 0.6rem;
+                        border: none;
+                        vertical-align: middle;
+                        font-weight: 500;
+                        color: #2d3748;
+                        font-size: 0.85rem;
+                    }
+
+                .advanced-status-badge {
+                    padding: 0.3rem 0.6rem;
+                    border-radius: 15px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
+                }
+
+                .status-active {
+                    background: linear-gradient(135deg, #48bb78, #38a169);
+                    color: white;
+                }
+
+                .status-inactive {
+                    background: linear-gradient(135deg, #f56565, #e53e3e);
+                    color: white;
+                }
+
+                .status-pending {
+                    background: linear-gradient(135deg, #ed8936, #dd6b20);
+                    color: white;
+                }
+
+                .advanced-btn {
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    border: none;
+                    border-radius: 16px;
+                    padding: 6px 14px;
+                    color: white;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
+                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+                    font-size: 0.8rem;
+                }
+
+                    .advanced-btn:hover {
+                        background: linear-gradient(135deg, #5a67d8, #6b46c1);
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+                        color: white;
+                    }
+
+                .advanced-pagination {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-top: 0.75rem;
+                    padding: 0.6rem;
+                    background: rgba(255,255,255,0.8);
+                    backdrop-filter: blur(5px);
+                    border-radius: 8px;
+                }
+
+                    .advanced-pagination button {
+                        background: linear-gradient(135deg, #667eea, #764ba2);
+                        border: none;
+                        border-radius: 5px;
+                        padding: 5px 10px;
+                        color: white;
+                        font-weight: 500;
+                        transition: all 0.3s ease;
+                        cursor: pointer;
+                        font-size: 0.8rem;
+                    }
+
+                        .advanced-pagination button:hover:not(:disabled) {
+                            background: linear-gradient(135deg, #5a67d8, #6b46c1);
+                            transform: translateY(-1px);
+                        }
+
+                        .advanced-pagination button:disabled {
+                            background: #cbd5e0;
+                            cursor: not-allowed;
+                            transform: none;
+                        }
+
+                    .advanced-pagination span {
+                        color: #4a5568;
+                        font-weight: 600;
+                        font-size: 0.85rem;
+                    }
+
+                .no-results {
+                    text-align: center;
+                    padding: 1.5rem;
+                    color: #64748b;
+                    font-style: italic;
+                }
+
+                /* Print styles */
+                @media print {
+                    .advanced-table-container {
+                        background: white !important;
+                        box-shadow: none !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+
+                    .advanced-table-header,
+                    .advanced-table-controls,
+                    .advanced-pagination {
+                        display: none !important;
+                    }
+
+                    .advanced-table-wrapper {
+                        background: white !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                    }
+
+                    .advanced-table thead th {
+                        background: #4a5568 !important;
+                        color: white !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+
+                    .advanced-table tbody tr:hover {
+                        background: transparent !important;
+                        transform: none !important;
+                        box-shadow: none !important;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .advanced-table-container {
+                        padding: 0.75rem;
+                        margin: 0.75rem 0;
+                    }
+
+                    .advanced-table-header {
+                        padding: 0.75rem;
+                    }
+
+                    .advanced-table-controls {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 0.5rem;
+                    }
+
+                    .advanced-search-box {
+                        min-width: auto;
+                        width: 100%;
+                    }
+
+                    .advanced-table-wrapper {
+                        overflow-x: auto;
+                    }
+
+                    .advanced-table {
+                        min-width: 600px;
+                    }
+
+                    .advanced-pagination {
+                        flex-wrap: wrap;
+                        gap: 0.4rem;
+                    }
+                }
+            </style>
+
+            <div class="container-fluid py-4">
+                <div class="advanced-table-container">
+                    <div class="advanced-table-header">
+                        <h2><i class="bi bi-table"></i> Employee Management Dashboard</h2>
+                        <p class="text-muted mb-0">Manage and export your employee data with advanced filtering and search capabilities</p>
+                    </div>
+
+                    <div class="advanced-table-controls">
+                        <div class="advanced-search-box">
+                            <i class="bi bi-search"></i>
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search employees...">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="advanced-btn" id="printTable">
+                                <i class="bi bi-printer me-1"></i>Print
+                            </button>
+                            <button class="advanced-btn" id="exportPDF">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="advanced-table-wrapper">
+                        <table class="table advanced-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable(0)">ID <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th onclick="sortTable(1)">Name <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th onclick="sortTable(2)">Email <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th onclick="sortTable(3)">Department <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th onclick="sortTable(4)">Position <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th onclick="sortTable(5)">Salary <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th onclick="sortTable(6)">Status <i class="bi bi-arrow-down-up ms-1"></i></th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                        <div id="noResults" class="no-results" style="display: none;">
+                            <i class="bi bi-search fs-1 text-muted"></i>
+                            <h4>No results found</h4>
+                            <p>Try adjusting your search criteria</p>
+                        </div>
+                    </div>
+
+                    <div class="advanced-pagination" id="pagination">
+                        <button id="prevBtn">← Previous</button>
+                        <span id="pageInfo">Page 1 of 1</span>
+                        <button id="nextBtn">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+
         </div>
     </div>
 </section>
@@ -842,7 +1216,7 @@ $(document).ready(function() {
         // Show all tabs for printing
         $('.tab-pane').addClass('show active');
         $('.nav-tabs').hide();
-        
+
         // Trigger print
         window.print();
         // Restore original tab state after a delay
@@ -867,7 +1241,7 @@ $(document).ready(function() {
 });
 
 function initializeCharts() {
-    // Gender Chart 
+    // Gender Chart
     new Chart($('#genderChart'), {
         type: 'doughnut',
         data: {
@@ -893,7 +1267,7 @@ function initializeCharts() {
         }
     });
 
-    // Age Distribution Chart 
+    // Age Distribution Chart
     new Chart($('#ageChart'), {
         type: 'bar',
         data: {
@@ -934,7 +1308,7 @@ function initializeCharts() {
         }
     });
 
-    // Blood Group Chart 
+    // Blood Group Chart
     new Chart($('#bloodGroupChart'), {
         type: 'doughnut',
         data: {
@@ -960,7 +1334,7 @@ function initializeCharts() {
         }
     });
 
-    // Patient Status Chart 
+    // Patient Status Chart
     new Chart($('#patientStatusChart'), {
         type: 'pie',
         data: {
@@ -986,7 +1360,7 @@ function initializeCharts() {
         }
     });
 
-    // Payment Method Chart 
+    // Payment Method Chart
     new Chart($('#paymentMethodChart'), {
         type: 'bar',
         data: {
@@ -1027,7 +1401,7 @@ function initializeCharts() {
         }
     });
 
-    // Expenses by Category Chart 
+    // Expenses by Category Chart
     new Chart($('#expensesChart'), {
         type: 'pie',
         data: {
@@ -1053,7 +1427,7 @@ function initializeCharts() {
         }
     });
 
-    // Staff by Role Chart 
+    // Staff by Role Chart
     new Chart($('#staffRoleChart'), {
         type: 'doughnut',
         data: {
@@ -1079,7 +1453,7 @@ function initializeCharts() {
         }
     });
 
-    // Staff by Department Chart 
+    // Staff by Department Chart
     new Chart($('#staffDeptChart'), {
         type: 'bar',
         data: {
@@ -1120,7 +1494,7 @@ function initializeCharts() {
         }
     });
 
-    // Attendance Chart (Last 30 Days) 
+    // Attendance Chart (Last 30 Days)
     new Chart($('#attendanceChart'), {
         type: 'bar',
         data: {
@@ -1161,7 +1535,7 @@ function initializeCharts() {
         }
     });
 
-    // Staff Transitions Chart 
+    // Staff Transitions Chart
     new Chart($('#transitionsChart'), {
         type: 'doughnut',
         data: {
@@ -1187,7 +1561,7 @@ function initializeCharts() {
         }
     });
 
-    // Lab Tests by Status Chart 
+    // Lab Tests by Status Chart
     new Chart($('#labStatusChart'), {
         type: 'pie',
         data: {
@@ -1213,7 +1587,7 @@ function initializeCharts() {
         }
     });
 
-    // Top Requested Lab Tests Chart 
+    // Top Requested Lab Tests Chart
     new Chart($('#topTestsChart'), {
         type: 'bar',
         data: {
@@ -1255,4 +1629,204 @@ function initializeCharts() {
     });
 }
 </script>
-{% endblock %}
+
+
+        <!-- Bootstrap JS -->
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Sample data
+            const employeeData = [
+                { id: 1, name: "John Smith", email: "john.smith@company.com", department: "Engineering", position: "Senior Developer", salary: "$85,000", status: "Active" },
+                { id: 2, name: "Sarah Johnson", email: "sarah.johnson@company.com", department: "Marketing", position: "Marketing Manager", salary: "$72,000", status: "Active" },
+                { id: 3, name: "Michael Brown", email: "michael.brown@company.com", department: "Sales", position: "Sales Representative", salary: "$58,000", status: "Pending" },
+                { id: 4, name: "Emily Davis", email: "emily.davis@company.com", department: "HR", position: "HR Specialist", salary: "$61,000", status: "Active" },
+                { id: 5, name: "David Wilson", email: "david.wilson@company.com", department: "Engineering", position: "Frontend Developer", salary: "$78,000", status: "Active" },
+                { id: 6, name: "Lisa Anderson", email: "lisa.anderson@company.com", department: "Finance", position: "Financial Analyst", salary: "$67,000", status: "Inactive" },
+                { id: 7, name: "James Taylor", email: "james.taylor@company.com", department: "Operations", position: "Operations Manager", salary: "$82,000", status: "Active" },
+                { id: 8, name: "Jennifer Martinez", email: "jennifer.martinez@company.com", department: "Design", position: "UX Designer", salary: "$70,000", status: "Active" },
+                { id: 9, name: "Robert Garcia", email: "robert.garcia@company.com", department: "Engineering", position: "Backend Developer", salary: "$81,000", status: "Pending" },
+                { id: 10, name: "Michelle Lee", email: "michelle.lee@company.com", department: "Marketing", position: "Content Specialist", salary: "$54,000", status: "Active" },
+                { id: 11, name: "Christopher White", email: "chris.white@company.com", department: "IT", position: "System Administrator", salary: "$69,000", status: "Active" },
+                { id: 12, name: "Amanda Rodriguez", email: "amanda.rodriguez@company.com", department: "Sales", position: "Account Manager", salary: "$63,000", status: "Inactive" },
+                { id: 13, name: "Thomas Clark", email: "thomas.clark@company.com", department: "Legal", position: "Legal Counsel", salary: "$95,000", status: "Active" },
+                { id: 14, name: "Jessica Lewis", email: "jessica.lewis@company.com", department: "Design", position: "Graphic Designer", salary: "$56,000", status: "Active" },
+                { id: 15, name: "Daniel Walker", email: "daniel.walker@company.com", department: "Finance", position: "Accountant", salary: "$59,000", status: "Pending" }
+            ];
+
+            let filteredData = [...employeeData];
+            let currentPage = 1;
+            const rowsPerPage = 10;
+            let sortDirection = {};
+
+            function renderTable() {
+                const tableBody = document.getElementById('tableBody');
+                const noResults = document.getElementById('noResults');
+
+                if (filteredData.length === 0) {
+                    tableBody.innerHTML = '';
+                    noResults.style.display = 'block';
+                    return;
+                }
+
+                noResults.style.display = 'none';
+
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const pageData = filteredData.slice(startIndex, endIndex);
+
+                tableBody.innerHTML = pageData.map(employee => `
+                            <tr>
+                                <td><strong>#${employee.id}</strong></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                            <span class="text-white fw-bold">${employee.name.charAt(0)}</span>
+                                        </div>
+                                        <strong style="font-size: 0.85rem;">${employee.name}</strong>
+                                    </div>
+                                </td>
+                                <td>${employee.email}</td>
+                                <td><span class="badge bg-light text-dark">${employee.department}</span></td>
+                                <td>${employee.position}</td>
+                                <td><strong>${employee.salary}</strong></td>
+                                <td><span class="advanced-status-badge status-${employee.status.toLowerCase()}">${employee.status}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+
+                updatePagination();
+            }
+
+            function updatePagination() {
+                const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                const pageInfo = document.getElementById('pageInfo');
+
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+                pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            }
+
+            function searchTable() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                filteredData = employeeData.filter(employee =>
+                    Object.values(employee).some(value =>
+                        value.toString().toLowerCase().includes(searchTerm)
+                    )
+                );
+                currentPage = 1;
+                renderTable();
+            }
+
+            function sortTable(columnIndex) {
+                const columns = ['id', 'name', 'email', 'department', 'position', 'salary', 'status'];
+                const column = columns[columnIndex];
+
+                sortDirection[column] = sortDirection[column] === 'asc' ? 'desc' : 'asc';
+
+                filteredData.sort((a, b) => {
+                    let aVal = a[column];
+                    let bVal = b[column];
+
+                    // Handle salary sorting (remove $ and commas)
+                    if (column === 'salary') {
+                        aVal = parseInt(aVal.replace(/[$,]/g, ''));
+                        bVal = parseInt(bVal.replace(/[$,]/g, ''));
+                    }
+
+                    // Handle ID sorting
+                    if (column === 'id') {
+                        aVal = parseInt(aVal);
+                        bVal = parseInt(bVal);
+                    }
+
+                    if (sortDirection[column] === 'asc') {
+                        return aVal > bVal ? 1 : -1;
+                    } else {
+                        return aVal < bVal ? 1 : -1;
+                    }
+                });
+
+                renderTable();
+            }
+
+            function exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Add title
+                doc.setFontSize(20);
+                doc.setTextColor(102, 126, 234);
+                doc.text('Employee Management Report', 20, 20);
+
+                // Add timestamp
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 30);
+
+                // Prepare table data
+                const tableData = filteredData.map(employee => [
+                    employee.id,
+                    employee.name,
+                    employee.email,
+                    employee.department,
+                    employee.position,
+                    employee.salary,
+                    employee.status
+                ]);
+
+                // Add table
+                doc.autoTable({
+                    head: [['ID', 'Name', 'Email', 'Department', 'Position', 'Salary', 'Status']],
+                    body: tableData,
+                    startY: 40,
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 3,
+                    },
+                    headStyles: {
+                        fillColor: [102, 126, 234],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    alternateRowStyles: {
+                        fillColor: [248, 250, 252]
+                    },
+                    margin: { top: 40 }
+                });
+
+                // Save the PDF
+                doc.save('employee-report.pdf');
+            }
+
+            // Event listeners
+            document.getElementById('searchInput').addEventListener('input', searchTable);
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                }
+            });
+            document.getElementById('nextBtn').addEventListener('click', () => {
+                const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTable();
+                }
+            });
+            document.getElementById('exportPDF').addEventListener('click', exportPDF);
+
+            // Initialize table
+            renderTable();
+        </script>
+
+        {% endblock %}
