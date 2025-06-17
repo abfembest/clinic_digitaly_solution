@@ -5,7 +5,6 @@
 
 {% block content %}
 
-<!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -22,11 +21,9 @@
     </div>
 </div>
 
-<!-- Main content -->
 <section class="content">
     <div class="container-fluid">
 
-        <!-- Statistics Cards Row -->
         <div class="row mb-3">
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-info">
@@ -77,7 +74,6 @@
             </div>
         </div>
 
-        <!-- Role Distribution Cards -->
         <div class="row mb-3">
             {% for role_name, count in role_counts.items %}
             <div class="col-md-3 col-sm-6 col-12">
@@ -111,7 +107,6 @@
             {% endfor %}
         </div>
 
-        <!-- Main Users Table Card -->
         <div class="card card-outline card-primary">
             <div class="card-header">
                 <h3 class="card-title">
@@ -121,7 +116,6 @@
                 <div class="card-tools">
                     <div class="row">
                         <div class="col-auto">
-                            <!-- Role Filter Dropdown -->
                             <label for="roleFilter" class="sr-only">Filter by Role:</label>
                             <select id="roleFilter" class="form-control form-control-sm" style="width: 150px;" onchange="filterTable()">
                                 <option value="">All Roles</option>
@@ -132,7 +126,6 @@
                             </select>
                         </div>
                         <div class="col-auto">
-                            <!-- Status Filter -->
                             <label for="statusFilter" class="sr-only">Filter by Status:</label>
                             <select id="statusFilter" class="form-control form-control-sm" style="width: 120px;" onchange="filterTable()">
                                 <option value="">All Status</option>
@@ -262,12 +255,8 @@
                                             <span class="sr-only">Toggle Dropdown</span>
                                         </button>
                                         <div class="dropdown-menu">
-                                            <a class="dropdown-item reset-password-btn" href="#" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
-                                                <i class="fas fa-key mr-2"></i>Reset Password
-                                            </a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item text-danger delete-user-btn" href="#" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
-                                                <i class="fas fa-trash mr-2"></i>Delete User
+                                            <a class="dropdown-item set-password-btn" href="#" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+                                                <i class="fas fa-key mr-2"></i>Set New Password
                                             </a>
                                         </div>
                                     </div>
@@ -286,7 +275,6 @@
                 </div>
             </div>
 
-            <!-- Card Footer with Actions -->
             <div class="card-footer">
                 <div class="row">
                     <div class="col-sm-6">
@@ -312,9 +300,6 @@
     </div>
 </section>
 
-<!-- Modals -->
-
-<!-- User Profile Modal -->
 <div class="modal fade" id="userProfileModal" tabindex="-1" role="dialog" aria-labelledby="userProfileModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -325,7 +310,6 @@
                 </button>
             </div>
             <div class="modal-body" id="userProfileContent">
-                <!-- Profile details will be loaded here by JavaScript -->
                 <div class="text-center">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p class="mt-2">Loading profile...</p>
@@ -338,53 +322,73 @@
     </div>
 </div>
 
-<!-- Edit User Modal -->
 <div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white" id="editUserModalLabel">Edit User</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <form id="editUserForm">
-                    {% csrf_token %} {# Include CSRF token for Django forms #}
+                    {% csrf_token %}
                     <input type="hidden" id="editUserId">
-                    <div class="form-group">
-                        <label for="editUsername">Username</label>
-                        <input type="text" class="form-control" id="editUsername" required>
-                        <div class="invalid-feedback">Please enter a username.</div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editUsername">Username</label>
+                                <input type="text" class="form-control" id="editUsername" required>
+                                <div class="invalid-feedback">Please enter a username.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editEmail">Email address</label>
+                                <input type="email" class="form-control" id="editEmail" required>
+                                <div class="invalid-feedback">Please enter a valid email address.</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="editEmail">Email address</label>
-                        <input type="email" class="form-control" id="editEmail" required>
-                        <div class="invalid-feedback">Please enter a valid email address.</div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editFirstName">First Name</label>
+                                <input type="text" class="form-control" id="editFirstName">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editLastName">Last Name</label>
+                                <input type="text" class="form-control" id="editLastName">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="editFirstName">First Name</label>
-                        <input type="text" class="form-control" id="editFirstName">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editRole">Role</label>
+                                <select class="form-control select2" id="editRole" style="width: 100%;" required>
+                                    <option value="">Select Role</option>
+                                    {% for choice in Staff.ROLE_CHOICES %}
+                                        <option value="{{ choice.0 }}">{{ choice.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">Please select a role.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editPhone">Phone Number</label>
+                                <input type="text" class="form-control" id="editPhone">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="editLastName">Last Name</label>
-                        <input type="text" class="form-control" id="editLastName">
-                    </div>
-                    <div class="form-group">
-                        <label for="editRole">Role</label>
-                        <select class="form-control select2" id="editRole" style="width: 100%;" required>
-                            <option value="">Select Role</option>
-                            {% for choice in Staff.ROLE_CHOICES %}
-                                {# Value should be the role key, not the display name #}
-                                <option value="{{ choice.0 }}">{{ choice.1 }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="invalid-feedback">Please select a role.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="editPhone">Phone Number</label>
-                        <input type="text" class="form-control" id="editPhone">
-                    </div>
+                    
                     <div class="form-group form-check">
                         <input type="checkbox" class="form-check-input" id="editIsActive">
                         <label class="form-check-label" for="editIsActive">Active User</label>
@@ -399,7 +403,6 @@
     </div>
 </div>
 
-<!-- Add User Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1" role="dialog" aria-labelledby="addUserModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -468,7 +471,6 @@
     </div>
 </div>
 
-<!-- Status Toggle Confirmation Modal -->
 <div class="modal fade" id="statusToggleModal" tabindex="-1" role="dialog" aria-labelledby="statusToggleModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -489,47 +491,34 @@
     </div>
 </div>
 
-<!-- Reset Password Confirmation Modal -->
-<div class="modal fade" id="resetPasswordModal" tabindex="-1" role="dialog" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+<div class="modal fade" id="setPasswordModal" tabindex="-1" role="dialog" aria-labelledby="setPasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="resetPasswordModalLabel">Confirm Password Reset</h5>
+                <h5 class="modal-title" id="setPasswordModalLabel">Set New Password</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to reset the password for user <strong id="resetUsername"></strong>?</p>
-                <div id="newPasswordDisplay" style="display: none; margin-top: 15px;">
-                    <strong>New Password: </strong><span id="generatedPassword"></span>
-                    <button class="btn btn-sm btn-outline-secondary ml-2" onclick="copyToClipboard('generatedPassword')"><i class="fas fa-copy"></i> Copy</button>
-                </div>
+                <p>Set a new password for user <strong id="setPasswordUsername"></strong>:</p>
+                <form id="setPasswordForm">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                        <div class="invalid-feedback">Password must be at least 8 characters long.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmNewPassword" required>
+                        <div class="invalid-feedback">Passwords do not match.</div>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmPasswordReset">Reset Password</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Delete User Confirmation Modal -->
-<div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteUserModalLabel">Confirm User Deletion</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmUserDelete">Delete User</button>
+                <button type="button" class="btn btn-primary" id="confirmSetPassword">Set Password</button>
             </div>
         </div>
     </div>
@@ -564,19 +553,18 @@
         $('.select2').select2();
 
         // DataTables initialization
-        // Note: We are using DataTables' built-in filtering, not custom row iteration, for better performance.
         usersTable = $('#usersTable').DataTable({
             "paging": true,
             "lengthChange": true,
-            "searching": true, // Global search box
+            "searching": true,
             "ordering": true,
             "info": true,
             "autoWidth": false,
             "responsive": true,
             "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"],
             "columnDefs": [
-                { "orderable": false, "targets": [0, 9] }, // Disable sorting for # and Actions
-                { "searchable": false, "targets": [0, 9] } // Disable searching for # and Actions
+                { "orderable": false, "targets": [0, 9] },
+                { "searchable": false, "targets": [0, 9] }
             ]
         });
 
@@ -592,7 +580,7 @@
         // Event listener for role cards to apply filter
         $('.role-filter-card').on('click', function() {
             const role = $(this).data('role');
-            $('#roleFilter').val(role).trigger('change'); // Set dropdown value and trigger change
+            $('#roleFilter').val(role).trigger('change');
             updateActiveRoleCard(role);
         });
 
@@ -600,711 +588,453 @@
         usersTable.on('draw.dt', function() {
             updateUserCount();
         });
-        updateUserCount(); // Initial count display
+        updateUserCount();
 
         // Setup form validation for modals
         setupFormValidation();
 
         // Handle specific modal button clicks for AJAX
-        $('#confirmStatusToggle').off('click').on('click', function() {
-            // This is the click handler for the 'Confirm' button in the toggle status modal
-            // It uses the currentUserId and currentIsActive set by toggleUserStatus()
+
+        // Status Toggle Confirmation
+        $('#confirmStatusToggle').on('click', function() {
             const userId = currentUserId;
-            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val(); // Get CSRF token
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
             $('#statusToggleModal').modal('hide');
 
             $.ajax({
-                url: `{% url 'toggle_user_status' user_id=0 %}`.replace('0', userId), // Django URL for toggling status
+                url: "{% url 'toggle_user_status' user_id=0 %}".replace('/0/', `/${userId}/`),
                 method: 'POST',
                 data: {
-                    csrfmiddlewaretoken: csrfToken
-                },
-                success: function(response) {
-                    // Assuming Django view returns a JSON response with 'success' and 'message'
-                    if (response.success) {
-                        showAlert('success', response.message || `User ${currentUsername} status toggled successfully.`);
-                        // Manually update the row in DataTable after successful server response
-                        const $row = $(`tr[data-user-id="${userId}"]`);
-                        const newIsActive = !currentIsActive;
-                        $row.data('isActive', newIsActive); // Update data attribute
-                        const statusText = newIsActive ? 'Active' : 'Inactive';
-                        const statusClass = newIsActive ? 'success' : 'secondary';
-
-                        // Update the status cell in the DataTables row
-                        usersTable.cell($row.find('td:eq(7)')).data(
-                            `<span class="badge badge-${statusClass}">
-                                <i class="fas fa-${newIsActive ? 'check' : 'times'} mr-1"></i>${statusText}
-                            </span>`
-                        ).draw(false); // Redraw without re-filtering the entire table
-
-                        // Update the toggle button's title and icon for next click
-                        const $toggleButton = $row.find('button[onclick*="toggleUserStatus"]');
-                        $toggleButton.attr('title', newIsActive ? 'Disable User' : 'Enable User');
-                        $toggleButton.html(newIsActive ? '<i class="fas fa-user-slash"></i>' : '<i class="fas fa-user-check"></i>');
-                        // Crucially, update the onclick handler's boolean state for the next click
-                        $toggleButton.attr('onclick', `toggleUserStatus('${userId}', '${currentUsername}', ${newIsActive})`);
-
-                    } else {
-                        showAlert('danger', response.message || 'Failed to toggle user status.');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    showAlert('danger', 'An error occurred while toggling status.');
-                    console.error('AJAX Error:', status, error, xhr.responseText);
-                }
-            });
-        });
-
-        $('#confirmPasswordReset').off('click').on('click', function() {
-            const userId = currentUserId;
-            const username = currentUsername;
-            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
-            // Perform AJAX call to reset password on the server
-            $.ajax({
-                url: `{% url 'reset_user_password_endpoint' %}`, // Ensure this URL is defined in urls.py
-                method: 'POST',
-                data: {
-                    user_id: userId,
                     csrfmiddlewaretoken: csrfToken
                 },
                 success: function(response) {
                     if (response.success) {
-                        $('#generatedPassword').text(response.new_password);
-                        $('#newPasswordDisplay').show();
-                        showAlert('success', response.message || 'Password reset successfully!');
-                        // Keep modal open to allow copying
+                        showAlert('success', response.message || `User ${currentUsername} status toggled successfully.`);
+                        location.reload(); // Reload page to reflect changes
                     } else {
-                        showAlert('danger', response.message || 'Failed to reset password.');
-                        $('#newPasswordDisplay').hide(); // Hide if error
+                        showAlert('error', response.message || 'Failed to toggle user status.');
                     }
                 },
-                error: function(xhr, status, error) {
-                    showAlert('danger', 'An error occurred during password reset.');
-                    console.error('AJAX Error:', status, error, xhr.responseText);
-                    $('#newPasswordDisplay').hide(); // Hide if error
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message || 'An error occurred while toggling user status.';
+                    showAlert('error', errorMsg);
                 }
             });
         });
 
-        $('#confirmUserDelete').off('click').on('click', function() {
-            const userId = currentUserId;
+        // Set Password Confirmation - Updated to use the endpoint that generates password
+        $('#confirmSetPassword').on('click', function() {
             const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-            $('#deleteUserModal').modal('hide');
+            $('#setPasswordModal').modal('hide');
 
             $.ajax({
-                url: `{% url 'delete_user_endpoint' %}`, // Ensure this URL is defined in urls.py
+                url: "{% url 'set_user_password' user_id=0 %}".replace('/0/', `/${currentUserId}/`),
                 method: 'POST',
                 data: {
-                    user_id: userId,
                     csrfmiddlewaretoken: csrfToken
                 },
                 success: function(response) {
                     if (response.success) {
-                        showAlert('success', response.message || `User ${currentUsername} deleted successfully.`);
-                        // Remove row from DataTable
-                        usersTable.row($(`tr[data-user-id="${userId}"]`)).remove().draw(false);
+                        // Show the generated password to the admin
+                        const passwordAlert = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <strong>Password Updated Successfully!</strong><br>
+                                <strong>Username:</strong> ${response.username}<br>
+                                <strong>New Password:</strong> <code>${response.new_password}</code><br>
+                                <small>Please save this password and share it with the user securely.</small>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('.content-header').after(passwordAlert);
+                        
+                        // Auto-hide after 15 seconds for security
+                        setTimeout(function() {
+                            $('.alert-success').fadeOut();
+                        }, 15000);
                     } else {
-                        showAlert('danger', response.message || 'Failed to delete user.');
+                        showAlert('error', response.message || 'Failed to set new password.');
                     }
                 },
-                error: function(xhr, status, error) {
-                    showAlert('danger', 'An error occurred while deleting user.');
-                    console.error('AJAX Error:', status, error, xhr.responseText);
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message || 'An error occurred while setting the password.';
+                    showAlert('error', errorMsg);
                 }
             });
         });
 
-        // Event delegation for reset and delete buttons
-        $(document).on('click', '.reset-password-btn', function() {
-            const userId = $(this).data('user-id');
-            const username = $(this).data('username');
-            resetPassword(userId, username);
+        // Set Password Modal Event Handlers
+        $('.set-password-btn').on('click', function(e) {
+            e.preventDefault();
+            currentUserId = $(this).data('user-id');
+            currentUsername = $(this).data('username');
+            $('#setPasswordUsername').text(currentUsername);
+            $('#setPasswordModal').modal('show');
         });
 
-        $(document).on('click', '.delete-user-btn', function() {
+        // Edit User Modal Event Handlers (if you have them separately, although onclick is used)
+        $('.edit-user-btn').on('click', function(e) {
+            e.preventDefault();
             const userId = $(this).data('user-id');
-            const username = $(this).data('username');
-            deleteUser(userId, username);
+            editUser(userId);
+        });
+
+        // Add User Modal Event Handler (if you have them separately, although onclick is used)
+        $('.add-user-btn').on('click', function(e) {
+            e.preventDefault();
+            addNewUser();
+        });
+
+        // Save User Changes Event Handler (if you have them separately, although onclick is used)
+        $('#saveUserChanges').on('click', function() {
+            saveUserChanges();
+        });
+
+        // Save New User Event Handler (if you have them separately, although onclick is used)
+        $('#saveNewUser').on('click', function() {
+            saveNewUser();
         });
     });
 
-    // --- Filtering Functions ---
-
+    // Function to filter the table based on role and status
     function filterTable() {
-        const roleFilter = $('#roleFilter').val(); // Display name, e.g., "Doctor"
-        const statusFilter = $('#statusFilter').val(); // "Active" or "Inactive"
-
-        // Apply filter to 'Role' column (index 4)
-        // DataTables search is applied to the *display* data in the cell.
-        // For 'Role', the cell contains '<span class="badge badge-info">Doctor</span>'.
-        // So, we search for 'Doctor' which will match the text content of the span.
-        if (roleFilter) {
-            usersTable.column(4).search(roleFilter, false, true); // (search_string, regex, smart)
-        } else {
-            usersTable.column(4).search('', false, true); // Clear filter
-        }
-
-        // Apply filter to 'Status' column (index 7)
-        if (statusFilter) {
-            usersTable.column(7).search(statusFilter, false, true);
-        } else {
-            usersTable.column(7).search('', false, true); // Clear filter
-        }
-
-        // Redraw the table with all filters applied (global search + column filters)
-        usersTable.draw();
+        const roleFilter = $('#roleFilter').val();
+        const statusFilter = $('#statusFilter').val();
+        
+        // Apply filters to DataTable
+        usersTable.column(4).search(roleFilter).draw(); // Role column
+        usersTable.column(7).search(statusFilter).draw(); // Status column
+        
         updateUserCount();
+        updateActiveRoleCard(roleFilter);
     }
 
-
+    // Function to update active role card styling
     function updateActiveRoleCard(selectedRole) {
-        $('.role-filter-card').removeClass('card-active-border'); // Remove previous active class
-        // Add a class that visually highlights the active role card
-        $(`.role-filter-card[data-role="${selectedRole}"]`).addClass('card-active-border');
+        $('.role-filter-card').removeClass('bg-gradient-primary').addClass('bg-light');
+        if (selectedRole) {
+            $(`.role-filter-card[data-role="${selectedRole}"]`).removeClass('bg-light').addClass('bg-gradient-primary');
+        }
     }
 
+    // Function to update user count display
     function updateUserCount() {
-        // Update the count message using DataTables info
         const info = usersTable.page.info();
-        $('#userCount').text(`Showing ${info.recordsDisplay} of ${info.recordsTotal} users`);
+        const totalUsers = {{ total_users }};
+        $('#userCount').text(`Showing ${info.recordsDisplay} of ${totalUsers} users`);
     }
 
-    // --- User Actions Functions ---
-
+    // Function to view user profile
     function viewUserProfile(userId) {
-        currentUserId = userId;
+        const row = $(`tr[data-user-id="${userId}"]`);
+        const userData = {
+            username: row.data('username'),
+            email: row.data('email'),
+            firstName: row.data('first-name'),
+            lastName: row.data('last-name'),
+            role: row.data('role-display'),
+            department: row.data('department'),
+            phone: row.data('phone'),
+            isActive: row.data('is-active'),
+            photoUrl: row.data('user-photo-url')
+        };
 
-        // Reset modal content and show loading spinner
-        $('#userProfileContent').html(`
-            <div class="text-center">
-                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                <p class="mt-2">Loading profile...</p>
-            </div>
-        `);
-
-        $('#userProfileModal').modal('show');
-
-        // Simulate fetching data, replace with actual AJAX call to Django endpoint if more data is needed
-        // For now, it pulls directly from data attributes on the table row.
-        setTimeout(function() {
-            const $row = $(`tr[data-user-id="${userId}"]`);
-            const username = $row.data('username');
-            const email = $row.data('email');
-            const firstName = $row.data('firstName');
-            const lastName = $row.data('lastName');
-            const fullName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : username;
-            const role = $row.data('roleDisplay'); // Use roleDisplay
-            const department = $row.data('department');
-            const phone = $row.data('phone');
-            const isActive = $row.data('isActive');
-            const dateJoined = $row.find('td:eq(8)').text().trim(); // Get date joined from table cell
-            const photoUrl = $row.data('user-photo-url'); // Get photo URL from data attribute
-
-            const statusText = isActive ? 'Active' : 'Inactive';
-            const statusClass = isActive ? 'success' : 'secondary';
-
-            const profileHtml = `
-                <div class="row">
-                    <div class="col-md-4 text-center">
-                        <img src="${photoUrl}" alt="User Photo" class="img-circle elevation-2" style="width: 120px; height: 120px; object-fit: cover;">
-                        <h5 class="mt-2">${fullName}</h5>
-                        <span class="badge badge-${statusClass}">${statusText}</span>
-                    </div>
-                    <div class="col-md-8">
-                        <table class="table table-borderless">
-                            <tr><td><strong>Username:</strong></td><td>${username}</td></tr>
-                            <tr><td><strong>Email:</strong></td><td>${email || 'Not provided'}</td></tr>
-                            <tr><td><strong>Role:</strong></td><td>${role}</td></tr>
-                            <tr><td><strong>Department:</strong></td><td>${department}</td></tr>
-                            <tr><td><strong>Phone:</strong></td><td>${phone || 'Not provided'}</td></tr>
-                            <tr><td><strong>Date Joined:</strong></td><td>${dateJoined}</td></tr>
-                        </table>
-                    </div>
+        const profileHtml = `
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <img src="${userData.photoUrl}" alt="User Photo" class="img-circle elevation-2" style="width: 120px; height: 120px; object-fit: cover;">
                 </div>
-            `;
+                <div class="col-md-8">
+                    <table class="table table-borderless">
+                        <tr><th>Username:</th><td>${userData.username}</td></tr>
+                        <tr><th>Full Name:</th><td>${userData.firstName} ${userData.lastName}</td></tr>
+                        <tr><th>Email:</th><td>${userData.email || 'Not provided'}</td></tr>
+                        <tr><th>Role:</th><td><span class="badge badge-info">${userData.role}</span></td></tr>
+                        <tr><th>Department:</th><td>${userData.department}</td></tr>
+                        <tr><th>Phone:</th><td>${userData.phone || 'Not provided'}</td></tr>
+                        <tr><th>Status:</th><td>
+                            ${userData.isActive === 'true' ? 
+                                '<span class="badge badge-success"><i class="fas fa-check mr-1"></i>Active</span>' : 
+                                '<span class="badge badge-secondary"><i class="fas fa-times mr-1"></i>Inactive</span>'
+                            }
+                        </td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
 
-            $('#userProfileContent').html(profileHtml);
-        }, 500);
+        $('#userProfileContent').html(profileHtml);
+        $('#userProfileModal').modal('show');
     }
 
+    // Function to edit user
     function editUser(userId) {
-        currentUserId = userId;
-        const $row = $(`tr[data-user-id="${userId}"]`);
-
+        const row = $(`tr[data-user-id="${userId}"]`);
+        
+        // Populate the edit form with current user data
         $('#editUserId').val(userId);
-        $('#editUsername').val($row.data('username'));
-        $('#editEmail').val($row.data('email'));
-        $('#editFirstName').val($row.data('firstName'));
-        $('#editLastName').val($row.data('lastName'));
-
-        // Set selected value for select2 using the role key
-        const roleKey = $row.data('roleKey'); // Get the role key from data attribute
-        $('#editRole').val(roleKey).trigger('change'); // .trigger('change') for Select2 to update
-
-        $('#editPhone').val($row.data('phone'));
-        $('#editIsActive').prop('checked', $row.data('isActive'));
-
-        // Clear validation messages
-        $('#editUserForm .form-control').removeClass('is-invalid');
+        $('#editUsername').val(row.data('username'));
+        $('#editEmail').val(row.data('email'));
+        $('#editFirstName').val(row.data('first-name'));
+        $('#editLastName').val(row.data('last-name'));
+        $('#editRole').val(row.data('role-key')).trigger('change');
+        $('#editPhone').val(row.data('phone'));
+        $('#editIsActive').prop('checked', row.data('is-active') === 'true');
+        
         $('#editUserModal').modal('show');
     }
 
+    // Function to save user changes
     function saveUserChanges() {
+        const form = $('#editUserForm')[0];
+        
+        // Reset validation states
+        $('.form-control').removeClass('is-invalid');
+        
+        // Validate form
         if (!validateEditForm()) {
             return;
         }
-
+        
         const userId = $('#editUserId').val();
-        const username = $('#editUsername').val();
-        const email = $('#editEmail').val();
-        const firstName = $('#editFirstName').val();
-        const lastName = $('#editLastName').val();
-        const role = $('#editRole').val(); // This will be the role key (e.g., 'doctor')
-        const phone = $('#editPhone').val();
-        const isActive = $('#editIsActive').is(':checked');
-        const csrfToken = $('input[name="csrfmiddlewaretoken"]').val(); // Get CSRF token
-
-        // --- Start AJAX Call to Django Backend ---
+        const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+        
         $.ajax({
-            url: `{% url 'edit_user_endpoint' %}`, // Replace with your actual Django URL, e.g., /admin/users/edit/
+            url: "{% url 'edit_user' user_id=0 %}".replace('/0/', `/${userId}/`),
             method: 'POST',
             data: {
-                user_id: userId,
-                username: username,
-                email: email,
-                first_name: firstName,
-                last_name: lastName,
-                role: role, // Send the role key
-                phone_number: phone,
-                is_active: isActive,
-                csrfmiddlewaretoken: csrfToken
+                csrfmiddlewaretoken: csrfToken,
+                username: $('#editUsername').val(),
+                email: $('#editEmail').val(),
+                first_name: $('#editFirstName').val(),
+                last_name: $('#editLastName').val(),
+                role: $('#editRole').val(),
+                phone_number: $('#editPhone').val(),
+                is_active: $('#editIsActive').is(':checked')
             },
             success: function(response) {
                 if (response.success) {
-                    showAlert('success', response.message || 'User updated successfully!');
+                    showAlert('success', response.message || 'User updated successfully.');
                     $('#editUserModal').modal('hide');
-
-                    // Manually update the DataTables row after successful server update
-                    const $row = $(`tr[data-user-id="${userId}"]`);
-                    // Update data attributes
-                    $row.data('username', username);
-                    $row.data('email', email);
-                    $row.data('firstName', firstName);
-                    $row.data('lastName', lastName);
-                    $row.data('roleDisplay', $('#editRole option:selected').text()); // Update with display name
-                    $row.data('roleKey', role); // Update with role key
-                    $row.data('phone', phone);
-                    $row.data('isActive', isActive);
-                    // photoUrl is not editable via this modal, so it remains the same.
-
-                    // Update visible cell content in DataTable using its API
-                    usersTable.cell($row.find('td:eq(1)')).data(`<strong>${username}</strong>`); // Username
-                    usersTable.cell($row.find('td:eq(2)')).data(
-                        `{% if user.staff.photo %}<img src="${$row.data('user-photo-url')}" alt="User Photo" class="img-circle elevation-1" style="width: 30px; height: 30px; margin-right: 5px; object-fit: cover;">{% else %}<img src="{% static 'dist/img/default-avatar.png' %}" alt="Default User Photo" class="img-circle elevation-1" style="width: 30px; height: 30px; margin-right: 5px; object-fit: cover;">{% endif %}
-                        ${firstName} ${lastName}`.trim()
-                    ); // Full Name (retaining photo markup)
-                    usersTable.cell($row.find('td:eq(3)')).data(email ? `<a href="mailto:${email}">${email}</a>` : '<span class="text-muted">Not provided</span>'); // Email
-                    usersTable.cell($row.find('td:eq(4)')).data(`<span class="badge badge-info">${$('#editRole option:selected').text()}</span>`); // Role
-                    usersTable.cell($row.find('td:eq(6)')).data(phone ? `<a href="tel:${phone}">${phone}</a>` : '<span class="text-muted">Not provided</span>'); // Phone
-                    usersTable.cell($row.find('td:eq(7)')).data(isActive ?
-                        `<span class="badge badge-success"><i class="fas fa-check mr-1"></i>Active</span>` :
-                        `<span class="badge badge-secondary"><i class="fas fa-times mr-1"></i>Inactive</span>`
-                    ); // Status
-                    usersTable.draw(false); // Redraw without changing paging/ordering
-
+                    location.reload(); // Reload to reflect changes
                 } else {
-                    showAlert('danger', response.message || 'Failed to update user.');
+                    showAlert('error', response.message || 'Failed to update user.');
                 }
             },
-            error: function(xhr, status, error) {
-                showAlert('danger', 'An error occurred while saving changes.');
-                console.error('AJAX Error:', status, error, xhr.responseText);
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'An error occurred while updating the user.';
+                showAlert('error', errorMsg);
             }
         });
-        // --- End AJAX Call ---
     }
 
+    // Function to add new user
     function addNewUser() {
-        $('#addUserForm')[0].reset(); // Clear the form
-        $('#addUserForm .form-control').removeClass('is-invalid'); // Clear validation
-        $('#addRole').val('').trigger('change'); // Reset Select2
-        $('#addPassword').siblings('.password-strength').remove(); // Clear strength indicator
+        // Reset form
+        $('#addUserForm')[0].reset();
+        $('.form-control').removeClass('is-invalid');
+        $('#addIsActive').prop('checked', true);
         $('#addUserModal').modal('show');
     }
 
+    // Function to save new user
     function saveNewUser() {
+        const form = $('#addUserForm')[0];
+        
+        // Reset validation states
+        $('.form-control').removeClass('is-invalid');
+        
+        // Validate form
         if (!validateAddForm()) {
             return;
         }
-
-        const username = $('#addUsername').val();
-        const email = $('#addEmail').val();
-        const password = $('#addPassword').val();
-        const firstName = $('#addFirstName').val();
-        const lastName = $('#addLastName').val();
-        const role = $('#addRole').val(); // Role key
-        const phone = $('#addPhone').val();
-        const isActive = $('#addIsActive').is(':checked');
-        const csrfToken = $('input[name="csrfmiddlewaretoken"]').val(); // Get CSRF token
-
-        // --- Start AJAX Call to Django Backend ---
+        
+        const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+        
         $.ajax({
-            url: `{% url 'add_user_endpoint' %}`, // Replace with your actual Django URL for adding user
+            url: "{% url 'add_user' %}",
             method: 'POST',
             data: {
-                username: username,
-                email: email,
-                password: password,
-                first_name: firstName,
-                last_name: lastName,
-                role: role,
-                phone_number: phone,
-                is_active: isActive,
-                csrfmiddlewaretoken: csrfToken
+                csrfmiddlewaretoken: csrfToken,
+                username: $('#addUsername').val(),
+                email: $('#addEmail').val(),
+                password: $('#addPassword').val(),
+                first_name: $('#addFirstName').val(),
+                last_name: $('#addLastName').val(),
+                role: $('#addRole').val(),
+                phone_number: $('#addPhone').val(),
+                is_active: $('#addIsActive').is(':checked')
             },
             success: function(response) {
                 if (response.success) {
-                    showAlert('success', response.message || 'New user added successfully!');
+                    showAlert('success', response.message || 'User added successfully.');
                     $('#addUserModal').modal('hide');
-                    location.reload(); // Reload to show the new user in the table (simpler than dynamic add)
+                    location.reload(); // Reload to show new user
                 } else {
-                    showAlert('danger', response.message || 'Failed to add user.');
+                    showAlert('error', response.message || 'Failed to add user.');
                 }
             },
-            error: function(xhr, status, error) {
-                showAlert('danger', 'An error occurred while adding user.');
-                console.error('AJAX Error:', status, error, xhr.responseText);
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || 'An error occurred while adding the user.';
+                showAlert('error', errorMsg);
             }
         });
-        // --- End AJAX Call ---
     }
 
+    // Function to toggle user status
     function toggleUserStatus(userId, username, isActive) {
         currentUserId = userId;
         currentUsername = username;
-        currentIsActive = isActive; // Store the *current* active state
-        const action = isActive ? 'deactivate' : 'activate';
-
+        currentIsActive = isActive;
+        
+        const action = isActive ? 'disable' : 'enable';
         $('#statusAction').text(action);
         $('#statusUsername').text(username);
         $('#statusToggleModal').modal('show');
     }
 
-    function resetPassword(userId, username) {
-        currentUserId = userId;
-        currentUsername = username;
-        $('#resetUsername').text(username);
-        $('#newPasswordDisplay').hide(); // Hide previously generated password
-        $('#resetPasswordModal').modal('show');
+    // Function to export users
+    function exportUsers() {
+        usersTable.button('.buttons-excel').trigger();
     }
 
-
-    function deleteUser(userId, username) {
-        currentUserId = userId;
-        currentUsername = username;
-        $('#deleteUsername').text(username);
-        $('#deleteUserModal').modal('show');
-    }
-
-
-    // --- Utility Functions ---
-
-    function showAlert(type, message) {
-        const alertHtml = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
-            ${message}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>`;
-        $('.content-header').after(alertHtml); // Insert after content header
-        setTimeout(() => {
-            $('.alert').alert('close');
-        }, 5000); // Auto-dismiss after 5 seconds
-    }
-
-    function copyToClipboard(elementId) {
-        const textToCopy = document.getElementById(elementId).innerText;
-        // Fallback for older browsers or if navigator.clipboard is not available in iframe
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                showAlert('info', 'Copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy using clipboard API: ', err);
-                // Fallback to execCommand if clipboard API fails
-                fallbackCopyToClipboard(textToCopy);
-            });
-        } else {
-            fallbackCopyToClipboard(textToCopy);
-        }
-    }
-
-    function fallbackCopyToClipboard(text) {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed'; // Avoid scrolling to bottom
-        textarea.style.left = '-9999px'; // Hide off-screen
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        try {
-            document.execCommand('copy');
-            showAlert('info', 'Copied to clipboard (fallback)!');
-        } catch (err) {
-            console.error('Fallback copy failed: ', err);
-            showAlert('danger', 'Failed to copy password. Please copy manually.');
-        } finally {
-            document.body.removeChild(textarea);
-        }
-    }
-
-    function exportUsers(exportType) { // Modified to accept exportType 'csv' or 'pdf'
-    // Get current search query and filter values
-    const searchQuery = usersTable.search(); // Get current global search value
-    const roleFilter = $('#roleFilter').val();
-    const statusFilter = $('#statusFilter').val();
-
-    // Construct query parameters
-    const params = new URLSearchParams();
-    if (searchQuery) {
-        params.append('search', searchQuery);
-    }
-    if (roleFilter) {
-        params.append('role', roleFilter); // Send display name, backend will convert
-    }
-    if (statusFilter) {
-        params.append('status', statusFilter);
-    }
-
-    let exportUrl;
-    if (exportType === 'csv') {
-        exportUrl = `{% url 'export_users_csv' %}?${params.toString()}`;
-    } else if (exportType === 'pdf') {
-        exportUrl = `{% url 'export_users_pdf' %}?${params.toString()}`;
-    } else {
-        showAlert('danger', 'Invalid export type specified.');
-        return;
-    }
-
-    // Redirect the browser to the export URL
-    window.location.href = exportUrl;
-}
-
+    // Function to print users
     function printUsers() {
-        // DataTables has a print button built-in, but this function provides a custom print view if needed.
-        const printContent = $('#usersTable').clone();
-        // Remove actions column for print
-        printContent.find('th:last-child, td:last-child').remove();
-
-        const originalTitle = document.title;
-        document.title = "User Accounts Report"; // Set title for print
-
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>User Accounts Report</title>
-                <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
-                <style>
-                    body { font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; }
-                    .badge { padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
-                    .badge-success { color: #fff; background-color: #28a745; }
-                    .badge-secondary { color: #fff; background-color: #6c757d; }
-                    .badge-info { color: #fff; background-color: #17a2b8; }
-                </style>
-            </head>
-            <body>
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1>User Accounts Report</h1>
-                    <p>Generated on: ${new Date().toLocaleDateString()}</p>
-                </div>
-                ${printContent.prop('outerHTML')}
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
-
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-            document.title = originalTitle; // Restore original title
-        }, 500);
+        usersTable.button('.buttons-print').trigger();
     }
 
-    // --- Form Validation ---
-
+    // Form validation functions
     function setupFormValidation() {
-        // Real-time validation for forms
-        $('#editUserForm input, #editUserForm select, #addUserForm input, #addUserForm select').on('input change blur', function() {
-            validateInput($(this));
+        // Real-time validation for add user form
+        $('#addPassword, #addConfirmPassword').on('input', function() {
+            validatePasswordMatch('#addPassword', '#addConfirmPassword');
         });
+        
+        $('#newPassword, #confirmNewPassword').on('input', function() {
+            validatePasswordMatch('#newPassword', '#confirmNewPassword');
+        });
+    }
 
-        $('#addPassword, #addConfirmPassword').on('keyup', function() {
-            validatePasswordMatch();
-            if ($(this).attr('id') === 'addPassword') {
-                updatePasswordStrengthIndicator($(this));
+    function validateAddForm() {
+        let isValid = true;
+        
+        // Username validation
+        if ($('#addUsername').val().length < 3) {
+            $('#addUsername').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // Email validation
+        const email = $('#addEmail').val();
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                $('#addEmail').addClass('is-invalid');
+                isValid = false;
             }
-        });
-    }
-
-    function validateInput($input) {
-        let isValid = true;
-        const value = $input.val().trim();
-        const id = $input.attr('id');
-
-        if ($input.prop('required') && value === '') {
-            isValid = false;
-            $input.siblings('.invalid-feedback').text('This field is required.');
-        } else if ($input.attr('type') === 'email' && value !== '' && !/\S+@\S+\.\S+/.test(value)) {
-            isValid = false;
-            $input.siblings('.invalid-feedback').text('Please enter a valid email address.');
-        } else if (id === 'addUsername' && value.length < 3) {
-            isValid = false;
-            $input.siblings('.invalid-feedback').text('Username must be at least 3 characters long.');
-        } else if (id === 'addPassword' && value.length > 0 && checkPasswordStrength(value).score < 3) {
-             isValid = false;
-             $input.siblings('.invalid-feedback').text('Password is too weak. Needs at least 3 types of characters.');
-        } else {
-             // Clear existing specific feedback, it will be added by parent validation functions
-             $input.siblings('.invalid-feedback').text('');
         }
-
-
-        if (isValid) {
-            $input.removeClass('is-invalid').addClass('is-valid');
-        } else {
-            $input.removeClass('is-valid').addClass('is-invalid');
-        }
-        return isValid;
-    }
-
-
-    function validatePasswordMatch() {
-        const password = $('#addPassword').val();
-        const confirmPassword = $('#addConfirmPassword').val();
-        let isValid = true;
-
-        if (password !== confirmPassword) {
-            $('#addConfirmPassword').removeClass('is-valid').addClass('is-invalid');
-            $('#addConfirmPassword').siblings('.invalid-feedback').text('Passwords do not match.');
+        
+        // Password validation
+        if ($('#addPassword').val().length < 8) {
+            $('#addPassword').addClass('is-invalid');
             isValid = false;
-        } else if (confirmPassword.trim() !== '') {
-            $('#addConfirmPassword').removeClass('is-invalid').addClass('is-valid');
-            $('#addConfirmPassword').siblings('.invalid-feedback').text('');
-        } else {
-             $('#addConfirmPassword').removeClass('is-invalid').removeClass('is-valid');
-             $('#addConfirmPassword').siblings('.invalid-feedback').text('');
         }
+        
+        // Confirm password validation
+        if ($('#addPassword').val() !== $('#addConfirmPassword').val()) {
+            $('#addConfirmPassword').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // Role validation
+        if (!$('#addRole').val()) {
+            $('#addRole').addClass('is-invalid');
+            isValid = false;
+        }
+        
         return isValid;
     }
 
     function validateEditForm() {
         let isValid = true;
-        $('#editUserForm input[required], #editUserForm select[required]').each(function() {
-            if (!validateInput($(this))) {
+        
+        // Username validation
+        if ($('#editUsername').val().length < 3) {
+            $('#editUsername').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // Email validation
+        const email = $('#editEmail').val();
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                $('#editEmail').addClass('is-invalid');
                 isValid = false;
             }
-        });
+        }
+        
+        // Role validation
+        if (!$('#editRole').val()) {
+            $('#editRole').addClass('is-invalid');
+            isValid = false;
+        }
+        
         return isValid;
     }
 
-    function validateAddForm() {
+    function validatePasswordForm(newPassword, confirmPassword) {
         let isValid = true;
-        $('#addUserForm input[required], #addUserForm select[required]').each(function() {
-            if (!validateInput($(this))) {
-                isValid = false;
-            }
-        });
-
-        // Specific checks for add form
-        if (!validatePasswordMatch()) {
+        
+        if (newPassword.length < 5) {
+            $('#newPassword').addClass('is-invalid');
             isValid = false;
         }
-        const passwordStrength = checkPasswordStrength($('#addPassword').val());
-        if ($('#addPassword').val().length > 0 && passwordStrength.score < 3) {
-            $('#addPassword').removeClass('is-valid').addClass('is-invalid');
-            $('#addPassword').siblings('.invalid-feedback').text('Password is too weak. Needs at least 3 types of characters.');
+        
+        if (newPassword !== confirmPassword) {
+            $('#confirmNewPassword').addClass('is-invalid');
             isValid = false;
         }
+        
         return isValid;
     }
 
-    // Password generation helper
-    function generateRandomPassword(length = 12) {
-        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
-        let password = "";
-        for (let i = 0; i < length; i++) {
-            password += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return password;
-    }
-
-    // Password strength indicator logic
-    function checkPasswordStrength(password) {
-        let strength = 0;
-        const checks = {
-            length: password.length >= 8,
-            lowercase: /[a-z]/.test(password),
-            uppercase: /[A-Z]/.test(password),
-            numbers: /\d/.test(password),
-            symbols: /[^A-Za-z0-9]/.test(password)
-        };
-
-        strength = Object.values(checks).filter(Boolean).length;
-
-        return {
-            score: strength,
-            checks: checks,
-            text: strength < 2 ? 'Weak' : strength < 4 ? 'Medium' : 'Strong'
-        };
-    }
-
-    // Update password strength indicator
-    function updatePasswordStrengthIndicator($inputField) {
-        const password = $inputField.val();
-        const strength = checkPasswordStrength(password);
-        const color = strength.score < 2 ? 'danger' : strength.score < 4 ? 'warning' : 'success';
-        const icon = strength.score < 3 ? 'fas fa-exclamation-triangle text-danger' : 'fas fa-check-circle text-success';
-        const advice = strength.score < 3 ? '(Try adding uppercase, numbers, or symbols)' : '';
-
-        $inputField.siblings('.password-strength').remove(); // Remove existing indicator
-
-        if (password) {
-            $inputField.after(`
-                <div class="password-strength">
-                    <small class="text-${color}">
-                        Password strength: ${strength.text}
-                        <i class="${icon} ml-1"></i> ${advice}
-                    </small>
-                </div>
-            `);
+    function validatePasswordMatch(passwordId, confirmPasswordId) {
+        const password = $(passwordId).val();
+        const confirmPassword = $(confirmPasswordId).val();
+        
+        if (password && confirmPassword && password !== confirmPassword) {
+            $(confirmPasswordId).addClass('is-invalid');
+        } else {
+            $(confirmPasswordId).removeClass('is-invalid');
         }
     }
 
-    // Helper to get role key from display name (for setting edit form dropdown)
-    // This assumes your Staff.ROLE_CHOICES is available in the template context.
-    function getRoleKeyFromDisplayName(displayName) {
-        const roleChoices = [
-            {% for choice in Staff.ROLE_CHOICES %}
-                { key: '{{ choice.0 }}', display: '{{ choice.1 }}' },
-            {% endfor %}
-        ];
-        const found = roleChoices.find(choice => choice.display === displayName);
-        return found ? found.key : '';
+    // Utility function to show alerts
+    function showAlert(type, message) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        
+        // Remove existing alerts
+        $('.alert').remove();
+        
+        // Add new alert at the top of the content
+        $('.content-header').after(alertHtml);
+        
+        // Auto-hide success alerts after 5 seconds
+        if (type === 'success') {
+            setTimeout(function() {
+                $('.alert-success').fadeOut();
+            }, 5000);
+        }
     }
-
 </script>
-
-<style>
-    /* Custom style for active role card border */
-    .role-filter-card.card-active-border .info-box-icon {
-        border: 2px solid #007bff; /* Primary color */
-        box-shadow: 0 0 8px rgba(0, 123, 255, 0.5); /* Soft glow */
-    }
-</style>
-
 {% endblock %}

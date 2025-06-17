@@ -114,12 +114,16 @@ urlpatterns = [
     path('ad/approve_expense/<int:exp_id>/', views.approve_expense, name='approve_expense'),
     path('ad/reports', views.director_reports, name='director_reports'),
     path('ad/accounts', views.user_accounts, name='user_accounts'),
-    path('user-accounts/', views.user_accounts, name='user_accounts'),
-    path('toggle-user-status/<int:user_id>/', views.toggle_user_status, name='toggle_user_status'),
-    path('admin/users/edit/', views.edit_user_endpoint, name='edit_user_endpoint'),
-    path('admin/users/add/', views.add_user_endpoint, name='add_user_endpoint'),
-    path('admin/users/reset-password/', views.reset_user_password_endpoint, name='reset_user_password_endpoint'),
-    path('admin/users/delete/', views.delete_user_endpoint, name='delete_user_endpoint'),
+    path('ad/user_accounts', views.user_accounts, name='user_accounts'),
+
+    # User management endpoints with user_id as URL parameter
+    path('user/<int:user_id>/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
+    path('user/<int:user_id>/edit/', views.edit_user_endpoint, name='edit_user'),
+    path('user/<int:user_id>/set-password/', views.set_user_password_endpoint, name='set_user_password'),
+    path('user/<int:user_id>/delete/', views.delete_user_endpoint, name='delete_user'),
+    
+    # Add user endpoint (no user_id needed)
+    path('user/add/', views.add_user_endpoint, name='add_user'),
     
     path('admin/users/export/csv/', views.export_users_csv_view, name='export_users_csv'),
     path('admin/users/export/pdf/', views.export_users_pdf_view, name='export_users_pdf'),

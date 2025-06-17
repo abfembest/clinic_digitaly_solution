@@ -40,6 +40,14 @@ class Staff(models.Model):
     photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
 
+    class Meta:
+        permissions = [
+            ("can_edit_staff_profiles", "Can edit any staff user's profile details (username, email, names, role, phone)"),
+            ("can_change_staff_status", "Can activate/deactivate staff user accounts"),
+            ("can_view_staff_list", "Can view the list of all staff users in the admin area"),
+            ("can_reset_staff_password", "Can reset staff user passwords"),
+        ]
+
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} ({self.role})"
 

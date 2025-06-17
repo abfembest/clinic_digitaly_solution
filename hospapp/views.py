@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from .models import Patient, Appointment, Referral
 from django.views.decorators.csrf import csrf_exempt
@@ -2505,36 +2505,36 @@ def user_accounts(request):
         )
 
     # Get statistics for dashboard cards
-    total_users = users_qs.count() # Use the filtered queryset for total count
+    total_users = users_qs.count()
     active_users = users_qs.filter(is_active=True).count()
     inactive_users = total_users - active_users
 
     # Count users by role
     role_counts = {}
     for choice_key, choice_name in Staff.ROLE_CHOICES:
-        # Use the role key to filter Staff objects
         count = users_qs.filter(staff__role=choice_key).count()
-        role_counts[choice_name] = count # Store with display name
+        role_counts[choice_name] = count
 
     context = {
-        'users': users_qs, # Pass the filtered queryset to the template
+        'users': users_qs,
         'search_query': search_query,
         'total_users': total_users,
         'active_users': active_users,
         'inactive_users': inactive_users,
         'role_counts': role_counts,
-        'Staff': Staff, # Pass the Staff model to access ROLE_CHOICES in template
+        'Staff': Staff,
     }
 
     return render(request, 'hms_admin/user_accounts.html', context)
 
 
 @login_required(login_url='home')
-@require_POST # Ensure only POST requests are accepted
-@csrf_exempt # Important for AJAX POST requests without explicit CSRF handling in JS
+@require_POST
+@csrf_exempt
 def toggle_user_status(request, user_id):
     """
     Toggles a user's active status. Accessible via AJAX.
+    Takes user_id as URL parameter.
     """
     try:
         # Ensure only non-superusers can be toggled
@@ -2544,7 +2544,11 @@ def toggle_user_status(request, user_id):
 
         status_msg = "activated" if user_to_toggle.is_active else "deactivated"
         messages.success(request, f'User {user_to_toggle.username} has been {status_msg} successfully.')
-        return JsonResponse({'success': True, 'message': f'User {user_to_toggle.username} status toggled successfully.'})
+        return JsonResponse({
+            'success': True, 
+            'message': f'User {user_to_toggle.username} status toggled successfully.',
+            'new_status': user_to_toggle.is_active
+        })
 
     except User.DoesNotExist:
         messages.error(request, "User not found or cannot be toggled.")
@@ -2555,54 +2559,92 @@ def toggle_user_status(request, user_id):
         return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
 
 
+def is_hms_software_admin(user):
+    """
+    Test function for the user_passes_test decorator.
+    The user must be staff (to access admin) AND have the custom permission
+    Or be a superuser (who bypasses all custom permissions)
+    """
+    return user.is_superuser or (user.is_staff and user.has_perm('hms.can_edit_staff_profiles'))
+
+
 @login_required(login_url='home')
 @require_POST
 @csrf_exempt
-def edit_user_endpoint(request):
+@user_passes_test(is_hms_software_admin, login_url='home')
+def edit_user_endpoint(request, user_id):
     """
     Handles updating user details via AJAX from the edit user modal.
+    Takes user_id as URL parameter.
     """
-    user_id = request.POST.get('user_id')
     username = request.POST.get('username')
     email = request.POST.get('email')
     first_name = request.POST.get('first_name')
     last_name = request.POST.get('last_name')
-    role_key = request.POST.get('role') # This is the role key, e.g., 'doctor'
+    role_key = request.POST.get('role')
     phone_number = request.POST.get('phone_number')
-    is_active = request.POST.get('is_active') == 'true' # Convert string 'true'/'false' to boolean
+    is_active = request.POST.get('is_active') == 'true'
 
     try:
-        user = get_object_or_404(User, id=user_id, is_superuser=False)
-        staff_profile = get_object_or_404(Staff, user=user)
+        user_to_edit = get_object_or_404(User, id=user_id)
+        staff_profile_to_edit = get_object_or_404(Staff, user=user_to_edit)
+
+        # --- Granular Permission Checks ---
+        
+        # 1. Prevent non-superusers from editing superusers
+        if user_to_edit.is_superuser and not request.user.is_superuser:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Permission denied: Cannot edit superuser account without superuser privileges.'
+            }, status=403)
+
+        # 2. Prevent a superuser from deactivating their own account
+        if user_to_edit == request.user and not is_active and request.user.is_superuser:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Superusers cannot deactivate their own account.'
+            }, status=400)
+
+        # Basic validation
+        if not username or not email or not role_key:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Missing required fields: username, email, and role.'
+            }, status=400)
+        
+        # Check for duplicate username or email if they are changed
+        if user_to_edit.username != username and User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'message': 'Username already exists.'}, status=400)
+        
+        if user_to_edit.email != email and User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'Email already exists.'}, status=400)
 
         # Update User model fields
-        user.username = username
-        user.email = email
-        user.first_name = first_name
-        user.last_name = last_name
-        user.is_active = is_active
-        user.save()
+        user_to_edit.username = username
+        user_to_edit.email = email
+        user_to_edit.first_name = first_name
+        user_to_edit.last_name = last_name
+        user_to_edit.is_active = is_active
+        user_to_edit.save()
 
         # Update Staff profile fields
-        staff_profile.role = role_key
-        staff_profile.phone_number = phone_number
-        staff_profile.save()
+        staff_profile_to_edit.role = role_key
+        staff_profile_to_edit.phone_number = phone_number
+        staff_profile_to_edit.save()
 
-        messages.success(request, f"User {user.username} updated successfully.")
-        return JsonResponse({'success': True, 'message': 'User updated successfully.'})
+        return JsonResponse({'success': True, 'message': f'User {user_to_edit.username} updated successfully.'})
 
     except (User.DoesNotExist, Staff.DoesNotExist):
-        messages.error(request, "User or staff profile not found.")
         return JsonResponse({'success': False, 'message': 'User or staff profile not found.'}, status=404)
     except Exception as e:
         logger.error(f"Error editing user {user_id}: {e}")
-        messages.error(request, f"An error occurred: {e}")
-        return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
+        return JsonResponse({'success': False, 'message': f'An error occurred: {str(e)}'}, status=500)
 
 
 @login_required(login_url='home')
 @require_POST
 @csrf_exempt
+@user_passes_test(is_hms_software_admin, login_url='home')
 def add_user_endpoint(request):
     """
     Handles adding a new user and staff profile via AJAX.
@@ -2617,11 +2659,17 @@ def add_user_endpoint(request):
     is_active = request.POST.get('is_active') == 'true'
 
     if not all([username, password, role_key]):
-        return JsonResponse({'success': False, 'message': 'Username, password, and role are required.'}, status=400)
+        return JsonResponse({
+            'success': False, 
+            'message': 'Username, password, and role are required.'
+        }, status=400)
 
     try:
         if User.objects.filter(username=username).exists():
             return JsonResponse({'success': False, 'message': 'Username already exists.'}, status=409)
+
+        if email and User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'Email already exists.'}, status=409)
 
         user = User.objects.create_user(
             username=username,
@@ -2636,7 +2684,6 @@ def add_user_endpoint(request):
             user=user,
             role=role_key,
             phone_number=phone_number
-            # department and photo fields could be added here if needed from form
         )
 
         messages.success(request, f"New user {user.username} added successfully.")
@@ -2651,33 +2698,40 @@ def add_user_endpoint(request):
 @login_required(login_url='home')
 @require_POST
 @csrf_exempt
-def reset_user_password_endpoint(request):
+@user_passes_test(is_hms_software_admin, login_url='home')
+def set_user_password_endpoint(request, user_id):
     """
-    Resets a user's password to a new randomly generated one.
-    Returns the new password to the client.
+    Sets a new password for a user (for when they forget their password).
+    Takes user_id as URL parameter.
+    Returns the new password to the admin.
     """
-    user_id = request.POST.get('user_id')
     try:
-        user_to_reset = get_object_or_404(User, id=user_id, is_superuser=False)
+        # Prevent non-superusers from resetting superuser passwords for security
+        user_to_update = get_object_or_404(User, id=user_id)
+        if user_to_update.is_superuser and not request.user.is_superuser:
+            return JsonResponse({
+                'success': False,
+                'message': 'Permission denied: Cannot reset password for superuser account without superuser privileges.'
+            }, status=403)
 
-        # Generate a strong, random temporary password
-        characters = string.ascii_letters + string.digits + string.punctuation
-        new_password = ''.join(secrets.choice(characters) for i in range(12)) # 12 characters is a good length
+        # Set the password to "12345678" as requested
+        new_password = "12345" # !!! WARNING: This is a highly insecure password !!!
 
-        user_to_reset.set_password(new_password)
-        user_to_reset.save()
+        user_to_update.set_password(new_password)
+        user_to_update.save()
 
-        messages.success(request, f"Password for {user_to_reset.username} has been reset.")
+        messages.success(request, f"New password set for {user_to_update.username}.")
         return JsonResponse({
             'success': True,
-            'message': f'Password for {user_to_reset.username} reset successfully.',
-            'new_password': new_password # Send the new password back to the frontend
+            'message': f'New password set for {user_to_update.username} successfully.',
+            'new_password': new_password, # Be cautious about returning plaintext passwords in production
+            'username': user_to_update.username
         })
     except User.DoesNotExist:
-        messages.error(request, "User not found or cannot reset password for superuser.")
+        messages.error(request, "User not found.")
         return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
     except Exception as e:
-        logger.error(f"Error resetting password for user {user_id}: {e}")
+        logger.error(f"Error setting password for user {user_id}: {e}")
         messages.error(request, f"An error occurred: {e}")
         return JsonResponse({'success': False, 'message': f'An error occurred: {e}'}, status=500)
 
@@ -2685,15 +2739,24 @@ def reset_user_password_endpoint(request):
 @login_required(login_url='home')
 @require_POST
 @csrf_exempt
-def delete_user_endpoint(request):
+@user_passes_test(is_hms_software_admin, login_url='home')
+def delete_user_endpoint(request, user_id):
     """
     Deletes a user and their associated staff profile.
+    Takes user_id as URL parameter.
     """
-    user_id = request.POST.get('user_id')
     try:
         # Ensure only non-superusers can be deleted
         user_to_delete = get_object_or_404(User, id=user_id, is_superuser=False)
-        username = user_to_delete.username # Store username before deleting
+        
+        # Prevent admin from deleting their own account
+        if user_to_delete == request.user:
+            return JsonResponse({
+                'success': False, 
+                'message': 'You cannot delete your own account.'
+            }, status=400)
+        
+        username = user_to_delete.username  # Store username before deleting
         user_to_delete.delete()
 
         messages.success(request, f"User {username} and associated staff profile deleted successfully.")
