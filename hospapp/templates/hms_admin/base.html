@@ -8,8 +8,9 @@
     <title>{% block title %}HMS | Administration{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- Local CSS Files -->
     <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
-    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link rel="stylesheet" href="{% static 'plugins/ionicons/css/ionicons.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}">
     <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
@@ -17,7 +18,39 @@
     <link rel="stylesheet" href="{% static 'plugins/datatables-buttons/css/buttons.bootstrap4.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
-    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'plugins/daterangepicker/daterangepicker.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/icheck-bootstrap/icheck-bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap-colorpicker/css/bootstrap-colorpicker.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap4-duallistbox/bootstrap-duallistbox.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/bs-stepper/css/bs-stepper.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/dropzone/min/dropzone.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/overlayScrollbars/css/OverlayScrollbars.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/toastr/toastr.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/jqvmap/jqvmap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/summernote/summernote-bs4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/codemirror/codemirror.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/codemirror/theme/monokai.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/simplemde/simplemde.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/css/alt/adminlte.extra-components.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/css/alt/adminlte.components.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/css/alt/adminlte.pages.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/css/alt/adminlte.plugins.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/css/alt/adminlte.light.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/css/alt/adminlte.dark.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/fullcalendar/main.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/ekko-lightbox/ekko-lightbox.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/flag-icon-css/css/flag-icon.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/pace-progress/themes/black/pace-theme-flat-top.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap-switch/css/bootstrap3/bootstrap-switch.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/jscolor/jscolor.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/chart.js/Chart.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/uplot/uPlot.min.css' %}">
+    
+    <!-- Google Fonts - Local version -->
+    <link rel="stylesheet" href="{% static 'fonts/source-sans-pro/source-sans-pro.css' %}">
+
     {% comment %} This block was added in the previous turn and is retained to allow for extra CSS. {% endcomment %}
     {% block extra_css %}
     <style>
@@ -112,203 +145,48 @@
                             </a>
                         </li>
 
-                        <li class="nav-header">DEPARTMENTS</li>
+                        <li class="nav-header">DEPARTMENT REPORTS</li>
 
-                        <li class="nav-item has-treeview">
-                            <a href="#" class="nav-link">
+                        <li class="nav-item">
+                            <a href="{% url 'doctor_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'doctor_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-user-md"></i>
-                                <p>
-                                    Doctor Station
-                                    <i class="fas fa-angle-left right"></i>
-                                    <span class="badge badge-info right">5</span>
-                                </p>
+                                <p>Doctor Station Reports</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="{% url 'doctor_consultation' %}" class="nav-link {% if request.resolver_match.url_name == 'doctor_consultation' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-user-md"></i>
-                                        <p>Patient Consultation</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'access_medical_records' %}" class="nav-link {% if request.resolver_match.url_name == 'access_medical_records' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-folder-open"></i>
-                                        <p>Medical Records</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{ url 'patient_monitor' %}" class="nav-link {% if request.resolver_match.url_name == 'patient_monitor' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-chart-line"></i>
-                                        <p>Treatment Monitoring</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'requesttest' %}" class="nav-link {% if request.resolver_match.url_name == 'requesttest' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-vial"></i>
-                                        <p>Request IVF Test</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'recomended_tests' %}" class="nav-link {% if request.resolver_match.url_name == 'recomended_tests' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-flask"></i>
-                                        <p>Recommended IVF</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
-                        <li class="nav-item has-treeview">
-                            <a href="#" class="nav-link">
+                        <li class="nav-item">
+                            <a href="{ url 'receptionist_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'receptionist_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-user-tie"></i>
-                                <p>
-                                    Receptionist
-                                    <i class="fas fa-angle-left right"></i>
-                                    <span class="badge badge-info right">1</span>
-                                </p>
+                                <p>Receptionist Reports</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="{% url 'register_patient' %}" class="nav-link {% if request.resolver_match.url_name == 'register_patient' %}active{% endif %}">
-                                        <i class="fas fa-user-plus nav-icon"></i>
-                                        <p>Register New Patient</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
-                        <li class="nav-item has-treeview">
-                            <a href="#" class="nav-link">
+                        <li class="nav-item">
+                            <a href="{ url 'nursing_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'nursing_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-user-nurse"></i>
-                                <p>
-                                    Nursing Station
-                                    <i class="fas fa-angle-left right"></i>
-                                    <span class="badge badge-info right">2</span>
-                                </p>
+                                <p>Nursing Station Reports</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="{% url 'vitals' %}" class="nav-link {% if request.resolver_match.url_name == 'vitals' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-heartbeat"></i>
-                                        <p>Record Vitals</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'nursing_actions' %}" class="nav-link {% if request.resolver_match.url_name == 'nursing_actions' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-hospital-user"></i>
-                                        <p>Nursing Actions</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
-                        <li class="nav-item has-treeview">
-                            <a href="#" class="nav-link">
+                        <li class="nav-item">
+                            <a href="{ url 'lab_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-vial"></i>
-                                <p>
-                                    Lab Station
-                                    <i class="fas fa-angle-left right"></i>
-                                    <span class="badge badge-info right">3</span>
-                                </p>
+                                <p>Lab Station Reports</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="{% url 'lab_test_entry' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_test_entry' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-vials"></i>
-                                        <p>Lab Test Entry</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{ url 'lab_result_upload' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_result_upload' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-file-medical"></i>
-                                        <p>Upload Lab Results</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{ url 'lab_internal_logs' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_internal_logs' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-history"></i>
-                                        <p>Test Logs</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
-                        {% comment %} Pharmacy Station - Kept commented as per original {% endcomment %}
-
-                        <li class="nav-item has-treeview">
-                            <a href="#" class="nav-link">
+                        <li class="nav-item">
+                            <a href="{ url 'accounts_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'accounts_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-wallet"></i>
-                                <p>
-                                    Accounts Department
-                                    <i class="fas fa-angle-left right"></i>
-                                    <span class="badge badge-info right">4</span>
-                                </p>
+                                <p>Accounts Department Reports</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="{% url 'patient_payment_tracker' %}" class="nav-link {% if request.resolver_match.url_name == 'patient_payment_tracker' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                                        <p>Payments & Balances</p>
-                                    </a>
-                                </li>
-
-                                <li class="nav-item">
-                                    <a href="{% url 'institution_financials' %}" class="nav-link {% if request.resolver_match.url_name == 'institution_financials' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-landmark"></i>
-                                        <p>Income & Expenditure</p>
-                                    </a>
-                                </li>
-
-                                <li class="nav-item">
-                                    <a href="{% url 'financial_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'financial_reports' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-chart-line"></i>
-                                        <p>Reports & Summaries</p>
-                                    </a>
-                                </li>
-
-                                <li class="nav-item">
-                                    <a href="{% url 'budget_planning' %}" class="nav-link {% if request.resolver_match.url_name == 'budget_planning' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-balance-scale"></i>
-                                        <p>Budget Planning</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
-                        <li class="nav-item has-treeview">
-                            <a href="#" class="nav-link">
+                        <li class="nav-item">
+                            <a href="{ url 'hr_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'hr_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-users"></i>
-                                <p>
-                                    Human Resources
-                                    <i class="fas fa-angle-left right"></i>
-                                    <span class="badge badge-info right">4</span>
-                                </p>
+                                <p>Human Resources Reports</p>
                             </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="{% url 'staff_profiles' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_profiles' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-user-tie"></i>
-                                        <p>Staff Profiles</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'staff_attendance_shift' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_attendance_shift' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-calendar-check"></i>
-                                        <p>Attendance & Shifts</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'staff_transitions' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_transitions' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-user-plus"></i>
-                                        <p>Onboarding & Exit</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{% url 'staff_certifications' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_certifications' %}active{% endif %}">
-                                        <i class="nav-icon fas fa-id-badge"></i>
-                                        <p>Certifications</p>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
 
                         <li class="nav-header">ACCOUNT</li>
@@ -387,7 +265,10 @@
         <aside class="control-sidebar control-sidebar-dark">
             </aside>
         </div>
+
+    <!-- Local JavaScript Files -->
     <script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
+    <script src="{% static 'plugins/jquery-ui/jquery-ui.min.js' %}"></script>
     <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
@@ -401,11 +282,46 @@
     <script src="{% static 'plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
     <script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
-    <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
-
     <script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
-    <script>
+    <script src="{% static 'plugins/moment/moment.min.js' %}"></script>
+    <script src="{% static 'plugins/daterangepicker/daterangepicker.js' %}"></script>
+    <script src="{% static 'plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-colorpicker/js/bootstrap-colorpicker.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap4-duallistbox/jquery.bootstrap-duallistbox.min.js' %}"></script>
+    <script src="{% static 'plugins/inputmask/jquery.inputmask.min.js' %}"></script>
+    <script src="{% static 'plugins/bs-stepper/js/bs-stepper.min.js' %}"></script>
+    <script src="{% static 'plugins/dropzone/min/dropzone.min.js' %}"></script>
+    <script src="{% static 'plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js' %}"></script>
+    <script src="{% static 'plugins/sweetalert2/sweetalert2.min.js' %}"></script>
+    <script src="{% static 'plugins/toastr/toastr.min.js' %}"></script>
+    <script src="{% static 'plugins/jqvmap/jquery.vmap.min.js' %}"></script>
+    <script src="{% static 'plugins/jqvmap/maps/jquery.vmap.usa.js' %}"></script>
+    <script src="{% static 'plugins/sparklines/sparkline.js' %}"></script>
+    <script src="{% static 'plugins/summernote/summernote-bs4.min.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/codemirror.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/mode/css/css.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/mode/xml/xml.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/mode/htmlmixed/htmlmixed.js' %}"></script>
+    <script src="{% static 'plugins/simplemde/simplemde.min.js' %}"></script>
+    <script src="{% static 'plugins/fullcalendar/main.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-switch/js/bootstrap-switch.min.js' %}"></script>
+    <script src="{% static 'plugins/ekko-lightbox/ekko-lightbox.min.js' %}"></script>
+    <script src="{% static 'plugins/filterizr/jquery.filterizr.min.js' %}"></script>
+    <script src="{% static 'plugins/pace-progress/pace.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-slider/bootstrap-slider.min.js' %}"></script>
+    <script src="{% static 'plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-colorpicker/js/bootstrap-colorpicker.min.js' %}"></script>
+    <script src="{% static 'plugins/jscolor/jscolor.min.js' %}"></script>
+    <script src="{% static 'plugins/jquery-knob/jquery.knob.min.js' %}"></script>
+    <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+    <script src="{% static 'plugins/flot/jquery.flot.js' %}"></script>
+    <script src="{% static 'plugins/flot/plugins/jquery.flot.resize.js' %}"></script>
+    <script src="{% static 'plugins/flot/plugins/jquery.flot.pie.js' %}"></script>
+    <script src="{% static 'plugins/uplot/uPlot.iife.min.js' %}"></script>
+    <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
+    <script src="{% static 'dist/js/demo.js' %}"></script>
 
+    <script>
         //Select2
         $(function () {
             //Initialize Select2 Elements
@@ -415,6 +331,7 @@
             $('.select2bs4').select2({
                 theme: 'bootstrap4'
             })
+        });
     </script>
     {% block extra_js%}
 
@@ -633,57 +550,151 @@
                                 .text-center {
                                     text-align: center;
                                 }
-                                .border-bottom {
-                                    border-bottom: 2px solid #007bff !important;
+                                .text-right {
+                                    text-align: right;
                                 }
-                                input[readonly] {
-                                    background: transparent !important;
-                                    border: none !important;
+                                .text-left {
+                                    text-align: left;
                                 }
-                                @page {
-                                    margin: 1in;
+                                .badge {
+                                    display: inline-block;
+                                    padding: 0.25em 0.4em;
+                                    font-size: 75%;
+                                    font-weight: 700;
+                                    line-height: 1;
+                                    text-align: center;
+                                    white-space: nowrap;
+                                    vertical-align: baseline;
+                                    border-radius: 0.25rem;
+                                }
+                                .badge-success {
+                                    color: #fff;
+                                    background-color: #28a745;
+                                }
+                                .badge-warning {
+                                    color: #212529;
+                                    background-color: #ffc107;
+                                }
+                                .badge-danger {
+                                    color: #fff;
+                                    background-color: #dc3545;
+                                }
+                                .badge-info {
+                                    color: #fff;
+                                    background-color: #17a2b8;
+                                }
+                                @media print {
+                                    .no-print {
+                                        display: none !important;
+                                    }
+                                    body {
+                                        margin: 0;
+                                        padding: 15px;
+                                    }
+                                    .card {
+                                        page-break-inside: avoid;
+                                        margin-bottom: 10px;
+                                    }
+                                    .table {
+                                        page-break-inside: auto;
+                                    }
+                                    .table tr {
+                                        page-break-inside: avoid;
+                                        page-break-after: auto;
+                                    }
                                 }
                             </style>
                         </head>
                         <body>
-                            <div style="text-align: center; margin-bottom: 30px;">
-                                <h1>Laboratory Test Results</h1>
-                                <p><strong>Patient: ${patientName}</strong></p>
-                                <p>Generated on: ${new Date().toLocaleDateString()}</p>
-                            </div>
                             ${printContent}
                         </body>
                         </html>
                     `);
 
                     printWindow.document.close();
-
-                    setTimeout(() => {
+                    
+                    // Wait for content to load then print
+                    printWindow.onload = function() {
+                        printWindow.focus();
                         printWindow.print();
                         printWindow.close();
-                    }, 500);
+                    };
                 });
             }
         });
-
     </script>
-    <script>
-        document.getElementById('patientInput').addEventListener('input', function () {
-            const input = this.value;
-            const options = document.querySelectorAll('#patients-datalist option');
-            let matchedId = '';
 
-            options.forEach(option => {
-                if (option.value === input) {
-                    matchedId = option.getAttribute('data-id');
+    <script>
+        // Additional utility functions for the HMS system
+        function confirmAction(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'warning' ? 'alert-warning' : 
+                              type === 'error' ? 'alert-danger' : 'alert-info';
+            
+            const alertDiv = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            `;
+            
+            // Insert alert at the top of content wrapper
+            const contentWrapper = document.querySelector('.content-wrapper');
+            if (contentWrapper) {
+                contentWrapper.insertAdjacentHTML('afterbegin', alertDiv);
+            }
+        }
+
+        // Form validation helper
+        function validateForm(formId) {
+            const form = document.getElementById(formId);
+            if (!form) return false;
+            
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
                 }
             });
+            
+            return isValid;
+        }
 
-            document.getElementById('selectedPatientId').value = matchedId;
+        // Auto-refresh functionality for certain pages
+        function autoRefresh(interval = 60000) {
+            setInterval(() => {
+                // Only refresh if user is active (not idle)
+                if (document.hasFocus()) {
+                    location.reload();
+                }
+            }, interval);
+        }
+
+        // Initialize tooltips
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+
+        // Initialize popovers
+        $(function () {
+            $('[data-toggle="popover"]').popover();
         });
     </script>
 
-    {% block extra_scripts %}
+    {% block extra_footer_js %}
     {% endblock %}
 
 </body>

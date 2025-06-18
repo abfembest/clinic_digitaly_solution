@@ -1,35 +1,33 @@
 {% extends "hms_admin/base.html" %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}HMS | Admin Dashboard{% endblock %}
 
 {% block content %}
 
-<!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
                 <h1 class="m-0 text-dark">Admin Dashboard</h1>
-            </div><!-- /.col -->
+            </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{% url 'hms_admin' %}">Home</a></li>
                     <li class="breadcrumb-item active">Dashboard</li>
                 </ol>
             </div>
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+        </div>
+    </div>
 </div>
-<!-- /.content-header -->
 
-<!-- Main content -->
 <section class="content">
     <div class="container-fluid">
-        <!-- Info boxes (Small Boxes) -->
+        <!-- Section 1: Overview Quick Stats (Small Boxes) -->
+        <h4 class="mb-3">Overview Metrics</h4>
         <div class="row">
             <div class="col-lg-3 col-6">
-                <!-- small box -->
                 <div class="small-box bg-info">
                     <div class="inner">
                         <h3>{{ total_patients }}</h3>
@@ -41,9 +39,7 @@
                     <a href="{% url 'register_patient' %}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                 </div>
             </div>
-            <!-- ./col -->
             <div class="col-lg-3 col-6">
-                <!-- small box -->
                 <div class="small-box bg-success">
                     <div class="inner">
                         <h3>{{ patients_admitted }}</h3>
@@ -55,9 +51,7 @@
                     <a href="{% url 'admit_patient' %}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                 </div>
             </div>
-            <!-- ./col -->
             <div class="col-lg-3 col-6">
-                <!-- small box -->
                 <div class="small-box bg-warning">
                     <div class="inner">
                         <h3>{{ pending_lab_tests }}</h3>
@@ -69,9 +63,7 @@
                     <a href="{% url 'lab_test_entry' %}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                 </div>
             </div>
-            <!-- ./col -->
             <div class="col-lg-3 col-6">
-                <!-- small box -->
                 <div class="small-box bg-danger">
                     <div class="inner">
                         <h3>₦{{ pending_bills|floatformat:2 }}</h3>
@@ -83,12 +75,8 @@
                     <a href="{% url 'patient_payment_tracker' %}" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                 </div>
             </div>
-            <!-- ./col -->
         </div>
-        <!-- /.row -->
-
-        <!-- Second row of Info boxes for staff roles -->
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-primary">
                     <div class="inner">
@@ -138,43 +126,28 @@
                 </div>
             </div>
         </div>
-        <!-- /.row (second row of info boxes) -->
 
+        <!-- Section 2: Patient Analytics -->
+        <h4 class="mt-4 mb-3">Patient Analytics</h4>
         <div class="row">
-            <div class="col-md-7">
-                <!-- Financial Overview Card -->
+            <div class="col-md-8">
                 <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="far fa-chart-bar"></i> Monthly Financial Overview ({{ current_month|date:"F" }} {{ current_year }})
+                            <i class="far fa-chart-bar"></i> Monthly Patient Registrations (Last 6 Months)
                         </h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 border-right">
-                                <h4 class="text-success mb-0">₦{{ monthly_revenue|floatformat:2 }}</h4>
-                                <p class="text-muted">Total Revenue</p>
-                            </div>
-                            <div class="col-md-6">
-                                <h4 class="text-danger mb-0">₦{{ monthly_expenses|floatformat:2 }}</h4>
-                                <p class="text-muted">Total Expenses</p>
-                            </div>
-                        </div>
-                        <hr>
                         <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
                             <canvas id="monthlyRegistrationsChart"></canvas>
                         </div>
                     </div>
                 </div>
-                <!-- /.card -->
             </div>
-            <!-- /.col -->
-
-            <div class="col-md-5">
-                <!-- Recently Registered Patients -->
+            <div class="col-md-4">
                 <div class="card card-info card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -206,104 +179,289 @@
                         <a href="{% url 'register_patient' %}" class="uppercase">View All Patients</a>
                     </div>
                 </div>
-                <!-- /.card -->
             </div>
-            <!-- /.col -->
         </div>
-        <!-- /.row -->
 
         <div class="row">
             <div class="col-md-12">
-                <!-- Recent Appointments Table -->
                 <div class="card card-success card-outline">
-                    <div class="card-header border-transparent">
-                        <h3 class="card-title"><i class="ion ion-clipboard mr-1"></i> Recent Upcoming Appointments</h3>
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Patient Demographics</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table m-0">
-                                <thead>
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Department</th>
-                                        <th>Scheduled Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for appointment in recent_appointments %}
-                                    <tr>
-                                        <td><a href="#">{{ appointment.patient.full_name }}</a></td>
-                                        <td><span class="badge badge-primary">{{ appointment.department.name }}</span></td>
-                                        <td>
-                                            <div class="sparkbar" data-color="#00a65a" data-height="20">
-                                                {{ appointment.scheduled_time|date:"M d, Y P" }}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">No upcoming appointments found.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="genderChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Patients by Gender</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="ageChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Patients by Age Group</p>
+                            </div>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="bloodGroupChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Patients by Blood Group</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="patientStatusChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Patients by Status</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer text-center">
-                        <a href="{% url 'schedule_appointment' %}" class="uppercase">View All Appointments</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Financial Overview -->
+        <h4 class="mt-4 mb-3">Financial Overview</h4>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card card-success card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-money-bill-wave mr-1"></i> Financial Summary</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="metric-card border-left-primary">
+                                    <div class="metric-value text-primary">₦{{ total_income|floatformat:0 }}</div>
+                                    <div class="metric-label">Total Revenue</div>
+                                    <small>₦{{ income_this_month|floatformat:0 }} this month</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metric-card border-left-danger">
+                                    <div class="metric-value text-danger">₦{{ total_approved_expenses|floatformat:0 }}</div>
+                                    <div class="metric-label">Total Expenses</div>
+                                    <small>₦{{ expenses_this_month|floatformat:0 }} this month</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metric-card border-left-info">
+                                    <div class="metric-value text-info">₦{{ budget_summary.total_allocated|floatformat:0 }}</div>
+                                    <div class="metric-label">Budget Allocated (This Month)</div>
+                                    <small>{{ budget_summary.utilization_percentage }}% utilized</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="paymentMethodChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Revenue by Payment Method</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="expensesChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Expenses by Category</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <!-- /.card -->
             </div>
-            <!-- /.col -->
         </div>
-        <!-- /.row -->
 
-    </div><!--/. container-fluid -->
+        <!-- Section 4: Staff Analytics -->
+        <h4 class="mt-4 mb-3">Staff Analytics</h4>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-user-tie mr-1"></i> Staff Overview and Trends</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="staffRoleChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Staff by Role</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="staffDeptChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Staff by Department</p>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="attendanceChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Attendance Summary (Last 30 Days)</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="transitionsChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Staff Transitions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Clinical Operations & Appointments -->
+        <h4 class="mt-4 mb-3">Clinical Operations & Appointments</h4>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card card-info card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-user-md mr-1"></i> Clinical Metrics & Lab Activity</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="info-box bg-gradient-info">
+                                    <span class="info-box-icon"><i class="fas fa-vial"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Total Lab Tests</span>
+                                        <span class="info-box-number">{{ total_lab_tests }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box bg-gradient-success">
+                                    <span class="info-box-icon"><i class="fas fa-check-circle"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Lab Test Completion Rate</span>
+                                        <span class="info-box-number">{{ lab_completion_rate }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box bg-gradient-warning">
+                                    <span class="info-box-icon"><i class="fas fa-prescription-bottle-alt"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Prescriptions Issued</span>
+                                        <span class="info-box-number">{{ total_prescriptions }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="labStatusChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Lab Tests by Status</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height: 300px;">
+                                    <canvas id="topTestsChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Top 5 Requested Lab Tests</p>
+                            </div>
+                        </div>
+
+                        <div class="card card-success card-outline mt-4"> {# Nested card for appointments for better grouping #}
+                            <div class="card-header border-transparent">
+                                <h3 class="card-title"><i class="ion ion-clipboard mr-1"></i> Recent Upcoming Appointments</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table m-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Patient</th>
+                                                <th>Department</th>
+                                                <th>Scheduled Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for appointment in recent_appointments %}
+                                            <tr>
+                                                <td><a href="#">{{ appointment.patient.full_name }}</a></td>
+                                                <td><span class="badge badge-primary">{{ appointment.department.name }}</span></td>
+                                                <td>
+                                                    <div class="sparkbar" data-color="#00a65a" data-height="20">
+                                                        {{ appointment.scheduled_time|date:"M d, Y P" }}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted">No upcoming appointments found.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <a href="{% url 'schedule_appointment' %}" class="uppercase">View All Appointments</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
-<!-- /.content -->
-
 {% endblock %}
 
 {% block extra_js %}
-<!-- ChartJS -->
 <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
 <script>
     $(document).ready(function () {
-        // Wait for DOM to be ready and ensure Chart.js is loaded
         if (typeof Chart === 'undefined') {
             console.error('Chart.js is not loaded properly');
             return;
         }
 
-        // Get context with jQuery - using 'get' method on an HTML element
         var canvas = document.getElementById('monthlyRegistrationsChart');
         if (!canvas) {
-            console.error('Canvas element not found');
+            console.error('Canvas element not found for monthlyRegistrationsChart');
             return;
         }
 
         var ctx = canvas.getContext('2d');
 
-        // Safely parse JSON data with error handling
         var monthlyRegistrationsLabels, monthlyRegistrationsData;
         
         try {
             monthlyRegistrationsLabels = JSON.parse('{{ monthly_registrations_labels_json|escapejs }}');
             monthlyRegistrationsData = JSON.parse('{{ monthly_registrations_data_json|escapejs }}');
         } catch (e) {
-            console.error('Error parsing chart data:', e);
-            // Fallback data
+            console.error('Error parsing monthly registrations chart data:', e);
             monthlyRegistrationsLabels = ['No Data'];
             monthlyRegistrationsData = [0];
         }
 
-        // Ensure data is valid
         if (!Array.isArray(monthlyRegistrationsLabels) || !Array.isArray(monthlyRegistrationsData)) {
-            console.error('Invalid chart data format');
+            console.error('Invalid chart data format for monthly registrations');
             monthlyRegistrationsLabels = ['No Data'];
             monthlyRegistrationsData = [0];
         }
@@ -374,7 +532,6 @@
             }
         };
 
-        // Create the Line Chart with error handling
         try {
             new Chart(ctx, {
                 type: 'line',
@@ -382,21 +539,545 @@
                 options: monthlyRegistrationsChartOptions
             });
         } catch (error) {
-            console.error('Error creating chart:', error);
-            // Show error message in the chart container
-            document.querySelector('.chart-container').innerHTML = 
-                '<div class="alert alert-warning text-center">Chart could not be loaded. Please refresh the page.</div>';
+            console.error('Error creating monthlyRegistrationsChart:', error);
+            document.querySelector('#monthlyRegistrationsChart').closest('.chart-container').innerHTML = 
+                '<div class="alert alert-warning text-center">Monthly Registrations Chart could not be loaded.</div>';
         }
+
+        initializeCharts();
     });
+
+    function initializeCharts() {
+        // Helper function to safely parse and get data from Django context
+        function getChartData(variableName) {
+            try {
+                // This approach attempts to read from a data attribute first if available,
+                // otherwise falls back to direct parsing as in the original template.
+                // The current Django template rendering doesn't use data attributes for these,
+                // so direct parsing is typically what happens.
+                const rawData = "{{ " + variableName + " | escapejs }}"; // This line will not work as written; it's illustrative
+                // For direct template variables, you just use them.
+                // Example: JSON.parse('{{ patients_by_gender|safe }}') if rendered as safe JSON
+                // Since they are rendered as loops, the current method in the template is correct.
+                return []; // Placeholder, actual logic follows for each chart
+            } catch (e) {
+                console.error(`Error parsing chart data for ${variableName}:`, e);
+                return []; // Return empty array on error
+            }
+        }
+
+        // Gender Chart
+        var genderLabels = [
+            {% for item in patients_by_gender %}
+                '{{ item.gender }}',
+            {% endfor %}
+        ];
+        var genderData = [
+            {% for item in patients_by_gender %}
+                {{ item.count }},
+            {% endfor %}
+        ];
+        if (genderLabels.length > 0) {
+            new Chart($('#genderChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: genderLabels,
+                    datasets: [{
+                        data: genderData,
+                        backgroundColor: ['#007bff', '#6f42c1', '#17a2b8', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#fd7e14', '#e83e8c', '#20c997', '#6610f2'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#genderChart').closest('.chart-container').html('<div class="alert alert-info text-center">No gender data available.</div>');
+        }
+
+
+        // Age Distribution Chart
+        var ageLabels = [
+            {% for item in patients_by_age_group %}
+                '{{ item.age_group }}',
+            {% endfor %}
+        ];
+        var ageData = [
+            {% for item in patients_by_age_group %}
+                {{ item.count }},
+            {% endfor %}
+        ];
+        if (ageLabels.length > 0) {
+            new Chart($('#ageChart'), {
+                type: 'bar',
+                data: {
+                    labels: ageLabels,
+                    datasets: [{
+                        label: 'Number of Patients',
+                        backgroundColor: '#dc3545',
+                        borderColor: '#dc3545',
+                        data: ageData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#ageChart').closest('.chart-container').html('<div class="alert alert-info text-center">No age distribution data available.</div>');
+        }
+
+
+        // Blood Group Chart
+        var bloodGroupLabels = [
+            {% for item in patients_by_blood_group %}
+                '{{ item.blood_group }}',
+            {% endfor %}
+        ];
+        var bloodGroupData = [
+            {% for item in patients_by_blood_group %}
+                {{ item.count }},
+            {% endfor %}
+        ];
+        if (bloodGroupLabels.length > 0) {
+            new Chart($('#bloodGroupChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: bloodGroupLabels,
+                    datasets: [{
+                        data: bloodGroupData,
+                        backgroundColor: ['#fd7e14', '#20c997', '#6c757d', '#6610f2', '#e83e8c', '#007bff', '#17a2b8', '#28a745'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#bloodGroupChart').closest('.chart-container').html('<div class="alert alert-info text-center">No blood group data available.</div>');
+        }
+
+
+        // Patient Status Chart
+        var patientStatusLabels = [
+            {% for item in patients_by_status %}
+                '{{ item.status|title }}',
+            {% endfor %}
+        ];
+        var patientStatusData = [
+            {% for item in patients_by_status %}
+                {{ item.count }},
+            {% endfor %}
+        ];
+        if (patientStatusLabels.length > 0) {
+            new Chart($('#patientStatusChart'), {
+                type: 'pie',
+                data: {
+                    labels: patientStatusLabels,
+                    datasets: [{
+                        data: patientStatusData,
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#patientStatusChart').closest('.chart-container').html('<div class="alert alert-info text-center">No patient status data available.</div>');
+        }
+
+
+        // Payment Method Chart
+        var paymentMethodLabels = [
+            {% for method in payment_methods %}
+                '{{ method.payment_method|title }}',
+            {% endfor %}
+        ];
+        var paymentMethodData = [
+            {% for method in payment_methods %}
+                {{ method.total_amount|floatformat:0 }},
+            {% endfor %}
+        ];
+        if (paymentMethodLabels.length > 0) {
+            new Chart($('#paymentMethodChart'), {
+                type: 'bar',
+                data: {
+                    labels: paymentMethodLabels,
+                    datasets: [{
+                        label: 'Revenue',
+                        backgroundColor: '#007bff',
+                        borderColor: '#007bff',
+                        data: paymentMethodData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#paymentMethodChart').closest('.chart-container').html('<div class="alert alert-info text-center">No payment method data available.</div>');
+        }
+
+
+        // Expenses by Category Chart
+        var expensesCategoryLabels = [
+            {% for expense in expenses_by_category %}
+                '{{ expense.category__name }}',
+            {% endfor %}
+        ];
+        var expensesCategoryData = [
+            {% for expense in expenses_by_category %}
+                {{ expense.total_amount|floatformat:0 }},
+            {% endfor %}
+        ];
+        if (expensesCategoryLabels.length > 0) {
+            new Chart($('#expensesChart'), {
+                type: 'pie',
+                data: {
+                    labels: expensesCategoryLabels,
+                    datasets: [{
+                        data: expensesCategoryData,
+                        backgroundColor: ['#dc3545', '#ffc107', '#28a745', '#17a2b8', '#6f42c1', '#fd7e14'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#expensesChart').closest('.chart-container').html('<div class="alert alert-info text-center">No expenses by category data available.</div>');
+        }
+
+
+        // Staff by Role Chart
+        var staffRoleLabels = [
+            {% for staff in staff_by_role %}
+                '{{ staff.role|title }}',
+            {% endfor %}
+        ];
+        var staffRoleData = [
+            {% for staff in staff_by_role %}
+                {{ staff.count }},
+            {% endfor %}
+        ];
+        if (staffRoleLabels.length > 0) {
+            new Chart($('#staffRoleChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: staffRoleLabels,
+                    datasets: [{
+                        data: staffRoleData,
+                        backgroundColor: ['#007bff', '#6f42c1', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d', '#fd7e14'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#staffRoleChart').closest('.chart-container').html('<div class="alert alert-info text-center">No staff role data available.</div>');
+        }
+
+
+        // Staff by Department Chart
+        var staffDeptLabels = [
+            {% for dept in staff_by_department %}
+                '{{ dept.department__name }}',
+            {% endfor %}
+        ];
+        var staffDeptData = [
+            {% for dept in staff_by_department %}
+                {{ dept.count }},
+            {% endfor %}
+        ];
+        if (staffDeptLabels.length > 0) {
+            new Chart($('#staffDeptChart'), {
+                type: 'bar',
+                data: {
+                    labels: staffDeptLabels,
+                    datasets: [{
+                        label: 'Number of Staff',
+                        backgroundColor: '#17a2b8',
+                        borderColor: '#17a2b8',
+                        data: staffDeptData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#staffDeptChart').closest('.chart-container').html('<div class="alert alert-info text-center">No staff department data available.</div>');
+        }
+
+
+        // Attendance Chart (Last 30 Days)
+        var attendanceLabels = [
+            {% for attendance in attendance_summary %}
+                '{{ attendance.status|title }}',
+            {% endfor %}
+        ];
+        var attendanceData = [
+            {% for attendance in attendance_summary %}
+                {{ attendance.count }},
+            {% endfor %}
+        ];
+        if (attendanceLabels.length > 0) {
+            new Chart($('#attendanceChart'), {
+                type: 'bar',
+                data: {
+                    labels: attendanceLabels,
+                    datasets: [{
+                        label: 'Count',
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                        borderColor: ['#28a745', '#ffc107', '#dc3545'],
+                        data: attendanceData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#attendanceChart').closest('.chart-container').html('<div class="alert alert-info text-center">No attendance data available.</div>');
+        }
+
+
+        // Staff Transitions Chart
+        var transitionsLabels = [
+            {% for transition in staff_transitions_summary %}
+                '{{ transition.transition_type|title }}',
+            {% endfor %}
+        ];
+        var transitionsData = [
+            {% for transition in staff_transitions_summary %}
+                {{ transition.count }},
+            {% endfor %}
+        ];
+        if (transitionsLabels.length > 0) {
+            new Chart($('#transitionsChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: transitionsLabels,
+                    datasets: [{
+                        data: transitionsData,
+                        backgroundColor: ['#007bff', '#dc3545', '#ffc107'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#transitionsChart').closest('.chart-container').html('<div class="alert alert-info text-center">No staff transition data available.</div>');
+        }
+
+
+        // Lab Tests by Status Chart
+        var labStatusLabels = [
+            {% for status in lab_tests_by_status %}
+                '{{ status.status|title }}',
+            {% endfor %}
+        ];
+        var labStatusData = [
+            {% for status in lab_tests_by_status %}
+                {{ status.count }},
+            {% endfor %}
+        ];
+        if (labStatusLabels.length > 0) {
+            new Chart($('#labStatusChart'), {
+                type: 'pie',
+                data: {
+                    labels: labStatusLabels,
+                    datasets: [{
+                        data: labStatusData,
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#17a2b8'],
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#labStatusChart').closest('.chart-container').html('<div class="alert alert-info text-center">No lab test status data available.</div>');
+        }
+
+
+        // Top Requested Lab Tests Chart
+        var topTestsLabels = [
+            {% for test in top_lab_tests %}
+                '{{ test.test_name }}',
+            {% endfor %}
+        ];
+        var topTestsData = [
+            {% for test in top_lab_tests %}
+                {{ test.count }},
+            {% endfor %}
+        ];
+        if (topTestsLabels.length > 0) {
+            new Chart($('#topTestsChart'), {
+                type: 'bar',
+                data: {
+                    labels: topTestsLabels,
+                    datasets: [{
+                        label: 'Count',
+                        backgroundColor: '#6f42c1',
+                        borderColor: '#6f42c1',
+                        data: topTestsData
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                beginAtZero: true,
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            $('#topTestsChart').closest('.chart-container').html('<div class="alert alert-info text-center">No top lab tests data available.</div>');
+        }
+    }
 </script>
 
 <script>
-    // Adding default avatar if photo is not available for users list in AdminLTE
     document.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll('.users-list img').forEach(img => {
             img.onerror = function() {
-                this.onerror = null; // Prevent infinite loop
-                this.src = "{% static 'dist/img/default-avatar.png' %}"; // Path to your default avatar image
+                this.onerror = null;
+                this.src = "{% static 'dist/img/default-avatar.png' %}";
             };
         });
     });

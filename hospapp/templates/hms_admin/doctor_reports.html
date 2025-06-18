@@ -1,0 +1,955 @@
+{% extends "hms_admin/base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}HMS | Doctor Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        background-color: #fff;
+        box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    .border-left-primary { border-left: 5px solid #007bff; }
+    .border-left-success { border-left: 5px solid #28a745; }
+    .border-left-warning { border-left: 5px solid #ffc107; }
+    .border-left-danger { border-left: 5px solid #dc3545; }
+    .border-left-info { border-left: 5px solid #17a2b8; }
+
+    /* Custom styles for tables */
+    .table th {
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: bold;
+    }
+    .table tbody tr:hover {
+        background-color: #f2f2f2;
+    }
+    .table .badge {
+        font-size: 0.8rem;
+        padding: 0.4em 0.6em;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Doctor's Reports</h1>
+            </div><!-- /.col -->
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'hms_admin' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Doctor Reports</li>
+                </ol>
+            </div>
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Patient and Date Filter Card -->
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter Reports</h3>
+            </div>
+            <form id="filterForm" method="GET" action="{% url 'doctor_reports' %}">
+                <div class="card-body row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="patient_id">Select Patient:</label>
+                            <select class="form-control select2" id="patient_id" name="patient_id" style="width: 100%;">
+                                <option value="">--- Select a Patient ---</option>
+                                {% for patient in all_patients %}
+                                <option value="{{ patient.id }}" {% if selected_patient.id == patient.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ patient.full_name }} (ID: {{ patient.id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="date_from">Date From:</label>
+                            <div class="input-group date" id="date_from_picker" data-target-input="nearest">
+                                <input type="date" class="form-control datetimepicker-input" data-target="#date_from_picker" name="date_from" id="date_from" value="{{ date_from|default:'' }}" placeholder="YYYY-MM-DD"/>
+                                <div class="input-group-append" data-target="#date_from_picker" data-toggle="datetimepicker">
+                                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="date_to">Date To:</label>
+                            <div class="input-group date" id="date_to_picker" data-target-input="nearest">
+                                <input type="date" class="form-control datetimepicker-input" data-target="#date_to_picker" name="date_to" id="date_to" value="{{ date_to|default:'' }}" placeholder="YYYY-MM-DD"/>
+                                <div class="input-group-append" data-target="#date_to_picker" data-toggle="datetimepicker">
+                                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary mr-2"><i class="fas fa-search mr-1"></i> Apply Filters</button>
+                    <button type="button" class="btn btn-secondary mr-2" id="exportCsvBtn"><i class="fas fa-file-csv mr-1"></i> Export CSV</button>
+                    <button type="button" class="btn btn-secondary mr-2" id="exportPdfBtn"><i class="fas fa-file-pdf mr-1"></i> Export PDF</button>
+                    <button type="button" class="btn btn-info" onclick="window.print();"><i class="fas fa-print mr-1"></i> Print Page</button>
+                </div>
+            </form>
+        </div>
+        <!-- /.card (Filter) -->
+
+        {% if selected_patient %}
+        <div id="report-content">
+            <!-- Patient Overview Card -->
+            <div class="card card-dark card-outline">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-user mr-1"></i> Patient Overview: {{ selected_patient.full_name }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2 text-center">
+                            <img src="{% if selected_patient.photo_url %}{{ selected_patient.photo_url }}{% else %}{% static 'dist/img/default-avatar.png' %}{% endif %}"
+                                 alt="Patient Photo" class="img-circle img-fluid" style="width: 100px; height: 100px; object-fit: cover;">
+                            <h5 class="mt-2">{{ selected_patient.full_name }}</h5>
+                            <p class="text-muted text-sm">{{ selected_patient.status }}</p>
+                        </div>
+                        <div class="col-md-5">
+                            <strong><i class="fas fa-venus-mars mr-1"></i> Gender:</strong> {{ selected_patient.gender }}<br>
+                            <strong><i class="fas fa-birthday-cake mr-1"></i> Age:</strong> {{ selected_patient.age }}<br>
+                            <strong><i class="fas fa-tint mr-1"></i> Blood Group:</strong> {{ selected_patient.blood_group }}<br>
+                            <strong><i class="fas fa-phone mr-1"></i> Phone:</strong> {{ selected_patient.phone }}<br>
+                            <strong><i class="fas fa-envelope mr-1"></i> Email:</strong> {{ selected_patient.email }}<br>
+                        </div>
+                        <div class="col-md-5">
+                            <strong><i class="fas fa-map-marker-alt mr-1"></i> Address:</strong> {{ selected_patient.address }}<br>
+                            <strong><i class="fas fa-ring mr-1"></i> Marital Status:</strong> {{ selected_patient.marital_status }}<br>
+                            <strong><i class="fas fa-globe mr-1"></i> Nationality:</strong> {{ selected_patient.nationality }}<br>
+                            <strong><i class="fas fa-notes-medical mr-1"></i> Current Diagnosis:</strong> {{ selected_patient.diagnosis }}<br>
+                            <strong><i class="fas fa-pills mr-1"></i> Current Medication:</strong> {{ selected_patient.medication }}<br>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-md-3 border-right">
+                            <div class="metric-value text-primary">{{ summary.total_consultations }}</div>
+                            <div class="metric-label">Consultations</div>
+                        </div>
+                        <div class="col-md-3 border-right">
+                            <div class="metric-value text-success">{{ summary.total_prescriptions }}</div>
+                            <div class="metric-label">Prescriptions</div>
+                        </div>
+                        <div class="col-md-3 border-right">
+                            <div class="metric-value text-warning">{{ summary.total_individual_lab_tests }}</div>
+                            <div class="metric-label">Lab Tests</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-value text-info">{{ summary.total_vitals }}</div>
+                            <div class="metric-label">Vitals Recorded</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /.card (Patient Overview) -->
+
+            <!-- Charts Section -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card card-info card-outline">
+                        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line mr-1"></i> Consultations Over Time</h3></div>
+                        <div class="card-body">
+                            <div class="chart-container"><canvas id="consultationChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-warning card-outline">
+                        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Top 5 Prescribed Medications</h3></div>
+                        <div class="card-body">
+                            <div class="chart-container"><canvas id="topMedicationsChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card card-primary card-outline">
+                        <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Lab Test Status Distribution</h3></div>
+                        <div class="card-body">
+                            <div class="chart-container"><canvas id="labStatusChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-success card-outline">
+                        <div class="card-header"><h3 class="card-title"><i class="fas fa-heartbeat mr-1"></i> Blood Pressure Trend</h3></div>
+                        <div class="card-body">
+                            <div class="chart-container"><canvas id="bloodPressureChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /.row (Charts Section) -->
+            
+            <!-- Other Trends (e.g., Temperature) -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card card-danger card-outline">
+                        <div class="card-header"><h3 class="card-title"><i class="fas fa-thermometer-half mr-1"></i> Temperature Trend</h3></div>
+                        <div class="card-body">
+                            <div class="chart-container"><canvas id="temperatureChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Detailed Activity Tables -->
+            <div class="card card-secondary card-outline">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-list-alt mr-1"></i> Detailed Patient Activity</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="custom-tabs-one-tab" role="tablist">
+                            <li class="nav-item"><a class="nav-link active" id="tab-consultations" data-toggle="pill" href="#content-consultations" role="tab" aria-controls="content-consultations" aria-selected="true">Consultations ({{ summary.total_consultations }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-prescriptions" data-toggle="pill" href="#content-prescriptions" role="tab" aria-controls="content-prescriptions" aria-selected="false">Prescriptions ({{ summary.total_prescriptions }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-vitals" data-toggle="pill" href="#content-vitals" role="tab" aria-controls="content-vitals" aria-selected="false">Vitals ({{ summary.total_vitals }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-labtests" data-toggle="pill" href="#content-labtests" role="tab" aria-controls="content-labtests" aria-selected="false">Lab Tests ({{ summary.total_individual_lab_tests }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-nursingnotes" data-toggle="pill" href="#content-nursingnotes" role="tab" aria-controls="content-nursingnotes" aria-selected="false">Nursing Notes ({{ summary.total_nursing_notes }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-admissions" data-toggle="pill" href="#content-admissions" role="tab" aria-controls="content-admissions" aria-selected="false">Admissions ({{ summary.total_admissions }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-careplans" data-toggle="pill" href="#content-careplans" role="tab" aria-controls="content-careplans" aria-selected="false">Care Plans ({{ summary.total_care_plans }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-referrals" data-toggle="pill" href="#content-referrals" role="tab" aria-controls="content-referrals" aria-selected="false">Referrals ({{ summary.total_referrals }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-appointments" data-toggle="pill" href="#content-appointments" role="tab" aria-controls="content-appointments" aria-selected="false">Appointments ({{ summary.total_appointments }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-bills" data-toggle="pill" href="#content-bills" role="tab" aria-controls="content-bills" aria-selected="false">Bills ({{ summary.total_bills }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-payments" data-toggle="pill" href="#content-payments" role="tab" aria-controls="content-payments" aria-selected="false">Payments ({{ summary.total_payments }})</a></li>
+                            <li class="nav-item"><a class="nav-link" id="tab-handoverlogs" data-toggle="pill" href="#content-handoverlogs" role="tab" aria-controls="content-handoverlogs" aria-selected="false">Handover Logs ({{ summary.total_handover_logs }})</a></li>
+                        </ul>
+                    </div>
+                    <div class="tab-content" id="custom-tabs-one-tabContent">
+                        <!-- Consultations Tab Content -->
+                        <div class="tab-pane fade show active" id="content-consultations" role="tabpanel" aria-labelledby="tab-consultations">
+                            <div class="table-responsive p-3">
+                                {% if consultations %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Doctor</th>
+                                            <th>Symptoms</th>
+                                            <th>Diagnosis Summary</th>
+                                            <th>Advice</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for c in consultations %}
+                                        <tr>
+                                            <td>{{ c.date }}</td>
+                                            <td>{{ c.doctor }}</td>
+                                            <td>{{ c.symptoms }}</td>
+                                            <td>{{ c.diagnosis_summary }}</td>
+                                            <td>{{ c.advice }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No consultations found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Prescriptions Tab Content -->
+                        <div class="tab-pane fade" id="content-prescriptions" role="tabpanel" aria-labelledby="tab-prescriptions">
+                            <div class="table-responsive p-3">
+                                {% if prescriptions %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Medication</th>
+                                            <th>Instructions</th>
+                                            <th>Start Date</th>
+                                            <th>Prescribed By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in prescriptions %}
+                                        <tr>
+                                            <td>{{ p.date }}</td>
+                                            <td>{{ p.medication }}</td>
+                                            <td>{{ p.instructions }}</td>
+                                            <td>{{ p.start_date }}</td>
+                                            <td>{{ p.prescribed_by }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No prescriptions found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Vitals Tab Content -->
+                        <div class="tab-pane fade" id="content-vitals" role="tabpanel" aria-labelledby="tab-vitals">
+                            <div class="table-responsive p-3">
+                                {% if vitals %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Recorded At</th>
+                                            <th>Recorded By</th>
+                                            <th>Temp (&#8451;)</th>
+                                            <th>BP (mmHg)</th>
+                                            <th>Pulse (bpm)</th>
+                                            <th>Resp Rate (bpm)</th>
+                                            <th>Weight (kg)</th>
+                                            <th>Height (cm)</th>
+                                            <th>BMI</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for v in vitals %}
+                                        <tr>
+                                            <td>{{ v.recorded_at }}</td>
+                                            <td>{{ v.recorded_by }}</td>
+                                            <td>{{ v.temperature|default:'N/A' }}</td>
+                                            <td>{{ v.blood_pressure|default:'N/A' }}</td>
+                                            <td>{{ v.pulse|default:'N/A' }}</td>
+                                            <td>{{ v.respiratory_rate|default:'N/A' }}</td>
+                                            <td>{{ v.weight|default:'N/A' }}</td>
+                                            <td>{{ v.height|default:'N/A' }}</td>
+                                            <td>{{ v.bmi|default:'N/A' }}</td>
+                                            <td>{{ v.notes|default:'N/A' }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No vitals data found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Lab Tests Tab Content -->
+                        <div class="tab-pane fade" id="content-labtests" role="tabpanel" aria-labelledby="tab-labtests">
+                            <div class="p-3">
+                                {% if lab_test_groups %}
+                                {% for group in lab_test_groups %}
+                                <div class="card card-default card-outline mb-3">
+                                    <div class="card-header bg-light">
+                                        <h5 class="card-title">
+                                            Test Request ID: <strong>{{ group.request_id }}</strong>
+                                            <span class="badge badge-{{ group.group_status }} ml-2">{{ group.group_status|title }}</span>
+                                        </h5>
+                                        <div class="card-tools">
+                                            <span class="text-muted mr-3">Requested: {{ group.requested_at }} by {{ group.requested_by }}</span>
+                                            {% if group.doctor_name %}<span class="text-muted mr-3">Doctor: {{ group.doctor_name }}</span>{% endif %}
+                                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if group.doctor_comment %}
+                                        <p class="font-italic"><strong>Doctor's Comment ({{ group.doctor_comment.doctor_name }} on {{ group.doctor_comment.date }}):</strong> {{ group.doctor_comment.comment }}</p>
+                                        {% endif %}
+                                        {% if group.result_file.file_url %}
+                                        <p><strong>Lab Result File:</strong> <a href="{{ group.result_file.file_url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-file-pdf mr-1"></i> View File ({{ group.result_file.file_name }})</a><br>
+                                            <small class="text-muted">Uploaded: {{ group.result_file.uploaded_at }} by {{ group.result_file.uploaded_by }}</small>
+                                        </p>
+                                        {% endif %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Test Name</th>
+                                                        <th>Category</th>
+                                                        <th>Status</th>
+                                                        <th>Result Value</th>
+                                                        <th>Normal Range</th>
+                                                        <th>Date Performed</th>
+                                                        <th>Performed By</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for test in group.tests %}
+                                                    <tr>
+                                                        <td>{{ test.test_name }}</td>
+                                                        <td>{{ test.category }}</td>
+                                                        <td><span class="badge badge-{{ test.status_code }}">{{ test.status }}</span></td>
+                                                        <td>{{ test.result_value }}</td>
+                                                        <td>{{ test.normal_range }}</td>
+                                                        <td>{{ test.date_performed|default:'N/A' }}</td>
+                                                        <td>{{ test.performed_by|default:'N/A' }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No lab tests found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Nursing Notes Tab Content -->
+                        <div class="tab-pane fade" id="content-nursingnotes" role="tabpanel" aria-labelledby="tab-nursingnotes">
+                            <div class="table-responsive p-3">
+                                {% if nursing_notes %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Nurse</th>
+                                            <th>Note Type</th>
+                                            <th>Notes</th>
+                                            <th>Patient Status</th>
+                                            <th>Follow Up</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for n in nursing_notes %}
+                                        <tr>
+                                            <td>{{ n.date }}</td>
+                                            <td>{{ n.nurse }}</td>
+                                            <td>{{ n.note_type }}</td>
+                                            <td>{{ n.notes }}</td>
+                                            <td>{{ n.patient_status }}</td>
+                                            <td>{{ n.follow_up }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No nursing notes found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Admissions Tab Content -->
+                        <div class="tab-pane fade" id="content-admissions" role="tabpanel" aria-labelledby="tab-admissions">
+                            <div class="table-responsive p-3">
+                                {% if admissions %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Admission Date</th>
+                                            <th>Admitted By</th>
+                                            <th>Doctor Assigned</th>
+                                            <th>Status</th>
+                                            <th>Discharge Date</th>
+                                            <th>Discharge Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for a in admissions %}
+                                        <tr>
+                                            <td>{{ a.admission_date }}</td>
+                                            <td>{{ a.admitted_by }}</td>
+                                            <td>{{ a.doctor_assigned }}</td>
+                                            <td><span class="badge badge-{{ a.status }}">{{ a.status }}</span></td>
+                                            <td>{{ a.discharge_date|default:'N/A' }}</td>
+                                            <td>{{ a.discharge_notes }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No admissions found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Care Plans Tab Content -->
+                        <div class="tab-pane fade" id="content-careplans" role="tabpanel" aria-labelledby="tab-careplans">
+                            <div class="table-responsive p-3">
+                                {% if care_plans %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Created At</th>
+                                            <th>Created By</th>
+                                            <th>Clinical Findings</th>
+                                            <th>Plan of Care</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for cp in care_plans %}
+                                        <tr>
+                                            <td>{{ cp.created_at }}</td>
+                                            <td>{{ cp.created_by }}</td>
+                                            <td>{{ cp.clinical_findings }}</td>
+                                            <td>{{ cp.plan_of_care }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No care plans found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Referrals Tab Content -->
+                        <div class="tab-pane fade" id="content-referrals" role="tabpanel" aria-labelledby="tab-referrals">
+                            <div class="table-responsive p-3">
+                                {% if referrals %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for r in referrals %}
+                                        <tr>
+                                            <td>{{ r.department }}</td>
+                                            <td>{{ r.notes }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No referrals found for the selected patient.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Appointments Tab Content -->
+                        <div class="tab-pane fade" id="content-appointments" role="tabpanel" aria-labelledby="tab-appointments">
+                            <div class="table-responsive p-3">
+                                {% if appointments %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Scheduled Time</th>
+                                            <th>Department</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for appt in appointments %}
+                                        <tr>
+                                            <td>{{ appt.scheduled_time }}</td>
+                                            <td>{{ appt.department }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No appointments found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Bills Tab Content -->
+                        <div class="tab-pane fade" id="content-bills" role="tabpanel" aria-labelledby="tab-bills">
+                            <div class="p-3">
+                                {% if bills %}
+                                {% for bill in bills %}
+                                <div class="card card-light card-outline mb-3">
+                                    <div class="card-header bg-gradient-gray">
+                                        <h5 class="card-title">Bill #<strong>{{ bill.bill_number }}</strong>
+                                            <span class="badge badge-{{ bill.status_code }} ml-2">{{ bill.status }}</span>
+                                        </h5>
+                                        <div class="card-tools">
+                                            <span class="text-muted mr-3">Created: {{ bill.created_at }}</span>
+                                            <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4"><strong>Total Amount:</strong> ₦{{ bill.total_amount|floatformat:2 }}</div>
+                                            <div class="col-md-4"><strong>Discount:</strong> ₦{{ bill.discount_amount|floatformat:2 }}</div>
+                                            <div class="col-md-4"><strong>Final Amount:</strong> ₦{{ bill.final_amount|floatformat:2 }}</div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-md-4"><strong>Amount Paid:</strong> ₦{{ bill.amount_paid|floatformat:2 }}</div>
+                                            <div class="col-md-4"><strong>Outstanding:</strong> ₦{{ bill.outstanding_amount|floatformat:2 }}</div>
+                                            <div class="col-md-4"><strong>Notes:</strong> {{ bill.notes }}</div>
+                                        </div>
+                                        {% if bill.items %}
+                                        <h6 class="mt-3">Bill Items:</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Description</th>
+                                                        <th>Service Type</th>
+                                                        <th>Qty</th>
+                                                        <th>Unit Price</th>
+                                                        <th>Total Price</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in bill.items %}
+                                                    <tr>
+                                                        <td>{{ item.description }}</td>
+                                                        <td>{{ item.service_type }}</td>
+                                                        <td>{{ item.quantity }}</td>
+                                                        <td>₦{{ item.unit_price|floatformat:2 }}</td>
+                                                        <td>₦{{ item.total_price|floatformat:2 }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No bills found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Payments Tab Content -->
+                        <div class="tab-pane fade" id="content-payments" role="tabpanel" aria-labelledby="tab-payments">
+                            <div class="table-responsive p-3">
+                                {% if payments %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Amount</th>
+                                            <th>Payment Date</th>
+                                            <th>Method</th>
+                                            <th>Reference</th>
+                                            <th>Status</th>
+                                            <th>Processed By</th>
+                                            <th>Bill #</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pay in payments %}
+                                        <tr>
+                                            <td>₦{{ pay.amount|floatformat:2 }}</td>
+                                            <td>{{ pay.payment_date }}</td>
+                                            <td>{{ pay.payment_method }}</td>
+                                            <td>{{ pay.payment_reference }}</td>
+                                            <td><span class="badge badge-{{ pay.status_code }}">{{ pay.status }}</span></td>
+                                            <td>{{ pay.processed_by }}</td>
+                                            <td>{{ pay.bill_number }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No payments found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Handover Logs Tab Content -->
+                        <div class="tab-pane fade" id="content-handoverlogs" role="tabpanel" aria-labelledby="tab-handoverlogs">
+                            <div class="table-responsive p-3">
+                                {% if handover_logs %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>Author</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for hl in handover_logs %}
+                                        <tr>
+                                            <td>{{ hl.timestamp }}</td>
+                                            <td>{{ hl.author }}</td>
+                                            <td>{{ hl.notes }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="alert alert-info text-center m-3">No handover logs found for the selected patient and date range.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <!-- /.card (Detailed Activity Tables) -->
+        </div>
+        <!-- /#report-content -->
+        {% else %}
+        <div class="alert alert-info text-center mt-4">
+            <i class="fas fa-info-circle mr-2"></i> Please select a patient from the dropdown above to view their comprehensive reports.
+        </div>
+        {% endif %}
+
+    </div><!--/. container-fluid -->
+</section>
+<!-- /.content -->
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- ChartJS -->
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<!-- Moment.js (for date parsing in daterangepicker) -->
+<script src="{% static 'plugins/moment/moment.min.js' %}"></script>
+<!-- Tempus Dominus Bootstrap 4 (for date pickers) -->
+<script src="{% static 'plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js' %}"></script>
+<!-- Select2 -->
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+
+
+<script>
+    $(document).ready(function () {
+        // Initialize Select2 for patient dropdown
+        $('.select2').select2({
+            placeholder: "Select a patient",
+            allowClear: true // Option to clear selection
+        });
+
+        // Initialize Datepickers
+        $('#date_from_picker').datetimepicker({
+            format: 'YYYY-MM-DD',
+            buttons: {
+                showClear: true,
+            },
+            toolbarPlacement: 'bottom',
+        });
+        $('#date_to_picker').datetimepicker({
+            format: 'YYYY-MM-DD',
+            useCurrent: false, // Important! See issue #1075
+            buttons: {
+                showClear: true,
+            },
+            toolbarPlacement: 'bottom',
+        });
+
+        $("#date_from_picker").on("change.datetimepicker", function (e) {
+            $('#date_to_picker').datetimepicker('minDate', e.date);
+        });
+        $("#date_to_picker").on("change.datetimepicker", function (e) {
+            $('#date_from_picker').datetimepicker('maxDate', e.date);
+        });
+
+        // --- Chart Rendering Logic ---
+        function createChart(canvasId, chartType, labels, datasets, options = {}) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) {
+                console.warn(`Canvas element with ID '${canvasId}' not found. Skipping chart.`);
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            
+            // Check if there's actual data to display
+            const hasData = datasets.some(dataset => dataset.data && dataset.data.some(val => val !== null && val !== 0));
+
+            if (!hasData || !Array.isArray(labels) || labels.length === 0) {
+                $(canvas).closest('.chart-container').html('<div class="alert alert-info text-center">No data available for this chart within the selected filters.</div>');
+                return;
+            }
+
+            const defaultOptions = {
+                maintainAspectRatio: false,
+                responsive: true,
+                plugins: {
+                    legend: { display: true },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff'
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        ticks: {
+                            beginAtZero: true,
+                            precision: 0,
+                            callback: function(value) { // Ensure integer ticks for count-based charts
+                                return Number.isInteger(value) ? value : '';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            };
+
+            // Merge default options with provided options
+            const finalOptions = Chart.helpers.merge(defaultOptions, options);
+
+            try {
+                new Chart(ctx, {
+                    type: chartType,
+                    data: { labels: labels, datasets: datasets },
+                    options: finalOptions
+                });
+            } catch (error) {
+                console.error(`Error creating ${canvasId} chart:`, error);
+                $(canvas).closest('.chart-container').html('<div class="alert alert-warning text-center">Chart could not be loaded due to an error.</div>');
+            }
+        }
+
+        // Only render charts if a patient is selected
+        {% if selected_patient %}
+            // Consultation Chart
+            const consultationLabels = JSON.parse('{{ consultation_labels_json|escapejs }}');
+            const consultationData = JSON.parse('{{ consultation_data_json|escapejs }}');
+            createChart('consultationChart', 'line', consultationLabels, [{
+                label: 'Number of Consultations',
+                backgroundColor: 'rgba(23,162,184,0.4)', // info blue
+                borderColor: 'rgba(23,162,184,1)',
+                pointRadius: 4,
+                pointBackgroundColor: '#17a2b8',
+                fill: true,
+                tension: 0.3,
+                data: consultationData
+            }], {
+                plugins: { legend: { display: true, position: 'top' } }
+            });
+
+            // Top Medications Chart
+            const topMedsLabels = JSON.parse('{{ top_meds_labels_json|escapejs }}');
+            const topMedsData = JSON.parse('{{ top_meds_data_json|escapejs }}');
+            createChart('topMedicationsChart', 'bar', topMedsLabels, [{
+                label: 'Prescription Count',
+                backgroundColor: '#ffc107', // warning yellow
+                borderColor: '#ffc107',
+                borderWidth: 1,
+                data: topMedsData
+            }], {
+                plugins: { legend: { display: false } }
+            });
+
+            // Lab Status Chart
+            const labStatusLabels = JSON.parse('{{ lab_status_labels_json|escapejs }}');
+            const labStatusData = JSON.parse('{{ lab_status_data_json|escapejs }}');
+            createChart('labStatusChart', 'pie', labStatusLabels, [{
+                data: labStatusData,
+                backgroundColor: [
+                    '#28a745', // green - completed
+                    '#ffc107', // yellow - pending
+                    '#17a2b8', // info - in_progress
+                    '#dc3545', // red - cancelled
+                ],
+            }], {
+                plugins: { legend: { position: 'right' } }
+            });
+
+            // Blood Pressure Chart
+            const vitalBpLabels = JSON.parse('{{ vital_bp_labels_json|escapejs }}');
+            const vitalSysData = JSON.parse('{{ vital_sys_data_json|escapejs }}');
+            const vitalDiaData = JSON.parse('{{ vital_dia_data_json|escapejs }}');
+            createChart('bloodPressureChart', 'line', vitalBpLabels, [
+                {
+                    label: 'Systolic BP',
+                    backgroundColor: 'rgba(40,167,69,0.2)', // success green
+                    borderColor: 'rgba(40,167,69,1)',
+                    pointRadius: 4,
+                    pointBackgroundColor: '#28a745',
+                    fill: false,
+                    tension: 0.3,
+                    data: vitalSysData
+                },
+                {
+                    label: 'Diastolic BP',
+                    backgroundColor: 'rgba(0,123,255,0.2)', // primary blue
+                    borderColor: 'rgba(0,123,255,1)',
+                    pointRadius: 4,
+                    pointBackgroundColor: '#007bff',
+                    fill: false,
+                    tension: 0.3,
+                    data: vitalDiaData
+                }
+            ], {
+                plugins: { legend: { display: true, position: 'top' } },
+                scales: {
+                    y: {
+                        ticks: {
+                            beginAtZero: false // BP might not start at zero
+                        }
+                    }
+                }
+            });
+
+            // Temperature Chart
+            const vitalTempLabels = JSON.parse('{{ vital_bp_labels_json|escapejs }}'); // Re-using BP labels for consistency
+            const vitalTempData = JSON.parse('{{ vital_temp_data_json|escapejs }}');
+            createChart('temperatureChart', 'line', vitalTempLabels, [{
+                label: 'Temperature (℃)',
+                backgroundColor: 'rgba(220,53,69,0.2)', // danger red
+                borderColor: 'rgba(220,53,69,1)',
+                pointRadius: 4,
+                pointBackgroundColor: '#dc3545',
+                fill: false,
+                tension: 0.3,
+                data: vitalTempData
+            }], {
+                plugins: { legend: { display: true, position: 'top' } },
+                scales: {
+                    y: {
+                        ticks: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+
+        {% endif %}
+
+
+        // --- Export Button Handlers ---
+        $('#exportCsvBtn').on('click', function() {
+            const form = $('#filterForm');
+            // Add a hidden input for export type
+            form.append('<input type="hidden" name="export_type" value="csv" />');
+            form.submit();
+            // Remove the hidden input after submission to not affect subsequent regular submits
+            form.find('input[name="export_type"]').remove();
+        });
+
+        $('#exportPdfBtn').on('click', function() {
+            const form = $('#filterForm');
+            // Add a hidden input for export type
+            form.append('<input type="hidden" name="export_type" value="pdf" />');
+            form.submit();
+            // Remove the hidden input after submission
+            form.find('input[name="export_type"]').remove();
+        });
+
+    }); // End of document.ready
+</script>
+{% endblock %}

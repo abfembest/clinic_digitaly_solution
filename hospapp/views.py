@@ -2,11 +2,11 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
-from .models import Patient, Appointment, Referral
+from django.db import models
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.http import JsonResponse
@@ -37,10 +37,11 @@ from uuid import uuid4
 from django.core.files.storage import default_storage
 import csv
 from io import BytesIO
+
 import string
 import secrets
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from django.db.models import Q
@@ -1963,125 +1964,186 @@ def inventory(request):
 # HMS Admin Views
 @login_required(login_url='home')
 def hms_admin(request):
-    """
-    Renders the Admin Dashboard with dynamic data.
-
-    Fetches key metrics from the database related to:
-    - Staff (active, by role)
-    - Patients (total, admitted, new registrations)
-    - Lab Tests (pending)
-    - Financials (pending bills, monthly revenue, monthly expenses)
-    - Appointments (recent)
-
-    The data is then passed to the 'hms_admin/index.html' template
-    to display a dynamic and informative dashboard.
-    """
-    
-    # Ensure only 'admin' role can access this dashboard
-    if not hasattr(request.user, 'staff') or request.user.staff.role != 'admin':
-        # Redirect to a generic home or unauthorized page, or show an error
-        # For now, let's redirect to a general home page
-        return redirect('home') # Assuming 'home' is a general entry point
-
     current_month = date.today().month
     current_year = date.today().year
-    
-    # 1. Staff Statistics
+    today = date.today()
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    start_of_month = date(current_year, current_month, 1)
+
     staff_active_count = Staff.objects.filter(user__is_active=True).count()
     total_doctors = Staff.objects.filter(role='doctor', user__is_active=True).count()
     total_nurses = Staff.objects.filter(role='nurse', user__is_active=True).count()
-    total_lab_techs = Staff.objects.filter(role='lab', user__is_active=True).count()
-    
-    # 2. Patient Statistics
+
+    staff_by_role = Staff.objects.values('role').annotate(count=Count('role')).order_by('role')
+
+    staff_by_department = Staff.objects.filter(department__isnull=False)\
+                                    .values('department__name')\
+                                    .annotate(count=Count('department__name'))\
+                                    .order_by('department__name')
+
+    attendance_summary = Attendance.objects.filter(date__gte=thirty_days_ago)\
+                                        .values('status')\
+                                        .annotate(count=Count('status'))\
+                                        .order_by('status')
+
+    staff_transitions_summary = StaffTransition.objects.values('transition_type')\
+                                                    .annotate(count=Count('transition_type'))\
+                                                    .order_by('transition_type')
+
     total_patients = Patient.objects.count()
     patients_admitted = Admission.objects.filter(status='Admitted').count()
-    
-    # Calculate new patient registrations for the last 30 days
-    thirty_days_ago = timezone.now() - timedelta(days=30)
+
     new_patients_last_30_days = Patient.objects.filter(date_registered__gte=thirty_days_ago).count()
 
-    # 3. Lab & Appointments
+    recent_patients = Patient.objects.order_by('-date_registered')[:5]
+
+    patients_by_gender = Patient.objects.values('gender').annotate(count=Count('gender')).order_by('gender')
+
+    patients_by_age_group_raw = Patient.objects.annotate(age=models.functions.ExtractYear(date.today()) - models.functions.ExtractYear('date_of_birth'))\
+                                            .values('age')\
+                                            .annotate(count=Count('age'))\
+                                            .order_by('age')
+
+    age_groups = {
+        '0-12': 0, '13-19': 0, '20-39': 0, '40-59': 0, '60+': 0
+    }
+    for p in patients_by_age_group_raw:
+        age = p['age']
+        if age <= 12:
+            age_groups['0-12'] += p['count']
+        elif 13 <= age <= 19:
+            age_groups['13-19'] += p['count']
+        elif 20 <= age <= 39:
+            age_groups['20-39'] += p['count']
+        elif 40 <= age <= 59:
+            age_groups['40-59'] += p['count']
+        else:
+            age_groups['60+'] += p['count']
+    patients_by_age_group = [{'age_group': k, 'count': v} for k, v in age_groups.items()]
+
+
+    patients_by_blood_group = Patient.objects.values('blood_group').annotate(count=Count('blood_group')).order_by('blood_group')
+
+    patients_by_status = Patient.objects.values('status').annotate(count=Count('status')).order_by('status')
+
     pending_lab_tests = LabTest.objects.filter(status='pending').count()
     upcoming_appointments_today = Appointment.objects.filter(
-        scheduled_time__date=date.today()
+        scheduled_time__date=today
     ).count()
 
-    # 4. Financials
-    pending_bills = PatientBill.objects.filter(status='pending').count()
-    
-    # Monthly Revenue
+    recent_appointments = Appointment.objects.filter(
+        scheduled_time__gte=timezone.now()
+    ).order_by('scheduled_time')[:5]
+
+    total_lab_tests = LabTest.objects.count()
+    completed_lab_tests = LabTest.objects.filter(status='completed').count()
+    lab_completion_rate = (completed_lab_tests / total_lab_tests * 100) if total_lab_tests > 0 else 0
+
+    total_prescriptions = Prescription.objects.count()
+
+    lab_tests_by_status = LabTest.objects.values('status').annotate(count=Count('status')).order_by('status')
+
+    top_lab_tests = LabTest.objects.values('test_name').annotate(count=Count('test_name')).order_by('-count')[:5]
+
+    pending_bills_amount = PatientBill.objects.filter(status='pending').aggregate(total_amount=Sum('final_amount'))['total_amount'] or 0.00
+
+
     monthly_revenue = Payment.objects.filter(
         status='completed',
         payment_date__year=current_year,
         payment_date__month=current_month
     ).aggregate(total_amount=Sum('amount'))['total_amount'] or 0.00
 
-    # Monthly Expenses
     monthly_expenses = Expense.objects.filter(
         status='approved',
         expense_date__year=current_year,
         expense_date__month=current_month
     ).aggregate(total_amount=Sum('amount'))['total_amount'] or 0.00
 
-    # Recent Data for Lists/Tables
-    # Fetch top 5 recently registered patients
-    recent_patients = Patient.objects.order_by('-date_registered')[:5]
-    
-    # Fetch top 5 upcoming appointments
-    recent_appointments = Appointment.objects.filter(
-        scheduled_time__gte=timezone.now()
-    ).order_by('scheduled_time')[:5]
+    total_income = Payment.objects.filter(status='completed').aggregate(total_amount=Sum('amount'))['total_amount'] or 0.00
 
-    # Data for Charts (e.g., monthly patient registrations)
-    # This is an example; you might need to adjust based on specific chart requirements
-    # For a sales chart, you might aggregate payments by month.
-    
-    # Example: Monthly patient registrations for the last 6 months
-    monthly_registrations = {}
-    for i in range(6):
-        month = (current_month - i - 1 + 12) % 12 + 1 # Handles year rollover
+    income_this_month = monthly_revenue
+
+    total_approved_expenses = Expense.objects.filter(status='approved').aggregate(total_amount=Sum('amount'))['total_amount'] or 0.00
+
+    expenses_this_month = monthly_expenses
+
+    total_allocated_budget = Budget.objects.filter(year=current_year, month=current_month)\
+                                        .aggregate(total_amount=Sum('allocated_amount'))['total_amount'] or 0.00
+    total_spent_budget = Budget.objects.filter(year=current_year, month=current_month)\
+                                    .aggregate(total_amount=Sum('spent_amount'))['total_amount'] or 0.00
+    budget_utilization_percentage = (total_spent_budget / total_allocated_budget * 100) if total_allocated_budget > 0 else 0
+    budget_summary = {
+        'total_allocated': total_allocated_budget,
+        'utilization_percentage': round(budget_utilization_percentage, 2)
+    }
+
+    payment_methods = Payment.objects.values('payment_method')\
+                                .annotate(total_amount=Sum('amount'))\
+                                .order_by('payment_method')
+
+    expenses_by_category = Expense.objects.values('category__name')\
+                                        .annotate(total_amount=Sum('amount'))\
+                                        .order_by('category__name')
+
+    monthly_registrations_labels = []
+    monthly_registrations_data = []
+    for i in range(5, -1, -1):
+        month = (current_month - i - 1 + 12) % 12 + 1
         year = current_year if (current_month - i) > 0 else current_year - 1
         
+        month_name = date(year, month, 1).strftime('%b')
+        monthly_registrations_labels.append(f"{month_name} {year}")
+
         count = Patient.objects.filter(
             date_registered__year=year,
             date_registered__month=month
         ).count()
-        monthly_registrations[f"{month}/{year}"] = count
-
-    # Reverse the order for chart display
-    monthly_registrations_labels = list(monthly_registrations.keys())[::-1]
-    monthly_registrations_data = list(monthly_registrations.values())[::-1]
-
+        monthly_registrations_data.append(count)
 
     context = {
-        # Overview Stats
         'staff_active_count': staff_active_count,
         'total_patients': total_patients,
         'patients_admitted': patients_admitted,
         'pending_lab_tests': pending_lab_tests,
-        'pending_bills': pending_bills,
+        'pending_bills': pending_bills_amount,
         'monthly_revenue': monthly_revenue,
         'monthly_expenses': monthly_expenses,
         'total_doctors': total_doctors,
         'total_nurses': total_nurses,
-        'total_lab_techs': total_lab_techs,
         'new_patients_last_30_days': new_patients_last_30_days,
         'upcoming_appointments_today': upcoming_appointments_today,
 
-        # Recent Lists
         'recent_patients': recent_patients,
         'recent_appointments': recent_appointments,
 
-        # Chart Data (convert to JSON string for JS)
         'monthly_registrations_labels_json': json.dumps(monthly_registrations_labels),
         'monthly_registrations_data_json': json.dumps(monthly_registrations_data),
+
+        'total_income': total_income,
+        'income_this_month': income_this_month,
+        'total_approved_expenses': total_approved_expenses,
+        'expenses_this_month': expenses_this_month,
+        'budget_summary': budget_summary,
+        'payment_methods': payment_methods,
+        'expenses_by_category': expenses_by_category,
+
+        'staff_by_role': staff_by_role,
+        'staff_by_department': staff_by_department,
+        'attendance_summary': attendance_summary,
+        'staff_transitions_summary': staff_transitions_summary,
+
+        'total_lab_tests': total_lab_tests,
+        'lab_completion_rate': round(lab_completion_rate, 2),
+        'total_prescriptions': total_prescriptions,
+        'lab_tests_by_status': lab_tests_by_status,
+        'top_lab_tests': top_lab_tests,
+
+        'current_month': date(current_year, current_month, 1),
+        'current_year': current_year,
     }
 
     return render(request, 'hms_admin/index.html', context)
-
-@login_required(login_url='home')
-def director_operations(request):
-    return render(request, 'hms_admin/operations.html')
 
 @login_required(login_url='home')
 def director_operations(request):
@@ -2952,6 +3014,1346 @@ def export_users_pdf_view(request):
     doc.build(elements)
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
+
+@login_required(login_url='home')
+def doctor_reports(request):
+    """
+    Renders the Doctor's Reports Dashboard with comprehensive patient activity data,
+    graphical representations, and export options.
+    """
+    # Ensure only 'doctor' or 'admin' role can access this dashboard
+    if not hasattr(request.user, 'staff') or request.user.staff.role not in ['doctor', 'admin']:
+        messages.error(request, "Access denied. You do not have permission to view this page.")
+        return redirect('home')
+
+    all_patients = Patient.objects.all().order_by('full_name')
+
+    # Get filter parameters from GET request
+    selected_patient_id = request.GET.get('patient_id')
+    date_from_param = request.GET.get('date_from')
+    date_to_param = request.GET.get('date_to')
+    export_type = request.GET.get('export_type') # 'csv', 'pdf'
+
+    current_patient = None
+    if selected_patient_id:
+        try:
+            current_patient = get_object_or_404(Patient, id=selected_patient_id)
+        except Exception as e:
+            messages.error(request, f"Selected patient not found: {e}")
+            current_patient = None
+            selected_patient_id = None # Reset if patient not found
+
+    # If no patient is selected, no detailed data is fetched beyond initial overview
+    if not current_patient:
+        context = {
+            'all_patients': all_patients,
+            'selected_patient': None,
+            'date_from': date_from_param,
+            'date_to': date_to_param,
+            # Initialize empty lists for charts/tables if no patient selected
+            'consultations': [], 'prescriptions': [], 'vitals': [], 'lab_test_groups': [],
+            'nursing_notes': [], 'admissions': [], 'care_plans': [], 'referrals': [],
+            'appointments': [], 'bills': [], 'payments': [], 'handover_logs': [],
+            'summary': {}, # Empty summary
+            # Chart data will also be empty if no patient
+            'consultation_labels_json': json.dumps([]), 'consultation_data_json': json.dumps([]),
+            'prescription_labels_json': json.dumps([]), 'prescription_data_json': json.dumps([]),
+            'vital_bp_labels_json': json.dumps([]), 'vital_sys_data_json': json.dumps([]), 'vital_dia_data_json': json.dumps([]),
+            'lab_status_labels_json': json.dumps([]), 'lab_status_data_json': json.dumps([]),
+            'top_meds_labels_json': json.dumps([]), 'top_meds_data_json': json.dumps([]),
+        }
+        return render(request, 'hms_admin/doctor_reports.html', context)
+
+
+    # --- Fetch Data for Selected Patient and Date Range ---
+    
+    # 1. BASIC PATIENT INFO
+    # Calculate age properly
+    today = date.today()
+    age = today.year - current_patient.date_of_birth.year - ((today.month, today.day) < (current_patient.date_of_birth.month, current_patient.date_of_birth.day))
+
+    # Handle patient photo
+    photo_url = ''
+    if current_patient.photo and hasattr(current_patient.photo, 'url'):
+        try:
+            if default_storage.exists(current_patient.photo.name):
+                photo_url = current_patient.photo.url
+        except Exception as e:
+            logger.warning(f"Error accessing patient photo for patient {current_patient.id}: {e}")
+            pass
+
+    patient_data_for_display = {
+        'id': current_patient.id,
+        'full_name': current_patient.full_name,
+        'gender': current_patient.gender,
+        'date_of_birth': current_patient.date_of_birth.strftime('%Y-%m-%d'),
+        'age': age,
+        'blood_group': current_patient.blood_group,
+        'phone': current_patient.phone,
+        'email': current_patient.email or 'N/A',
+        'address': current_patient.address,
+        'marital_status': current_patient.marital_status,
+        'nationality': current_patient.nationality,
+        'state_of_origin': current_patient.state_of_origin or 'N/A',
+        'id_type': current_patient.id_type or 'N/A',
+        'id_number': current_patient.id_number or 'N/A',
+        'status': current_patient.get_status_display(), # Use get_status_display
+        'is_inpatient': current_patient.is_inpatient,
+        'date_registered': current_patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+        'photo_url': photo_url,
+        'next_of_kin_name': current_patient.next_of_kin_name,
+        'next_of_kin_phone': current_patient.next_of_kin_phone,
+        'next_of_kin_relationship': current_patient.next_of_kin_relationship or 'N/A',
+        'next_of_kin_email': current_patient.next_of_kin_email or 'N/A',
+        'next_of_kin_address': current_patient.next_of_kin_address or 'N/A',
+        'diagnosis': current_patient.diagnosis or 'N/A',
+        'medication': current_patient.medication or 'N/A',
+        'notes': current_patient.notes or 'N/A',
+        'referred_by': current_patient.referred_by or 'N/A',
+    }
+
+    # Apply date filters to all relevant querysets
+    # Consultations
+    consultations_qs = apply_date_filter(
+        current_patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
+        date_from_param, date_to_param, 'created_at'
+    )
+    consultations = []
+    for c in consultations_qs:
+        consultations.append({
+            'date': c.created_at.strftime('%Y-%m-%d %H:%M'),
+            'doctor': c.doctor.get_full_name() if c.doctor else 'Unknown',
+            'symptoms': c.symptoms,
+            'diagnosis_summary': c.diagnosis_summary,
+            'advice': c.advice,
+        })
+
+    # Prescriptions
+    prescriptions_qs = apply_date_filter(
+        current_patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
+        date_from_param, date_to_param, 'created_at'
+    )
+    prescriptions = []
+    for p in prescriptions_qs:
+        prescriptions.append({
+            'date': p.created_at.strftime('%Y-%m-%d %H:%M'),
+            'medication': p.medication,
+            'instructions': p.instructions,
+            'start_date': p.start_date.strftime('%Y-%m-%d'),
+            'prescribed_by': p.prescribed_by.get_full_name() if p.prescribed_by else 'Unknown',
+        })
+    
+    # Vitals
+    vitals_qs = apply_date_filter(
+        Vitals.objects.filter(patient=current_patient).order_by('recorded_at'), # Order by oldest to newest for trend charts
+        date_from_param, date_to_param, 'recorded_at'
+    )
+    vitals = []
+    for v in vitals_qs:
+        vitals.append({
+            'recorded_at': v.recorded_at.strftime('%Y-%m-%d %H:%M'),
+            'temperature': v.temperature,
+            'blood_pressure': v.blood_pressure,
+            'pulse': v.pulse,
+            'respiratory_rate': v.respiratory_rate,
+            'weight': v.weight,
+            'height': v.height,
+            'bmi': v.bmi,
+            'recorded_by': v.recorded_by,
+            'notes': v.notes or ''
+        })
+
+    # Lab Tests & Results (Grouped by test_request_id UUID)
+    lab_tests_qs = apply_date_filter(
+        current_patient.lab_tests.select_related('category', 'performed_by', 'requested_by', 'recorded_by').order_by('-requested_at'),
+        date_from_param, date_to_param, 'requested_at'
+    )
+
+    grouped_lab_tests = defaultdict(list)
+    for test in lab_tests_qs:
+        grouped_lab_tests[test.test_request_id].append(test)
+
+    lab_test_groups = []
+    for request_id, tests_in_group in grouped_lab_tests.items():
+        first_test = tests_in_group[0]
+
+        doctor_comment_data = None
+        if first_test.doctor_comments:
+            try:
+                comment = DoctorComments.objects.get(id=first_test.doctor_comments)
+                doctor_comment_data = {
+                    "id": comment.id,
+                    "comment": comment.comments,
+                    "doctor_name": comment.doctor_name,
+                    "date": comment.date.strftime('%Y-%m-%d %H:%M')
+                }
+            except DoctorComments.DoesNotExist:
+                pass
+
+        lab_file_data = None
+        if first_test.labresulttestid:
+            try:
+                lab_file = LabResultFile.objects.select_related('uploaded_by').get(id=first_test.labresulttestid)
+                file_url = ''
+                file_name = ''
+                if lab_file.result_file and hasattr(lab_file.result_file, 'url'):
+                    try:
+                        if default_storage.exists(lab_file.result_file.name):
+                            file_url = lab_file.result_file.url
+                            file_name = lab_file.result_file.name.split('/')[-1]
+                    except Exception as e:
+                        logger.warning(f"Error accessing lab result file {lab_file.id}: {e}")
+                        pass
+                
+                lab_file_data = {
+                    "id": lab_file.id,
+                    "file_url": file_url,
+                    "file_name": file_name,
+                    "uploaded_at": lab_file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+                    "uploaded_by": lab_file.uploaded_by.get_full_name() if lab_file.uploaded_by else 'Unknown'
+                }
+            except LabResultFile.DoesNotExist:
+                pass
+
+        tests_data = []
+        for test in tests_in_group:
+            tests_data.append({
+                'id': test.id,
+                'test_name': test.test_name,
+                'category': test.category.name if test.category else 'N/A',
+                'status': test.get_status_display(),
+                'status_code': test.status,
+                'result_value': test.result_value or 'N/A',
+                'normal_range': test.normal_range or 'N/A',
+                'notes': test.notes or 'N/A',
+                'instructions': test.instructions or 'N/A',
+                'doctor_name': test.doctor_name or 'N/A',
+                'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+                'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
+                'recorded_by': test.recorded_by.get_full_name() if test.recorded_by else 'N/A',
+                'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else 'N/A',
+                'submitted_on': test.submitted_on.strftime('%Y-%m-%d'),
+                'testcompleted': test.testcompleted,
+            })
+        tests_data.sort(key=lambda x: x['test_name']) # Sort individual tests within a group
+
+        group_statuses = [test.status for test in tests_in_group]
+        if all(s == 'completed' for s in group_statuses):
+            group_status = 'completed'
+        elif any(s == 'in_progress' for s in group_statuses):
+            group_status = 'in_progress'
+        elif any(s == 'cancelled' for s in group_statuses):
+            group_status = 'cancelled'
+        else:
+            group_status = 'pending'
+
+        lab_test_groups.append({
+            "request_id": str(request_id),
+            "requested_at": first_test.requested_at.strftime('%Y-%m-%d %H:%M'),
+            "submitted_on": first_test.submitted_on.strftime('%Y-%m-%d'),
+            "doctor_name": first_test.doctor_name or 'N/A',
+            "requested_by": first_test.requested_by.get_full_name() if first_test.requested_by else 'N/A',
+            "group_status": group_status,
+            "tests_count": len(tests_in_group),
+            "completed_tests_count": len([t for t in tests_in_group if t.status == 'completed']),
+            "pending_tests_count": len([t for t in tests_in_group if t.status == 'pending']),
+            "doctor_comment": doctor_comment_data,
+            "result_file": lab_file_data,
+            "tests": tests_data
+        })
+    lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True) # Sort groups by requested time
+
+    # Nursing Notes
+    nursing_notes_qs = apply_date_filter(
+        current_patient.nursing_notes.order_by('-note_datetime'),
+        date_from_param, date_to_param, 'note_datetime'
+    )
+    nursing_notes = []
+    for n in nursing_notes_qs:
+        nursing_notes.append({
+            'date': n.note_datetime.strftime('%Y-%m-%d %H:%M'),
+            'nurse': n.nurse,
+            'note_type': n.get_note_type_display(),
+            'notes': n.notes,
+            'patient_status': n.patient_status or 'N/A',
+            'follow_up': n.follow_up or 'N/A',
+        })
+
+    # Admissions
+    admissions_qs = apply_date_filter(
+        Admission.objects.filter(patient=current_patient).order_by('-admission_date'),
+        date_from_param, date_to_param, 'admission_date', is_datetime_field=False
+    )
+    admissions = []
+    for a in admissions_qs:
+        admissions.append({
+            'admission_date': a.admission_date.strftime('%Y-%m-%d'),
+            'doctor_assigned': a.doctor_assigned,
+            'status': a.get_status_display(),
+            'discharge_date': a.discharge_date.strftime('%Y-%m-%d') if a.discharge_date else 'N/A',
+            'discharge_notes': a.discharge_notes or 'N/A',
+            'admitted_by': a.admitted_by or 'N/A',
+        })
+
+    # Care Plans
+    care_plans_qs = apply_date_filter(
+        CarePlan.objects.filter(patient=current_patient).select_related('created_by').order_by('-created_at'),
+        date_from_param, date_to_param, 'created_at'
+    )
+    care_plans = []
+    for cp in care_plans_qs:
+        care_plans.append({
+            'created_at': cp.created_at.strftime('%Y-%m-%d %H:%M'),
+            'created_by': cp.created_by.get_full_name() if cp.created_by else 'Unknown',
+            'clinical_findings': cp.clinical_findings,
+            'plan_of_care': cp.plan_of_care,
+        })
+
+    # Referrals
+    referrals_qs = Referral.objects.filter(patient=current_patient).select_related('department').order_by('-id') # Assuming 'id' can order them, or add a created_at field
+    referrals = []
+    for r in referrals_qs:
+        referrals.append({
+            'department': r.department.name,
+            'notes': r.notes,
+        })
+
+    # Appointments
+    appointments_qs = apply_date_filter(
+        Appointment.objects.filter(patient=current_patient).select_related('department').order_by('-scheduled_time'),
+        date_from_param, date_to_param, 'scheduled_time'
+    )
+    appointments = []
+    for appt in appointments_qs:
+        appointments.append({
+            'scheduled_time': appt.scheduled_time.strftime('%Y-%m-%d %H:%M'),
+            'department': appt.department.name,
+        })
+
+    # Bills
+    bills_qs = apply_date_filter(
+        current_patient.bills.prefetch_related('items__service_type').order_by('-created_at'),
+        date_from_param, date_to_param, 'created_at'
+    )
+    bills = []
+    for b in bills_qs:
+        bill_items = []
+        for item in b.items.all():
+            bill_items.append({
+                'description': item.description,
+                'service_type': item.service_type.name,
+                'quantity': item.quantity,
+                'unit_price': float(item.unit_price),
+                'total_price': float(item.total_price),
+            })
+        bills.append({
+            'bill_number': b.bill_number,
+            'created_at': b.created_at.strftime('%Y-%m-%d %H:%M'),
+            'total_amount': float(b.total_amount),
+            'discount_amount': float(b.discount_amount),
+            'final_amount': float(b.final_amount),
+            'amount_paid': float(b.amount_paid()),
+            'outstanding_amount': float(b.outstanding_amount()),
+            'status': b.get_status_display(),
+            'notes': b.notes or 'N/A',
+            'items': bill_items,
+        })
+
+    # Payments
+    payments_qs = apply_date_filter(
+        current_patient.payments.select_related('processed_by', 'bill').order_by('-payment_date'),
+        date_from_param, date_to_param, 'payment_date'
+    )
+    payments = []
+    for pay in payments_qs:
+        payments.append({
+            'amount': float(pay.amount),
+            'payment_date': pay.payment_date.strftime('%Y-%m-%d %H:%M'),
+            'payment_method': pay.get_payment_method_display(),
+            'payment_reference': pay.payment_reference or 'N/A',
+            'status': pay.get_status_display(),
+            'processed_by': pay.processed_by.get_full_name() if pay.processed_by else 'Unknown',
+            'bill_number': pay.bill.bill_number if pay.bill else 'N/A',
+        })
+    
+    # Handover Logs
+    handover_logs_qs = apply_date_filter(
+        HandoverLog.objects.filter(patient=current_patient).select_related('author').order_by('-timestamp'),
+        date_from_param, date_to_param, 'timestamp'
+    )
+    handover_logs = []
+    for hl in handover_logs_qs:
+        handover_logs.append({
+            'timestamp': hl.timestamp.strftime('%Y-%m-%d %H:%M'),
+            'author': hl.author.get_full_name() if hl.author else 'Unknown',
+            'notes': hl.notes,
+        })
+
+
+    # --- Prepare Data for Charts ---
+    
+    # Consultation Frequency (Last 12 months)
+    consultation_labels = []
+    consultation_data = []
+    for i in range(11, -1, -1): # From 11 months ago to current month
+        month_start = (timezone.now() - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+        
+        count = Consultation.objects.filter(
+            patient=current_patient,
+            created_at__range=[month_start, month_end]
+        ).count()
+        consultation_labels.append(month_start.strftime('%b %Y'))
+        consultation_data.append(count)
+
+    # Top 5 Prescribed Medications (overall for this patient)
+    top_medications = Prescription.objects.filter(patient=current_patient)\
+                                        .values('medication')\
+                                        .annotate(count=Count('medication'))\
+                                        .order_by('-count')[:5]
+    top_meds_labels = [m['medication'] for m in top_medications]
+    top_meds_data = [m['count'] for m in top_medications]
+
+    # Lab Test Status Distribution (for current patient within filtered range)
+    lab_status_counts = LabTest.objects.filter(patient=current_patient)\
+                                    .values('status')\
+                                    .annotate(count=Count('status'))\
+                                    .order_by('status')
+    lab_status_labels = [s['status'] for s in lab_status_counts]
+    lab_status_data = [s['count'] for s in lab_status_counts]
+
+    # Vitals Trends (Blood Pressure, Temperature over time) - limited to last N records for clarity
+    vitals_bp_labels = [v.recorded_at.strftime('%m-%d %H:%M') for v in vitals_qs[:20]] # Last 20 vitals
+    vitals_sys_data = [int(v.blood_pressure.split('/')[0]) if v.blood_pressure and '/' in v.blood_pressure else None for v in vitals_qs[:20]]
+    vitals_dia_data = [int(v.blood_pressure.split('/')[1]) if v.blood_pressure and '/' in v.blood_pressure else None for v in vitals_qs[:20]]
+    vitals_temp_data = [v.temperature for v in vitals_qs[:20]]
+
+    # Ensure no None values for charts, convert to 0 or filter
+    vitals_sys_data = [x if x is not None else 0 for x in vitals_sys_data]
+    vitals_dia_data = [x if x is not None else 0 for x in vitals_dia_data]
+    vitals_temp_data = [x if x is not None else 0 for x in vitals_temp_data]
+
+
+    # --- Prepare Summary Statistics ---
+    summary = {
+        'total_consultations': len(consultations),
+        'total_prescriptions': len(prescriptions),
+        'total_vitals': len(vitals),
+        'total_lab_test_groups': len(lab_test_groups),
+        'total_individual_lab_tests': sum(len(group['tests']) for group in lab_test_groups),
+        'pending_lab_test_groups': len([g for g in lab_test_groups if g['group_status'] in ['pending', 'in_progress']]),
+        'completed_lab_test_groups': len([g for g in lab_test_groups if g['group_status'] == 'completed']),
+        'total_nursing_notes': len(nursing_notes),
+        'total_admissions': len(admissions),
+        'current_admission': any(a['status'] == 'Admitted' for a in admissions),
+        'total_bills': len(bills),
+        'outstanding_bills_count': len([b for b in bills if b['outstanding_amount'] > 0]),
+        'total_payments': len(payments),
+        'total_referrals': len(referrals),
+        'total_appointments': len(appointments),
+        'total_care_plans': len(care_plans),
+        'total_handover_logs': len(handover_logs),
+        'total_amount_billed': sum(b['final_amount'] for b in bills),
+        'total_amount_paid': sum(p['amount'] for p in payments),
+    }
+
+
+    # --- Handle Exports ---
+    if export_type == 'csv':
+        return _export_doctor_report_csv(
+            patient_data_for_display, consultations, prescriptions, vitals,
+            lab_test_groups, nursing_notes, admissions, care_plans,
+            referrals, appointments, bills, payments, handover_logs, summary
+        )
+    elif export_type == 'pdf':
+        return _export_doctor_report_pdf(
+            patient_data_for_display, consultations, prescriptions, vitals,
+            lab_test_groups, nursing_notes, admissions, care_plans,
+            referrals, appointments, bills, payments, handover_logs, summary
+        )
+
+    # --- Render Page ---
+    context = {
+        'all_patients': all_patients,
+        'selected_patient': patient_data_for_display,
+        'date_from': date_from_param,
+        'date_to': date_to_param,
+
+        # Detailed Data for Tables
+        'consultations': consultations,
+        'prescriptions': prescriptions,
+        'vitals': vitals, # Ordered by oldest to newest for charts
+        'lab_test_groups': lab_test_groups, # Grouped Lab Tests
+        'nursing_notes': nursing_notes,
+        'admissions': admissions,
+        'care_plans': care_plans,
+        'referrals': referrals,
+        'appointments': appointments,
+        'bills': bills,
+        'payments': payments,
+        'handover_logs': handover_logs,
+        'summary': summary,
+
+        # Chart Data (JSON serialized)
+        'consultation_labels_json': json.dumps(consultation_labels),
+        'consultation_data_json': json.dumps(consultation_data),
+        'top_meds_labels_json': json.dumps(top_meds_labels),
+        'top_meds_data_json': json.dumps(top_meds_data),
+        'lab_status_labels_json': json.dumps(lab_status_labels),
+        'lab_status_data_json': json.dumps(lab_status_data),
+        'vital_bp_labels_json': json.dumps(vitals_bp_labels),
+        'vital_sys_data_json': json.dumps(vitals_sys_data),
+        'vital_dia_data_json': json.dumps(vitals_dia_data),
+        'vital_temp_data_json': json.dumps(vitals_temp_data),
+    }
+
+    return render(request, 'hms_admin/doctor_reports.html', context)
+
+# --- Export Helper Functions ---
+
+def _export_doctor_report_csv(
+    patient_info, consultations, prescriptions, vitals,
+    lab_test_groups, nursing_notes, admissions, care_plans,
+    referrals, appointments, bills, payments, handover_logs, summary
+):
+    response = HttpResponse(content_type='text/csv')
+    file_name = f"Doctor_Report_{patient_info['full_name'].replace(' ', '_')}_{timezone.now().strftime('%Y%m%d%H%M')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+
+    writer = csv.writer(response)
+
+    # Patient Information
+    writer.writerow(["--- Patient Information ---"])
+    writer.writerow(["Field", "Value"])
+    for key, value in patient_info.items():
+        if isinstance(value, str) and "photo_url" in key: # Exclude photo URL from CSV
+             continue
+        writer.writerow([key.replace('_', ' ').title(), value])
+    writer.writerow([]) # Spacer
+
+    # Summary
+    writer.writerow(["--- Summary ---"])
+    for key, value in summary.items():
+        writer.writerow([key.replace('_', ' ').title(), value])
+    writer.writerow([])
+
+    # Consultations
+    if consultations:
+        writer.writerow(["--- Consultations ---"])
+        writer.writerow(["Date", "Doctor", "Symptoms", "Diagnosis Summary", "Advice"])
+        for c in consultations:
+            writer.writerow([c['date'], c['doctor'], c['symptoms'], c['diagnosis_summary'], c['advice']])
+        writer.writerow([])
+
+    # Prescriptions
+    if prescriptions:
+        writer.writerow(["--- Prescriptions ---"])
+        writer.writerow(["Date", "Medication", "Instructions", "Start Date", "Prescribed By"])
+        for p in prescriptions:
+            writer.writerow([p['date'], p['medication'], p['instructions'], p['start_date'], p['prescribed_by']])
+        writer.writerow([])
+
+    # Vitals
+    if vitals:
+        writer.writerow(["--- Vitals ---"])
+        writer.writerow(["Recorded At", "Recorded By", "Temp", "BP", "Pulse", "Resp Rate", "Weight", "Height", "BMI", "Notes"])
+        for v in vitals:
+            writer.writerow([
+                v['recorded_at'], v['recorded_by'], v['temperature'], v['blood_pressure'],
+                v['pulse'], v['respiratory_rate'], v['weight'], v['height'], v['bmi'], v['notes']
+            ])
+        writer.writerow([])
+
+    # Lab Tests
+    if lab_test_groups:
+        writer.writerow(["--- Lab Tests ---"])
+        for group in lab_test_groups:
+            writer.writerow([f"Test Request ID: {group['request_id']}"])
+            writer.writerow([f"Requested At: {group['requested_at']}, Doctor: {group['doctor_name']}, Status: {group['group_status'].title()}"])
+            if group['doctor_comment']:
+                writer.writerow(["Doctor Comment:", group['doctor_comment']['comment']])
+            if group['result_file'] and group['result_file']['file_url']:
+                 writer.writerow(["Lab Result File:", group['result_file']['file_name'], group['result_file']['file_url']])
+            writer.writerow(["Test Name", "Category", "Status", "Result Value", "Normal Range", "Date Performed", "Performed By"])
+            for test in group['tests']:
+                writer.writerow([
+                    test['test_name'], test['category'], test['status'], test['result_value'],
+                    test['normal_range'], test['date_performed'], test['performed_by']
+                ])
+            writer.writerow([]) # Spacer after each group
+
+    # Nursing Notes
+    if nursing_notes:
+        writer.writerow(["--- Nursing Notes ---"])
+        writer.writerow(["Date", "Nurse", "Note Type", "Notes", "Patient Status", "Follow Up"])
+        for n in nursing_notes:
+            writer.writerow([n['date'], n['nurse'], n['note_type'], n['notes'], n['patient_status'], n['follow_up']])
+        writer.writerow([])
+
+    # Admissions
+    if admissions:
+        writer.writerow(["--- Admissions ---"])
+        writer.writerow(["Admission Date", "Doctor Assigned", "Status", "Discharge Date", "Discharge Notes", "Admitted By"])
+        for a in admissions:
+            writer.writerow([a['admission_date'], a['doctor_assigned'], a['status'], a['discharge_date'], a['discharge_notes'], a['admitted_by']])
+        writer.writerow([])
+
+    # Care Plans
+    if care_plans:
+        writer.writerow(["--- Care Plans ---"])
+        writer.writerow(["Created At", "Created By", "Clinical Findings", "Plan of Care"])
+        for cp in care_plans:
+            writer.writerow([cp['created_at'], cp['created_by'], cp['clinical_findings'], cp['plan_of_care']])
+        writer.writerow([])
+    
+    # Referrals
+    if referrals:
+        writer.writerow(["--- Referrals ---"])
+        writer.writerow(["Department", "Notes"])
+        for r in referrals:
+            writer.writerow([r['department'], r['notes']])
+        writer.writerow([])
+
+    # Appointments
+    if appointments:
+        writer.writerow(["--- Appointments ---"])
+        writer.writerow(["Scheduled Time", "Department"])
+        for appt in appointments:
+            writer.writerow([appt['scheduled_time'], appt['department']])
+        writer.writerow([])
+
+    # Bills
+    if bills:
+        writer.writerow(["--- Patient Bills ---"])
+        for b in bills:
+            writer.writerow([f"Bill Number: {b['bill_number']}"])
+            writer.writerow([f"Created At: {b['created_at']}, Total: ₦{b['total_amount']:.2f}, Discount: ₦{b['discount_amount']:.2f}, Final: ₦{b['final_amount']:.2f}, Paid: ₦{b['amount_paid']:.2f}, Outstanding: ₦{b['outstanding_amount']:.2f}, Status: {b['status']}"])
+            if b['notes'] != 'N/A':
+                 writer.writerow(["Notes:", b['notes']])
+            if b['items']:
+                writer.writerow(["  Item Description", "Service Type", "Quantity", "Unit Price", "Total Price"])
+                for item in b['items']:
+                    writer.writerow([
+                        f"  {item['description']}", item['service_type'], item['quantity'],
+                        f"₦{item['unit_price']:.2f}", f"₦{item['total_price']:.2f}"
+                    ])
+            writer.writerow([])
+
+    # Payments
+    if payments:
+        writer.writerow(["--- Payments ---"])
+        writer.writerow(["Amount", "Payment Date", "Method", "Reference", "Status", "Processed By", "Bill No."])
+        for pay in payments:
+            writer.writerow([
+                f"₦{pay['amount']:.2f}", pay['payment_date'], pay['payment_method'],
+                pay['payment_reference'], pay['status'], pay['processed_by'], pay['bill_number']
+            ])
+        writer.writerow([])
+    
+    # Handover Logs
+    if handover_logs:
+        writer.writerow(["--- Handover Logs ---"])
+        writer.writerow(["Timestamp", "Author", "Notes"])
+        for hl in handover_logs:
+            writer.writerow([hl['timestamp'], hl['author'], hl['notes']])
+        writer.writerow([])
+
+
+    return response
+
+def _export_doctor_report_pdf(
+    patient_info, consultations, prescriptions, vitals,
+    lab_test_groups, nursing_notes, admissions, care_plans,
+    referrals, appointments, bills, payments, handover_logs, summary
+):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            rightMargin=50, leftMargin=50,
+                            topMargin=50, bottomMargin=50)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Title
+    elements.append(Paragraph("Doctor's Comprehensive Report", styles['h1']))
+    elements.append(Paragraph(f"For Patient: <b>{patient_info['full_name']} (ID: {patient_info['id']})</b>", styles['h2']))
+    elements.append(Paragraph(f"Report Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+    if patient_info.get('date_from') and patient_info.get('date_to'):
+         elements.append(Paragraph(f"Filtered Period: {patient_info['date_from']} to {patient_info['date_to']}", styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    # Patient Information Table
+    elements.append(Paragraph("Patient Demographics", styles['h3']))
+    patient_data_table = [
+        ['Field', 'Value'],
+        ['Full Name', patient_info['full_name']],
+        ['Date of Birth', patient_info['date_of_birth']],
+        ['Age', patient_info['age']],
+        ['Gender', patient_info['gender']],
+        ['Blood Group', patient_info['blood_group']],
+        ['Phone', patient_info['phone']],
+        ['Email', patient_info['email']],
+        ['Address', patient_info['address']],
+        ['Marital Status', patient_info['marital_status']],
+        ['Nationality', patient_info['nationality']],
+        ['Current Status', patient_info['status']],
+        ['Is Inpatient', 'Yes' if patient_info['is_inpatient'] else 'No'],
+        ['Date Registered', patient_info['date_registered']],
+        ['Diagnosis', patient_info['diagnosis']],
+        ['Medication', patient_info['medication']],
+        ['Next of Kin', patient_info['next_of_kin_name']],
+        ['Next of Kin Phone', patient_info['next_of_kin_phone']],
+    ]
+    table_style_patient = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')), # Primary blue header
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+    ])
+    p_table = Table(patient_data_table, colWidths=[150, 350])
+    p_table.setStyle(table_style_patient)
+    elements.append(p_table)
+    elements.append(Spacer(1, 12))
+
+    # Summary Section
+    elements.append(Paragraph("Summary", styles['h3']))
+    summary_data = [
+        ['Category', 'Count'],
+        ['Total Consultations', summary['total_consultations']],
+        ['Total Prescriptions', summary['total_prescriptions']],
+        ['Total Vitals Recorded', summary['total_vitals']],
+        ['Total Lab Test Requests', summary['total_individual_lab_tests']],
+        ['Pending Lab Tests', summary['pending_lab_test_groups']],
+        ['Completed Lab Tests', summary['completed_lab_test_groups']],
+        ['Total Nursing Notes', summary['total_nursing_notes']],
+        ['Total Admissions', summary['total_admissions']],
+        ['Total Bills', summary['total_bills']],
+        ['Outstanding Bills', summary['outstanding_bills_count']],
+        ['Total Payments', summary['total_payments']],
+        ['Total Referrals', summary['total_referrals']],
+        ['Total Appointments', summary['total_appointments']],
+        ['Total Care Plans', summary['total_care_plans']],
+        ['Total Handover Logs', summary['total_handover_logs']],
+        ['Total Amount Billed', f"₦{summary['total_amount_billed']:.2f}"],
+        ['Total Amount Paid', f"₦{summary['total_amount_paid']:.2f}"],
+    ]
+    summary_table = Table(summary_data, colWidths=[250, 150])
+    summary_table.setStyle(table_style_patient) # Reuse patient table style
+    elements.append(summary_table)
+    elements.append(Spacer(1, 12))
+
+
+    # Consultations
+    if consultations:
+        elements.append(Paragraph("Consultations", styles['h3']))
+        data = [['Date', 'Doctor', 'Symptoms', 'Diagnosis Summary', 'Advice']]
+        for c in consultations:
+            data.append([c['date'], c['doctor'], Paragraph(c['symptoms'], styles['Normal']), Paragraph(c['diagnosis_summary'], styles['Normal']), Paragraph(c['advice'], styles['Normal'])])
+        table = Table(data, colWidths=[90, 80, 100, 100, 100]) # Adjusted for Paragraph
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6c757d')), # Gray header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (2, 1), (4, -1), True), # Enable word wrap for text fields
+            ('LEFTPADDING', (2, 1), (4, -1), 6),
+            ('RIGHTPADDING', (2, 1), (4, -1), 6),
+            ('TOPPADDING', (2, 1), (4, -1), 6),
+            ('BOTTOMPADDING', (2, 1), (4, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Prescriptions
+    if prescriptions:
+        elements.append(Paragraph("Prescriptions", styles['h3']))
+        data = [['Date', 'Medication', 'Instructions', 'Start Date', 'Prescribed By']]
+        for p in prescriptions:
+            data.append([p['date'], p['medication'], Paragraph(p['instructions'], styles['Normal']), p['start_date'], p['prescribed_by']])
+        table = Table(data, colWidths=[90, 120, 150, 70, 70])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#28a745')), # Success green header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (2, 1), (2, -1), True),
+            ('LEFTPADDING', (2, 1), (2, -1), 6),
+            ('RIGHTPADDING', (2, 1), (2, -1), 6),
+            ('TOPPADDING', (2, 1), (2, -1), 6),
+            ('BOTTOMPADDING', (2, 1), (2, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Vitals
+    if vitals:
+        elements.append(Paragraph("Vitals", styles['h3']))
+        data = [['Recorded At', 'Recorded By', 'Temp', 'BP', 'Pulse', 'Resp Rate', 'Weight (kg)', 'Height (cm)', 'BMI', 'Notes']]
+        for v in vitals:
+            data.append([
+                v['recorded_at'], v['recorded_by'], str(v['temperature']) if v['temperature'] else 'N/A',
+                v['blood_pressure'], str(v['pulse']) if v['pulse'] else 'N/A',
+                str(v['respiratory_rate']) if v['respiratory_rate'] else 'N/A',
+                str(v['weight']) if v['weight'] else 'N/A',
+                str(v['height']) if v['height'] else 'N/A',
+                str(v['bmi']) if v['bmi'] else 'N/A', Paragraph(v['notes'], styles['Normal'])
+            ])
+        table = Table(data, colWidths=[80, 70, 30, 45, 30, 40, 40, 40, 30, 100])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ffc107')), # Warning yellow header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (9, 1), (9, -1), True),
+            ('LEFTPADDING', (9, 1), (9, -1), 6),
+            ('RIGHTPADDING', (9, 1), (9, -1), 6),
+            ('TOPPADDING', (9, 1), (9, -1), 6),
+            ('BOTTOMPADDING', (9, 1), (9, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Lab Tests (Grouped)
+    if lab_test_groups:
+        elements.append(Paragraph("Lab Tests", styles['h3']))
+        for group in lab_test_groups:
+            elements.append(Paragraph(f"<b>Test Request ID: {group['request_id']}</b>", styles['Normal']))
+            elements.append(Paragraph(f"Requested At: {group['requested_at']}, Doctor: {group['doctor_name']}, Status: {group['group_status'].title()}", styles['Normal']))
+            if group['doctor_comment']:
+                elements.append(Paragraph(f"<i>Doctor Comment: {group['doctor_comment']['comment']}</i>", styles['Normal']))
+            if group['result_file'] and group['result_file']['file_url']:
+                elements.append(Paragraph(f"Lab Result File: <link href='{group['result_file']['file_url']}'>{group['result_file']['file_name']}</link>", styles['Normal']))
+            
+            data = [['Test Name', 'Category', 'Status', 'Result Value', 'Normal Range', 'Date Performed', 'Performed By']]
+            for test in group['tests']:
+                data.append([
+                    test['test_name'], test['category'], test['status'],
+                    Paragraph(test['result_value'], styles['Normal']), test['normal_range'],
+                    test['date_performed'], test['performed_by']
+                ])
+            table = Table(data, colWidths=[90, 70, 50, 100, 70, 70, 70])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#17a2b8')), # Info blue header
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('BOX', (0, 0), (-1, -1), 1, colors.black),
+                ('WORDWRAP', (3, 1), (3, -1), True),
+                ('LEFTPADDING', (3, 1), (3, -1), 6),
+                ('RIGHTPADDING', (3, 1), (3, -1), 6),
+                ('TOPPADDING', (3, 1), (3, -1), 6),
+                ('BOTTOMPADDING', (3, 1), (3, -1), 6),
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 12))
+
+    # Nursing Notes
+    if nursing_notes:
+        elements.append(Paragraph("Nursing Notes", styles['h3']))
+        data = [['Date', 'Nurse', 'Note Type', 'Notes', 'Patient Status', 'Follow Up']]
+        for n in nursing_notes:
+            data.append([n['date'], n['nurse'], n['note_type'], Paragraph(n['notes'], styles['Normal']), n['patient_status'], Paragraph(n['follow_up'], styles['Normal'])])
+        table = Table(data, colWidths=[90, 70, 80, 100, 70, 90])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6f42c1')), # Purple header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (3, 1), (3, -1), True),
+            ('WORDWRAP', (5, 1), (5, -1), True),
+            ('LEFTPADDING', (3, 1), (3, -1), 6),
+            ('RIGHTPADDING', (3, 1), (3, -1), 6),
+            ('TOPPADDING', (3, 1), (3, -1), 6),
+            ('BOTTOMPADDING', (3, 1), (3, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Admissions
+    if admissions:
+        elements.append(Paragraph("Admissions", styles['h3']))
+        data = [['Admission Date', 'Admitted By', 'Doctor Assigned', 'Status', 'Discharge Date', 'Discharge Notes']]
+        for a in admissions:
+            data.append([a['admission_date'], a['admitted_by'], a['doctor_assigned'], a['status'], a['discharge_date'], Paragraph(a['discharge_notes'], styles['Normal'])])
+        table = Table(data, colWidths=[90, 90, 90, 50, 90, 100])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (5, 1), (5, -1), True),
+            ('LEFTPADDING', (5, 1), (5, -1), 6),
+            ('RIGHTPADDING', (5, 1), (5, -1), 6),
+            ('TOPPADDING', (5, 1), (5, -1), 6),
+            ('BOTTOMPADDING', (5, 1), (5, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Care Plans
+    if care_plans:
+        elements.append(Paragraph("Care Plans", styles['h3']))
+        data = [['Created At', 'Created By', 'Clinical Findings', 'Plan of Care']]
+        for cp in care_plans:
+            data.append([cp['created_at'], cp['created_by'], Paragraph(cp['clinical_findings'], styles['Normal']), Paragraph(cp['plan_of_care'], styles['Normal'])])
+        table = Table(data, colWidths=[100, 100, 150, 150])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#fd7e14')), # Orange header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (2, 1), (3, -1), True),
+            ('LEFTPADDING', (2, 1), (3, -1), 6),
+            ('RIGHTPADDING', (2, 1), (3, -1), 6),
+            ('TOPPADDING', (2, 1), (3, -1), 6),
+            ('BOTTOMPADDING', (2, 1), (3, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+    
+    # Referrals
+    if referrals:
+        elements.append(Paragraph("Referrals", styles['h3']))
+        data = [['Department', 'Notes']]
+        for r in referrals:
+            data.append([r['department'], Paragraph(r['notes'], styles['Normal'])])
+        table = Table(data, colWidths=[150, 350])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#20c997')), # Teal header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (1, 1), (1, -1), True),
+            ('LEFTPADDING', (1, 1), (1, -1), 6),
+            ('RIGHTPADDING', (1, 1), (1, -1), 6),
+            ('TOPPADDING', (1, 1), (1, -1), 6),
+            ('BOTTOMPADDING', (1, 1), (1, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Appointments
+    if appointments:
+        elements.append(Paragraph("Appointments", styles['h3']))
+        data = [['Scheduled Time', 'Department']]
+        for appt in appointments:
+            data.append([appt['scheduled_time'], appt['department']])
+        table = Table(data, colWidths=[200, 300])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6610f2')), # Indigo header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Bills
+    if bills:
+        elements.append(Paragraph("Bills", styles['h3']))
+        for b in bills:
+            elements.append(Paragraph(f"<b>Bill Number: {b['bill_number']}</b>", styles['Normal']))
+            elements.append(Paragraph(f"Created At: {b['created_at']}, Total: ₦{b['total_amount']:.2f}, Discount: ₦{b['discount_amount']:.2f}, Final: ₦{b['final_amount']:.2f}, Paid: ₦{b['amount_paid']:.2f}, Outstanding: ₦{b['outstanding_amount']:.2f}, Status: {b['status']}", styles['Normal']))
+            if b['notes'] != 'N/A':
+                 elements.append(Paragraph(f"Notes: {b['notes']}", styles['Normal']))
+            if b['items']:
+                elements.append(Paragraph("Items:", styles['Normal']))
+                item_data = [['Description', 'Service Type', 'Qty', 'Unit Price', 'Total Price']]
+                for item in b['items']:
+                    item_data.append([
+                        item['description'], item['service_type'], item['quantity'],
+                        f"₦{item['unit_price']:.2f}", f"₦{item['total_price']:.2f}"
+                    ])
+                item_table = Table(item_data, colWidths=[150, 100, 40, 80, 80])
+                item_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+                    ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
+                ]))
+                elements.append(item_table)
+            elements.append(Spacer(1, 12))
+
+    # Payments
+    if payments:
+        elements.append(Paragraph("Payments", styles['h3']))
+        data = [['Amount', 'Payment Date', 'Method', 'Reference', 'Status', 'Processed By', 'Bill No.']]
+        for pay in payments:
+            data.append([
+                f"₦{pay['amount']:.2f}", pay['payment_date'], pay['payment_method'],
+                pay['payment_reference'], pay['status'], pay['processed_by'], pay['bill_number']
+            ])
+        table = Table(data, colWidths=[70, 90, 70, 90, 60, 70, 50])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e83e8c')), # Pink header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+    
+    # Handover Logs
+    if handover_logs:
+        elements.append(Paragraph("Handover Logs", styles['h3']))
+        data = [['Timestamp', 'Author', 'Notes']]
+        for hl in handover_logs:
+            data.append([hl['timestamp'], hl['author'], Paragraph(hl['notes'], styles['Normal'])])
+        table = Table(data, colWidths=[100, 80, 320])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dc3545')), # Danger red header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (2, 1), (2, -1), True),
+            ('LEFTPADDING', (2, 1), (2, -1), 6),
+            ('RIGHTPADDING', (2, 1), (2, -1), 6),
+            ('TOPPADDING', (2, 1), (2, -1), 6),
+            ('BOTTOMPADDING', (2, 1), (2, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+
+    doc.build(elements)
+    buffer.seek(0)
+    return HttpResponse(buffer, content_type='application/pdf')
+
+@login_required(login_url='home')
+def receptionist_reports(request):
+    """
+    Renders the Receptionist Reports Dashboard focusing on patient registrations
+    and appointments, with graphical representations and export options.
+    """
+    # Ensure only 'receptionist' or 'admin' role can access this dashboard
+    if not hasattr(request.user, 'staff') or request.user.staff.role not in ['receptionist', 'admin']:
+        messages.error(request, "Access denied. You do not have permission to view this page.")
+        return redirect('home')
+
+    all_patients = Patient.objects.all().order_by('full_name')
+    all_departments = Department.objects.all().order_by('name')
+
+    # Get filter parameters from GET request
+    selected_patient_id = request.GET.get('patient_id')
+    date_from_param = request.GET.get('date_from')
+    date_to_param = request.GET.get('date_to')
+    export_type = request.GET.get('export_type') # 'csv', 'pdf'
+
+    current_patient = None
+    if selected_patient_id:
+        try:
+            current_patient = get_object_or_404(Patient, id=selected_patient_id)
+        except Exception as e:
+            messages.error(request, f"Selected patient not found: {e}")
+            current_patient = None
+            selected_patient_id = None # Reset if patient not found
+
+    # Base querysets for filtering
+    patients_qs = Patient.objects.all()
+    appointments_qs = Appointment.objects.all().select_related('patient', 'department')
+
+    # Apply global date filters if provided
+    patients_qs = apply_date_filter(patients_qs, date_from_param, date_to_param, 'date_registered')
+    appointments_qs = apply_date_filter(appointments_qs, date_from_param, date_to_param, 'scheduled_time')
+
+    # Apply patient filter if a patient is selected (only for appointments related to that patient)
+    if current_patient:
+        appointments_qs = appointments_qs.filter(patient=current_patient)
+        patients_qs = patients_qs.filter(id=current_patient.id) # Show only selected patient if selected
+
+    # --- Fetch Data ---
+    
+    # Patients (for table)
+    patients = []
+    for p in patients_qs.order_by('-date_registered')[:50]: # Limit for display
+        patients.append({
+            'id': p.id,
+            'full_name': p.full_name,
+            'gender': p.gender,
+            'date_of_birth': p.date_of_birth.strftime('%Y-%m-%d'),
+            'phone': p.phone,
+            'status': p.get_status_display(),
+            'date_registered': p.date_registered.strftime('%Y-%m-%d %H:%M'),
+        })
+
+    # Appointments (for table)
+    appointments = []
+    for appt in appointments_qs.order_by('scheduled_time')[:50]: # Limit for display
+        appointments.append({
+            'id': appt.id,
+            'patient_name': appt.patient.full_name,
+            'department_name': appt.department.name if appt.department else 'N/A',
+            'scheduled_time': appt.scheduled_time.strftime('%Y-%m-%d %H:%M'),
+            'reason': appt.reason_for_appointment or 'N/A',
+            'status': appt.get_status_display() if hasattr(appt, 'get_status_display') else 'N/A', # Assuming Appointment has a status field
+        })
+
+    # --- Prepare Data for Charts ---
+
+    # Monthly Patient Registrations (last 12 months)
+    monthly_reg_labels = []
+    monthly_reg_data = []
+    current_date = timezone.now()
+    for i in range(11, -1, -1):
+        month_start = (current_date - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+        
+        count = Patient.objects.filter(date_registered__range=[month_start, month_end]).count()
+        monthly_reg_labels.append(month_start.strftime('%b %Y'))
+        monthly_reg_data.append(count)
+
+    # Appointment Status Distribution
+    appt_status_counts = Appointment.objects.values('status').annotate(count=Count('status')).order_by('status')
+    appt_status_labels = [s['status'].replace('_', ' ').title() for s in appt_status_counts]
+    appt_status_data = [s['count'] for s in appt_status_counts]
+
+    # Appointments by Department (Top 5)
+    appts_by_dept = Appointment.objects.values('department__name')\
+                                    .annotate(count=Count('department__name'))\
+                                    .order_by('-count')[:5]
+    appts_by_dept_labels = [d['department__name'] for d in appts_by_dept]
+    appts_by_dept_data = [d['count'] for d in appts_by_dept]
+
+    # New Patients Last 30 Days
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    new_patients_last_30_days = Patient.objects.filter(date_registered__gte=thirty_days_ago).count()
+
+    # Upcoming Appointments Today
+    upcoming_appointments_today = Appointment.objects.filter(scheduled_time__date=date.today()).count()
+
+    # --- Prepare Summary Statistics ---
+    summary = {
+        'total_patients_registered': Patient.objects.count(),
+        'new_patients_last_30_days': new_patients_last_30_days,
+        'total_appointments': Appointment.objects.count(),
+        'upcoming_appointments_today': upcoming_appointments_today,
+        'pending_appointments': Appointment.objects.filter(status='pending').count(),
+        'completed_appointments': Appointment.objects.filter(status='completed').count(),
+        'cancelled_appointments': Appointment.objects.filter(status='cancelled').count(),
+    }
+
+
+    # --- Handle Exports ---
+    if export_type == 'csv':
+        return _export_receptionist_report_csv(
+            patients, appointments, summary, date_from_param, date_to_param, current_patient
+        )
+    elif export_type == 'pdf':
+        return _export_receptionist_report_pdf(
+            patients, appointments, summary, date_from_param, date_to_param, current_patient
+        )
+
+    # --- Render Page ---
+    context = {
+        'all_patients': all_patients,
+        'selected_patient': current_patient,
+        'date_from': date_from_param,
+        'date_to': date_to_param,
+
+        'patients': patients,
+        'appointments': appointments,
+        'summary': summary,
+
+        # Chart Data (JSON serialized)
+        'monthly_reg_labels_json': json.dumps(monthly_reg_labels),
+        'monthly_reg_data_json': json.dumps(monthly_reg_data),
+        'appt_status_labels_json': json.dumps(appt_status_labels),
+        'appt_status_data_json': json.dumps(appt_status_data),
+        'appts_by_dept_labels_json': json.dumps(appts_by_dept_labels),
+        'appts_by_dept_data_json': json.dumps(appts_by_dept_data),
+    }
+
+    return render(request, 'receptionists/receptionist_reports.html', context)
+
+
+# --- Export Helper Functions for Receptionist ---
+
+def _export_receptionist_report_csv(
+    patients, appointments, summary, date_from, date_to, current_patient
+):
+    response = HttpResponse(content_type='text/csv')
+    patient_name_slug = current_patient.full_name.replace(' ', '_') if current_patient else 'All_Patients'
+    file_name = f"Receptionist_Report_{patient_name_slug}_{timezone.now().strftime('%Y%m%d%H%M')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+
+    writer = csv.writer(response)
+
+    writer.writerow(["--- Receptionist Report ---"])
+    if current_patient:
+        writer.writerow(["Selected Patient:", current_patient.full_name])
+    if date_from and date_to:
+        writer.writerow(["Date Range:", f"{date_from} to {date_to}"])
+    elif date_from:
+        writer.writerow(["Date From:", date_from])
+    elif date_to:
+        writer.writerow(["Date To:", date_to])
+    writer.writerow(["Report Generated:", timezone.now().strftime('%Y-%m-%d %H:%M')])
+    writer.writerow([]) # Spacer
+
+    # Summary
+    writer.writerow(["--- Summary Statistics ---"])
+    for key, value in summary.items():
+        writer.writerow([key.replace('_', ' ').title(), value])
+    writer.writerow([])
+
+    # Patients
+    if patients:
+        writer.writerow(["--- Patient Registrations ---"])
+        writer.writerow(["ID", "Full Name", "Gender", "Date of Birth", "Phone", "Status", "Date Registered"])
+        for p in patients:
+            writer.writerow([p['id'], p['full_name'], p['gender'], p['date_of_birth'], p['phone'], p['status'], p['date_registered']])
+        writer.writerow([])
+
+    # Appointments
+    if appointments:
+        writer.writerow(["--- Appointments ---"])
+        writer.writerow(["ID", "Patient Name", "Department", "Scheduled Time", "Reason", "Status"])
+        for appt in appointments:
+            writer.writerow([appt['id'], appt['patient_name'], appt['department_name'], appt['scheduled_time'], appt['reason'], appt['status']])
+        writer.writerow([])
+
+    return response
+
+def _export_receptionist_report_pdf(
+    patients, appointments, summary, date_from, date_to, current_patient
+):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            rightMargin=50, leftMargin=50,
+                            topMargin=50, bottomMargin=50)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Title
+    elements.append(Paragraph("Receptionist Report", styles['h1']))
+    if current_patient:
+        elements.append(Paragraph(f"For Patient: <b>{current_patient.full_name} (ID: {current_patient.id})</b>", styles['h2']))
+    
+    if date_from and date_to:
+         elements.append(Paragraph(f"Filtered Period: {date_from} to {date_to}", styles['Normal']))
+    elif date_from:
+        elements.append(Paragraph(f"Filtered From: {date_from}", styles['Normal']))
+    elif date_to:
+        elements.append(Paragraph(f"Filtered To: {date_to}", styles['Normal']))
+    
+    elements.append(Paragraph(f"Report Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    # Summary
+    elements.append(Paragraph("Summary Statistics", styles['h3']))
+    summary_data = [['Category', 'Count']]
+    for key, value in summary.items():
+        summary_data.append([key.replace('_', ' ').title(), value])
+    summary_table = Table(summary_data, colWidths=[250, 150])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 12))
+
+    # Patients Table
+    if patients:
+        elements.append(Paragraph("Patient Registrations", styles['h3']))
+        data = [['ID', 'Full Name', 'Gender', 'D.O.B', 'Phone', 'Status', 'Registered On']]
+        for p in patients:
+            data.append([p['id'], p['full_name'], p['gender'], p['date_of_birth'], p['phone'], p['status'], p['date_registered']])
+        table = Table(data, colWidths=[30, 90, 40, 60, 70, 50, 90])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6c757d')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Appointments Table
+    if appointments:
+        elements.append(Paragraph("Appointments", styles['h3']))
+        data = [['ID', 'Patient Name', 'Department', 'Scheduled Time', 'Reason', 'Status']]
+        for appt in appointments:
+            data.append([appt['id'], appt['patient_name'], appt['department_name'], appt['scheduled_time'], Paragraph(appt['reason'], styles['Normal']), appt['status']])
+        table = Table(data, colWidths=[30, 90, 70, 90, 120, 50])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#28a745')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (4, 1), (4, -1), True),
+            ('LEFTPADDING', (4, 1), (4, -1), 6),
+            ('RIGHTPADDING', (4, 1), (4, -1), 6),
+            ('TOPPADDING', (4, 1), (4, -1), 6),
+            ('BOTTOMPADDING', (4, 1), (4, -1), 6),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return HttpResponse(buffer, content_type='application/pdf')
+
 
 ''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
 
