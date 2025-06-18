@@ -16,7 +16,7 @@ from django.views.decorators.http import require_GET
 from django.shortcuts import get_object_or_404, render
 import json
 from datetime import datetime, date
-from django.db.models import Sum
+from django.db.models import Sum, F
 from django.utils.timezone import localdate, now
 from django.utils import timezone
 from django.db.models.functions import TruncDate
@@ -37,6 +37,9 @@ from uuid import uuid4
 from django.core.files.storage import default_storage
 import csv
 from io import BytesIO
+from datetime import date, datetime, timedelta
+from django.db.models import Case, When, Value, IntegerField, F, Q, Count
+
 
 import string
 import secrets
@@ -4069,8 +4072,9 @@ def _export_doctor_report_pdf(
 @login_required(login_url='home')
 def receptionist_reports(request):
     """
-    Renders the Receptionist Reports Dashboard focusing on patient registrations
-    and appointments, with graphical representations and export options.
+    Renders the Receptionist's Reports Dashboard with patient registration,
+    admission, appointment, and referral data, along with graphical representations
+    and export options.
     """
     # Ensure only 'receptionist' or 'admin' role can access this dashboard
     if not hasattr(request.user, 'staff') or request.user.staff.role not in ['receptionist', 'admin']:
@@ -4094,148 +4098,321 @@ def receptionist_reports(request):
             messages.error(request, f"Selected patient not found: {e}")
             current_patient = None
             selected_patient_id = None # Reset if patient not found
-
-    # Base querysets for filtering
-    patients_qs = Patient.objects.all()
-    appointments_qs = Appointment.objects.all().select_related('patient', 'department')
-
-    # Apply global date filters if provided
-    patients_qs = apply_date_filter(patients_qs, date_from_param, date_to_param, 'date_registered')
-    appointments_qs = apply_date_filter(appointments_qs, date_from_param, date_to_param, 'scheduled_time')
-
-    # Apply patient filter if a patient is selected (only for appointments related to that patient)
-    if current_patient:
-        appointments_qs = appointments_qs.filter(patient=current_patient)
-        patients_qs = patients_qs.filter(id=current_patient.id) # Show only selected patient if selected
-
-    # --- Fetch Data ---
     
-    # Patients (for table)
-    patients = []
-    for p in patients_qs.order_by('-date_registered')[:50]: # Limit for display
-        patients.append({
-            'id': p.id,
-            'full_name': p.full_name,
-            'gender': p.gender,
-            'date_of_birth': p.date_of_birth.strftime('%Y-%m-%d'),
-            'phone': p.phone,
-            'status': p.get_status_display(),
-            'date_registered': p.date_registered.strftime('%Y-%m-%d %H:%M'),
-        })
+    # Base querysets (before patient-specific filtering, but after date range if global)
+    # For trend charts, we want overall data, not patient-specific, so filter dates globally.
+    # For tables, we want patient-specific data, filtered by patient and date.
 
-    # Appointments (for table)
-    appointments = []
-    for appt in appointments_qs.order_by('scheduled_time')[:50]: # Limit for display
-        appointments.append({
-            'id': appt.id,
-            'patient_name': appt.patient.full_name,
-            'department_name': appt.department.name if appt.department else 'N/A',
-            'scheduled_time': appt.scheduled_time.strftime('%Y-%m-%d %H:%M'),
-            'reason': appt.reason_for_appointment or 'N/A',
-            'status': appt.get_status_display() if hasattr(appt, 'get_status_display') else 'N/A', # Assuming Appointment has a status field
-        })
+    # Apply global date filters for overall trends if date range is set
+    filtered_patients_qs = Patient.objects.all()
+    filtered_admissions_qs = Admission.objects.all()
+    filtered_appointments_qs = Appointment.objects.all()
+    filtered_referrals_qs = Referral.objects.all()
 
-    # --- Prepare Data for Charts ---
+    if date_from_param or date_to_param:
+        filtered_patients_qs = apply_date_filter(filtered_patients_qs, date_from_param, date_to_param, 'date_registered')
+        filtered_admissions_qs = apply_date_filter(filtered_admissions_qs, date_from_param, date_to_param, 'admission_date', is_datetime_field=False)
+        filtered_appointments_qs = apply_date_filter(filtered_appointments_qs, date_from_param, date_to_param, 'scheduled_time')
+        # Referrals usually don't have a specific date field, might need 'id' or 'timestamp' if added.
+        # Assuming Referral has a 'created_at' or 'id' field for time-based filtering.
+        # For now, let's assume 'id' for ordering if no date field exists or skip time filter for referrals.
+        # If Referral model gets a 'created_at' field, use it.
+        # filtered_referrals_qs = apply_date_filter(filtered_referrals_qs, date_from_param, date_to_param, 'created_at')
 
-    # Monthly Patient Registrations (last 12 months)
-    monthly_reg_labels = []
-    monthly_reg_data = []
-    current_date = timezone.now()
-    for i in range(11, -1, -1):
-        month_start = (current_date - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        month_end = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+    
+    # --- Fetch Data for Summary & Charts (Overall & Filtered) ---
+
+    # Patient Registrations Trend (Last 6 months)
+    registration_labels = []
+    registration_data = []
+    for i in range(5, -1, -1): # Last 6 months including current
+        month_start_date = (timezone.now() - timedelta(days=30*i)).replace(day=1).date()
+        next_month_start_date = (month_start_date + timedelta(days=32)).replace(day=1) # First day of next month
         
-        count = Patient.objects.filter(date_registered__range=[month_start, month_end]).count()
-        monthly_reg_labels.append(month_start.strftime('%b %Y'))
-        monthly_reg_data.append(count)
+        count = Patient.objects.filter(
+            date_registered__date__gte=month_start_date,
+            date_registered__date__lt=next_month_start_date # Use less than for next month's start
+        ).count()
+        registration_labels.append(month_start_date.strftime('%b %Y'))
+        registration_data.append(count)
 
-    # Appointment Status Distribution
-    appt_status_counts = Appointment.objects.values('status').annotate(count=Count('status')).order_by('status')
-    appt_status_labels = [s['status'].replace('_', ' ').title() for s in appt_status_counts]
-    appt_status_data = [s['count'] for s in appt_status_counts]
+    # Admissions Trend (Last 6 months)
+    admissions_trend_labels = []
+    admissions_trend_data = []
+    for i in range(5, -1, -1):
+        month_start_date = (timezone.now() - timedelta(days=30*i)).replace(day=1).date()
+        next_month_start_date = (month_start_date + timedelta(days=32)).replace(day=1)
+        
+        count = Admission.objects.filter(
+            admission_date__gte=month_start_date,
+            admission_date__lt=next_month_start_date
+        ).count()
+        admissions_trend_labels.append(month_start_date.strftime('%b %Y'))
+        admissions_trend_data.append(count)
 
-    # Appointments by Department (Top 5)
-    appts_by_dept = Appointment.objects.values('department__name')\
-                                    .annotate(count=Count('department__name'))\
-                                    .order_by('-count')[:5]
-    appts_by_dept_labels = [d['department__name'] for d in appts_by_dept]
-    appts_by_dept_data = [d['count'] for d in appts_by_dept]
+    # Appointments Trend (Last 6 months)
+    appointments_trend_labels = []
+    appointments_trend_data = []
+    for i in range(5, -1, -1):
+        month_start_dt = (timezone.now() - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month_start_dt = (month_start_dt + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+        
+        count = Appointment.objects.filter(
+            scheduled_time__gte=month_start_dt,
+            scheduled_time__lte=next_month_start_dt
+        ).count()
+        appointments_trend_labels.append(month_start_dt.strftime('%b %Y'))
+        appointments_trend_data.append(count)
 
-    # New Patients Last 30 Days
-    thirty_days_ago = timezone.now() - timedelta(days=30)
-    new_patients_last_30_days = Patient.objects.filter(date_registered__gte=thirty_days_ago).count()
 
-    # Upcoming Appointments Today
-    upcoming_appointments_today = Appointment.objects.filter(scheduled_time__date=date.today()).count()
+    # Patient Demographics: Gender Distribution
+    patients_by_gender = filtered_patients_qs.values('gender').annotate(count=Count('gender')).order_by('gender')
+    gender_labels = [item['gender'] for item in patients_by_gender]
+    gender_data = [item['count'] for item in patients_by_gender]
 
-    # --- Prepare Summary Statistics ---
+    # Patient Demographics: Age Group (re-using logic from admin/doctor reports)
+    patients_by_age_group_raw = filtered_patients_qs.annotate(
+        # Calculate the difference in years as a base
+        years_diff=F('date_registered__year') - F('date_of_birth__year'),
+        
+        # Determine the age adjustment based on month and day
+        # Subtract 1 if the registration date's (month, day) is before the birth date's (month, day)
+        age_adjustment=Case(
+            When(
+                Q(date_registered__month__lt=F('date_of_birth__month')) |
+                (
+                    Q(date_registered__month=F('date_of_birth__month')) &
+                    Q(date_registered__day__lt=F('date_of_birth__day'))
+                ),
+                then=Value(1)
+            ),
+            default=Value(0),
+            output_field=IntegerField()
+        ),
+        
+        # Calculate the final age by subtracting the adjustment
+        age=F('years_diff') - F('age_adjustment')
+    ).values('age').annotate(count=Count('age')).order_by('age')
+
+    age_groups = {
+        '0-12': 0, '13-19': 0, '20-39': 0, '40-59': 0, '60+': 0
+    }
+    for p in patients_by_age_group_raw:
+        age = p['age']
+        if age <= 12:
+            age_groups['0-12'] += p['count']
+        elif 13 <= age <= 19:
+            age_groups['13-19'] += p['count']
+        elif 20 <= age <= 39:
+            age_groups['20-39'] += p['count']
+        elif 40 <= age <= 59:
+            age_groups['40-59'] += p['count']
+        else:
+            age_groups['60+'] += p['count']
+    age_labels = list(age_groups.keys())
+    age_data = list(age_groups.values())
+
+
+    # Patient Demographics: Marital Status
+    patients_by_marital_status = filtered_patients_qs.values('marital_status').annotate(count=Count('marital_status')).order_by('marital_status')
+    marital_status_labels = [item['marital_status'] for item in patients_by_marital_status]
+    marital_status_data = [item['count'] for item in patients_by_marital_status]
+
+    # Patient Demographics: Nationality (Top 5)
+    patients_by_nationality = filtered_patients_qs.values('nationality').annotate(count=Count('nationality')).order_by('-count')[:5]
+    nationality_labels = [item['nationality'] for item in patients_by_nationality]
+    nationality_data = [item['count'] for item in patients_by_nationality]
+
+    # Admissions by Status
+    admissions_by_status = filtered_admissions_qs.values('status').annotate(count=Count('status')).order_by('status')
+    admission_status_labels = [item['status'] for item in admissions_by_status]
+    admission_status_data = [item['count'] for item in admissions_by_status]
+
+    # Appointments by Department
+    appointments_by_dept = filtered_appointments_qs.values('department__name').annotate(count=Count('department__name')).order_by('department__name')
+    appointment_dept_labels = [item['department__name'] for item in appointments_by_dept]
+    appointment_dept_data = [item['count'] for item in appointments_by_dept]
+
+    # Referrals by Department
+    referrals_by_dept = filtered_referrals_qs.values('department__name').annotate(count=Count('department__name')).order_by('department__name')
+    referral_dept_labels = [item['department__name'] for item in referrals_by_dept]
+    referral_dept_data = [item['count'] for item in referrals_by_dept]
+
+
+    # --- Fetch Data for Tables (Patient-specific if selected, otherwise global recent) ---
+    
+    recent_patients = []
+    recent_admissions = []
+    recent_appointments = []
+    recent_referrals = []
+
+    if current_patient:
+        # Patient-specific data
+        recent_patients = apply_date_filter(Patient.objects.filter(id=current_patient.id), date_from_param, date_to_param, 'date_registered').order_by('-date_registered')
+        recent_admissions = apply_date_filter(Admission.objects.filter(patient=current_patient).select_related('patient'), date_from_param, date_to_param, 'admission_date', is_datetime_field=False).order_by('-admission_date')
+        recent_appointments = apply_date_filter(Appointment.objects.filter(patient=current_patient).select_related('patient', 'department'), date_from_param, date_to_param, 'scheduled_time').order_by('-scheduled_time')
+        recent_referrals = apply_date_filter( Referral.objects.filter(patient=current_patient).select_related('patient', 'department'), date_from_param, date_to_param, 'created_at').order_by('-created_at') # Also order by the date field
+        
+        # Format patient data for display in tables (similar to doctor_reports for consistency)
+        patient_data_for_display = {
+            'id': current_patient.id,
+            'full_name': current_patient.full_name,
+            'gender': current_patient.gender,
+            'date_of_birth': current_patient.date_of_birth.strftime('%Y-%m-%d'),
+            'age': timezone.now().year - current_patient.date_of_birth.year - ((timezone.now().month, timezone.now().day) < (current_patient.date_of_birth.month, current_patient.date_of_birth.day)),
+            'blood_group': current_patient.blood_group,
+            'phone': current_patient.phone,
+            'email': current_patient.email or 'N/A',
+            'address': current_patient.address,
+            'marital_status': current_patient.marital_status,
+            'nationality': current_patient.nationality,
+            'id_type': current_patient.id_type or 'N/A',
+            'id_number': current_patient.id_number or 'N/A',
+            'status': current_patient.get_status_display(),
+            'is_inpatient': current_patient.is_inpatient,
+            'date_registered': current_patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+            'referred_by': current_patient.referred_by or 'N/A',
+            'next_of_kin_name': current_patient.next_of_kin_name or 'N/A',
+            'next_of_kin_phone': current_patient.next_of_kin_phone or 'N/A',
+            'next_of_kin_relationship': current_patient.next_of_kin_relationship or 'N/A',
+            'notes': current_patient.notes or 'N/A',
+        }
+        # Handle patient photo
+        photo_url = ''
+        if current_patient.photo and hasattr(current_patient.photo, 'url'):
+            try:
+                if default_storage.exists(current_patient.photo.name):
+                    photo_url = current_patient.photo.url
+            except Exception as e:
+                logger.warning(f"Error accessing patient photo for patient {current_patient.id}: {e}")
+                pass
+        patient_data_for_display['photo_url'] = photo_url
+
+    else:
+        # Global recent data if no patient selected
+        recent_patients = filtered_patients_qs.order_by('-date_registered')[:10]
+        recent_admissions = filtered_admissions_qs.select_related('patient').order_by('-admission_date')[:10]
+        recent_appointments = filtered_appointments_qs.select_related('patient', 'department').order_by('-scheduled_time')[:10]
+        recent_referrals = filtered_referrals_qs.select_related('patient', 'department').order_by('-id')[:10]
+        patient_data_for_display = None # No single patient overview if no patient is selected.
+
+
+    # --- Summary Statistics ---
     summary = {
-        'total_patients_registered': Patient.objects.count(),
-        'new_patients_last_30_days': new_patients_last_30_days,
-        'total_appointments': Appointment.objects.count(),
-        'upcoming_appointments_today': upcoming_appointments_today,
-        'pending_appointments': Appointment.objects.filter(status='pending').count(),
-        'completed_appointments': Appointment.objects.filter(status='completed').count(),
-        'cancelled_appointments': Appointment.objects.filter(status='cancelled').count(),
+        'total_registered_patients': filtered_patients_qs.count(),
+        'patients_registered_today': filtered_patients_qs.filter(date_registered__date=timezone.now().date()).count(),
+        'total_admissions': filtered_admissions_qs.count(),
+        'admissions_today': filtered_admissions_qs.filter(admission_date=timezone.now().date()).count(),
+        'total_appointments': filtered_appointments_qs.count(),
+        'appointments_today': filtered_appointments_qs.filter(scheduled_time__date=timezone.now().date()).count(),
+        'total_referrals': filtered_referrals_qs.count(),
     }
 
 
     # --- Handle Exports ---
     if export_type == 'csv':
         return _export_receptionist_report_csv(
-            patients, appointments, summary, date_from_param, date_to_param, current_patient
+            patient_data_for_display, recent_patients, recent_admissions,
+            recent_appointments, recent_referrals, summary,
+            registration_labels, registration_data,
+            admissions_trend_labels, admissions_trend_data,
+            appointments_trend_labels, appointments_trend_data,
+            gender_labels, gender_data, age_labels, age_data,
+            marital_status_labels, marital_status_data,
+            nationality_labels, nationality_data,
+            admission_status_labels, admission_status_data,
+            appointment_dept_labels, appointment_dept_data,
+            referral_dept_labels, referral_dept_data,
         )
     elif export_type == 'pdf':
         return _export_receptionist_report_pdf(
-            patients, appointments, summary, date_from_param, date_to_param, current_patient
+            patient_data_for_display, recent_patients, recent_admissions,
+            recent_appointments, recent_referrals, summary,
+            registration_labels, registration_data,
+            admissions_trend_labels, admissions_trend_data,
+            appointments_trend_labels, appointments_trend_data,
+            gender_labels, gender_data, age_labels, age_data,
+            marital_status_labels, marital_status_data,
+            nationality_labels, nationality_data,
+            admission_status_labels, admission_status_data,
+            appointment_dept_labels, appointment_dept_data,
+            referral_dept_labels, referral_dept_data,
         )
 
     # --- Render Page ---
     context = {
         'all_patients': all_patients,
-        'selected_patient': current_patient,
+        'all_departments': all_departments,
+        'selected_patient': patient_data_for_display, # This will be None if no patient selected
         'date_from': date_from_param,
         'date_to': date_to_param,
-
-        'patients': patients,
-        'appointments': appointments,
+        
         'summary': summary,
 
         # Chart Data (JSON serialized)
-        'monthly_reg_labels_json': json.dumps(monthly_reg_labels),
-        'monthly_reg_data_json': json.dumps(monthly_reg_data),
-        'appt_status_labels_json': json.dumps(appt_status_labels),
-        'appt_status_data_json': json.dumps(appt_status_data),
-        'appts_by_dept_labels_json': json.dumps(appts_by_dept_labels),
-        'appts_by_dept_data_json': json.dumps(appts_by_dept_data),
+        'registration_labels_json': json.dumps(registration_labels),
+        'registration_data_json': json.dumps(registration_data),
+        'admissions_trend_labels_json': json.dumps(admissions_trend_labels),
+        'admissions_trend_data_json': json.dumps(admissions_trend_data),
+        'appointments_trend_labels_json': json.dumps(appointments_trend_labels),
+        'appointments_trend_data_json': json.dumps(appointments_trend_data),
+        'gender_labels_json': json.dumps(gender_labels),
+        'gender_data_json': json.dumps(gender_data),
+        'age_labels_json': json.dumps(age_labels),
+        'age_data_json': json.dumps(age_data),
+        'marital_status_labels_json': json.dumps(marital_status_labels),
+        'marital_status_data_json': json.dumps(marital_status_data),
+        'nationality_labels_json': json.dumps(nationality_labels),
+        'nationality_data_json': json.dumps(nationality_data),
+        'admission_status_labels_json': json.dumps(admission_status_labels),
+        'admission_status_data_json': json.dumps(admission_status_data),
+        'appointment_dept_labels_json': json.dumps(appointment_dept_labels),
+        'appointment_dept_data_json': json.dumps(appointment_dept_data),
+        'referral_dept_labels_json': json.dumps(referral_dept_labels),
+        'referral_dept_data_json': json.dumps(referral_dept_data),
+
+        # Table Data (recent or patient-specific)
+        'recent_patients': recent_patients,
+        'recent_admissions': recent_admissions,
+        'recent_appointments': recent_appointments,
+        'recent_referrals': recent_referrals,
     }
 
-    return render(request, 'receptionists/receptionist_reports.html', context)
+    return render(request, 'hms_admin/reception_reports.html', context)
 
 
 # --- Export Helper Functions for Receptionist ---
 
 def _export_receptionist_report_csv(
-    patients, appointments, summary, date_from, date_to, current_patient
+    patient_info, recent_patients, recent_admissions,
+    recent_appointments, recent_referrals, summary,
+    registration_labels, registration_data,
+    admissions_trend_labels, admissions_trend_data,
+    appointments_trend_labels, appointments_trend_data,
+    gender_labels, gender_data, age_labels, age_data,
+    marital_status_labels, marital_status_data,
+    nationality_labels, nationality_data,
+    admission_status_labels, admission_status_data,
+    appointment_dept_labels, appointment_dept_data,
+    referral_dept_labels, referral_dept_data,
 ):
     response = HttpResponse(content_type='text/csv')
-    patient_name_slug = current_patient.full_name.replace(' ', '_') if current_patient else 'All_Patients'
-    file_name = f"Receptionist_Report_{patient_name_slug}_{timezone.now().strftime('%Y%m%d%H%M')}.csv"
+    file_name_suffix = patient_info['full_name'].replace(' ', '_') if patient_info else 'Overall'
+    file_name = f"Receptionist_Report_{file_name_suffix}_{timezone.now().strftime('%Y%m%d%H%M')}.csv"
     response['Content-Disposition'] = f'attachment; filename="{file_name}"'
 
     writer = csv.writer(response)
 
-    writer.writerow(["--- Receptionist Report ---"])
-    if current_patient:
-        writer.writerow(["Selected Patient:", current_patient.full_name])
-    if date_from and date_to:
-        writer.writerow(["Date Range:", f"{date_from} to {date_to}"])
-    elif date_from:
-        writer.writerow(["Date From:", date_from])
-    elif date_to:
-        writer.writerow(["Date To:", date_to])
-    writer.writerow(["Report Generated:", timezone.now().strftime('%Y-%m-%d %H:%M')])
-    writer.writerow([]) # Spacer
+    writer.writerow([f"Receptionist's Report - Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}"])
+    writer.writerow([])
+
+    if patient_info:
+        writer.writerow(["--- Selected Patient Information ---"])
+        writer.writerow(["Field", "Value"])
+        for key, value in patient_info.items():
+            if "photo_url" in key: continue # Exclude photo URL
+            writer.writerow([key.replace('_', ' ').title(), value])
+        writer.writerow([])
 
     # Summary
     writer.writerow(["--- Summary Statistics ---"])
@@ -4243,26 +4420,125 @@ def _export_receptionist_report_csv(
         writer.writerow([key.replace('_', ' ').title(), value])
     writer.writerow([])
 
-    # Patients
-    if patients:
-        writer.writerow(["--- Patient Registrations ---"])
-        writer.writerow(["ID", "Full Name", "Gender", "Date of Birth", "Phone", "Status", "Date Registered"])
-        for p in patients:
-            writer.writerow([p['id'], p['full_name'], p['gender'], p['date_of_birth'], p['phone'], p['status'], p['date_registered']])
+    # Recent Patients
+    if recent_patients:
+        writer.writerow(["--- Recent Patient Registrations ---"])
+        writer.writerow(["ID", "Full Name", "Gender", "DOB", "Phone", "Email", "Date Registered"])
+        for p in recent_patients:
+            writer.writerow([
+                p.id, p.full_name, p.gender, p.date_of_birth.strftime('%Y-%m-%d'),
+                p.phone, p.email, p.date_registered.strftime('%Y-%m-%d %H:%M')
+            ])
         writer.writerow([])
 
-    # Appointments
-    if appointments:
-        writer.writerow(["--- Appointments ---"])
-        writer.writerow(["ID", "Patient Name", "Department", "Scheduled Time", "Reason", "Status"])
-        for appt in appointments:
-            writer.writerow([appt['id'], appt['patient_name'], appt['department_name'], appt['scheduled_time'], appt['reason'], appt['status']])
+    # Recent Admissions
+    if recent_admissions:
+        writer.writerow(["--- Recent Admissions ---"])
+        writer.writerow(["Patient Name", "Admission Date", "Status", "Doctor Assigned", "Discharge Date", "Reason", "Admitted By"])
+        for a in recent_admissions:
+            writer.writerow([
+                a.patient.full_name, a.admission_date.strftime('%Y-%m-%d'), a.get_status_display(),
+                a.doctor_assigned_staff.user.get_full_name() if a.doctor_assigned_staff else a.doctor_assigned,
+                a.discharge_date.strftime('%Y-%m-%d') if a.discharge_date else 'N/A',
+                a.discharge_notes, a.admitted_by
+            ])
         writer.writerow([])
+
+    # Recent Appointments
+    if recent_appointments:
+        writer.writerow(["--- Recent Appointments ---"])
+        writer.writerow(["Patient Name", "Department", "Scheduled Time"])
+        for appt in recent_appointments:
+            writer.writerow([
+                appt.patient.full_name, appt.department.name, appt.scheduled_time.strftime('%Y-%m-%d %H:%M')
+            ])
+        writer.writerow([])
+
+    # Recent Referrals
+    if recent_referrals:
+        writer.writerow(["--- Recent Referrals ---"])
+        writer.writerow(["Patient Name", "Department", "Notes"])
+        for r in recent_referrals:
+            writer.writerow([
+                r.patient.full_name, r.department.name, r.notes
+            ])
+        writer.writerow([])
+
+    # Chart Data Sections (Raw data for analysis)
+    writer.writerow(["--- Patient Registration Trend (Last 6 Months) ---"])
+    writer.writerow(["Month", "Registrations"])
+    for label, data in zip(registration_labels, registration_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Admissions Trend (Last 6 Months) ---"])
+    writer.writerow(["Month", "Admissions"])
+    for label, data in zip(admissions_trend_labels, admissions_trend_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+    
+    writer.writerow(["--- Appointments Trend (Last 6 Months) ---"])
+    writer.writerow(["Month", "Appointments"])
+    for label, data in zip(appointments_trend_labels, appointments_trend_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Patient Gender Distribution ---"])
+    writer.writerow(["Gender", "Count"])
+    for label, data in zip(gender_labels, gender_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Patient Age Group Distribution ---"])
+    writer.writerow(["Age Group", "Count"])
+    for label, data in zip(age_labels, age_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Patient Marital Status Distribution ---"])
+    writer.writerow(["Marital Status", "Count"])
+    for label, data in zip(marital_status_labels, marital_status_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Patient Nationality Distribution ---"])
+    writer.writerow(["Nationality", "Count"])
+    for label, data in zip(nationality_labels, nationality_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Admission Status Distribution ---"])
+    writer.writerow(["Status", "Count"])
+    for label, data in zip(admission_status_labels, admission_status_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Appointments by Department Distribution ---"])
+    writer.writerow(["Department", "Count"])
+    for label, data in zip(appointment_dept_labels, appointment_dept_data):
+        writer.writerow([label, data])
+    writer.writerow([])
+
+    writer.writerow(["--- Referrals by Department Distribution ---"])
+    writer.writerow(["Department", "Count"])
+    for label, data in zip(referral_dept_labels, referral_dept_data):
+        writer.writerow([label, data])
+    writer.writerow([])
 
     return response
 
 def _export_receptionist_report_pdf(
-    patients, appointments, summary, date_from, date_to, current_patient
+    patient_info, recent_patients, recent_admissions,
+    recent_appointments, recent_referrals, summary,
+    registration_labels, registration_data,
+    admissions_trend_labels, admissions_trend_data,
+    appointments_trend_labels, appointments_trend_data,
+    gender_labels, gender_data, age_labels, age_data,
+    marital_status_labels, marital_status_data,
+    nationality_labels, nationality_data,
+    admission_status_labels, admission_status_data,
+    appointment_dept_labels, appointment_dept_data,
+    referral_dept_labels, referral_dept_data,
 ):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4,
@@ -4272,88 +4548,137 @@ def _export_receptionist_report_pdf(
     elements = []
 
     # Title
-    elements.append(Paragraph("Receptionist Report", styles['h1']))
-    if current_patient:
-        elements.append(Paragraph(f"For Patient: <b>{current_patient.full_name} (ID: {current_patient.id})</b>", styles['h2']))
-    
-    if date_from and date_to:
-         elements.append(Paragraph(f"Filtered Period: {date_from} to {date_to}", styles['Normal']))
-    elif date_from:
-        elements.append(Paragraph(f"Filtered From: {date_from}", styles['Normal']))
-    elif date_to:
-        elements.append(Paragraph(f"Filtered To: {date_to}", styles['Normal']))
-    
+    elements.append(Paragraph("Receptionist's Activity Report", styles['h1']))
+    report_scope = "Overall Activity"
+    if patient_info:
+        report_scope = f"For Patient: {patient_info['full_name']} (ID: {patient_info['id']})"
+    elements.append(Paragraph(report_scope, styles['h2']))
     elements.append(Paragraph(f"Report Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
     elements.append(Spacer(1, 12))
 
-    # Summary
+    if patient_info:
+        # Patient Information Table
+        elements.append(Paragraph("Selected Patient Demographics", styles['h3']))
+        patient_data_table = [
+            ['Field', 'Value'],
+            ['Full Name', patient_info['full_name']],
+            ['Date of Birth', patient_info['date_of_birth']],
+            ['Age', patient_info['age']],
+            ['Gender', patient_info['gender']],
+            ['Blood Group', patient_info['blood_group']],
+            ['Phone', patient_info['phone']],
+            ['Email', patient_info['email']],
+            ['Address', patient_info['address']],
+            ['Marital Status', patient_info['marital_status']],
+            ['Nationality', patient_info['nationality']],
+            ['ID Type', patient_info['id_type']],
+            ['ID Number', patient_info['id_number']],
+            ['Current Status', patient_info['status']],
+            ['Is Inpatient', 'Yes' if patient_info['is_inpatient'] else 'No'],
+            ['Date Registered', patient_info['date_registered']],
+            ['Referred By', patient_info['referred_by']],
+            ['Next of Kin', patient_info['next_of_kin_name']],
+            ['Next of Kin Phone', patient_info['next_of_kin_phone']],
+            ['Next of Kin Relationship', patient_info['next_of_kin_relationship']],
+        ]
+        table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ])
+        p_table = Table(patient_data_table, colWidths=[150, 350])
+        p_table.setStyle(table_style)
+        elements.append(p_table)
+        elements.append(Spacer(1, 12))
+
+    # Summary Statistics
     elements.append(Paragraph("Summary Statistics", styles['h3']))
-    summary_data = [['Category', 'Count']]
+    summary_data = [['Metric', 'Value']]
     for key, value in summary.items():
         summary_data.append([key.replace('_', ' ').title(), value])
     summary_table = Table(summary_data, colWidths=[250, 150])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-    ]))
+    summary_table.setStyle(table_style)
     elements.append(summary_table)
     elements.append(Spacer(1, 12))
 
-    # Patients Table
-    if patients:
-        elements.append(Paragraph("Patient Registrations", styles['h3']))
-        data = [['ID', 'Full Name', 'Gender', 'D.O.B', 'Phone', 'Status', 'Registered On']]
-        for p in patients:
-            data.append([p['id'], p['full_name'], p['gender'], p['date_of_birth'], p['phone'], p['status'], p['date_registered']])
-        table = Table(data, colWidths=[30, 90, 40, 60, 70, 50, 90])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6c757d')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 1, colors.black),
-        ]))
+    # Recent Patient Registrations
+    if recent_patients:
+        elements.append(Paragraph("Recent Patient Registrations", styles['h3']))
+        data = [['ID', 'Full Name', 'Gender', 'DOB', 'Phone', 'Email', 'Date Registered']]
+        for p in recent_patients:
+            data.append([
+                p.id, p.full_name, p.gender, p.date_of_birth.strftime('%Y-%m-%d'),
+                p.phone, p.email, p.date_registered.strftime('%Y-%m-%d %H:%M')
+            ])
+        table = Table(data, colWidths=[40, 90, 50, 60, 60, 80, 80])
+        table.setStyle(table_style)
         elements.append(table)
         elements.append(Spacer(1, 12))
 
-    # Appointments Table
-    if appointments:
-        elements.append(Paragraph("Appointments", styles['h3']))
-        data = [['ID', 'Patient Name', 'Department', 'Scheduled Time', 'Reason', 'Status']]
-        for appt in appointments:
-            data.append([appt['id'], appt['patient_name'], appt['department_name'], appt['scheduled_time'], Paragraph(appt['reason'], styles['Normal']), appt['status']])
-        table = Table(data, colWidths=[30, 90, 70, 90, 120, 50])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#28a745')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOX', (0, 0), (-1, -1), 1, colors.black),
-            ('WORDWRAP', (4, 1), (4, -1), True),
-            ('LEFTPADDING', (4, 1), (4, -1), 6),
-            ('RIGHTPADDING', (4, 1), (4, -1), 6),
-            ('TOPPADDING', (4, 1), (4, -1), 6),
-            ('BOTTOMPADDING', (4, 1), (4, -1), 6),
-        ]))
+    # Recent Admissions
+    if recent_admissions:
+        elements.append(Paragraph("Recent Admissions", styles['h3']))
+        data = [['Patient', 'Adm. Date', 'Status', 'Doctor', 'Disc. Date', 'Reason', 'Admitted By']]
+        for a in recent_admissions:
+            data.append([
+                a.patient.full_name, a.admission_date.strftime('%Y-%m-%d'), a.get_status_display(),
+                a.doctor_assigned_staff.user.get_full_name() if a.doctor_assigned_staff else a.doctor_assigned,
+                a.discharge_date.strftime('%Y-%m-%d') if a.discharge_date else 'N/A',
+                Paragraph(a.discharge_notes or '', styles['Normal']), a.admitted_by
+            ])
+        table = Table(data, colWidths=[80, 60, 50, 70, 60, 80, 70])
+        table.setStyle(table_style)
         elements.append(table)
         elements.append(Spacer(1, 12))
+
+    # Recent Appointments
+    if recent_appointments:
+        elements.append(Paragraph("Recent Appointments", styles['h3']))
+        data = [['Patient', 'Department', 'Scheduled Time']]
+        for appt in recent_appointments:
+            data.append([
+                appt.patient.full_name, appt.department.name, appt.scheduled_time.strftime('%Y-%m-%d %H:%M')
+            ])
+        table = Table(data, colWidths=[150, 100, 200])
+        table.setStyle(table_style)
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Recent Referrals
+    if recent_referrals:
+        elements.append(Paragraph("Recent Referrals", styles['h3']))
+        data = [['Patient', 'Department', 'Notes']]
+        for r in recent_referrals:
+            data.append([
+                r.patient.full_name, r.department.name, Paragraph(r.notes or '', styles['Normal'])
+            ])
+        table = Table(data, colWidths=[150, 100, 250])
+        table.setStyle(table_style)
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # Add sections for Chart Data if needed in PDF (as tables)
+    # Example: Patient Registration Trend
+    if registration_labels and registration_data:
+        elements.append(Paragraph("Patient Registration Trend (Last 6 Months)", styles['h3']))
+        data = [['Month', 'Registrations']]
+        for label, count in zip(registration_labels, registration_data):
+            data.append([label, count])
+        table = Table(data, colWidths=[250, 250])
+        table.setStyle(table_style)
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+    # ... similarly for other chart data if you want them in PDF as tables
 
     doc.build(elements)
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
-
 
 ''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
 

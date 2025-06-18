@@ -134,6 +134,7 @@ class Referral(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     notes = models.TextField()
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True) # Automatically sets on creation
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department.name}"

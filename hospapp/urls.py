@@ -126,6 +126,7 @@ urlpatterns = [
     path('user/add/', views.add_user_endpoint, name='add_user'),
 
     path('ad/doctor_report', views.doctor_reports, name='doctor_reports'),
+    path('ad/receptionist_report', views.receptionist_reports, name='receptionist_reports'),
     
     path('admin/users/export/csv/', views.export_users_csv_view, name='export_users_csv'),
     path('admin/users/export/pdf/', views.export_users_pdf_view, name='export_users_pdf'),

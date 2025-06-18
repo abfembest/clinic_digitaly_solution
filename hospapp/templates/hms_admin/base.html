@@ -155,7 +155,7 @@
                         </li>
 
                         <li class="nav-item">
-                            <a href="{ url 'receptionist_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'receptionist_reports' %}active{% endif %}">
+                            <a href="{% url 'receptionist_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'receptionist_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-user-tie"></i>
                                 <p>Receptionist Reports</p>
                             </a>

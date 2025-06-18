@@ -1,0 +1,762 @@
+{% extends "hms_admin/base.html" %} {# Assuming hms_admin/base.html is your main base for common UI #}
+{% load static %}
+{% load custom_filters %} {# Make sure custom_filters.py exists and includes get_status_color #}
+
+{% block title %}HMS | Receptionist Reports{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 -->
+<link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
+<!-- Tempusdominus Bootstrap 4 -->
+<link rel="stylesheet" href="{% static 'plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css' %}">
+<style>
+    .metric-card {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        background-color: #fff;
+        box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    .border-left-primary { border-left: 5px solid #007bff; }
+    .border-left-success { border-left: 5px solid #28a745; }
+    .border-left-warning { border-left: 5px solid #ffc107; }
+    .border-left-danger { border-left: 5px solid #dc3545; }
+    .border-left-info { border-left: 5px solid #17a2b8; }
+
+    /* Custom styles for tables */
+    .table th {
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: bold;
+    }
+    .table tbody tr:hover {
+        background-color: #f2f2f2;
+    }
+    .table .badge {
+        font-size: 0.8rem;
+        padding: 0.4em 0.6em;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    /* Print styles */
+    @media print {
+        .content-header, .card-footer, .no-print {
+            display: none !important;
+        }
+        .main-footer, .main-header, .main-sidebar {
+            display: none !important;
+        }
+        .content-wrapper {
+            margin-left: 0 !important;
+            padding-top: 0 !important;
+        }
+        .card {
+            border: 1px solid #ccc;
+            box-shadow: none;
+            margin-bottom: 20px;
+            page-break-inside: avoid; /* Avoid breaking cards across pages */
+        }
+        .table {
+            border-collapse: collapse !important;
+            width: 100%;
+        }
+        .table, .table th, .table td {
+            border: 1px solid #ddd;
+        }
+        .table th, .table td {
+            padding: 8px;
+            text-align: left;
+        }
+        .table thead {
+            background-color: #f2f2f2;
+        }
+        .tab-content .tab-pane {
+            display: block !important; /* Show all tabs when printing */
+            visibility: visible !important;
+            height: auto !important;
+            opacity: 1 !important;
+        }
+        /* Ensure charts print reasonably well (might still be rasterized) */
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 600px; /* Limit chart width for print */
+            margin: auto;
+            border: 1px solid #ddd;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Content Header (Page header) -->
+<div class="content-header no-print">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">Receptionist Reports</h1>
+            </div><!-- /.col -->
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'hms_admin' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
+            </div>
+        </div><!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Patient and Date Filter Card -->
+        <div class="card card-primary card-outline no-print">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter Reports</h3>
+            </div>
+            <form id="filterForm" method="GET" action="{% url 'receptionist_reports' %}">
+                <div class="card-body row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="patient_id">Select Patient (Optional):</label>
+                            <select class="form-control select2" id="patient_id" name="patient_id" style="width: 100%;">
+                                <option value="">--- All Patients ---</option>
+                                {% for patient in all_patients %}
+                                <option value="{{ patient.id }}" {% if selected_patient.id|stringformat:"i" == patient.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ patient.full_name }} (ID: {{ patient.id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="date_from">Date From:</label>
+                            <div class="input-group date" id="date_from_picker" data-target-input="nearest">
+                                <input type="date" class="form-control datetimepicker-input" data-target="#date_from_picker" name="date_from" id="date_from" value="{{ date_from|default:'' }}" placeholder="YYYY-MM-DD"/>
+                                <div class="input-group-append" data-target="#date_from_picker" data-toggle="datetimepicker">
+                                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="date_to">Date To:</label>
+                            <div class="input-group date" id="date_to_picker" data-target-input="nearest">
+                                <input type="date" class="form-control datetimepicker-input" data-target="#date_to_picker" name="date_to" id="date_to" value="{{ date_to|default:'' }}" placeholder="YYYY-MM-DD"/>
+                                <div class="input-group-append" data-target="#date_to_picker" data-toggle="datetimepicker">
+                                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary mr-2"><i class="fas fa-search mr-1"></i> Apply Filters</button>
+                    <button type="button" class="btn btn-secondary mr-2" id="exportCsvBtn"><i class="fas fa-file-csv mr-1"></i> Export CSV</button>
+                    <button type="button" class="btn btn-secondary mr-2" id="exportPdfBtn"><i class="fas fa-file-pdf mr-1"></i> Export PDF</button>
+                    <button type="button" class="btn btn-info" onclick="window.print();"><i class="fas fa-print mr-1"></i> Print Page</button>
+                </div>
+            </form>
+        </div>
+        <!-- /.card (Filter) -->
+
+        <!-- General Summary Statistics -->
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ summary.total_registered_patients }}</h3>
+                        <p>Total Patients Registered</p>
+                    </div>
+                    <div class="icon"><i class="ion ion-ios-people"></i></div>
+                    <a href="#" class="small-box-footer">View Details <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ summary.admissions_today }}</h3>
+                        <p>Admissions Today</p>
+                    </div>
+                    <div class="icon"><i class="ion ion-ios-hospital"></i></div>
+                    <a href="#" class="small-box-footer">View Details <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ summary.appointments_today }}</h3>
+                        <p>Appointments Today</p>
+                    </div>
+                    <div class="icon"><i class="ion ion-calendar"></i></div>
+                    <a href="#" class="small-box-footer">View Details <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3>{{ summary.total_referrals }}</h3>
+                        <p>Total Referrals</p>
+                    </div>
+                    <div class="icon"><i class="ion ion-share"></i></div>
+                    <a href="#" class="small-box-footer">View Details <i class="fas fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+        </div>
+        <!-- /.row (General Summary Statistics) -->
+
+        {% if selected_patient %}
+        <!-- Patient Overview Card (only if a specific patient is selected) -->
+        <div class="card card-dark card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-user mr-1"></i> Patient Overview: {{ selected_patient.full_name }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 text-center">
+                        <img src="{% if selected_patient.photo_url %}{{ selected_patient.photo_url }}{% else %}{% static 'dist/img/default-avatar.png' %}{% endif %}"
+                             alt="Patient Photo" class="img-circle img-fluid" style="width: 100px; height: 100px; object-fit: cover;">
+                        <h5 class="mt-2">{{ selected_patient.full_name }}</h5>
+                        <p class="text-muted text-sm">{{ selected_patient.status }}</p>
+                    </div>
+                    <div class="col-md-5">
+                        <strong><i class="fas fa-id-badge mr-1"></i> Patient ID:</strong> {{ selected_patient.id }}<br>
+                        <strong><i class="fas fa-venus-mars mr-1"></i> Gender:</strong> {{ selected_patient.gender }}<br>
+                        <strong><i class="fas fa-birthday-cake mr-1"></i> Age:</strong> {{ selected_patient.age }}<br>
+                        <strong><i class="fas fa-tint mr-1"></i> Blood Group:</strong> {{ selected_patient.blood_group }}<br>
+                        <strong><i class="fas fa-phone mr-1"></i> Phone:</strong> {{ selected_patient.phone }}<br>
+                        <strong><i class="fas fa-envelope mr-1"></i> Email:</strong> {{ selected_patient.email }}<br>
+                    </div>
+                    <div class="col-md-5">
+                        <strong><i class="fas fa-map-marker-alt mr-1"></i> Address:</strong> {{ selected_patient.address }}<br>
+                        <strong><i class="fas fa-ring mr-1"></i> Marital Status:</strong> {{ selected_patient.marital_status }}<br>
+                        <strong><i class="fas fa-globe mr-1"></i> Nationality:</strong> {{ selected_patient.nationality }}<br>
+                        <strong><i class="fas fa-notes-medical mr-1"></i> Notes:</strong> {{ selected_patient.notes }}<br>
+                        <strong><i class="fas fa-user-friends mr-1"></i> Next of Kin:</strong> {{ selected_patient.next_of_kin_name }} ({{ selected_patient.next_of_kin_relationship }})<br>
+                        <strong><i class="fas fa-phone-alt mr-1"></i> NOK Phone:</strong> {{ selected_patient.next_of_kin_phone }}<br>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.card (Patient Overview) -->
+        {% endif %}
+
+        <!-- Charts Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-info card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line mr-1"></i> Patient Registrations Trend</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="registrationTrendChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-warning card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Admissions Trend</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="admissionsTrendChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-primary card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line mr-1"></i> Appointments Trend</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="appointmentsTrendChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Patient Gender Distribution</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="genderDistributionChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-danger card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Patient Age Group Distribution</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="ageDistributionChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-dark card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Patient Marital Status</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="maritalStatusChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-secondary card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Top Nationalities Registered</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="nationalityChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-light card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Admissions by Status</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="admissionStatusChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Appointments by Department</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="appointmentDeptChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-danger card-outline">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Referrals by Department</h3></div>
+                    <div class="card-body">
+                        <div class="chart-container"><canvas id="referralDeptChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.row (Charts Section) -->
+
+        <!-- Detailed Activity Tables -->
+        <div class="card card-secondary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list-alt mr-1"></i> Detailed Recent Activity</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="receptionist-tabs" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" id="tab-recent-patients" data-toggle="pill" href="#content-recent-patients" role="tab" aria-controls="content-recent-patients" aria-selected="true">Recent Patients ({{ recent_patients|length }})</a></li>
+                        <li class="nav-item"><a class="nav-link" id="tab-recent-admissions" data-toggle="pill" href="#content-recent-admissions" role="tab" aria-controls="content-recent-admissions" aria-selected="false">Recent Admissions ({{ recent_admissions|length }})</a></li>
+                        <li class="nav-item"><a class="nav-link" id="tab-recent-appointments" data-toggle="pill" href="#content-recent-appointments" role="tab" aria-controls="content-recent-appointments" aria-selected="false">Recent Appointments ({{ recent_appointments|length }})</a></li>
+                        <li class="nav-item"><a class="nav-link" id="tab-recent-referrals" data-toggle="pill" href="#content-recent-referrals" role="tab" aria-controls="content-recent-referrals" aria-selected="false">Recent Referrals ({{ recent_referrals|length }})</a></li>
+                    </ul>
+                </div>
+                <div class="tab-content" id="receptionist-tabsContent">
+                    <!-- Recent Patients Tab Content -->
+                    <div class="tab-pane fade show active" id="content-recent-patients" role="tabpanel" aria-labelledby="tab-recent-patients">
+                        <div class="table-responsive p-3">
+                            {% if recent_patients %}
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Full Name</th>
+                                        <th>Gender</th>
+                                        <th>DOB</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Date Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in recent_patients %}
+                                    <tr>
+                                        <td>{{ p.id }}</td>
+                                        <td>{{ p.full_name }}</td>
+                                        <td>{{ p.gender }}</td>
+                                        <td>{{ p.date_of_birth|date:"Y-m-d" }}</td>
+                                        <td>{{ p.phone }}</td>
+                                        <td>{{ p.email|default:'N/A' }}</td>
+                                        <td>{{ p.date_registered|date:"Y-m-d H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="alert alert-info text-center m-3">No recent patient registrations found for the selected filters.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Recent Admissions Tab Content -->
+                    <div class="tab-pane fade" id="content-recent-admissions" role="tabpanel" aria-labelledby="tab-recent-admissions">
+                        <div class="table-responsive p-3">
+                            {% if recent_admissions %}
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Admission Date</th>
+                                        <th>Status</th>
+                                        <th>Doctor Assigned</th>
+                                        <th>Discharge Date</th>
+                                        <th>Reason</th>
+                                        <th>Admitted By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for a in recent_admissions %}
+                                    <tr>
+                                        <td>{{ a.patient.full_name }}</td>
+                                        <td>{{ a.admission_date|date:"Y-m-d" }}</td>
+                                        <td><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+                                        <td>{{ a.doctor_assigned_staff.user.get_full_name }}</td>
+                                        <td>{{ a.discharge_date|date:"Y-m-d"|default:'N/A' }}</td>
+                                        <td>{{ a.discharge_notes|default:'N/A' }}</td>
+                                        <td>{{ a.admitted_by|default:'N/A' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="alert alert-info text-center m-3">No recent admissions found for the selected filters.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Recent Appointments Tab Content -->
+                    <div class="tab-pane fade" id="content-recent-appointments" role="tabpanel" aria-labelledby="tab-recent-appointments">
+                        <div class="table-responsive p-3">
+                            {% if recent_appointments %}
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Department</th>
+                                        <th>Scheduled Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for appt in recent_appointments %}
+                                    <tr>
+                                        <td>{{ appt.patient.full_name }}</td>
+                                        <td>{{ appt.department.name }}</td>
+                                        <td>{{ appt.scheduled_time|date:"Y-m-d H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="alert alert-info text-center m-3">No recent appointments found for the selected filters.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Recent Referrals Tab Content -->
+                    <div class="tab-pane fade" id="content-recent-referrals" role="tabpanel" aria-labelledby="tab-recent-referrals">
+                        <div class="table-responsive p-3">
+                            {% if recent_referrals %}
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Department</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in recent_referrals %}
+                                    <tr>
+                                        <td>{{ r.patient.full_name }}</td>
+                                        <td>{{ r.department.name }}</td>
+                                        <td>{{ r.notes|default:'N/A' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <div class="alert alert-info text-center m-3">No recent referrals found for the selected filters.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.card (Detailed Activity Tables) -->
+
+    </div><!--/. container-fluid -->
+</section>
+<!-- /.content -->
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- ChartJS -->
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<!-- Moment.js -->
+<script src="{% static 'plugins/moment/moment.min.js' %}"></script>
+<!-- Tempus Dominus Bootstrap 4 (for date pickers) -->
+<script src="{% static 'plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js' %}"></script>
+<!-- Select2 -->
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+
+
+<script>
+    $(document).ready(function () {
+        // Initialize Select2 for patient dropdown
+        $('.select2').select2({
+            placeholder: "--- Select a Patient (Optional) ---",
+            allowClear: true // Option to clear selection
+        });
+
+        // Initialize Datepickers
+        $('#date_from_picker').datetimepicker({
+            format: 'YYYY-MM-DD',
+            buttons: {
+                showClear: true,
+            },
+            toolbarPlacement: 'bottom',
+        });
+        $('#date_to_picker').datetimepicker({
+            format: 'YYYY-MM-DD',
+            useCurrent: false, // Important! See issue #1075
+            buttons: {
+                showClear: true,
+            },
+            toolbarPlacement: 'bottom',
+        });
+
+        $("#date_from_picker").on("change.datetimepicker", function (e) {
+            $('#date_to_picker').datetimepicker('minDate', e.date);
+        });
+        $("#date_to_picker").on("change.datetimepicker", function (e) {
+            $('#date_from_picker').datetimepicker('maxDate', e.date);
+        });
+
+        // --- Chart Rendering Logic ---
+        function createChart(canvasId, chartType, labels, datasets, options = {}) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) {
+                console.warn(`Canvas element with ID '${canvasId}' not found. Skipping chart.`);
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            
+            // Check if there's actual data to display
+            const hasData = datasets.some(dataset => dataset.data && dataset.data.some(val => val !== null && val !== 0));
+
+            if (!hasData || !Array.isArray(labels) || labels.length === 0) {
+                $(canvas).closest('.chart-container').html('<div class="alert alert-info text-center">No data available for this chart within the selected filters.</div>');
+                return;
+            }
+
+            const defaultOptions = {
+                maintainAspectRatio: false,
+                responsive: true,
+                plugins: {
+                    legend: { display: true },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff'
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        ticks: {
+                            beginAtZero: true,
+                            precision: 0,
+                            callback: function(value) { // Ensure integer ticks for count-based charts
+                                return Number.isInteger(value) ? value : '';
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            };
+
+            // Merge default options with provided options
+            const finalOptions = Chart.helpers.merge(defaultOptions, options);
+
+            try {
+                new Chart(ctx, {
+                    type: chartType,
+                    data: { labels: labels, datasets: datasets },
+                    options: finalOptions
+                });
+            } catch (error) {
+                console.error(`Error creating ${canvasId} chart:`, error);
+                $(canvas).closest('.chart-container').html('<div class="alert alert-warning text-center">Chart could not be loaded due to an error.</div>');
+            }
+        }
+
+        // --- Render Charts ---
+        // Patient Registrations Trend Chart
+        const registrationLabels = JSON.parse('{{ registration_labels_json|escapejs }}');
+        const registrationData = JSON.parse('{{ registration_data_json|escapejs }}');
+        createChart('registrationTrendChart', 'line', registrationLabels, [{
+            label: 'New Patients Registered',
+            backgroundColor: 'rgba(23,162,184,0.4)', // info blue
+            borderColor: 'rgba(23,162,184,1)',
+            pointRadius: 4,
+            pointBackgroundColor: '#17a2b8',
+            fill: true,
+            tension: 0.3,
+            data: registrationData
+        }], {
+            plugins: { legend: { display: true, position: 'top' } }
+        });
+
+        // Admissions Trend Chart
+        const admissionsTrendLabels = JSON.parse('{{ admissions_trend_labels_json|escapejs }}');
+        const admissionsTrendData = JSON.parse('{{ admissions_trend_data_json|escapejs }}');
+        createChart('admissionsTrendChart', 'bar', admissionsTrendLabels, [{
+            label: 'Admissions Count',
+            backgroundColor: '#ffc107', // warning yellow
+            borderColor: '#ffc107',
+            borderWidth: 1,
+            data: admissionsTrendData
+        }], {
+            plugins: { legend: { display: false } }
+        });
+
+        // Appointments Trend Chart
+        const appointmentsTrendLabels = JSON.parse('{{ appointments_trend_labels_json|escapejs }}');
+        const appointmentsTrendData = JSON.parse('{{ appointments_trend_data_json|escapejs }}');
+        createChart('appointmentsTrendChart', 'line', appointmentsTrendLabels, [{
+            label: 'Appointments Scheduled',
+            backgroundColor: 'rgba(0,123,255,0.4)', // primary blue
+            borderColor: 'rgba(0,123,255,1)',
+            pointRadius: 4,
+            pointBackgroundColor: '#007bff',
+            fill: true,
+            tension: 0.3,
+            data: appointmentsTrendData
+        }], {
+            plugins: { legend: { display: true, position: 'top' } }
+        });
+
+        // Gender Distribution Chart
+        const genderLabels = JSON.parse('{{ gender_labels_json|escapejs }}');
+        const genderData = JSON.parse('{{ gender_data_json|escapejs }}');
+        createChart('genderDistributionChart', 'doughnut', genderLabels, [{
+            data: genderData,
+            backgroundColor: ['#28a745', '#6f42c1'], // green, purple
+        }], {
+            plugins: { legend: { position: 'right' } }
+        });
+
+        // Age Distribution Chart
+        const ageLabels = JSON.parse('{{ age_labels_json|escapejs }}');
+        const ageData = JSON.parse('{{ age_data_json|escapejs }}');
+        createChart('ageDistributionChart', 'bar', ageLabels, [{
+            label: 'Number of Patients',
+            backgroundColor: '#dc3545', // danger red
+            borderColor: '#dc3545',
+            borderWidth: 1,
+            data: ageData
+        }], {
+            plugins: { legend: { display: false } }
+        });
+
+        // Marital Status Chart
+        const maritalStatusLabels = JSON.parse('{{ marital_status_labels_json|escapejs }}');
+        const maritalStatusData = JSON.parse('{{ marital_status_data_json|escapejs }}');
+        createChart('maritalStatusChart', 'pie', maritalStatusLabels, [{
+            data: maritalStatusData,
+            backgroundColor: ['#343a40', '#17a2b8', '#ffc107', '#28a745'], // dark, info, warning, success
+        }], {
+            plugins: { legend: { position: 'right' } }
+        });
+
+        // Nationality Chart
+        const nationalityLabels = JSON.parse('{{ nationality_labels_json|escapejs }}');
+        const nationalityData = JSON.parse('{{ nationality_data_json|escapejs }}');
+        createChart('nationalityChart', 'bar', nationalityLabels, [{
+            label: 'Count',
+            backgroundColor: '#6c757d', // secondary grey
+            borderColor: '#6c757d',
+            borderWidth: 1,
+            data: nationalityData
+        }], {
+            plugins: { legend: { display: false } }
+        });
+
+        // Admission Status Chart
+        const admissionStatusLabels = JSON.parse('{{ admission_status_labels_json|escapejs }}');
+        const admissionStatusData = JSON.parse('{{ admission_status_data_json|escapejs }}');
+        createChart('admissionStatusChart', 'doughnut', admissionStatusLabels, [{
+            data: admissionStatusData,
+            backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'], // primary, success, warning, danger
+        }], {
+            plugins: { legend: { position: 'right' } }
+        });
+
+        // Appointment by Department Chart
+        const appointmentDeptLabels = JSON.parse('{{ appointment_dept_labels_json|escapejs }}');
+        const appointmentDeptData = JSON.parse('{{ appointment_dept_data_json|escapejs }}');
+        createChart('appointmentDeptChart', 'bar', appointmentDeptLabels, [{
+            label: 'Appointments Count',
+            backgroundColor: '#28a745', // success green
+            borderColor: '#28a745',
+            borderWidth: 1,
+            data: appointmentDeptData
+        }], {
+            plugins: { legend: { display: false } }
+        });
+
+        // Referral by Department Chart
+        const referralDeptLabels = JSON.parse('{{ referral_dept_labels_json|escapejs }}');
+        const referralDeptData = JSON.parse('{{ referral_dept_data_json|escapejs }}');
+        createChart('referralDeptChart', 'pie', referralDeptLabels, [{
+            data: referralDeptData,
+            backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#007bff', '#6f42c1'], // danger, warning, info, primary, purple
+        }], {
+            plugins: { legend: { position: 'right' } }
+        });
+
+
+        // --- Export Button Handlers ---
+        $('#exportCsvBtn').on('click', function() {
+            const form = $('#filterForm');
+            form.append('<input type="hidden" name="export_type" value="csv" />');
+            form.submit();
+            form.find('input[name="export_type"]').remove();
+        });
+
+        $('#exportPdfBtn').on('click', function() {
+            const form = $('#filterForm');
+            form.append('<input type="hidden" name="export_type" value="pdf" />');
+            form.submit();
+            form.find('input[name="export_type"]').remove();
+        });
+
+    }); // End of document.ready
+</script>
+{% endblock %}
