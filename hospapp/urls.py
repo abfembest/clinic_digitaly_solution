@@ -120,6 +120,11 @@ urlpatterns = [
     path('lab/report/', views.lab_report_view, name='lab_reports'),
     path('api/analytics/', views.lab_analytics_api, name='lab_analytics_api'),
 
+    path('report/', views.account_report, name='account_report'),
+    path('report/api/', views.account_report_api, name='account_report_api'),
+
+    path('hr/report/', views.hr_report, name='hr_reports'),
+
     path('ad/accounts', views.user_accounts, name='user_accounts'),
     path('ad/user_accounts', views.user_accounts, name='user_accounts'),
 

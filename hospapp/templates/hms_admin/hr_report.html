@@ -1,0 +1,797 @@
+{% extends 'hms_admin/base.html' %}
+
+{% block title %}HR Report Dashboard{% endblock %}
+
+{% block content %}
+    <!-- Content Header -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">HR Report Dashboard</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="#">Home</a></li>
+                        <li class="breadcrumb-item active">HR Report</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            
+            <!-- Alerts Section -->
+            {% if alerts %}
+            <div class="row mb-3">
+                <div class="col-12">
+                    {% for alert in alerts %}
+                    <div class="alert alert-{{ alert.type }} alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                        <h5><i class="icon fas fa-exclamation-triangle"></i> Alert!</h5>
+                        {{ alert.message }} - <strong>{{ alert.action }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Overview Cards -->
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info">
+                        <div class="inner">
+                            <h3>{{ total_staff }}</h3>
+                            <p>Total Staff</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3>{{ active_staff }}</h3>
+                            <p>Active Staff</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3>{{ present_today }}</h3>
+                            <p>Present Today</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-danger">
+                        <div class="inner">
+                            <h3>{{ attendance_rate }}%</h3>
+                            <p>Attendance Rate</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Attendance Summary -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Today's Attendance Summary</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="progress-group">
+                                        <span class="progress-text">Present</span>
+                                        <span class="float-right">{{ present_today }}/{{ active_staff }}</span>
+                                        <div class="progress progress-sm">
+                                            <div class="progress-bar bg-success" style="width: {{ attendance_rate }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="progress-group">
+                                        <span class="progress-text">Absent</span>
+                                        <span class="float-right">{{ absent_today }}</span>
+                                        <div class="progress progress-sm">
+                                            <div class="progress-bar bg-danger" style="width: {% widthratio absent_today active_staff 100 %}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="progress-group">
+                                        <span class="progress-text">On Leave</span>
+                                        <span class="float-right">{{ on_leave_today }}</span>
+                                        <div class="progress progress-sm">
+                                            <div class="progress-bar bg-warning" style="width: {% widthratio on_leave_today active_staff 100 %}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row">
+                <!-- Staff by Role Chart -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Staff Distribution by Role</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="staffRoleChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staff by Department Chart -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Staff Distribution by Department</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="staffDeptChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Attendance Trend -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Weekly Attendance Trend ({{ week_range }})</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="weeklyAttendanceChart" style="height: 400px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Transition Trends -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Staff Transition Trends (Last 6 Months)</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="transitionTrendChart" style="height: 350px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gender Distribution -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Staff by Gender</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="genderChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shift Distribution -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Today's Shift Distribution</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="shiftChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Shift Assignments -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Current Shift Assignments</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Staff</th>
+                                            <th>Shift</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for assignment in current_shifts %}
+                                        <tr>
+                                            <td>{{ assignment.staff.get_full_name|default:assignment.staff.username }}</td>
+                                            <td>
+                                                <span class="badge badge-info">{{ assignment.shift.name }}</span>
+                                            </td>
+                                            <td>
+                                                {% if assignment.staff.is_active %}
+                                                    <span class="badge badge-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center">No shift assignments for today</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Department Analysis -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Department Performance Analysis</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Total Staff</th>
+                                            <th>Active Staff</th>
+                                            <th>Present This Week</th>
+                                            <th>Absent This Week</th>
+                                            <th>Attendance Rate</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dept in dept_analysis %}
+                                        <tr>
+                                            <td><strong>{{ dept.name }}</strong></td>
+                                            <td>{{ dept.total_staff }}</td>
+                                            <td>{{ dept.active_staff }}</td>
+                                            <td>{{ dept.present_week }}</td>
+                                            <td>{{ dept.absent_week }}</td>
+                                            <td>
+                                                <div class="progress progress-sm">
+                                                    <div class="progress-bar 
+                                                        {% if dept.attendance_rate >= 90 %}bg-success
+                                                        {% elif dept.attendance_rate >= 80 %}bg-warning
+                                                        {% else %}bg-danger{% endif %}"
+                                                         style="width: {{ dept.attendance_rate }}%">
+                                                        {{ dept.attendance_rate|floatformat:1 }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if dept.attendance_rate >= 90 %}
+                                                    <span class="badge badge-success">Excellent</span>
+                                                {% elif dept.attendance_rate >= 80 %}
+                                                    <span class="badge badge-warning">Good</span>
+                                                {% elif dept.attendance_rate >= 70 %}
+                                                    <span class="badge badge-info">Average</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">Needs Attention</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center">No department data available</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Performers & Recent Transitions -->
+            <div class="row">
+                <!-- Top Performers -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Top Performers ({{ current_month }})</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Name</th>
+                                            <th>Department</th>
+                                            <th>Attendance Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for performer in top_performers %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <strong>{{ performer.name }}</strong><br>
+                                                <small class="text-muted">{{ performer.role }}</small>
+                                            </td>
+                                            <td>{{ performer.department }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if performer.attendance_rate >= 95 %}badge-success
+                                                    {% elif performer.attendance_rate >= 85 %}badge-warning
+                                                    {% else %}badge-danger{% endif %}">
+                                                    {{ performer.attendance_rate|floatformat:1 }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">No performance data available</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Transitions -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Staff Transitions</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                {% for transition in recent_onboarding %}
+                                <div class="time-label">
+                                    <span class="bg-green">{{ transition.date }}</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-user-plus bg-green"></i>
+                                    <div class="timeline-item">
+                                        <h3 class="timeline-header">
+                                            <strong>{{ transition.full_name }}</strong> joined the team
+                                        </h3>
+                                        <div class="timeline-body">
+                                            {{ transition.notes|default:"Welcome to the team!" }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+
+                                {% for transition in recent_offboarding %}
+                                <div class="time-label">
+                                    <span class="bg-red">{{ transition.date }}</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-user-minus bg-red"></i>
+                                    <div class="timeline-item">
+                                        <h3 class="timeline-header">
+                                            <strong>{{ transition.full_name }}</strong> left the organization
+                                        </h3>
+                                        <div class="timeline-body">
+                                            {{ transition.notes|default:"Thank you for your service." }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse JSON data safely
+    function parseJSON(data) {
+        try {
+            return JSON.parse(data);
+        } catch (e) {
+            console.error('Error parsing JSON:', e);
+            return [];
+        }
+    }
+
+    const staffByRole = parseJSON('{{ staff_by_role|safe }}');
+    const staffByDept = parseJSON('{{ staff_by_dept|safe }}');
+    const staffByGender = parseJSON('{{ staff_by_gender|safe }}');
+    const weeklyAttendance = parseJSON('{{ weekly_attendance|safe }}');
+    const shiftDistribution = parseJSON('{{ shift_distribution|safe }}');
+    const transitionTrends = parseJSON('{{ transition_trends|safe }}');
+
+    // Color palettes
+    const colors = {
+        primary: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'],
+        success: '#28A745',
+        warning: '#FFC107',
+        danger: '#DC3545',
+        info: '#17A2B8'
+    };
+
+    // Staff by Role Chart
+    if (staffByRole.length > 0) {
+        const roleCtx = document.getElementById('staffRoleChart');
+        if (roleCtx) {
+            new Chart(roleCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: staffByRole.map(item => item.role ? item.role.replace('_', ' ').toUpperCase() : 'Unknown'),
+                    datasets: [{
+                        data: staffByRole.map(item => item.count || 0),
+                        backgroundColor: colors.primary,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Staff by Department Chart
+    if (staffByDept.length > 0) {
+        const deptCtx = document.getElementById('staffDeptChart');
+        if (deptCtx) {
+            new Chart(deptCtx, {
+                type: 'bar',
+                data: {
+                    labels: staffByDept.map(item => item.department__name || 'Unknown'),
+                    datasets: [{
+                        label: 'Staff Count',
+                        data: staffByDept.map(item => item.count || 0),
+                        backgroundColor: colors.info,
+                        borderColor: colors.info,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Weekly Attendance Chart
+    if (weeklyAttendance.length > 0) {
+        const attendanceCtx = document.getElementById('weeklyAttendanceChart');
+        if (attendanceCtx) {
+            new Chart(attendanceCtx, {
+                type: 'line',
+                data: {
+                    labels: weeklyAttendance.map(item => item.day || ''),
+                    datasets: [{
+                        label: 'Present',
+                        data: weeklyAttendance.map(item => item.present || 0),
+                        borderColor: colors.success,
+                        backgroundColor: colors.success + '20',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Absent',
+                        data: weeklyAttendance.map(item => item.absent || 0),
+                        borderColor: colors.danger,
+                        backgroundColor: colors.danger + '20',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'On Leave',
+                        data: weeklyAttendance.map(item => item.on_leave || 0),
+                        borderColor: colors.warning,
+                        backgroundColor: colors.warning + '20',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Transition Trends Chart
+    if (transitionTrends.length > 0) {
+        const transitionCtx = document.getElementById('transitionTrendChart');
+        if (transitionCtx) {
+            new Chart(transitionCtx, {
+                type: 'bar',
+                data: {
+                    labels: transitionTrends.map(item => item.month || ''),
+                    datasets: [{
+                        label: 'Onboarding',
+                        data: transitionTrends.map(item => item.onboarding || 0),
+                        backgroundColor: colors.success,
+                        borderRadius: 4
+                    }, {
+                        label: 'Offboarding',
+                        data: transitionTrends.map(item => item.offboarding || 0),
+                        backgroundColor: colors.danger,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Gender Distribution Chart
+    if (staffByGender.length > 0) {
+        const genderCtx = document.getElementById('genderChart');
+        if (genderCtx) {
+            const genderLabels = staffByGender.map(item => {
+                switch(item.gender) {
+                    case 'M': return 'Male';
+                    case 'F': return 'Female';
+                    case 'O': return 'Other';
+                    default: return 'Not Specified';
+                }
+            });
+            
+            new Chart(genderCtx, {
+                type: 'pie',
+                data: {
+                    labels: genderLabels,
+                    datasets: [{
+                        data: staffByGender.map(item => item.count || 0),
+                        backgroundColor: [colors.info, colors.warning, colors.success, colors.danger],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Shift Distribution Chart
+    if (shiftDistribution.length > 0) {
+        const shiftCtx = document.getElementById('shiftChart');
+        if (shiftCtx) {
+            new Chart(shiftCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: shiftDistribution.map(item => item.shift__name || 'Unknown Shift'),
+                    datasets: [{
+                        data: shiftDistribution.map(item => item.count || 0),
+                        backgroundColor: colors.primary,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Auto-refresh functionality (optional)
+    setInterval(function() {
+        // You can add auto-refresh logic here if needed
+        console.log('Dashboard data refreshed at:', new Date().toLocaleTimeString());
+    }, 300000); // Refresh every 5 minutes
+
+    // Tooltip functionality for progress bars
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(bar => {
+        bar.setAttribute('title', bar.style.width);
+    });
+
+    // Print functionality
+    window.printReport = function() {
+        window.print();
+    };
+
+    // Export functionality (placeholder)
+    window.exportReport = function(format) {
+        alert('Export to ' + format + ' functionality to be implemented');
+    };
+});
+
+// Utility functions for chart updates
+function updateChartData(chart, newData) {
+    chart.data = newData;
+    chart.update();
+}
+
+function refreshDashboard() {
+    location.reload();
+}
+</script>
+
+<style>
+/* Additional custom styles for the dashboard */
+.small-box {
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.small-box:hover {
+    transform: translateY(-2px);
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+.progress-sm {
+    height: 10px;
+    border-radius: 5px;
+}
+
+.badge {
+    font-size: 0.85em;
+}
+
+.timeline {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.alert {
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+}
+
+.alert-danger {
+    border-left-color: #dc3545;
+}
+
+.table-responsive {
+    border-radius: 8px;
+}
+
+/* Loading animation */
+.chart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    color: #6c757d;
+}
+
+.chart-loading::after {
+    content: "Loading chart...";
+}
+
+/* Print styles */
+@media print {
+    .content-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
@@ -39,6 +39,7 @@ import csv
 from io import BytesIO
 from datetime import date, datetime, timedelta
 from django.db.models import Case, When, Value, IntegerField, F, Q, Count, Avg
+from calendar import monthrange
 
 
 import string
@@ -4678,6 +4679,414 @@ def lab_analytics_api(request):
             })
     
     return JsonResponse({'data': data})
+
+def account_report(request):
+    """Main account report dashboard"""
+    today = timezone.now().date()
+    current_month = today.month
+    current_year = today.year
+    
+    # Financial Summary
+    total_revenue = PatientBill.objects.filter(
+        status='paid'
+    ).aggregate(Sum('final_amount'))['final_amount__sum'] or Decimal('0.00')
+    
+    total_expenses = Expense.objects.filter(
+        status='paid'
+    ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+    
+    monthly_revenue = PatientBill.objects.filter(
+        created_at__month=current_month,
+        created_at__year=current_year,
+        status='paid'
+    ).aggregate(Sum('final_amount'))['final_amount__sum'] or Decimal('0.00')
+    
+    monthly_expenses = Expense.objects.filter(
+        expense_date__month=current_month,
+        expense_date__year=current_year,
+        status='paid'
+    ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+    
+    # Outstanding amounts
+    outstanding_bills = PatientBill.objects.filter(
+        status__in=['pending', 'partial']
+    ).aggregate(Sum('final_amount'))['final_amount__sum'] or Decimal('0.00')
+    
+    # Revenue by service type (last 30 days)
+    last_30_days = today - timedelta(days=30)
+    service_revenue = BillItem.objects.filter(
+        bill__created_at__gte=last_30_days,
+        bill__status='paid'
+    ).values('service_type__name').annotate(
+        total=Sum('total_price')
+    ).order_by('-total')[:10]
+    
+    # Monthly trends (last 12 months)
+    monthly_data = []
+    for i in range(12):
+        month_date = today.replace(day=1) - timedelta(days=30*i)
+        month_revenue = PatientBill.objects.filter(
+            created_at__month=month_date.month,
+            created_at__year=month_date.year,
+            status='paid'
+        ).aggregate(Sum('final_amount'))['final_amount__sum'] or Decimal('0.00')
+        
+        month_expenses = Expense.objects.filter(
+            expense_date__month=month_date.month,
+            expense_date__year=month_date.year,
+            status='paid'
+        ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        
+        monthly_data.append({
+            'month': month_date.strftime('%B %Y'),
+            'revenue': float(month_revenue),
+            'expenses': float(month_expenses),
+            'profit': float(month_revenue - month_expenses)
+        })
+    
+    monthly_data.reverse()
+    
+    # Payment method distribution
+    payment_methods = Payment.objects.filter(
+        status='completed',
+        payment_date__gte=last_30_days
+    ).values('payment_method').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('-total')
+    
+    # Budget utilization
+    current_budgets = Budget.objects.filter(
+        year=current_year,
+        month=current_month
+    ).select_related('category')
+    
+    # Top patients by revenue
+    top_patients = PatientBill.objects.filter(
+        status='paid'
+    ).values('patient__full_name').annotate(
+        total_spent=Sum('final_amount')
+    ).order_by('-total_spent')[:10]
+    
+    # Expense categories breakdown
+    expense_categories = Expense.objects.filter(
+        status='paid',
+        expense_date__gte=last_30_days
+    ).values('category__name').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Daily revenue trend (last 30 days)
+    daily_revenue = PatientBill.objects.filter(
+        created_at__gte=last_30_days,
+        status='paid'
+    ).extra(
+        select={'day': 'date(created_at)'}
+    ).values('day').annotate(
+        revenue=Sum('final_amount')
+    ).order_by('day')
+    
+    context = {
+        'total_revenue': total_revenue,
+        'total_expenses': total_expenses,
+        'monthly_revenue': monthly_revenue,
+        'monthly_expenses': monthly_expenses,
+        'outstanding_bills': outstanding_bills,
+        'net_profit': total_revenue - total_expenses,
+        'monthly_profit': monthly_revenue - monthly_expenses,
+        'service_revenue': service_revenue,
+        'monthly_data': json.dumps(monthly_data),
+        'payment_methods': payment_methods,
+        'current_budgets': current_budgets,
+        'top_patients': top_patients,
+        'expense_categories': expense_categories,
+        'daily_revenue': json.dumps(list(daily_revenue)),
+        'current_month_name': today.strftime('%B %Y'),
+        'total_patients': Patient.objects.count(),
+        'total_bills': PatientBill.objects.count(),
+        'paid_bills': PatientBill.objects.filter(status='paid').count(),
+        'pending_bills': PatientBill.objects.filter(status='pending').count(),
+    }
+    
+    return render(request, 'hms_admin/account_reports.html', context)
+
+def account_report_api(request):
+    """API endpoint for dynamic chart data"""
+    chart_type = request.GET.get('type', 'revenue')
+    period = request.GET.get('period', '30')  # days
+    
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=int(period))
+    
+    if chart_type == 'revenue_trend':
+        data = PatientBill.objects.filter(
+            created_at__gte=start_date,
+            status='paid'
+        ).extra(
+            select={'day': 'date(created_at)'}
+        ).values('day').annotate(
+            revenue=Sum('final_amount')
+        ).order_by('day')
+        
+        return JsonResponse({
+            'labels': [item['day'].strftime('%Y-%m-%d') for item in data],
+            'data': [float(item['revenue']) for item in data]
+        })
+    
+    elif chart_type == 'expense_trend':
+        data = Expense.objects.filter(
+            expense_date__gte=start_date,
+            status='paid'
+        ).extra(
+            select={'day': 'date(expense_date)'}
+        ).values('day').annotate(
+            expenses=Sum('amount')
+        ).order_by('day')
+        
+        return JsonResponse({
+            'labels': [item['day'].strftime('%Y-%m-%d') for item in data],
+            'data': [float(item['expenses']) for item in data]
+        })
+    
+    return JsonResponse({'error': 'Invalid chart type'}, status=400)
+
+@login_required
+def hr_report(request):
+    """Comprehensive HR Report Dashboard"""
+    
+    # Get current date and calculate date ranges
+    today = timezone.now().date()
+    current_month = today.month
+    current_year = today.year
+    
+    # Calculate previous month
+    if current_month == 1:
+        prev_month = 12
+        prev_year = current_year - 1
+    else:
+        prev_month = current_month - 1
+        prev_year = current_year
+    
+    # Date ranges
+    month_start = datetime(current_year, current_month, 1).date()
+    month_end = datetime(current_year, current_month, monthrange(current_year, current_month)[1]).date()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    
+    # STAFF OVERVIEW METRICS
+    total_staff = Staff.objects.count()
+    active_staff = Staff.objects.filter(user__is_active=True).count()
+    inactive_staff = total_staff - active_staff
+    
+    # Staff by role
+    staff_by_role = Staff.objects.values('role').annotate(count=Count('id')).order_by('-count')
+    
+    # Staff by department
+    staff_by_dept = Staff.objects.filter(department__isnull=False).values('department__name').annotate(count=Count('id')).order_by('-count')
+    
+    # Staff by gender
+    staff_by_gender = Staff.objects.values('gender').annotate(count=Count('id'))
+    
+    # New hires this month
+    new_hires_month = Staff.objects.filter(date_joined__gte=month_start, date_joined__lte=month_end).count()
+    
+    # ATTENDANCE METRICS
+    # Today's attendance
+    today_attendance = Attendance.objects.filter(date__date=today)
+    present_today = today_attendance.filter(status='Present').count()
+    absent_today = today_attendance.filter(status='Absent').count()
+    on_leave_today = today_attendance.filter(status='On Leave').count()
+    
+    # Weekly attendance trends
+    weekly_attendance = []
+    for i in range(7):
+        day = week_start + timedelta(days=i)
+        day_attendance = Attendance.objects.filter(date__date=day)
+        weekly_attendance.append({
+            'date': day.strftime('%Y-%m-%d'),
+            'day': day.strftime('%a'),
+            'present': day_attendance.filter(status='Present').count(),
+            'absent': day_attendance.filter(status='Absent').count(),
+            'on_leave': day_attendance.filter(status='On Leave').count()
+        })
+    
+    # Monthly attendance summary
+    monthly_attendance = Attendance.objects.filter(date__month=current_month, date__year=current_year)
+    monthly_present = monthly_attendance.filter(status='Present').count()
+    monthly_absent = monthly_attendance.filter(status='Absent').count()
+    monthly_on_leave = monthly_attendance.filter(status='On Leave').count()
+    
+    # Attendance rate calculation
+    total_working_days = len([d for d in weekly_attendance if d['present'] + d['absent'] + d['on_leave'] > 0])
+    attendance_rate = (present_today / active_staff * 100) if active_staff > 0 else 0
+    
+    # SHIFT MANAGEMENT
+    # Current shift assignments
+    current_shifts = ShiftAssignment.objects.filter(date=today).select_related('shift', 'staff')
+    shift_distribution = current_shifts.values('shift__name').annotate(count=Count('id'))
+    
+    # Weekly shift patterns
+    weekly_shifts = []
+    for i in range(7):
+        day = week_start + timedelta(days=i)
+        day_shifts = ShiftAssignment.objects.filter(date=day).select_related('shift')
+        shift_counts = day_shifts.values('shift__name').annotate(count=Count('id'))
+        weekly_shifts.append({
+            'date': day.strftime('%Y-%m-%d'),
+            'day': day.strftime('%a'),
+            'shifts': {shift['shift__name']: shift['count'] for shift in shift_counts}
+        })
+    
+    # STAFF TRANSITIONS
+    # Recent onboarding
+    recent_onboarding = StaffTransition.objects.filter(
+        transition_type='onboarding',
+        date__gte=month_start
+    ).order_by('-date')[:5]
+    
+    # Recent offboarding
+    recent_offboarding = StaffTransition.objects.filter(
+        transition_type='offboarding',
+        date__gte=month_start
+    ).order_by('-date')[:5]
+    
+    # Monthly transition trends (last 6 months)
+    transition_trends = []
+    for i in range(6):
+        if current_month - i <= 0:
+            month = current_month - i + 12
+            year = current_year - 1
+        else:
+            month = current_month - i
+            year = current_year
+        
+        month_transitions = StaffTransition.objects.filter(date__month=month, date__year=year)
+        onboarding_count = month_transitions.filter(transition_type='onboarding').count()
+        offboarding_count = month_transitions.filter(transition_type='offboarding').count()
+        
+        transition_trends.append({
+            'month': datetime(year, month, 1).strftime('%b %Y'),
+            'onboarding': onboarding_count,
+            'offboarding': offboarding_count,
+            'net': onboarding_count - offboarding_count
+        })
+    
+    transition_trends.reverse()
+    
+    # DEPARTMENT ANALYSIS
+    dept_analysis = []
+    for dept in Department.objects.all():
+        dept_staff = Staff.objects.filter(department=dept)
+        dept_active = dept_staff.filter(user__is_active=True).count()
+        dept_total = dept_staff.count()
+        
+        # Recent attendance for this department
+        dept_attendance = Attendance.objects.filter(
+            staff__staff__department=dept,
+            date__gte=week_start
+        )
+        dept_present = dept_attendance.filter(status='Present').count()
+        dept_absent = dept_attendance.filter(status='Absent').count()
+        
+        dept_analysis.append({
+            'name': dept.name,
+            'total_staff': dept_total,
+            'active_staff': dept_active,
+            'present_week': dept_present,
+            'absent_week': dept_absent,
+            'attendance_rate': (dept_present / (dept_present + dept_absent) * 100) if (dept_present + dept_absent) > 0 else 0
+        })
+    
+    # TOP PERFORMERS (by attendance)
+    top_performers = []
+    for staff in Staff.objects.filter(user__is_active=True)[:10]:
+        staff_attendance = Attendance.objects.filter(
+            staff=staff.user,
+            date__gte=month_start
+        )
+        present_days = staff_attendance.filter(status='Present').count()
+        total_days = staff_attendance.count()
+        attendance_rate = (present_days / total_days * 100) if total_days > 0 else 0
+        
+        top_performers.append({
+            'name': f"{staff.user.first_name} {staff.user.last_name}",
+            'role': staff.get_role_display(),
+            'department': staff.department.name if staff.department else 'N/A',
+            'attendance_rate': attendance_rate,
+            'present_days': present_days,
+            'total_days': total_days
+        })
+    
+    top_performers.sort(key=lambda x: x['attendance_rate'], reverse=True)
+    top_performers = top_performers[:10]
+    
+    # ALERTS AND NOTIFICATIONS
+    alerts = []
+    
+    # Low attendance alert
+    if attendance_rate < 80:
+        alerts.append({
+            'type': 'warning',
+            'message': f'Low attendance rate today: {attendance_rate:.1f}%',
+            'action': 'Review attendance patterns'
+        })
+    
+    # High absence rate
+    if absent_today > active_staff * 0.15:
+        alerts.append({
+            'type': 'danger',
+            'message': f'High absence rate: {absent_today} staff members absent',
+            'action': 'Contact absent staff'
+        })
+    
+    # Understaffed departments
+    for dept in dept_analysis:
+        if dept['attendance_rate'] < 70:
+            alerts.append({
+                'type': 'warning',
+                'message': f'{dept["name"]} department understaffed: {dept["attendance_rate"]:.1f}% attendance',
+                'action': 'Review staffing levels'
+            })
+    
+    context = {
+        # Overview metrics
+        'total_staff': total_staff,
+        'active_staff': active_staff,
+        'inactive_staff': inactive_staff,
+        'new_hires_month': new_hires_month,
+        'attendance_rate': round(attendance_rate, 1),
+        
+        # Today's stats
+        'present_today': present_today,
+        'absent_today': absent_today,
+        'on_leave_today': on_leave_today,
+        
+        # Charts data
+        'staff_by_role': json.dumps(list(staff_by_role)),
+        'staff_by_dept': json.dumps(list(staff_by_dept)),
+        'staff_by_gender': json.dumps(list(staff_by_gender)),
+        'weekly_attendance': json.dumps(weekly_attendance),
+        'shift_distribution': json.dumps(list(shift_distribution)),
+        'weekly_shifts': json.dumps(weekly_shifts),
+        'transition_trends': json.dumps(transition_trends),
+        
+        # Tables data
+        'dept_analysis': dept_analysis,
+        'top_performers': top_performers,
+        'recent_onboarding': recent_onboarding,
+        'recent_offboarding': recent_offboarding,
+        'current_shifts': current_shifts,
+        
+        # Alerts
+        'alerts': alerts,
+        
+        # Date info
+        'today': today,
+        'current_month': datetime(current_year, current_month, 1).strftime('%B %Y'),
+        'week_range': f"{week_start.strftime('%B %d')} - {week_end.strftime('%B %d, %Y')}"
+    }
+    
+    return render(request, 'hms_admin/hr_report.html', context)
 
 
 # --- Export Helper Functions for Receptionist ---

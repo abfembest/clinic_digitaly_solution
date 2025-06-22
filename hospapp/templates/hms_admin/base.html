@@ -176,14 +176,14 @@
                         </li>
 
                         <li class="nav-item">
-                            <a href="{ url 'accounts_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'accounts_reports' %}active{% endif %}">
+                            <a href="{% url 'account_report' %}" class="nav-link {% if request.resolver_match.url_name == 'accounts_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-wallet"></i>
                                 <p>Accounts Department Reports</p>
                             </a>
                         </li>
 
                         <li class="nav-item">
-                            <a href="{ url 'hr_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'hr_reports' %}active{% endif %}">
+                            <a href="{% url 'hr_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'hr_reports' %}active{% endif %}">
                                 <i class="nav-icon fas fa-users"></i>
                                 <p>Human Resources Reports</p>
                             </a>

@@ -1,0 +1,714 @@
+{% extends 'hms_admin/base.html' %}
+{% load custom_filters %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Financial Reports - HMS{% endblock %}
+
+{% block content %}
+<!-- Content Header -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Financial Reports</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'hms_admin' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Financial Reports</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Summary Cards -->
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>₦{{ total_revenue|floatformat:2|intcomma }}</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3>₦{{ total_expenses|floatformat:2|intcomma }}</h3>
+                        <p>Total Expenses</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>₦{{ net_profit|floatformat:2|intcomma }}</h3>
+                        <p>Net Profit</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>₦{{ outstanding_bills|floatformat:2|intcomma }}</h3>
+                        <p>Outstanding Bills</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Summary Cards -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ current_month_name }} Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-success"><i class="fas fa-money-bill-wave"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Monthly Revenue</span>
+                                        <span class="info-box-number">₦{{ monthly_revenue|floatformat:2|intcomma}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-danger"><i class="fas fa-credit-card"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Monthly Expenses</span>
+                                        <span class="info-box-number">₦{{ monthly_expenses|floatformat:2|intcomma}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-info"><i class="fas fa-chart-bar"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Monthly Profit</span>
+                                        <span class="info-box-number">₦{{ monthly_profit|floatformat:2|intcomma}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-warning"><i class="fas fa-users"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Total Patients</span>
+                                        <span class="info-box-number">{{ total_patients|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <!-- Revenue vs Expenses Trend -->
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-line mr-1"></i>
+                            Revenue vs Expenses Trend (Last 12 Months)
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="monthlyTrendChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Service Revenue Breakdown -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>
+                            Top Services by Revenue (Last 30 Days)
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="serviceRevenueChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods Distribution -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-credit-card mr-1"></i>
+                            Payment Methods Distribution
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="paymentMethodChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Expense Categories -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-donut mr-1"></i>
+                            Expense Categories (Last 30 Days)
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="expenseCategoriesChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Revenue Trend -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-area mr-1"></i>
+                            Daily Revenue Trend (Last 30 Days)
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="dailyRevenueChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Tables Row -->
+        <div class="row">
+            <!-- Budget Utilization -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-calculator mr-1"></i>
+                            Budget Utilization - {{ current_month_name }}
+                        </h3>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Allocated</th>
+                                    <th>Spent</th>
+                                    <th>Remaining</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for budget in current_budgets %}
+                                <tr>
+                                    <td>{{ budget.category.name }}</td>
+                                    <td>₦{{ budget.allocated_amount|floatformat:2|intcomma }}</td>
+                                    <td>₦{{ budget.spent_amount|floatformat:2|intcomma }}</td>
+                                    <td>₦{{ budget.remaining_amount|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <div class="progress progress-xs">
+                                            <div class="progress-bar 
+                                                    {% if budget.percentage_used < 50 %}bg-success
+                                                    {% elif budget.percentage_used < 80 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}"
+                                                style="width: {{ budget.percentage_used }}%"></div>
+                                        </div>
+                                        <span class="badge 
+                                                {% if budget.percentage_used < 50 %}badge-success
+                                                {% elif budget.percentage_used < 80 %}badge-warning
+                                                {% else %}badge-danger{% endif %}">
+                                            {{ budget.percentage_used|floatformat:1 }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No budget data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Patients by Revenue -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-users mr-1"></i>
+                            Top Patients by Revenue
+                        </h3>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Patient Name</th>
+                                    <th>Total Spent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in top_patients %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ patient.patient__full_name }}</td>
+                                    <td>₦{{ patient.total_spent|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bills Status Summary -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-file-invoice mr-1"></i>
+                            Bills Summary
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-primary"><i class="fas fa-file-invoice"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Total Bills</span>
+                                        <span class="info-box-number">{{ total_bills|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-success"><i class="fas fa-check-circle"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Paid Bills</span>
+                                        <span class="info-box-number">{{ paid_bills|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-warning"><i class="fas fa-clock"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Pending Bills</span>
+                                        <span class="info-box-number">{{ pending_bills|intcomma }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-info"><i class="fas fa-percentage"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Payment Rate</span>
+                                        <span class="info-box-number">
+                                            {% if total_bills > 0 %}
+                                            {{ paid_bills|mul:100|div:total_bills|floatformat:1 }}%
+                                            {% else %}
+                                            0%
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js%}
+<!-- Chart.js -->
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<!-- DataTables -->
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+
+<!-- Chart.js Scripts -->
+<script>
+    $(document).ready(function () {
+        // Monthly Trend Chart
+        const monthlyData = {{ monthly_data| safe
+    }};
+    const monthlyCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.map(item => item.month),
+            datasets: [{
+                label: 'Revenue',
+                data: monthlyData.map(item => item.revenue),
+                borderColor: 'rgb(40, 167, 69)',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.1
+            }, {
+                label: 'Expenses',
+                data: monthlyData.map(item => item.expenses),
+                borderColor: 'rgb(220, 53, 69)',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.1
+            }, {
+                label: 'Profit',
+                data: monthlyData.map(item => item.profit),
+                borderColor: 'rgb(23, 162, 184)',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return '₦' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.dataset.label + ': ₦' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Service Revenue Chart
+    const serviceCtx = document.getElementById('serviceRevenueChart').getContext('2d');
+    new Chart(serviceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for service in service_revenue %}
+                '{{ service.service_type__name }}',
+                {% endfor %}
+            ],
+        datasets: [{
+            data: [
+                {% for service in service_revenue %}
+                    {{ service.total }},
+        {% endfor %}
+    ],
+        backgroundColor: [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+    ]
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        return context.label + ': ₦' + context.parsed.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+    });
+
+    // Payment Methods Chart
+    const paymentCtx = document.getElementById('paymentMethodChart').getContext('2d');
+    new Chart(paymentCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for method in payment_methods %}
+                '{{ method.payment_method|title }}',
+                {% endfor %}
+            ],
+        datasets: [{
+            label: 'Amount',
+            data: [
+                {% for method in payment_methods %}
+                    {{ method.total }},
+        {% endfor %}
+    ],
+        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function (value) {
+                        return '₦' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        return 'Amount: ₦' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+    });
+
+    // Expense Categories Chart
+    const expenseCtx = document.getElementById('expenseCategoriesChart').getContext('2d');
+    new Chart(expenseCtx, {
+        type: 'pie',
+        data: {
+            labels: [
+                {% for expense in expense_categories %}
+                '{{ expense.category__name }}',
+                {% endfor %}
+            ],
+        datasets: [{
+            data: [
+                {% for expense in expense_categories %}
+                    {{ expense.total }},
+        {% endfor %}
+    ],
+        backgroundColor: [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+    ]
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        return context.label + ': ₦' + context.parsed.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+    });
+
+    // Daily Revenue Chart
+    const dailyRevenueData = {{ daily_revenue| safe }};
+    const dailyCtx = document.getElementById('dailyRevenueChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: dailyRevenueData.map(item => item.day),
+            datasets: [{
+                label: 'Daily Revenue',
+                data: dailyRevenueData.map(item => item.revenue),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return '₦' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return 'Revenue: ₦' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Add chart refresh functionality
+    function refreshCharts() {
+        // You can add AJAX calls here to fetch updated data
+        console.log('Charts refreshed');
+    }
+
+    // Refresh charts every 5 minutes (optional)
+    setInterval(refreshCharts, 300000);
+
+    // Export functionality
+    window.exportChart = function (chartId, filename) {
+        const canvas = document.getElementById(chartId);
+        const url = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = filename + '.png';
+        link.href = url;
+        link.click();
+    };
+
+    // Print functionality
+    window.printReport = function () {
+        window.print();
+    };
+});
+</script>
+
+<!-- Additional functionality for better UX -->
+<script>
+    // Add loading states
+    function showLoading(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        }
+    }
+
+    // Error handling for charts
+    window.addEventListener('error', function (e) {
+        console.error('Chart error:', e.error);
+    });
+
+    // Responsive chart handling
+    window.addEventListener('resize', function () {
+        Chart.helpers.each(Chart.instances, function (instance) {
+            instance.resize();
+        });
+    });
+</script>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .small-box {
+        border-radius: 0.5rem;
+        position: relative;
+        display: block;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    }
+
+    .small-box>.inner {
+        padding: 10px;
+    }
+
+    .small-box .icon {
+        transition: all .3s linear;
+        position: absolute;
+        top: -10px;
+        right: 10px;
+        z-index: 0;
+        font-size: 90px;
+        color: rgba(0, 0, 0, 0.15);
+    }
+
+    .info-box {
+        display: block;
+        min-height: 90px;
+        background: #fff;
+        width: 100%;
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+        border-radius: 0.25rem;
+        margin-bottom: 15px;
+    }
+
+    .progress-xs {
+        height: 7px;
+    }
+
+    .card {
+        box-shadow: 0 0 1px rgba(0, 0, 0, .125), 0 1px 3px rgba(0, 0, 0, .2);
+        margin-bottom: 1rem;
+    }
+
+    @media print {
+
+        .btn,
+        .card-tools {
+            display: none !important;
+        }
+
+        .content-wrapper {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+    }
+</style>
+<link rel="stylesheet" href="{% static 'plugins/chart.js/Chart.min.css' %}">
+<!-- DataTables -->
+<link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
+{% endblock %}
