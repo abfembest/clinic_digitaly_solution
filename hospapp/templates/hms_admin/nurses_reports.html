@@ -1,0 +1,548 @@
+{% extends "hms_admin/base.html" %}
+{% load static %}
+
+{% block title %}Nurses Report Dashboard{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js -->
+<link rel="stylesheet" href="{% static 'plugins/chart.js/Chart.min.css' %}">
+<!-- DataTables -->
+<link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Nurses Report Dashboard</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'hms_admin' %}">Home</a></li>
+                    <li class="breadcrumb-item">Reports</li>
+                    <li class="breadcrumb-item active">Nurses Report</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+<div class="container-fluid">
+    <!-- Stats Cards Row -->
+    <div class="row">
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3>{{ total_nurses }}</h3>
+                    <p>Total Nurses</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-user-nurse"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-success">
+                <div class="inner">
+                    <h3>{{ active_nurses }}</h3>
+                    <p>Active Nurses</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-warning">
+                <div class="inner">
+                    <h3>{{ nurses_on_duty }}</h3>
+                    <p>On Duty Today</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-danger">
+                <div class="inner">
+                    <h3>{{ patients_under_care }}</h3>
+                    <p>In-Patients</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-bed"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Stats Row -->
+    <div class="row">
+        <div class="col-lg-3 col-6">
+            <div class="info-box">
+                <span class="info-box-icon bg-primary"><i class="fas fa-notes-medical"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text">Nursing Notes</span>
+                    <span class="info-box-number">{{ nursing_notes_stats.total_notes }}</span>
+                    <span class="progress-description">Last 30 days</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-6">
+            <div class="info-box">
+                <span class="info-box-icon bg-info"><i class="fas fa-heartbeat"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text">Vitals Recorded</span>
+                    <span class="info-box-number">{{ vitals_recorded }}</span>
+                    <span class="progress-description">Last 30 days</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-6">
+            <div class="info-box">
+                <span class="info-box-icon bg-success"><i class="fas fa-exchange-alt"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text">Handover Logs</span>
+                    <span class="info-box-number">{{ handover_logs }}</span>
+                    <span class="progress-description">Last 30 days</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-6">
+            <div class="info-box">
+                <span class="info-box-icon bg-warning"><i class="fas fa-calendar-check"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text">Present Today</span>
+                    <span class="info-box-number">{{ today_attendance.present }}</span>
+                    <span class="progress-description">
+                        Absent: {{ today_attendance.absent }} | Leave: {{ today_attendance.on_leave }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Attendance Chart -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-line mr-1"></i>
+                        Weekly Attendance Trend
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Nursing Notes Chart -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-pie mr-1"></i>
+                        Nursing Notes by Type
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="notesChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Shift Distribution -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-bar mr-1"></i>
+                        Current Shift Distribution
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="shiftChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monthly Performance -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-area mr-1"></i>
+                        Monthly Activities Trend
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nurses Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-users mr-1"></i>
+                        Nurses Overview
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table id="nursesTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Phone</th>
+                                <th>Date Joined</th>
+                                <th>Status</th>
+                                <th>Gender</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for nurse in nurses %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if nurse.photo %}
+                                            <img src="{{ nurse.photo.url }}" alt="Photo" class="img-circle mr-2" style="width: 30px; height: 30px;">
+                                        {% else %}
+                                            <div class="bg-info img-circle mr-2 d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 12px;">
+                                                {{ nurse.user.first_name|first }}{{ nurse.user.last_name|first }}
+                                            </div>
+                                        {% endif %}
+                                        {{ nurse.user.first_name }} {{ nurse.user.last_name }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if nurse.department %}
+                                        <span class="badge badge-info">{{ nurse.department.name }}</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">Not Assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ nurse.phone_number|default:"-" }}</td>
+                                <td>{{ nurse.date_joined|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if nurse.user.is_active %}
+                                        <span class="badge badge-success">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if nurse.gender == 'M' %}
+                                        <i class="fas fa-mars text-blue"></i> Male
+                                    {% else %}
+                                        <i class="fas fa-venus text-pink"></i> Female
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No nurses found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-clipboard-list mr-1"></i>
+                        Nursing Notes Breakdown
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="description-block border-right">
+                                <span class="description-percentage text-success">
+                                    <i class="fas fa-caret-up"></i>
+                                </span>
+                                <h5 class="description-header">{{ nursing_notes_stats.care_plan_notes }}</h5>
+                                <span class="description-text">Care Plan Updates</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="description-block">
+                                <span class="description-percentage text-info">
+                                    <i class="fas fa-caret-up"></i>
+                                </span>
+                                <h5 class="description-header">{{ nursing_notes_stats.medication_notes }}</h5>
+                                <span class="description-text">Medication Notes</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="description-block">
+                                <h5 class="description-header">{{ nursing_notes_stats.observation_notes }}</h5>
+                                <span class="description-text">Observation Notes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Quick Stats
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress-group">
+                        <span class="float-right"><b>{{ today_attendance.present }}</b>/{{ total_nurses }}</span>
+                        <span>Present Today</span>
+                        <div class="progress progress-sm">
+                            <div class="progress-bar bg-success" style="width: {% widthratio today_attendance.present total_nurses 100 %}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-group">
+                        <span class="float-right"><b>{{ active_nurses }}</b>/{{ total_nurses }}</span>
+                        <span>Active Nurses</span>
+                        <div class="progress progress-sm">
+                            <div class="progress-bar bg-info" style="width: {% widthratio active_nurses total_nurses 100 %}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-group">
+                        <span class="float-right"><b>{{ nurses_on_duty }}</b>/{{ total_nurses }}</span>
+                        <span>On Duty</span>
+                        <div class="progress progress-sm">
+                            <div class="progress-bar bg-warning" style="width: {% widthratio nurses_on_duty total_nurses 100 %}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+<!-- DataTables -->
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#nursesTable').DataTable({
+        "responsive": true,
+        "lengthChange": false,
+        "autoWidth": false,
+        "pageLength": 10,
+        "order": [[3, "desc"]]
+    });
+
+    // Chart colors
+    const colors = {
+        primary: '#007bff',
+        success: '#28a745',
+        info: '#17a2b8',
+        warning: '#ffc107',
+        danger: '#dc3545'
+    };
+
+    // Load and render charts
+    loadAttendanceChart();
+    loadNotesChart();
+    loadShiftChart();
+    loadMonthlyChart();
+
+    function loadAttendanceChart() {
+        $.get('{% url "nurses_report_api" %}?type=attendance', function(response) {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: response.data.map(item => new Date(item.date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Present',
+                        data: response.data.map(item => item.present),
+                        borderColor: colors.success,
+                        backgroundColor: colors.success + '20',
+                        tension: 0.1
+                    }, {
+                        label: 'Absent',
+                        data: response.data.map(item => item.absent),
+                        borderColor: colors.danger,
+                        backgroundColor: colors.danger + '20',
+                        tension: 0.1
+                    }, {
+                        label: 'On Leave',
+                        data: response.data.map(item => item.on_leave),
+                        borderColor: colors.warning,
+                        backgroundColor: colors.warning + '20',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    function loadNotesChart() {
+        $.get('{% url "nurses_report_api" %}?type=nursing_notes', function(response) {
+            const ctx = document.getElementById('notesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: response.data.map(item => item.note_type.replace('_', ' ').toUpperCase()),
+                    datasets: [{
+                        data: response.data.map(item => item.count),
+                        backgroundColor: [
+                            colors.primary,
+                            colors.success,
+                            colors.info,
+                            colors.warning,
+                            colors.danger
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        });
+    }
+
+    function loadShiftChart() {
+        $.get('{% url "nurses_report_api" %}?type=shift_distribution', function(response) {
+            const ctx = document.getElementById('shiftChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: response.data.map(item => item.shift__name),
+                    datasets: [{
+                        label: 'Nurses',
+                        data: response.data.map(item => item.count),
+                        backgroundColor: [colors.primary, colors.success, colors.warning]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    function loadMonthlyChart() {
+        $.get('{% url "nurses_report_api" %}?type=monthly_performance', function(response) {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: response.data.map(item => item.month),
+                    datasets: [{
+                        label: 'Nursing Notes',
+                        data: response.data.map(item => item.nursing_notes),
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primary + '20',
+                        tension: 0.1
+                    }, {
+                        label: 'Vitals Recorded',
+                        data: response.data.map(item => item.vitals_recorded),
+                        borderColor: colors.success,
+                        backgroundColor: colors.success + '20',
+                        tension: 0.1
+                    }, {
+                        label: 'Handovers',
+                        data: response.data.map(item => item.handovers),
+                        borderColor: colors.info,
+                        backgroundColor: colors.info + '20',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

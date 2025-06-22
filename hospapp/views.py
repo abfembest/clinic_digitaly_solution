@@ -38,7 +38,7 @@ from django.core.files.storage import default_storage
 import csv
 from io import BytesIO
 from datetime import date, datetime, timedelta
-from django.db.models import Case, When, Value, IntegerField, F, Q, Count
+from django.db.models import Case, When, Value, IntegerField, F, Q, Count, Avg
 
 
 import string
@@ -4379,6 +4379,305 @@ def receptionist_reports(request):
     }
 
     return render(request, 'hms_admin/reception_reports.html', context)
+
+@login_required
+def nurses_report(request):
+    """Main nurses report dashboard"""
+    today = timezone.now().date()
+    last_30_days = today - timedelta(days=30)
+    
+    # Get all nurses
+    nurses = Staff.objects.filter(role='nurse').select_related('user')
+    nurse_users = User.objects.filter(staff__role='nurse')
+    
+    # Basic stats
+    total_nurses = nurses.count()
+    active_nurses = nurses.filter(user__is_active=True).count()
+    nurses_on_duty = ShiftAssignment.objects.filter(
+        date=today, 
+        staff__staff__role='nurse'
+    ).count()
+    
+    # Today's attendance
+    today_attendance = Attendance.objects.filter(
+        date__date=today,
+        staff__staff__role='nurse'
+    ).aggregate(
+        present=Count('id', filter=Q(status='Present')),
+        absent=Count('id', filter=Q(status='Absent')),
+        on_leave=Count('id', filter=Q(status='On Leave'))
+    )
+    
+    # Nursing notes stats (last 30 days)
+    nursing_notes_stats = NursingNote.objects.filter(
+        created_at__date__gte=last_30_days
+    ).aggregate(
+        total_notes=Count('id'),
+        care_plan_notes=Count('id', filter=Q(note_type='care_plan')),
+        medication_notes=Count('id', filter=Q(note_type='medication')),
+        observation_notes=Count('id', filter=Q(note_type='observation'))
+    )
+    
+    # Vitals recorded by nurses (last 30 days)
+    vitals_recorded = Vitals.objects.filter(
+        recorded_at__date__gte=last_30_days
+    ).count()
+    
+    # Handover logs (last 30 days)
+    handover_logs = HandoverLog.objects.filter(
+        timestamp__date__gte=last_30_days
+    ).count()
+    
+    # Patient care stats
+    patients_under_care = Patient.objects.filter(
+        is_inpatient=True
+    ).count()
+    
+    context = {
+        'total_nurses': total_nurses,
+        'active_nurses': active_nurses,
+        'nurses_on_duty': nurses_on_duty,
+        'today_attendance': today_attendance,
+        'nursing_notes_stats': nursing_notes_stats,
+        'vitals_recorded': vitals_recorded,
+        'handover_logs': handover_logs,
+        'patients_under_care': patients_under_care,
+        'nurses': nurses[:10],  # Top 10 for quick view
+    }
+    
+    return render(request, 'hms_admin/nurses_reports.html', context)
+
+@login_required
+def nurses_report_api(request):
+    """API endpoint for chart data"""
+    chart_type = request.GET.get('type', 'attendance')
+    
+    if chart_type == 'attendance':
+        # Last 7 days attendance
+        data = []
+        for i in range(7):
+            date = timezone.now().date() - timedelta(days=i)
+            attendance = Attendance.objects.filter(
+                date__date=date,
+                staff__staff__role='nurse'
+            ).aggregate(
+                present=Count('id', filter=Q(status='Present')),
+                absent=Count('id', filter=Q(status='Absent')),
+                on_leave=Count('id', filter=Q(status='On Leave'))
+            )
+            data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'present': attendance['present'] or 0,
+                'absent': attendance['absent'] or 0,
+                'on_leave': attendance['on_leave'] or 0
+            })
+        return JsonResponse({'data': list(reversed(data))})
+    
+    elif chart_type == 'nursing_notes':
+        # Last 30 days nursing notes by type
+        last_30_days = timezone.now().date() - timedelta(days=30)
+        notes_by_type = NursingNote.objects.filter(
+            created_at__date__gte=last_30_days
+        ).values('note_type').annotate(count=Count('id'))
+        
+        data = list(notes_by_type)
+        return JsonResponse({'data': data})
+    
+    elif chart_type == 'shift_distribution':
+        # Current shift distribution
+        today = timezone.now().date()
+        shift_data = ShiftAssignment.objects.filter(
+            date=today,
+            staff__staff__role='nurse'
+        ).values('shift__name').annotate(count=Count('id'))
+        
+        data = list(shift_data)
+        return JsonResponse({'data': data})
+    
+    elif chart_type == 'monthly_performance':
+        # Monthly nursing activities
+        data = []
+        for i in range(6):  # Last 6 months
+            month_start = (timezone.now().replace(day=1) - timedelta(days=32*i)).replace(day=1)
+            month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            
+            notes_count = NursingNote.objects.filter(
+                created_at__date__gte=month_start,
+                created_at__date__lte=month_end
+            ).count()
+            
+            vitals_count = Vitals.objects.filter(
+                recorded_at__date__gte=month_start,
+                recorded_at__date__lte=month_end
+            ).count()
+            
+            handovers_count = HandoverLog.objects.filter(
+                timestamp__date__gte=month_start,
+                timestamp__date__lte=month_end
+            ).count()
+            
+            data.append({
+                'month': month_start.strftime('%B %Y'),
+                'nursing_notes': notes_count,
+                'vitals_recorded': vitals_count,
+                'handovers': handovers_count
+            })
+        
+        return JsonResponse({'data': list(reversed(data))})
+    
+    return JsonResponse({'error': 'Invalid chart type'})
+
+
+@login_required
+def lab_report_view(request):
+    """Main lab report dashboard view"""
+    
+    # Date filtering
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    
+    # Basic statistics
+    total_tests = LabTest.objects.count()
+    pending_tests = LabTest.objects.filter(status='pending').count()
+    completed_tests = LabTest.objects.filter(status='completed').count()
+    in_progress_tests = LabTest.objects.filter(status='in_progress').count()
+    
+    # Today's statistics
+    today_tests = LabTest.objects.filter(requested_at__date=today).count()
+    today_completed = LabTest.objects.filter(
+        status='completed',
+        date_performed__date=today
+    ).count()
+    
+    # Weekly trend data
+    weekly_data = []
+    for i in range(7):
+        date = today - timedelta(days=i)
+        count = LabTest.objects.filter(requested_at__date=date).count()
+        weekly_data.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'count': count
+        })
+    weekly_data.reverse()
+    
+    # Test category distribution
+    category_stats = TestCategory.objects.annotate(
+        test_count=Count('test_category')
+    ).values('name', 'test_count').order_by('-test_count')
+    
+    # Status distribution for pie chart
+    status_stats = LabTest.objects.values('status').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Monthly completion rate
+    monthly_completion = []
+    for i in range(6):
+        start_date = today.replace(day=1) - timedelta(days=i*30)
+        end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        
+        total = LabTest.objects.filter(
+            requested_at__date__range=[start_date, end_date]
+        ).count()
+        
+        completed = LabTest.objects.filter(
+            requested_at__date__range=[start_date, end_date],
+            status='completed'
+        ).count()
+        
+        rate = (completed / total * 100) if total > 0 else 0
+        monthly_completion.append({
+            'month': start_date.strftime('%b %Y'),
+            'rate': round(rate, 1)
+        })
+    monthly_completion.reverse()
+    
+    # Recent tests
+    recent_tests = LabTest.objects.select_related(
+        'patient', 'category', 'requested_by'
+    ).order_by('-requested_at')[:10]
+    
+    # Top performing technicians
+    top_technicians = User.objects.filter(
+        performed_tests__isnull=False
+    ).annotate(
+        test_count=Count('performed_tests')
+    ).order_by('-test_count')[:5]
+    
+    # Pending tests by category
+    pending_by_category = TestCategory.objects.annotate(
+        pending_count=Count('test_category', filter=Q(test_category__status='pending'))
+    ).filter(pending_count__gt=0).order_by('-pending_count')
+    
+    context = {
+        'total_tests': total_tests,
+        'pending_tests': pending_tests,
+        'completed_tests': completed_tests,
+        'in_progress_tests': in_progress_tests,
+        'today_tests': today_tests,
+        'today_completed': today_completed,
+        'weekly_data': json.dumps(weekly_data),
+        'category_stats': list(category_stats),
+        'status_stats': list(status_stats),
+        'monthly_completion': json.dumps(monthly_completion),
+        'recent_tests': recent_tests,
+        'top_technicians': top_technicians,
+        'pending_by_category': pending_by_category,
+        'completion_rate': round((completed_tests / total_tests * 100) if total_tests > 0 else 0, 1),
+    }
+    
+    return render(request, 'hms_admin/lab_reports.html', context)
+
+@login_required
+def lab_analytics_api(request):
+    """API endpoint for dynamic chart data"""
+    
+    chart_type = request.GET.get('type', 'daily')
+    days = int(request.GET.get('days', 30))
+    
+    today = timezone.now().date()
+    start_date = today - timedelta(days=days)
+    
+    if chart_type == 'daily':
+        data = []
+        for i in range(days):
+            date = start_date + timedelta(days=i)
+            tests = LabTest.objects.filter(requested_at__date=date)
+            data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'total': tests.count(),
+                'completed': tests.filter(status='completed').count(),
+                'pending': tests.filter(status='pending').count(),
+                'in_progress': tests.filter(status='in_progress').count(),
+            })
+    
+    elif chart_type == 'category_performance':
+        data = []
+        categories = TestCategory.objects.all()
+        for category in categories:
+            tests = LabTest.objects.filter(
+                category=category,
+                requested_at__date__gte=start_date
+            )
+            total = tests.count()
+            completed = tests.filter(status='completed').count()
+            avg_completion_time = tests.filter(
+                status='completed',
+                date_performed__isnull=False
+            ).extra(
+                select={'completion_time': 'TIMESTAMPDIFF(HOUR, requested_at, date_performed)'}
+            ).aggregate(Avg('completion_time'))['completion_time__avg'] or 0
+            
+            data.append({
+                'category': category.name,
+                'total': total,
+                'completed': completed,
+                'completion_rate': round((completed / total * 100) if total > 0 else 0, 1),
+                'avg_completion_hours': round(avg_completion_time, 1)
+            })
+    
+    return JsonResponse({'data': data})
 
 
 # --- Export Helper Functions for Receptionist ---

@@ -1,0 +1,524 @@
+{% extends "hms_admin/base.html" %}
+{% load static %}
+
+{% block title %}Lab Analytics Report{% endblock %}
+
+{% block content %}
+    <!-- Content Header -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">Laboratory Analytics Report</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="#">Home</a></li>
+                        <li class="breadcrumb-item active">Lab Report</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            
+            <!-- Statistics Cards Row -->
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info">
+                        <div class="inner">
+                            <h3>{{ total_tests }}</h3>
+                            <p>Total Tests</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-vial"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3>{{ completed_tests }}</h3>
+                            <p>Completed Tests</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3>{{ pending_tests }}</h3>
+                            <p>Pending Tests</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-primary">
+                        <div class="inner">
+                            <h3>{{ completion_rate }}%</h3>
+                            <p>Completion Rate</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Performance -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Today's Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="description-block border-right">
+                                        <span class="description-percentage text-success">
+                                            <i class="fas fa-caret-up"></i> {{ today_tests }}
+                                        </span>
+                                        <h5 class="description-header">{{ today_tests }}</h5>
+                                        <span class="description-text">TESTS REQUESTED</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="description-block">
+                                        <span class="description-percentage text-info">
+                                            <i class="fas fa-caret-up"></i> {{ today_completed }}
+                                        </span>
+                                        <h5 class="description-header">{{ today_completed }}</h5>
+                                        <span class="description-text">TESTS COMPLETED</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">Test Status Distribution</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="statusPieChart" style="height: 200px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Weekly Test Trends</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="weeklyTrendChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card card-warning">
+                        <div class="card-header">
+                            <h3 class="card-title">Tests by Category</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="categoryChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Completion Rate -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">Monthly Completion Rate Trend</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlyCompletionChart" style="height: 250px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Tables Row -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Lab Tests</h3>
+                        </div>
+                        <div class="card-body table-responsive p-0">
+                            <table class="table table-hover text-nowrap">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Test</th>
+                                        <th>Category</th>
+                                        <th>Status</th>
+                                        <th>Requested</th>
+                                        <th>Requested By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for test in recent_tests %}
+                                    <tr>
+                                        <td>{{ test.patient.full_name }}</td>
+                                        <td>{{ test.test_name }}</td>
+                                        <td>{{ test.category.name }}</td>
+                                        <td>
+                                            {% if test.status == 'completed' %}
+                                                <span class="badge badge-success">{{ test.status|title }}</span>
+                                            {% elif test.status == 'pending' %}
+                                                <span class="badge badge-warning">{{ test.status|title }}</span>
+                                            {% elif test.status == 'in_progress' %}
+                                                <span class="badge badge-info">{{ test.status|title }}</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">{{ test.status|title }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ test.requested_at|date:"M d, Y H:i" }}</td>
+                                        <td>{{ test.requested_by.get_full_name|default:test.requested_by.username }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">No recent tests found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <!-- Top Performing Technicians -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Top Performing Technicians</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for tech in top_technicians %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ tech.get_full_name|default:tech.username }}
+                                    <span class="badge badge-primary badge-pill">{{ tech.test_count }}</span>
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item text-center">No data available</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Pending Tests by Category -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Pending Tests by Category</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for category in pending_by_category %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ category.name }}
+                                    <span class="badge badge-warning badge-pill">{{ category.pending_count }}</span>
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item text-center">No pending tests</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Analytics Section -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card card-secondary">
+                        <div class="card-header">
+                            <h3 class="card-title">Advanced Analytics</h3>
+                            <div class="card-tools">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-light" onclick="loadAnalytics('daily', 7)">7 Days</button>
+                                    <button type="button" class="btn btn-sm btn-outline-light" onclick="loadAnalytics('daily', 30)">30 Days</button>
+                                    <button type="button" class="btn btn-sm btn-outline-light" onclick="loadAnalytics('category_performance', 30)">Category Performance</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="advancedAnalyticsContainer">
+                                <canvas id="advancedChart" style="height: 400px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse data from Django context
+    const weeklyData = {{ weekly_data|safe }};
+    const categoryStats = {{ category_stats|safe }};
+    const statusStats = {{ status_stats|safe }};
+    const monthlyCompletion = {{ monthly_completion|safe }};
+    
+    // Initialize charts
+    initializeWeeklyTrendChart(weeklyData);
+    initializeCategoryChart(categoryStats);
+    initializeStatusPieChart(statusStats);
+    initializeMonthlyCompletionChart(monthlyCompletion);
+});
+
+function initializeWeeklyTrendChart(data) {
+    const ctx = document.getElementById('weeklyTrendChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => new Date(d.date).toLocaleDateString()),
+            datasets: [{
+                label: 'Tests Requested',
+                data: data.map(d => d.count),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function initializeCategoryChart(data) {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [{
+                data: data.map(d => d.test_count),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function initializeStatusPieChart(data) {
+    const ctx = document.getElementById('statusPieChart').getContext('2d');
+    const colors = {
+        'completed': '#28a745',
+        'pending': '#ffc107',
+        'in_progress': '#17a2b8',
+        'cancelled': '#dc3545'
+    };
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: data.map(d => d.status.replace('_', ' ').toUpperCase()),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: data.map(d => colors[d.status] || '#6c757d')
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function initializeMonthlyCompletionChart(data) {
+    const ctx = document.getElementById('monthlyCompletionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.month),
+            datasets: [{
+                label: 'Completion Rate (%)',
+                data: data.map(d => d.rate),
+                backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                borderColor: 'rgba(40, 167, 69, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+let advancedChart = null;
+
+function loadAnalytics(type, days) {
+    fetch(`{% url 'lab_analytics_api' %}?type=${type}&days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            renderAdvancedChart(data.data, type);
+        })
+        .catch(error => {
+            console.error('Error loading analytics:', error);
+        });
+}
+
+function renderAdvancedChart(data, type) {
+    const ctx = document.getElementById('advancedChart').getContext('2d');
+    
+    if (advancedChart) {
+        advancedChart.destroy();
+    }
+    
+    if (type === 'daily') {
+        advancedChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => new Date(d.date).toLocaleDateString()),
+                datasets: [
+                    {
+                        label: 'Total Tests',
+                        data: data.map(d => d.total),
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    },
+                    {
+                        label: 'Completed',
+                        data: data.map(d => d.completed),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    },
+                    {
+                        label: 'Pending',
+                        data: data.map(d => d.pending),
+                        borderColor: 'rgb(255, 205, 86)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } else if (type === 'category_performance') {
+        advancedChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.category),
+                datasets: [
+                    {
+                        label: 'Completion Rate (%)',
+                        data: data.map(d => d.completion_rate),
+                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Avg Completion Time (hrs)',
+                        data: data.map(d => d.avg_completion_hours),
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        max: 100,
+                        beginAtZero: true
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Auto-refresh functionality
+setInterval(function() {
+    location.reload();
+}, 300000); // Refresh every 5 minutes
+</script>
+{% endblock %}

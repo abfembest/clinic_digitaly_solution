@@ -113,6 +113,13 @@ urlpatterns = [
     path('ad/approve_discharge/<int:d_id>/', views.approve_discharge, name='approve_discharge'),
     path('ad/approve_expense/<int:exp_id>/', views.approve_expense, name='approve_expense'),
     path('ad/reports', views.director_reports, name='director_reports'),
+
+    path('nurses/report/', views.nurses_report, name='nurses_report'),
+    path('nurses/report/api/', views.nurses_report_api, name='nurses_report_api'),
+
+    path('lab/report/', views.lab_report_view, name='lab_reports'),
+    path('api/analytics/', views.lab_analytics_api, name='lab_analytics_api'),
+
     path('ad/accounts', views.user_accounts, name='user_accounts'),
     path('ad/user_accounts', views.user_accounts, name='user_accounts'),
 
