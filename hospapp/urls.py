@@ -156,6 +156,8 @@ urlpatterns = [
     path('receptionist/update', views.update_patient_info, name='update_patient_info'),
     path('receptionist/schedule', views.schedule_appointment, name='schedule_appointment'),
     path('receptionist/refer', views.refer_patient, name='refer_patient'),
+
+    path('my-activities/', views.receptionist_activity_report, name='receptionist_activity_report'),
     
     path('ajax/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
     ########################### Receptionist URLS #################################

@@ -5395,14 +5395,39 @@ def receptionist(request):
     today = localdate()
     start_of_week = today - timedelta(days=today.weekday())
 
-    recent_activity = Patient.objects.order_by('-date_registered')[:5]
-    queue = Appointment.objects.filter(scheduled_time__date=today).order_by('scheduled_time')[:5]
+    current_receptionist = request.user
+
+    recent_activity = Patient.objects.filter(
+        registered_by=current_receptionist
+    ).order_by('-date_registered')[:5]
+
+    new_patients_today = Patient.objects.filter(
+        date_registered__date=today,
+        registered_by=current_receptionist
+    ).count()
+
+    active_patients = Patient.objects.count()
+
+    appointments_today = Appointment.objects.filter(
+        scheduled_time__date=today,
+        scheduled_by=current_receptionist
+    ).count()
+
+    admissions_this_week = Admission.objects.filter(
+        admitted_on__range=[start_of_week, today],
+        admitted_by=current_receptionist
+    ).count()
+
+    queue = Appointment.objects.filter(
+        scheduled_time__date=today,
+        scheduled_by=current_receptionist
+    ).order_by('scheduled_time')[:5]
 
     context = {
-        'new_patients_today': Patient.objects.filter(date_registered__date=today).count(),
-        'active_patients': Patient.objects.count(),
-        'appointments_today': Appointment.objects.filter(scheduled_time__date=today).count(),
-        'admissions_this_week': Admission.objects.filter(admitted_on__range=[start_of_week, today]).count(),
+        'new_patients_today': new_patients_today,
+        'active_patients': active_patients,
+        'appointments_today': appointments_today,
+        'admissions_this_week': admissions_this_week,
         'recent_activity': recent_activity,
         'queue': queue,
     }
@@ -5462,6 +5487,7 @@ def register_p(request):
                 address=address,
                 nationality=nationality,
                 state_of_origin=data.get('state_of_origin'),
+                registered_by=request.user,
                 id_type=data.get('id_type'),
                 id_number=data.get('id_number'),
                 photo=photo,
@@ -5526,7 +5552,7 @@ def admit_patient(request):
         Admission.objects.create(
             patient=patient,
             doctor_assigned=attending_name,
-            admitted_by=request.user.get_full_name() or request.user.username,
+            admitted_by=request.user,
             status='Admitted'
         )
 
@@ -5672,7 +5698,8 @@ def schedule_appointment(request):
                 Appointment.objects.create(
                     patient=patient,
                     department=department,
-                    scheduled_time=scheduled_time
+                    scheduled_time=scheduled_time,
+                    scheduled_by=request.user
                 )
                 messages.success(request, "Appointment scheduled successfully.")
         
@@ -5697,7 +5724,8 @@ def refer_patient(request):
             Referral.objects.create(
                 patient=patient,
                 department=department,
-                notes=notes
+                notes=notes,
+                referred_by=request.user
             )
             messages.success(request, "Patient referred successfully.")
         except Patient.DoesNotExist:
@@ -5707,6 +5735,35 @@ def refer_patient(request):
         
         referer = request.META.get('HTTP_REFERER', '/')
         return redirect(referer)
+    
+def receptionist_activity_report(request):
+    user = request.user
+    
+    patients_registered = Patient.objects.filter(registered_by=user).order_by('-date_registered')
+    
+    admissions_made = Admission.objects.filter(admitted_by=user).order_by('-admission_date')
+
+    appointments_scheduled = Appointment.objects.filter(patient__registered_by=user).order_by('-scheduled_time')
+    
+    referrals_made = Referral.objects.filter(patient__registered_by=user).order_by('-created_at')
+
+    # Aggregated data
+    total_patients_registered = patients_registered.count()
+    total_admissions_made = admissions_made.count()
+    total_appointments_scheduled = appointments_scheduled.count()
+    total_referrals_made = referrals_made.count()
+
+    context = {
+        'patients_registered': patients_registered,
+        'admissions_made': admissions_made,
+        'appointments_scheduled': appointments_scheduled,
+        'referrals_made': referrals_made,
+        'total_patients_registered': total_patients_registered,
+        'total_admissions_made': total_admissions_made,
+        'total_appointments_scheduled': total_appointments_scheduled,
+        'total_referrals_made': total_referrals_made,
+    }
+    return render(request, 'receptionist/activity_report.html', context)
     
 ''' ############################################################################################################################ End Receptionist View ############################################################################################################################ '''
 

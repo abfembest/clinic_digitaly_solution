@@ -7,6 +7,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from uuid import uuid4
+from django.db import transaction
 
 # =============================================================================
 # CORE SYSTEM MODELS (Alphabetical)
@@ -62,6 +63,7 @@ class Patient(models.Model):
         ('AB+', 'AB+'), ('AB-', 'AB-'),
         ('O+', 'O+'), ('O-', 'O-'),
     ]
+    
     STATUS_CHOICES = [
         ('critical', 'Critical'),
         ('recovered', 'Recovered'),
@@ -97,13 +99,18 @@ class Patient(models.Model):
     phone = models.CharField(max_length=15)
     photo = models.ImageField(upload_to='patient_photos/', blank=True, null=True)
     state_of_origin = models.CharField(max_length=50, blank=True)
+    
+    # Auto-generated patient ID
+    patient_id = models.CharField(max_length=100, unique=True, editable=False)
+    
+    registered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='patients_registered')
 
     # Next of Kin - EXISTING FIELDS
     next_of_kin_name = models.CharField(max_length=100)
     next_of_kin_phone = models.CharField(max_length=15)
     
-    # Next of Kin - ADD THESE NEW FIELDS
-    next_of_kin_relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, blank=True, null=True, default='Ade')
+    # Next of Kin - NEW FIELDS
+    next_of_kin_relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES, blank=True, null=True)
     next_of_kin_email = models.EmailField(blank=True, null=True)
     next_of_kin_address = models.TextField(blank=True, null=True)
 
@@ -114,9 +121,43 @@ class Patient(models.Model):
     notes = models.TextField(blank=True, null=True)
     referred_by = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
-    
+
+    def generate_patient_id(self):
+        """Generate a unique patient ID in format YYYYMMXXX"""
+        now = datetime.now()
+        year_month = now.strftime('%Y%m')
+        
+        # Get the count of patients created this month
+        with transaction.atomic():
+            # Count existing patients with IDs starting with current year-month
+            existing_count = Patient.objects.filter(
+                patient_id__startswith=year_month
+            ).count()
+            
+            # Generate sequential number (starting from 1)
+            sequential_number = existing_count + 1
+            
+            # Format: YYYYMM + 3-digit sequential number
+            patient_id = f"{year_month}{sequential_number:03d}"
+            
+            # Ensure uniqueness (in case of race conditions)
+            while Patient.objects.filter(patient_id=patient_id).exists():
+                sequential_number += 1
+                patient_id = f"{year_month}{sequential_number:03d}"
+                
+        return patient_id
+
+    def save(self, *args, **kwargs):
+        # Generate patient_id only for new patients
+        if not self.patient_id:
+            self.patient_id = self.generate_patient_id()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.full_name}"
+        return f"{self.patient_id} - {self.full_name}"
+
+    class Meta:
+        ordering = ['-date_registered']
 
 # =============================================================================
 # APPOINTMENT & REFERRAL MODELS (Alphabetical)
@@ -125,6 +166,7 @@ class Patient(models.Model):
 class Appointment(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    scheduled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     scheduled_time = models.DateTimeField()
 
     def __str__(self):
@@ -134,7 +176,8 @@ class Referral(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     notes = models.TextField()
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True) # Automatically sets on creation
+    referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department.name}"
@@ -150,7 +193,7 @@ class Admission(models.Model):
     ]
 
     admission_date = models.DateField(default=timezone.now)
-    admitted_by = models.CharField(max_length=100, blank=True, null=True)
+    admitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     admitted_on = models.DateField(default=date.today)
     discharge_date = models.DateField(blank=True, null=True)
     discharge_notes = models.TextField(blank=True, null=True)
