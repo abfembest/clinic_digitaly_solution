@@ -1,0 +1,460 @@
+{% extends "nurses/base.html" %}
+{% load static %}
+
+{% block title %}HMS | Nurse Activity Report{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">
+                    <i class="fas fa-chart-line text-info mr-2"></i>
+                    My Activity Dashboard
+                </h1>
+                <p class="text-muted mb-0">Overview of your daily and total nursing activities</p>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'nurse' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Activity Report</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        
+        <div class="row">
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ total_vitals_recorded }}</h3>
+                        <p>Vitals Recorded</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">
+                        Today: {{ vitals_today }} <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ nursing_notes_added }}</h3>
+                        <p>Nursing Notes Added</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-sticky-note"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">
+                        Today: {{ nursing_notes_today }} <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ admissions_processed }}</h3>
+                        <p>Patients Admitted</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">
+                        Today: {{ admissions_today }} <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3>{{ discharges_processed }}</h3>
+                        <p>Patients Discharged</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">
+                        Today: {{ discharges_today }} <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-primary">
+                    <div class="inner">
+                        <h3>{{ referrals_made }}</h3>
+                        <p>Referrals Made</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">
+                        Today: {{ referrals_today }} <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-secondary">
+                    <div class="inner">
+                        <h3>{{ handovers_logged }}</h3>
+                        <p>Handovers Logged</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">
+                        Today: {{ handovers_today }} <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+            {# Add more summary boxes if needed #}
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-heartbeat mr-2"></i>
+                            Recent Vitals Recorded
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-info">{{ recent_vitals|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Temp (°C)</th>
+                                        <th>BP</th>
+                                        <th>Pulse</th>
+                                        <th>Recorded At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for vital in recent_vitals %}
+                                    <tr>
+                                        <td><strong>{{ vital.patient.full_name }}</strong></td>
+                                        <td>{{ vital.temperature|default:"N/A" }}</td>
+                                        <td>{{ vital.blood_pressure|default:"N/A" }}</td>
+                                        <td>{{ vital.pulse|default:"N/A" }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ vital.recorded_at|date:"M d, Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            <i class="fas fa-notes-medical fa-2x mb-2"></i>
+                                            <br>No recent vital signs recorded by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-success">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-sticky-note mr-2"></i>
+                            Recent Nursing Notes
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-success">{{ recent_nursing_notes|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Note Type</th>
+                                        <th>Notes Summary</th>
+                                        <th>Date/Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for note in recent_nursing_notes %}
+                                    <tr>
+                                        <td><strong>{{ note.patient.full_name }}</strong></td>
+                                        <td><span class="badge badge-primary">{{ note.get_note_type_display }}</span></td>
+                                        <td>{{ note.notes|truncatechars:50 }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ note.created_at|date:"M d, Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-file-alt fa-2x mb-2"></i>
+                                            <br>No recent nursing notes added by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-warning">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-hospital-user mr-2"></i>
+                            Recent Patients Admitted
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-warning">{{ recent_admissions|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Reason</th>
+                                        <th>Admitted On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for admission in recent_admissions %}
+                                    <tr>
+                                        <td><strong>{{ admission.patient.full_name }}</strong></td>
+                                        <td>{{ admission.admission_reason|truncatechars:50 }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ admission.admission_date|date:"M d, Y" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">
+                                            <i class="fas fa-bed fa-2x mb-2"></i>
+                                            <br>No recent admissions processed by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            Recent Patients Discharged
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-danger">{{ recent_discharges|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Summary</th>
+                                        <th>Discharged On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for discharge in recent_discharges %}
+                                    <tr>
+                                        <td><strong>{{ discharge.patient.full_name }}</strong></td>
+                                        <td>{{ discharge.discharge_notes|truncatechars:50 }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ discharge.discharge_date|date:"M d, Y" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">
+                                            <i class="fas fa-procedures fa-2x mb-2"></i>
+                                            <br>No recent discharges processed by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-share-alt mr-2"></i>
+                            Recent Referrals Made
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-primary">{{ recent_referrals|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Department</th>
+                                        <th>Notes Summary</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for referral in recent_referrals %}
+                                    <tr>
+                                        <td><strong>{{ referral.patient.full_name }}</strong></td>
+                                        <td>{{ referral.department.name }}</td>
+                                        <td>{{ referral.notes|truncatechars:50 }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ referral.created_at|date:"M d, Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-paper-plane fa-2x mb-2"></i>
+                                            <br>No recent referrals made by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-secondary">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-exchange-alt mr-2"></i>
+                            Recent Handovers Logged
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-secondary">{{ recent_handovers|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Handover To</th>
+                                        <th>Notes Summary</th>
+                                        <th>Date/Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for handover in recent_handovers %}
+                                    <tr>
+                                        <td><strong>{{ handover.patient.full_name }}</strong></td>
+                                        <td>{{ handover.recipient.get_full_name }}</td>
+                                        <td>{{ handover.notes|truncatechars:50 }}</td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ handover.timestamp|date:"M d, Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-handshake fa-2x mb-2"></i>
+                                            <br>No recent handovers logged by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

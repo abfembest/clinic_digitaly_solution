@@ -37,7 +37,7 @@
               <div class="col-md-6">
                 <div class="form-group mb-0">
                   <label for="master-patient-select">Select Patient for All Actions:</label>
-                  <select class="form-control form-control-lg" id="master-patient-select">
+                  <select class="form-control" id="master-patient-select">
                     <option value="">-- Choose Patient --</option>
                     {% for patient in patients %}
                     <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}</option>
@@ -117,7 +117,7 @@
                         <select name="doctor" class="form-control" required>
                           <option disabled selected>-- Select Doctor --</option>
                           {% for doctor in doctors %}
-                          <option value="{{ doctor.user.get_full_name }}">{{ doctor.user.get_full_name }}</option>
+                          <option value="{{ doctor.user.id }}">{{ doctor.user.get_full_name }}</option>
                           {% endfor %}
                         </select>
                       </div>
@@ -313,7 +313,14 @@
                     <div class="col-md-6">
                       <div class="form-group">
                         <label><i class="fas fa-user-nurse"></i> Handover To</label>
-                        <input type="text" name="handover_to" class="form-control" required placeholder="Nurse name receiving handover">
+                        <select name="handover_to" class="form-control" required>
+                          <option disabled selected>-- Select Nurse --</option>
+                          {% for nurse in nurses %}
+                            {% if nurse.user.id != request.user.id %}
+                              <option value="{{ nurse.user.id }}">{{ nurse.user.get_full_name }}</option>
+                            {% endif %}
+                          {% endfor %}
+                        </select>
                       </div>
                     </div>
                     <div class="col-md-6">
@@ -497,10 +504,19 @@ function fetchPatientDetails(patientId) {
       }
 
       let vitalsHTML = data.vitals.map(v => `
-        <div class="small-box bg-info mb-2">
-          <div class="inner">
-            <p class="mb-1"><strong>${new Date(v.recorded_at).toLocaleDateString()}</strong></p>
-            <p class="mb-0">Temp: ${v.temperature}°C | BP: ${v.blood_pressure} | Pulse: ${v.pulse}</p>
+        <div class="info-box bg-light mb-2">
+          <span class="info-box-icon bg-info elevation-1"><i class="fas fa-heartbeat"></i></span>
+          <div class="info-box-content">
+            <span class="info-box-text">
+              <strong>${new Date(v.recorded_at).toLocaleDateString()} at ${new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+            </span>
+            <span class="info-box-number text-sm">
+              Temp: ${v.temperature ? v.temperature + '°C' : 'N/A'} | BP: ${v.blood_pressure || 'N/A'} | Pulse: ${v.pulse ? v.pulse + ' bpm' : 'N/A'}
+            </span>
+            <span class="info-box-number text-sm">
+              RR: ${v.respiratory_rate ? v.respiratory_rate + ' rpm' : 'N/A'} | Weight: ${v.weight ? v.weight + ' kg' : 'N/A'} | Height: ${v.height ? v.height + ' cm' : 'N/A'} | BMI: ${v.bmi || 'N/A'}
+            </span>
+            ${v.notes ? `<small class="text-muted mt-1 d-block">Notes: ${v.notes}</small>` : ''}
           </div>
         </div>
       `).join('') || '<p class="text-muted">No vitals recorded.</p>';

@@ -12,6 +12,7 @@ urlpatterns = [
     ########################### Nurses URLS #################################
 
     path('n/home', views.nurses, name='nurse'),
+    path('n/vitals', views.vitals, name='vitals'),
     path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
 
     path('n/admit_patient_nurse', views.admit_patient_nurse, name='admit_patient_nurse'),
@@ -24,9 +25,9 @@ urlpatterns = [
 
     path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
 
-    # Optional vitals routes (already provided earlier)
-    path('n/vitals', views.vitals, name='vitals'),
     path('n/record_vitals', views.record_vitals, name='record_vitals'),
+
+    path('nurse/activity-report/', views.nurse_activity_report, name='nurse_activity_report'),
 
     ########################### End Nurses URLS #################################
 

@@ -193,20 +193,19 @@ class Admission(models.Model):
     ]
 
     admission_date = models.DateField(default=timezone.now)
-    admitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    admitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='admissions_admitted')
     admitted_on = models.DateField(default=date.today)
+    admission_reason = models.TextField(max_length=254, null=True)
     discharge_date = models.DateField(blank=True, null=True)
     discharge_notes = models.TextField(blank=True, null=True)
-    discharged_by = models.CharField(max_length=100, blank=True, null=True)
-    doctor_assigned = models.CharField(max_length=100)
+    discharged_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='admissions_discharged')
+    doctor_assigned = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='admissions_doctor')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Admitted')
     time = models.TimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Admission for {self.patient.full_name} - {self.status}"
-
-# Note: Removed redundant PatientAdmission model as it duplicates Admission functionality
 
 # =============================================================================
 # MEDICAL CARE MODELS (Alphabetical)
@@ -248,7 +247,7 @@ class NursingNote(models.Model):
     note_datetime = models.DateTimeField(default=timezone.now)
     note_type = models.CharField(max_length=50, choices=NOTE_TYPE_CHOICES)
     notes = models.TextField()
-    nurse = models.CharField(max_length=100)
+    nurse = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='nursing_notes')
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='nursing_notes')
     patient_status = models.CharField(max_length=50, blank=True, null=True)
 
@@ -274,7 +273,7 @@ class Vitals(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     pulse = models.IntegerField(null=True, blank=True)
     recorded_at = models.DateTimeField()
-    recorded_by = models.CharField(max_length=100)
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     respiratory_rate = models.IntegerField(null=True, blank=True)
     temperature = models.FloatField(null=True, blank=True)
     weight = models.FloatField(null=True, blank=True)
@@ -383,13 +382,14 @@ class Attendance(models.Model):
         return f"{self.staff.get_full_name() or self.staff.username} - {self.date} - {self.status}"
 
 class HandoverLog(models.Model):
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='handovers_made')
+    recipient = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='handovers_received')
     notes = models.TextField()
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Handover: {self.patient.full_name} by {self.author}"
+        return f"Handover: {self.patient.full_name} from {self.author} to {self.recipient}"
 
 class Shift(models.Model):
     SHIFT_CHOICES = [

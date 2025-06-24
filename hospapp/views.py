@@ -224,7 +224,7 @@ def nursing_actions(request):
         'patients': Patient.objects.all(),
         'admitted_patients': Patient.objects.filter(is_inpatient=True),
         'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
-        'nurses': Staff.objects.select_related('user').filter(Q(role='nurse')),
+        'nurses': Staff.objects.select_related('user').filter(Q(role='nurse')).exclude(user=request.user),
         'departments': Department.objects.all(),
     }
     return render(request, 'nurses/nursing_actions.html', context)
@@ -235,12 +235,12 @@ def nursing_actions(request):
 def admit_patient_nurse(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
-        doctor = request.POST.get('doctor')
+        doctor_id = request.POST.get('doctor')
         admission_reason = request.POST.get('admission_reason')
 
-        # Validate patient_id
-        if not patient_id or patient_id.strip() == '':
-            messages.error(request, "Please select a patient to admit.")
+        # Validate input
+        if not patient_id or not doctor_id or not admission_reason:
+            messages.error(request, "All fields are required.")
             return redirect('nursing_actions')
 
         try:
@@ -253,19 +253,29 @@ def admit_patient_nurse(request):
             messages.warning(request, f"{patient.full_name} is already admitted.")
             return redirect('nursing_actions')
 
-        # Store admission details in the notes field since the model lacks specific fields
+        # Prepare admission details
         admission_details = f"Reason for Admission: {admission_reason}"
 
+        try:
+            doctor_user = User.objects.get(id=int(doctor_id))
+        except (User.DoesNotExist, ValueError, TypeError):
+            messages.error(request, "Selected doctor not found.")
+            return redirect('nursing_actions')
+
+        # Create admission
         Admission.objects.create(
             patient=patient,
             admission_date=timezone.now().date(),
-            doctor_assigned=doctor,
-            status='Admitted',
-            admitted_by=request.user.get_full_name() or request.user.username,
-            discharge_notes=admission_details
+            admitted_on=timezone.now().date(),
+            doctor_assigned=doctor_user,
+            admitted_by=request.user,
+            admission_reason=admission_details,
+            status='Admitted'
         )
 
+        # Update patient status
         patient.is_inpatient = True
+        patient.status = 'stable'
         patient.save()
 
         messages.success(request, f"{patient.full_name} admitted successfully.")
@@ -273,8 +283,7 @@ def admit_patient_nurse(request):
 
     return redirect('nursing_actions')
 
-
-@csrf_exempt
+@csrf_exempt  # Optional in development, but use CSRF tokens in production
 @login_required(login_url='home')
 def discharge_patient(request):
     if request.method == 'POST':
@@ -284,7 +293,7 @@ def discharge_patient(request):
         followup_doctor = request.POST.get('followup_doctor')
 
         # Validate patient_id
-        if not patient_id or patient_id.strip() == '':
+        if not patient_id or not patient_id.strip():
             messages.error(request, "Please select a patient to discharge.")
             return redirect('nursing_actions')
 
@@ -293,16 +302,16 @@ def discharge_patient(request):
         except (ValueError, TypeError):
             messages.error(request, "Invalid patient selection.")
             return redirect('nursing_actions')
-        
+
         admission = Admission.objects.filter(patient=patient, status='Admitted').first()
         if not admission:
             messages.error(request, "No active admission found for this patient.")
             return redirect('nursing_actions')
-        
-        # Combine all discharge info into the notes field
+
+        # Compile discharge summary
         full_summary = f"Discharge Summary:\n{summary}"
         if followup_date:
-            full_summary += f"\n\nFollow-up Date: {followup_date}"
+            full_summary += f"\nFollow-up Date: {followup_date}"
         if followup_doctor:
             full_summary += f"\nFollow-up Doctor: {followup_doctor}"
 
@@ -315,7 +324,7 @@ def discharge_patient(request):
         admission.status = 'Discharged'
         admission.discharge_date = timezone.now().date()
         admission.discharge_notes = full_summary
-        admission.discharged_by = request.user.get_full_name() or request.user.username
+        admission.discharged_by = request.user
         admission.save()
 
         messages.success(request, f"{patient.full_name} has been discharged successfully.")
@@ -390,11 +399,10 @@ def refer_patient(request):
 
 @csrf_exempt
 @login_required(login_url='home')
-def save_nursing_note(request):  # Make sure this matches your URL name
+def save_nursing_note(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
-        
-        # Validate patient_id
+
         if not patient_id or patient_id.strip() == '':
             messages.error(request, "Please select a patient to add nursing notes.")
             return redirect('nursing_actions')
@@ -410,9 +418,10 @@ def save_nursing_note(request):  # Make sure this matches your URL name
             note_type=request.POST.get('note_type'),
             notes=request.POST.get('notes'),
             follow_up=request.POST.get('follow_up'),
-            nurse=request.user.get_full_name() or request.user.username,
+            nurse=request.user,
             note_datetime=timezone.now()
         )
+
         messages.success(request, "Nursing note saved successfully.")
         return redirect('nursing_actions')
 
@@ -423,19 +432,32 @@ def save_nursing_note(request):  # Make sure this matches your URL name
 def handover_log(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
-        handover_to = request.POST.get('handover_to') #
-        shift = request.POST.get('shift') #
-        notes = request.POST.get('notes') #
-        
+        handover_to_id = request.POST.get('handover_to')
+        shift = request.POST.get('shift')
+        notes = request.POST.get('notes')
+
+        if not all([patient_id, handover_to_id, shift, notes]):
+            messages.error(request, "All fields are required.")
+            return redirect('nursing_actions')
+
         patient = get_object_or_404(Patient, id=patient_id)
+        try:
+            handover_to_user = User.objects.get(id=handover_to_id)
+        except User.DoesNotExist:
+            messages.error(request, "The selected nurse to handover to does not exist.")
+            return redirect('nursing_actions')
 
         # Combine handover details into the main notes field
-        handover_details = f"Handover To: {handover_to}\nShift: {shift.title()}\n\n{notes}"
+        handover_details = (
+            f"Handover To: {handover_to_user.get_full_name()}\n"
+            f"Shift: {shift.title()}\n\n{notes}"
+        )
 
         HandoverLog.objects.create(
             patient=patient,
-            notes=handover_details, #
-            author=request.user #
+            notes=handover_details,
+            author=request.user,
+            recipient=handover_to_user
         )
 
         messages.success(request, f"Handover for {patient.full_name} has been logged.")
@@ -449,15 +471,16 @@ def get_patient_details(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)
 
-        vitals = list(Vitals.objects.filter(patient=patient).order_by('-recorded_at')[:5].values(
-            'temperature', 'blood_pressure', 'pulse', 'recorded_at'
+        vitals = list(Vitals.objects.filter(patient=patient).order_by('-recorded_at').values(
+            'temperature', 'blood_pressure', 'pulse', 'recorded_at', 'respiratory_rate',
+            'weight', 'height', 'bmi', 'notes', 'recorded_by' # Add all desired fields
         ))
 
         prescriptions = list(Prescription.objects.filter(patient=patient).order_by('-created_at')[:5].values(
             'medication', 'instructions', 'start_date'
         ))
 
-        _ts = list(LabTest.objects.filter(patient=patient).order_by('-requested_at')[:5].values(
+        lab_tests = list(LabTest.objects.filter(patient=patient).order_by('-requested_at')[:5].values(
             'test_name', 'result_value', 'status'
         ))
 
@@ -472,11 +495,10 @@ def get_patient_details(request, patient_id):
             'id': patient.id,
             'full_name': patient.full_name,
             'status': patient.status,
-            'notes': patient.notes,
             'photo_url': patient.photo.url if patient.photo else None,
             'vitals': vitals,
             'prescriptions': prescriptions,
-            # 'lab_tests': lab_tests,
+            'lab_tests': lab_tests,
             'care_plan': care_plan_data,
             'nursing_notes': nursing_notes,
         })
@@ -506,12 +528,68 @@ def record_vitals(request):
                 height=request.POST.get('height') or None,
                 bmi=request.POST.get('bmi') or None,
                 notes=request.POST.get('notes'),
-                recorded_by=request.user.username
+                recorded_by=request.user
             )
             messages.success(request, "Vitals recorded successfully.")
         except Exception as e:
             messages.error(request, f"Error recording vitals: {str(e)}")
     return redirect('vitals')
+
+def nurse_activity_report(request):
+    nurse_user = request.user
+    
+    today = timezone.localdate()
+
+    # Fetch Counts for Key Nurse Activities
+    total_vitals_recorded = Vitals.objects.filter(recorded_by=nurse_user).count()
+    vitals_today = Vitals.objects.filter(recorded_by=nurse_user, recorded_at__date=today).count()
+
+    # Filtering by username for NursingNote, as 'nurse' is CharField
+    # RECOMMENDATION: Change NursingNote.nurse to ForeignKey(User) for better integrity.
+    nursing_notes_added = NursingNote.objects.filter(nurse=nurse_user).count()
+    nursing_notes_today = NursingNote.objects.filter(nurse=nurse_user, created_at__date=today).count()
+
+    admissions_processed = Admission.objects.filter(admitted_by=nurse_user).count()
+    admissions_today = Admission.objects.filter(admitted_by=nurse_user, admission_date=today).count()
+
+    discharges_processed = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').count()
+    discharges_today = Admission.objects.filter(discharged_by=nurse_user, status='Discharged', discharge_date=today).count()
+
+    referrals_made = Referral.objects.filter(referred_by=nurse_user).count()
+    referrals_today = Referral.objects.filter(referred_by=nurse_user, created_at__date=today).count()
+
+    handovers_logged = HandoverLog.objects.filter(author=nurse_user).count()
+    handovers_today = HandoverLog.objects.filter(author=nurse_user, timestamp__date=today).count()
+    
+    # Fetch recent activities for tables (latest 5)
+    recent_vitals = Vitals.objects.filter(recorded_by=nurse_user).order_by('-recorded_at')[:5]
+    recent_nursing_notes = NursingNote.objects.filter(nurse=nurse_user).order_by('-created_at')[:5]
+    recent_admissions = Admission.objects.filter(admitted_by=nurse_user).order_by('-admission_date')[:5]
+    recent_discharges = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').order_by('-discharge_date')[:5]
+    recent_referrals = Referral.objects.filter(referred_by=nurse_user).order_by('-created_at')[:5]
+    recent_handovers = HandoverLog.objects.filter(author=nurse_user).order_by('-timestamp')[:5]
+
+    context = {
+        'total_vitals_recorded': total_vitals_recorded,
+        'vitals_today': vitals_today,
+        'nursing_notes_added': nursing_notes_added,
+        'nursing_notes_today': nursing_notes_today,
+        'admissions_processed': admissions_processed,
+        'admissions_today': admissions_today,
+        'discharges_processed': discharges_processed,
+        'discharges_today': discharges_today,
+        'referrals_made': referrals_made,
+        'referrals_today': referrals_today,
+        'handovers_logged': handovers_logged,
+        'handovers_today': handovers_today,
+        'recent_vitals': recent_vitals,
+        'recent_nursing_notes': recent_nursing_notes,
+        'recent_admissions': recent_admissions,
+        'recent_discharges': recent_discharges,
+        'recent_referrals': recent_referrals,
+        'recent_handovers': recent_handovers,
+    }
+    return render(request, 'nurses/reports.html', context)
 
 ''' ############################################################################################################################ End Nurses View ############################################################################################################################ '''
 
@@ -5513,7 +5591,6 @@ def register_p(request):
 
     return redirect('register_patient')
 
-@csrf_exempt
 def admit_patient(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
@@ -5530,17 +5607,16 @@ def admit_patient(request):
             messages.error(request, "Selected patient not found.")
             return redirect('register_patient')
 
-        # ✅ Check for existing open admission
+        # Check for existing admission
         if Admission.objects.filter(patient=patient, status='Admitted').exists():
             messages.warning(request, f"{patient.full_name} is already admitted and not yet discharged.")
             return redirect('register_patient')
 
-        # Get attending staff name
         try:
-            attending_profile = Staff.objects.get(user__id=attending_id)
-            attending_name = f"{attending_profile.user.first_name} {attending_profile.user.last_name}"
+            attending_profile = Staff.objects.get(user__id=attending_id).user  # Access the actual User object
         except Staff.DoesNotExist:
-            attending_name = "Unknown Staff"
+            messages.error(request, "Attending staff not found.")
+            return redirect('register_patient')
 
         # Update patient status
         patient.is_inpatient = True
@@ -5551,7 +5627,7 @@ def admit_patient(request):
         # Create admission
         Admission.objects.create(
             patient=patient,
-            doctor_assigned=attending_name,
+            doctor_assigned=attending_profile,
             admitted_by=request.user,
             status='Admitted'
         )
