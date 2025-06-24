@@ -535,17 +535,16 @@ def record_vitals(request):
             messages.error(request, f"Error recording vitals: {str(e)}")
     return redirect('vitals')
 
+@csrf_exempt
+@login_required(login_url='home')
 def nurse_activity_report(request):
     nurse_user = request.user
     
     today = timezone.localdate()
 
-    # Fetch Counts for Key Nurse Activities
     total_vitals_recorded = Vitals.objects.filter(recorded_by=nurse_user).count()
     vitals_today = Vitals.objects.filter(recorded_by=nurse_user, recorded_at__date=today).count()
 
-    # Filtering by username for NursingNote, as 'nurse' is CharField
-    # RECOMMENDATION: Change NursingNote.nurse to ForeignKey(User) for better integrity.
     nursing_notes_added = NursingNote.objects.filter(nurse=nurse_user).count()
     nursing_notes_today = NursingNote.objects.filter(nurse=nurse_user, created_at__date=today).count()
 
@@ -561,7 +560,6 @@ def nurse_activity_report(request):
     handovers_logged = HandoverLog.objects.filter(author=nurse_user).count()
     handovers_today = HandoverLog.objects.filter(author=nurse_user, timestamp__date=today).count()
     
-    # Fetch recent activities for tables (latest 5)
     recent_vitals = Vitals.objects.filter(recorded_by=nurse_user).order_by('-recorded_at')[:5]
     recent_nursing_notes = NursingNote.objects.filter(nurse=nurse_user).order_by('-created_at')[:5]
     recent_admissions = Admission.objects.filter(admitted_by=nurse_user).order_by('-admission_date')[:5]
