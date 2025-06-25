@@ -24,18 +24,6 @@
 <!-- Main content -->
 <section class="content">
     <div class="container-fluid">
-        <!-- Success/Error Messages -->
-        {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-        {% endfor %}
-        {% endif %}
-
         <!-- Statistics Cards -->
         <div class="row mb-3">
             <div class="col-lg-3 col-6">

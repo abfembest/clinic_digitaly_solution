@@ -1113,60 +1113,60 @@ def ae(request):
 
 ''' ############################################################################################################################ Laboratory View ############################################################################################################################ '''
 
-# Lab views
 @login_required(login_url='home')
 def laboratory(request):
-    # Get current date for filtering
     today = date.today()
     start_of_day = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     end_of_day = timezone.make_aware(datetime.combine(today, datetime.max.time()))
 
-    # --- Dashboard Counts ---
-    # Tests completed/performed today
+    # Define a Q object for filtering by the current user's involvement
+    # This assumes 'his activities' means tests they requested or performed.
+    user_filter = Q(requested_by=request.user) | Q(performed_by=request.user)
+
+    # Dashboard Counts - Filtered by logged-in user
     test_today = LabTest.objects.filter(
+        user_filter, # Apply user filter
         date_performed__range=(start_of_day, end_of_day),
-        status='completed' # Assuming 'date_performed' is set upon completion
+        status='completed'
     ).count()
 
-    # Pending Tests Count (overall)
-    pending_count = LabTest.objects.filter(status='pending').count()
+    pending_count = LabTest.objects.filter(user_filter, status='pending').count()
+    completed_count = LabTest.objects.filter(user_filter, status='completed').count()
+    in_progress_count = LabTest.objects.filter(user_filter, status='in_progress').count()
 
-    # Completed Tests Count (overall)
-    completed_count = LabTest.objects.filter(status='completed').count()
-
-    # In Progress Tests Count (overall) - Used for the donut chart
-    in_progress_count = LabTest.objects.filter(status='in_progress').count()
-
-    # Total Patients Count
+    # Total Patients Count and Uploaded Results Files Count might still be global
+    # or you might need a more specific filter based on roles.
+    # For now, keeping them global as they are not directly 'activities' of a single lab tech.
     total_patients_count = Patient.objects.count()
-
-    # Total Uploaded Results Files Count
     uploaded_results_count = LabResultFile.objects.count()
 
-    # --- Data for Today's Test Status Table (Latest 5 tests requested today) ---
+    # Data for Today's Test Status Table (Latest 5 tests requested today) - Filtered by user
     today_tests_details = LabTest.objects.filter(
+        user_filter, # Apply user filter
         requested_at__range=(start_of_day, end_of_day)
-    ).select_related('patient', 'category').order_by('-requested_at')[:5] # Limit to 5 for dashboard snippet
+    ).select_related('patient', 'category').order_by('-requested_at')[:5]
 
-    # --- Data for Awaiting Tests (Pending Tests List) ---
-    awaiting_tests = LabTest.objects.filter(status='pending').select_related('patient', 'category').order_by('-requested_at')[:8] # Limit for quick view
+    # Data for Awaiting Tests (Pending Tests List) - Filtered by user
+    awaiting_tests = LabTest.objects.filter(user_filter, status='pending').select_related('patient', 'category').order_by('-requested_at')[:8]
 
-    # --- Data for Weekly Lab Activity Chart (Last 7 days) ---
-    weekly_labels = [] # e.g., ['Mon', 'Tue', 'Wed', ...]
-    weekly_tests_data_total = [0] * 7 # Total tests performed each day
-    weekly_tests_data_completed = [0] * 7 # Completed tests each day
+    # Data for Weekly Lab Activity Chart (Last 7 days) - Filtered by user
+    weekly_labels = []
+    weekly_tests_data_total = [0] * 7
+    weekly_tests_data_completed = [0] * 7
 
     for i in range(7):
-        day = today - timedelta(days=6 - i) # Calculate date for each of the last 7 days
-        weekly_labels.append(day.strftime('%a')) # Format day name (e.g., 'Mon')
+        day = today - timedelta(days=6 - i)
+        weekly_labels.append(day.strftime('%a'))
 
         day_start = timezone.make_aware(datetime.combine(day, datetime.min.time()))
         day_end = timezone.make_aware(datetime.combine(day, datetime.max.time()))
 
         total_on_day = LabTest.objects.filter(
+            user_filter, # Apply user filter
             date_performed__range=(day_start, day_end)
         ).count()
         completed_on_day = LabTest.objects.filter(
+            user_filter, # Apply user filter
             status='completed',
             date_performed__range=(day_start, day_end)
         ).count()
@@ -1174,32 +1174,32 @@ def laboratory(request):
         weekly_tests_data_total[i] = total_on_day
         weekly_tests_data_completed[i] = completed_on_day
 
-    # --- Recent Activity (Timeline) ---
-    # Fetch recent LabTests to populate the timeline. You can extend this to include other activities.
+    # Recent Activity (Timeline) - Filtered by user
     recent_activities = []
-    recent_lab_tests = LabTest.objects.all().select_related('patient').order_by('-requested_at')[:5] # Get top 5 recent tests
+    recent_lab_tests = LabTest.objects.filter(user_filter).select_related('patient').order_by('-requested_at')[:5]
 
     for test in recent_lab_tests:
+        icon_class = ''
+        bg_color = ''
+        header_text = ''
+        body_text = ''
+        link_url = '#'
+
         if test.status == 'completed':
             icon_class = 'fas fa-vial'
             bg_color = 'bg-primary'
             header_text = f"{test.test_name} completed"
             body_text = f"Patient {test.patient.full_name} - All parameters within normal range."
-            # Assuming a detail URL for a completed test
-            link_url = "" # Replace with actual URL for test details if available
         elif test.status == 'pending':
             icon_class = 'fas fa-clock'
             bg_color = 'bg-warning'
             header_text = f"{test.test_name} Pending"
             body_text = f"Patient {test.patient.full_name} - Awaiting processing."
-            # Assuming a process URL for pending test
-            link_url = "" # Replace with actual URL to process test if available
-        else: # For 'in_progress' or 'cancelled'
+        else:
             icon_class = 'fas fa-hourglass-half'
             bg_color = 'bg-info'
             header_text = f"{test.test_name} in progress"
             body_text = f"Patient {test.patient.full_name} - Currently being processed."
-            link_url = ""
 
         recent_activities.append({
             'timestamp': test.requested_at,
@@ -1209,18 +1209,16 @@ def laboratory(request):
             'body': body_text,
             'link': link_url
         })
-    
-    # Sort by timestamp in descending order (most recent first)
-    recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
 
+    recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
 
     context = {
         'test_today': test_today,
         'pending_count': pending_count,
         'completed_count': completed_count,
         'in_progress_count': in_progress_count,
-        'total_patients_count': total_patients_count,
-        'uploaded_results_count': uploaded_results_count,
+        'total_patients_count': total_patients_count, # Kept global
+        'uploaded_results_count': uploaded_results_count, # Kept global
 
         'today_tests_details': today_tests_details,
         'awaiting_tests': awaiting_tests,
@@ -1230,12 +1228,12 @@ def laboratory(request):
         'weekly_tests_data_completed': weekly_tests_data_completed,
         'recent_activities': recent_activities,
 
-        # URLs for navigation - these should match your urls.py names
-        'dashboard_url': 'laboratory', # The name of this current view
-        'pending_tests_url': 'lab_internal_logs', # Used for 'View Pending Tests' link
-        'test_logs_url': 'lab_internal_logs', # Used for 'View Details' and 'View Logs' links
-        'lab_test_entry_url': 'lab_test_entry', # Used for 'Enter New Test' link
-        'logout_url': 'logout', # Standard Django logout URL name
+        'dashboard_url': 'laboratory',
+        'pending_tests_url': 'lab_internal_logs',
+        'test_logs_url': 'lab_internal_logs',
+        'lab_test_entry_url': 'lab_test_entry',
+        'logout_url': 'logout',
+        'user_full_name': request.user.get_full_name() or request.user.username,
     }
     return render(request, 'laboratory/index.html', context)
 

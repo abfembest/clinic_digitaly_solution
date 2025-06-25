@@ -5,7 +5,6 @@
 
 {% block content %}
 <style>
-    /* Your existing CSS styles go here */
     :root {
         --primary-color: #2c5aa0;
         --secondary-color: #f8f9fc;
@@ -16,7 +15,6 @@
     }
 
     body {
-       
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
@@ -101,11 +99,11 @@
             background: linear-gradient(135deg, #ffc107, #ff9800);
         }
 
-        .menu-icon.patients { /* Reused for Dashboard card */
+        .menu-icon.patients {
             background: linear-gradient(135deg, #2c5aa0, #1e3a8a);
         }
 
-        .menu-icon.completed { /* Reused for Test Logs card */
+        .menu-icon.completed {
             background: linear-gradient(135deg, #28a745, #20c997);
         }
 
@@ -191,16 +189,14 @@
     <div class="dashboard-container">
         <div class="header">
             <h1><i class="bi bi-heart-pulse me-2"></i>IVF Laboratory Dashboard</h1>
-            <p>Comprehensive fertility testing and management system</p>
+            <p>Welcome, {{ user_full_name }}! Comprehensive fertility testing and management system</p>
         </div>
 
         <div class="row">
-            {# Dashboard Card (aligned with sidebar) #}
             <div class="col-lg-4 col-md-6 col-sm-12">
                 <div class="menu-card" onclick="handleMenuClick('dashboard', '{% url 'laboratory' %}')">
-                    {# Using total_patients_count as a relevant metric for the dashboard overview #}
-                    <div class="stats-badge">{{ total_patients_count|default:0 }}</div> 
-                    <div class="menu-icon patients"> 
+                    <div class="stats-badge">{{ total_patients_count|default:0 }}</div>
+                    <div class="menu-icon patients">
                         <i class="bi bi-speedometer"></i>
                     </div>
                     <div class="menu-title">Dashboard</div>
@@ -208,7 +204,6 @@
                 </div>
             </div>
 
-            {# Pending Tests Card (aligned with sidebar) #}
             <div class="col-lg-4 col-md-6 col-sm-12">
                 <div class="menu-card" onclick="handleMenuClick('new_test_entry', '{% url 'lab_test_entry' %}')">
                     <div class="stats-badge">{{ pending_count|default:0 }}</div>
@@ -220,12 +215,10 @@
                 </div>
             </div>
 
-            {# Test Logs Card (aligned with sidebar) #}
             <div class="col-lg-4 col-md-6 col-sm-12">
                 <div class="menu-card" onclick="handleMenuClick('test_logs', '{% url 'lab_internal_logs' %}')">
-                    {# Showing completed count as a key log metric #}
-                    <div class="stats-badge">{{ completed_count|default:0 }}</div> 
-                    <div class="menu-icon completed"> 
+                    <div class="stats-badge">{{ completed_count|default:0 }}</div>
+                    <div class="menu-icon completed">
                         <i class="bi bi-journal"></i>
                     </div>
                     <div class="menu-title">Test Logs</div>
@@ -247,18 +240,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
     function handleMenuClick(section, url) {
-        // Add click animation
         event.currentTarget.style.transform = 'scale(0.95)';
         setTimeout(() => {
             event.currentTarget.style.transform = 'translateY(-5px)';
         }, 150);
 
-        // Handle navigation
         console.log(`Navigating to: ${section} at ${url}`);
-        window.location.href = url; // Redirect to the provided URL
+        window.location.href = url;
     }
 
-    // Add some interactive feedback
     document.querySelectorAll('.menu-card').forEach(card => {
         card.addEventListener('mouseenter', function () {
             this.style.transform = 'translateY(-5px)';
@@ -269,7 +259,6 @@
         });
     });
 
-    // Update stats periodically (demo) - This is for visual effect, actual data changes come from backend
     function updateStats() {
         const badges = document.querySelectorAll('.stats-badge');
         badges.forEach(badge => {
@@ -278,7 +267,6 @@
         });
     }
 
-    // Update stats every 30 seconds (triggers visual pulse)
     setInterval(updateStats, 30000);
 </script>
 
@@ -361,7 +349,6 @@
                 </div>
             </div>
 
-            {# Total Patients Info Box #}
             <div class="col-12 col-sm-6 col-md-3">
                 <div class="info-box mb-3">
                     <span class="info-box-icon bg-primary elevation-1"><i class="fas fa-users"></i></span>
@@ -372,7 +359,7 @@
                             <div class="progress-bar bg-primary" style="width: 100%;"></div>
                         </div>
                         <span class="progress-description">
-                            <a href="{% url dashboard_url %}" class="text-primary">View Patients</a> {# Adjust this URL to your actual patient list view #}
+                            <a href="{% url dashboard_url %}" class="text-primary">View Patients</a>
                         </span>
                     </div>
                 </div>
@@ -457,11 +444,11 @@
                                         <td>{{ test.requested_at|date:"M d, Y H:i" }}</td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="#" class="btn btn-info"><i class="fas fa-eye"></i></a> {# Link to test detail page if available #}
+                                                <a href="#" class="btn btn-info"><i class="fas fa-eye"></i></a>
                                                 {% if test.status == 'pending' %}
-                                                    <a href="#" class="btn btn-warning"><i class="fas fa-play"></i></a> {# Link to a page to start processing the test #}
+                                                    <a href="#" class="btn btn-warning"><i class="fas fa-play"></i></a>
                                                 {% elif test.status == 'completed' %}
-                                                    <a href="#" class="btn btn-success"><i class="fas fa-download"></i></a> {# Link to download results #}
+                                                    <a href="#" class="btn btn-success"><i class="fas fa-download"></i></a>
                                                 {% endif %}
                                             </div>
                                         </td>
@@ -498,7 +485,7 @@
                                     <i class="fas fa-plus mr-2"></i>Enter New Test
                                 </a>
                             </div>
-                            
+
                             <div class="col-6">
                                 <a href="{% url test_logs_url %}" class="btn btn-outline-light btn-block">
                                     <i class="fas fa-list mr-1"></i>View Logs
@@ -509,7 +496,7 @@
                                     <i class="fas fa-clock mr-1"></i>View Pending
                                 </a>
                             </div>
-                            <div class="col-12 mt-3"> {# Added Logout button here as per quick actions #}
+                            <div class="col-12 mt-3">
                                 <a href="{% url logout_url %}" class="btn btn-danger btn-block">
                                     <i class="fas fa-sign-out-alt mr-2"></i>Logout
                                 </a>
@@ -573,11 +560,18 @@
                                         <div class="timeline-body">
                                             {{ activity.body }}
                                         </div>
-                                        {% if activity.link %}
                                         <div class="timeline-footer">
-                                            <a href="{{ activity.link }}" class="btn btn-primary btn-sm">View Details</a>
+                                            <button type="button" class="btn btn-primary btn-sm view-details-btn"
+                                                    data-toggle="modal" data-target="#testDetailsModal"
+                                                    data-test-name="{{ activity.header }}"
+                                                    data-patient-name="{{ activity.body|slice:"8:-27" }}" {# Extracts "Patient [Name]" #}
+                                                    data-status="{{ activity.header|slice:"-9:"|cut:" " }}" {# Extracts status from header #}
+                                                    data-requested-at="{{ activity.timestamp|date:"M d, Y H:i" }}"
+                                                    data-notes="{{ activity.body }}" {# Using body as a placeholder for notes #}
+                                                    data-doctor-name="N/A" {# No doctor_name in activity, default to N/A #}
+                                                    data-result-value="N/A" {# No result_value in activity, default to N/A #}
+                                            >View Details</button>
                                         </div>
-                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -624,6 +618,48 @@
     </div>
 </section>
 
+<!-- Test Details Modal -->
+<div class="modal fade" id="testDetailsModal" tabindex="-1" role="dialog" aria-labelledby="testDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="testDetailsModalLabel">Lab Test Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Test Name:</dt>
+                    <dd class="col-sm-9" id="modal-test-name"></dd>
+
+                    <dt class="col-sm-3">Patient Name:</dt>
+                    <dd class="col-sm-9" id="modal-patient-name"></dd>
+
+                    <dt class="col-sm-3">Status:</dt>
+                    <dd class="col-sm-9" id="modal-status"></dd>
+
+                    <dt class="col-sm-3">Requested At:</dt>
+                    <dd class="col-sm-9" id="modal-requested-at"></dd>
+
+                    <dt class="col-sm-3">Doctor Comments:</dt>
+                    <dd class="col-sm-9" id="modal-doctor-comments"></dd>
+
+                    <dt class="col-sm-3">Result Value:</dt>
+                    <dd class="col-sm-9" id="modal-result-value"></dd>
+
+                    <dt class="col-sm-3">Notes:</dt>
+                    <dd class="col-sm-9" id="modal-notes"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
 <script src="{% static 'plugins/jquery-ui/jquery-ui.min.js' %}"></script>
 
@@ -639,7 +675,6 @@ $(function () {
   var mode = 'index'
   var intersect = true
 
-  // Sales Chart (Donut Chart) - Test Status Distribution
   var $salesChart = $('#sales-chart-canvas')
   var salesChart = new Chart($salesChart, {
     type: 'doughnut',
@@ -668,14 +703,13 @@ $(function () {
     }
   })
 
-  // Revenue Chart (Area/Line Chart) - Weekly Lab Activity
   var $visitorsChart = $('#revenue-chart-canvas')
   var visitorsChart = new Chart($visitorsChart, {
     data: {
-      labels: JSON.parse('{{ weekly_labels|safe }}'), // Data from Django context
+      labels: JSON.parse('{{ weekly_labels|safe }}'),
       datasets: [{
         type: 'line',
-        data: JSON.parse('{{ weekly_tests_data_completed|safe }}'), // Completed tests
+        data: JSON.parse('{{ weekly_tests_data_completed|safe }}'),
         backgroundColor: 'transparent',
         borderColor: '#007bff',
         pointBorderColor: '#007bff',
@@ -684,7 +718,7 @@ $(function () {
         label: 'Completed Tests'
       }, {
         type: 'line',
-        data: JSON.parse('{{ weekly_tests_data_total|safe }}'), // Total tests performed
+        data: JSON.parse('{{ weekly_tests_data_total|safe }}'),
         backgroundColor: 'transparent',
         borderColor: '#ced4da',
         pointBorderColor: '#ced4da',
@@ -704,7 +738,7 @@ $(function () {
         intersect: intersect
       },
       legend: {
-        display: true // Display legend for multi-line chart
+        display: true
       },
       scales: {
         yAxes: [{
@@ -716,7 +750,6 @@ $(function () {
           },
           ticks: $.extend({
             beginAtZero: true,
-            // Dynamically set suggestedMax based on the highest value in total tests data
             suggestedMax: Math.max(...JSON.parse('{{ weekly_tests_data_total|safe }}')) + 5
           }, ticksStyle)
         }],
@@ -731,15 +764,33 @@ $(function () {
     }
   })
 
-  // The Calender
   $('#calendar').datetimepicker({
     format: 'L',
     inline: true
   })
 
+    // JavaScript for modal population
+    $('#testDetailsModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var testName = button.data('test-name');
+        var patientName = button.data('patient-name');
+        var status = button.data('status');
+        var requestedAt = button.data('requested-at');
+        var doctorComments = button.data('doctor-name'); // Reusing doctor-name for doctor comments placeholder
+        var resultValue = button.data('result-value');
+        var notes = button.data('notes');
+
+        var modal = $(this);
+        modal.find('#modal-test-name').text(testName);
+        modal.find('#modal-patient-name').text(patientName);
+        modal.find('#modal-status').text(status);
+        modal.find('#modal-requested-at').text(requestedAt);
+        modal.find('#modal-doctor-comments').text(doctorComments);
+        modal.find('#modal-result-value').text(resultValue);
+        modal.find('#modal-notes').text(notes);
+    });
 })
 
-// Refresh function (for toasts, if still used)
 function refreshTestStatus() {
   $(document).Toasts('create', {
     class: 'bg-info',
