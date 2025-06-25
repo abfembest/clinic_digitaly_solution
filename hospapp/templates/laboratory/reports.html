@@ -112,6 +112,7 @@
                             <table class="table table-sm table-hover">
                                 <thead class="bg-light">
                                     <tr>
+                                        <th>Patient Id</th>
                                         <th>Patient</th>
                                         <th>Test Name</th>
                                         <th>Status</th>
@@ -121,6 +122,7 @@
                                 <tbody>
                                     {% for test in recent_lab_activities %}
                                     <tr>
+                                        <td>{{test.patient.patient_id}}</td>
                                         <td><strong>{{ test.patient.full_name }}</strong></td>
                                         <td>{{ test.test_name }}</td>
                                         <td>

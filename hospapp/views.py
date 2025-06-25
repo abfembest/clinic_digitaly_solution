@@ -1254,6 +1254,7 @@ def lab_test_entry(request):
             test.testcompleted = True
             test.date_performed = timezone.now()
             test.performed_by = request.user
+            test.recorded_by = request.user
             test.save()
 
             messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
@@ -6178,57 +6179,54 @@ def test_details(request, patient_id):
         'patient': patient
     })
 
+@csrf_exempt
 def submit_test_results(request, patient_id):
     if request.method == 'POST':
-        # Get the patient object for file upload
         patient = get_object_or_404(Patient, id=patient_id)
-        
-        # Process test results (your existing logic)
         test_ids = request.POST.getlist('ids')
-        
-        # Handle file upload first (if provided)
         uploaded_file = request.FILES.get('result_file')
         lab_result_file = None
-        
+
         if uploaded_file:
             try:
-                # Create a new LabResultFile entry
                 lab_result_file = LabResultFile.objects.create(
                     patient=patient,
                     result_file=uploaded_file,
-                    uploaded_by=request.user if request.user.is_authenticated else None
+                    uploaded_by=request.user
                 )
             except Exception as e:
                 messages.error(request, f'File upload failed: {str(e)}')
                 return redirect('lab_test_entry')
-        
-        # Process individual test results
+
         for test_id in test_ids:
             try:
                 lab_test = LabTest.objects.get(id=test_id)
-                # Fetch the value using test name as the input name
                 result_value = request.POST.get(lab_test.test_name)
-                
+
                 if result_value:
                     lab_test.result_value = result_value
                     lab_test.status = 'completed'
-                    
-                    # Link the uploaded file to this test (similar to doctor_comments pattern)
+                    lab_test.testcompleted = True
+
+                    # Fill additional fields
+                    lab_test.recorded_by = request.user
+                    lab_test.performed_by = request.user
+                    lab_test.date_performed = timezone.now()
+
                     if lab_result_file:
                         lab_test.labresulttestid = lab_result_file.id
-                    
+
                     lab_test.save()
             except LabTest.DoesNotExist:
-                continue  # Ignore invalid IDs
-        
-        # Success messages
+                continue
+
         if uploaded_file and lab_result_file:
-            messages.success(request, f'Test results updated and file "{uploaded_file.name}" uploaded successfully!')
+            messages.success(request, f'Test results updated and file \"{uploaded_file.name}\" uploaded successfully!')
         elif test_ids:
             messages.success(request, 'Test results updated successfully!')
         else:
             messages.warning(request, 'No tests were selected for update.')
-        
+
         return redirect('lab_test_entry')
 
     return redirect('lab_test_entry')
