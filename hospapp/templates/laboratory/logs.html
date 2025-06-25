@@ -266,7 +266,7 @@
       modal.find('#modal-content').hide();
       
       $.ajax({
-        url: "{% url 'lab_log_detail_ajax' %}",
+        url: "{% url 'lab_log_detail_ajax' %}", // Ensure this URL name is correct in your urls.py
         data: { 'log_id': logId },
         dataType: 'json',
         success: function(data) {
@@ -346,60 +346,12 @@
                             <th>Normal Range</th>
                           </tr>
                         </thead>
-                        <tbody>`;
-                          
-          // Add test-specific result rows based on test type
-          if (data.test_type === 'Semen Analysis') {
-            contentHtml += `
-              <tr>
-                <td>Sperm Count</td>
-                <td>${data.sperm_count} million/ml</td>
-                <td>15-200 million/ml</td>
-              </tr>
-              <tr>
-                <td>Motility</td>
-                <td>${data.motility}%</td>
-                <td>40-81%</td>
-              </tr>`;
-          } else if (data.test_type === 'Blood Screening') {
-            contentHtml += `
-              <tr>
-                <td>Blood Type</td>
-                <td>${data.blood_type}</td>
-                <td>N/A</td>
-              </tr>`;
-          } else if (data.test_type === 'Hormonal Assay') {
-            contentHtml += `
-              <tr>
-                <td>${data.hormone}</td>
-                <td>${data.hormone_level}</td>
-                <td>Varies by hormone</td>
-              </tr>`;
-          } else if (data.test_type === 'Pregnancy Test') {
-            contentHtml += `
-              <tr>
-                <td>Pregnancy Result</td>
-                <td>
-                  <span class="badge badge-${data.pregnancy_result === 'positive' ? 'success' : 'secondary'}">
-                    ${data.pregnancy_result}
-                  </span>
-                </td>
-                <td>N/A</td>
-              </tr>`;
-          } else if (data.test_type === 'Infection Screening') {
-            contentHtml += `
-              <tr>
-                <td>${data.infection_type}</td>
-                <td>
-                  <span class="badge badge-${data.infection_result === 'positive' ? 'danger' : 'success'}">
-                    ${data.infection_result}
-                  </span>
-                </td>
-                <td>Negative</td>
-              </tr>`;
-          }
-          
-          contentHtml += `
+                        <tbody>
+                          <tr>
+                            <td>Main Result</td>
+                            <td>${data.result_value}</td>
+                            <td>${data.normal_range}</td>
+                          </tr>
                         </tbody>
                       </table>
                     </div>

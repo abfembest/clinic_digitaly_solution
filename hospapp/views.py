@@ -1582,28 +1582,23 @@ def patient_search(request):
 
 @login_required(login_url='home')
 def lab_internal_logs(request):
-    user = request.user
-
-    # Fetch all lab tests, with related patient and user to optimize queries
-    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'performed_by').order_by('-date_performed')
+    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'category').order_by('-requested_at')
 
     logs = []
     for test in lab_tests:
-        # Gather key results dynamically from LabTestField related objects
-        fields = test.fields.all()
-
-        # Compose a summary string of all fields for display
-        key_results = ', '.join([f"{field.name}: {field.value}" for field in fields]) or "N/A"
+        key_results = test.result_value if test.result_value else "N/A"
+        
+        display_status = test.status.capitalize() if test.status else "N/A"
 
         logs.append({
             'id': test.id,
-            'date': test.date_performed.date(),
+            'date': test.date_performed.date() if test.date_performed else test.requested_at.date(),
             'patient_name': test.patient.full_name,
-            'test_type': test.test_type.name,
+            'test_type': test.category.name if test.category else "Unknown Test Type",
             'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
             'key_results': key_results,
-            'notes': getattr(test, 'notes', ''),
-            'status': 'Completed',
+            'notes': test.notes if test.notes else '',
+            'status': display_status,
         })
 
     context = {
@@ -1617,26 +1612,23 @@ def lab_log_detail_ajax(request):
         return JsonResponse({"error": "Missing log ID"}, status=400)
 
     try:
-        lab_test = get_object_or_404(LabTest, id=log_id)
+        # Pre-fetch related objects for efficiency
+        lab_test = get_object_or_404(LabTest.objects.select_related('patient', 'recorded_by', 'category'), id=log_id)
 
         data = {
             'patient': lab_test.patient.full_name,
-            'test_type': lab_test.test_type.name,
-            'date': lab_test.date_recorded.strftime('%B %d, %Y'),
+            'test_type': lab_test.category.name if lab_test.category else "Unknown Test Type", # Corrected to category.name
+            'date': (lab_test.date_performed or lab_test.requested_at).strftime('%B %d, %Y'), # Use date_performed if exists, else requested_at
             'recorded_by': lab_test.recorded_by.get_full_name() if lab_test.recorded_by else "Unknown",
-            'notes': getattr(lab_test, 'notes', ''),
-            'fields': []
+            'notes': lab_test.notes if lab_test.notes else 'No additional notes provided.', # Access notes directly
+            'result_value': lab_test.result_value if lab_test.result_value else "N/A", # General result value
+            'normal_range': lab_test.normal_range if lab_test.normal_range else "N/A", # Normal range
         }
-
-        # Add all test fields dynamically
-        for field in lab_test.fields.all():
-            data['fields'].append({
-                'name': field.name,
-                'value': field.value,
-            })
-
+        
         return JsonResponse(data)
 
+    except LabTest.DoesNotExist:
+        return JsonResponse({"error": "Lab Test not found."}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
