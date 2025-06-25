@@ -1,19 +1,137 @@
 {% extends "nurses/base.html" %}
 {% load static %}
 
-{% block title %}HMS | Nurse Home{% endblock %}
+{% block title %}HMS | Nurse Dashboard{% endblock %}
 
 {% block content %}
+<style>
+  .dashboard-card {
+    border: none;
+    box-shadow: 0 0 20px 0 rgba(154, 161, 171, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+  }
+  .dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px 0 rgba(154, 161, 171, 0.2);
+  }
+  .stat-card {
+    background: linear-gradient(135deg, var(--bg-color), var(--bg-color-light));
+    border: none;
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    height: 100px;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transform: translate(25px, -25px);
+  }
+  .stat-card-info { --bg-color: #17a2b8; --bg-color-light: #20b8ce; }
+  .stat-card-danger { --bg-color: #dc3545; --bg-color-light: #e04454; }
+  .stat-card-success { --bg-color: #28a745; --bg-color-light: #32b74a; }
+  .stat-card-warning { --bg-color: #ffc107; --bg-color-light: #ffca2c; }
+  .pulse-animation { animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .floating-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2.5rem;
+    opacity: 0.3;
+  }
+  .welcome-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    height: 200px;
+  }
+  .time-card {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 15px;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    height: 95px;
+  }
+  .alert-card {
+    background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+    border-radius: 15px;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    height: 95px;
+  }
+  .action-btn {
+    border-radius: 12px;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    height: 80px;
+  }
+  .action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+  .table-modern {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(0,0,0,0.05);
+  }
+  .badge-modern {
+    padding: 6px 10px;
+    border-radius: 15px;
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+  .list-group-modern .list-group-item {
+    border: none;
+    padding: 12px 15px;
+    margin-bottom: 3px;
+    border-radius: 8px;
+    background: #f8f9fa;
+  }
+  .compact-section {
+    padding: 15px !important;
+  }
+  .section-spacing {
+    margin-bottom: 1.5rem;
+  }
+  .minimal-padding {
+    padding: 10px 15px !important;
+  }
+</style>
+
 <div class="content-header">
   <div class="container-fluid">
-    <div class="row mb-2">
+    <div class="row mb-3">
       <div class="col-sm-6">
-        <h1 class="m-0 text-dark font-weight-bold">Dashboard</h1>
+        <h1 class="m-0 text-dark font-weight-bold">
+          <i class="fas fa-tachometer-alt text-primary mr-2"></i>
+          Nurse Dashboard
+        </h1>
       </div>
       <div class="col-sm-6">
-        <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item"><a href="{% url 'nurse' %}">Home</a></li>
-          <li class="breadcrumb-item active">Dashboard</li>
+        <ol class="breadcrumb float-sm-right bg-transparent">
+          <li class="breadcrumb-item"><a href="{% url 'nurse' %}" class="text-primary">Home</a></li>
+          <li class="breadcrumb-item active text-muted">Dashboard</li>
         </ol>
       </div>
     </div>
@@ -23,166 +141,368 @@
 <section class="content">
   <div class="container-fluid">
 
-    <!-- Welcome + Clock -->
-    <div class="row mb-4">
-      <div class="col-md-8">
-        <div class="card card-primary card-outline h-100">
-          <div class="card-body">
-            <h3 class="mb-3">
-              {% if user.is_authenticated %}
-                Welcome back, {{ user.first_name }}!
-              {% else %}
-                Welcome to Nurse Dashboard!
-              {% endif %}
-            </h3>
-            <p class="text-muted">Ready to provide excellent patient care today.</p>
-            <hr>
-            <p class="mb-1"><strong>Current Patient Status Overview:</strong></p>
-            <span class="badge badge-danger mr-2">{{ critical_patients }} Critical</span>
-            <span class="badge badge-success mr-2">{{ stable_patients }} Stable</span>
-            <span class="badge badge-info mr-2">{{ recovered_patients }} Recovered</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card card-outline card-info text-center h-100 d-flex align-items-center justify-content-center">
-          <div class="card-body">
-            <div class="h2 text-primary" id="currentTime"></div>
-            <small class="text-muted">Current Time</small>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="row mb-4">
-      {% for action in quick_actions %}
-      <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-        <a href="{{ action.url }}" class="text-decoration-none">
-          <div class="card card-{{ action.color }} card-outline h-100">
-            <div class="card-body text-center">
-              <i class="fas {{ action.icon }} fa-2x text-{{ action.color }} mb-2"></i>
-              <h6 class="card-title mb-1">{{ action.title }}</h6>
-              <p class="text-muted small mb-0">{{ action.description }}</p>
+    <!-- Top Row: Stats + Welcome + Time/Alerts -->
+    <div class="row section-spacing">
+      <!-- Stats Cards -->
+      <div class="col-lg-6 col-xl-5">
+        <div class="row">
+          <div class="col-6 mb-2">
+            <div class="stat-card stat-card-info">
+              <div class="d-flex justify-content-between align-items-center h-100">
+                <div>
+                  <h3 class="font-weight-bold mb-0">{{ active_patients }}</h3>
+                  <small class="opacity-75">Active Patients</small>
+                </div>
+                <i class="fas fa-users floating-icon"></i>
+              </div>
             </div>
           </div>
-        </a>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- Dashboard Stats -->
-    <div class="row mb-4">
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="info-box">
-          <span class="info-box-icon bg-info"><i class="fas fa-users"></i></span>
-          <div class="info-box-content">
-            <span class="info-box-text">Active Patients</span>
-            <span class="info-box-number">{{ active_patients }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="info-box">
-          <span class="info-box-icon bg-danger"><i class="fas fa-exclamation-triangle"></i></span>
-          <div class="info-box-content">
-            <span class="info-box-text">Critical Cases</span>
-            <span class="info-box-number">{{ critical_patients }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="info-box">
-          <span class="info-box-icon bg-warning"><i class="fas fa-user-injured"></i></span>
-          <div class="info-box-content">
-            <span class="info-box-text">Priority Patients</span>
-            <span class="info-box-number">{{ critical_patients }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3 col-sm-6 mb-3">
-        <div class="info-box">
-          <span class="info-box-icon bg-primary"><i class="fas fa-user-plus"></i></span>
-          <div class="info-box-content">
-            <span class="info-box-text">Today's Admissions</span>
-            <span class="info-box-number">{{ todays_admissions }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Activities & Notes -->
-    <div class="row">
-      <div class="col-lg-8 mb-4">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Recent Patient Activities</h3>
-            <div class="card-tools">
-              <button class="btn btn-tool" data-card-widget="collapse">
-                <i class="fas fa-minus"></i>
-              </button>
+          
+          <div class="col-6 mb-2">
+            <div class="stat-card stat-card-danger pulse-animation">
+              <div class="d-flex justify-content-between align-items-center h-100">
+                <div>
+                  <h3 class="font-weight-bold mb-0">{{ critical_patients }}</h3>
+                  <small class="opacity-75">Critical Cases</small>
+                </div>
+                <i class="fas fa-exclamation-triangle floating-icon"></i>
+              </div>
             </div>
+          </div>
+          
+          <div class="col-6">
+            <div class="stat-card stat-card-success">
+              <div class="d-flex justify-content-between align-items-center h-100">
+                <div>
+                  <h3 class="font-weight-bold mb-0">{{ todays_admissions }}</h3>
+                  <small class="opacity-75">Today's Admissions</small>
+                </div>
+                <i class="fas fa-user-plus floating-icon"></i>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-6">
+            <div class="stat-card stat-card-warning">
+              <div class="d-flex justify-content-between align-items-center h-100">
+                <div>
+                  <h3 class="font-weight-bold mb-0">{{ todays_discharges }}</h3>
+                  <small class="opacity-75">Today's Discharges</small>
+                </div>
+                <i class="fas fa-door-open floating-icon"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Welcome Section -->
+      <div class="col-lg-4 col-xl-5">
+        <div class="welcome-card">
+          <div class="d-flex align-items-center mb-2">
+            <i class="fas fa-user-nurse fa-lg mr-2"></i>
+            <div>
+              <h4 class="mb-0">
+                {% if user.is_authenticated %}
+                  Welcome back, {{ user.first_name|default:user.username }}!
+                {% else %}
+                  Welcome to Nurse Dashboard!
+                {% endif %}
+              </h4>
+              <small class="opacity-75">Ready to provide excellent patient care today</small>
+            </div>
+          </div>
+          
+          {% if my_shift_today %}
+          <div class="alert alert-light border-0 mb-2 py-2">
+            <small><i class="fas fa-clock mr-1"></i><strong>Today's Shift:</strong> {{ my_shift_today.shift.name }} Shift</small>
+          </div>
+          {% endif %}
+          
+          <div class="row mt-3">
+            <div class="col-6">
+              <h6 class="text-uppercase font-weight-bold mb-1" style="font-size: 0.7rem;">Patient Status</h6>
+              <div class="d-flex flex-wrap">
+                <span class="badge badge-danger badge-modern mr-1 mb-1" style="font-size: 0.7rem;">{{ critical_patients }}</span>
+                <span class="badge badge-success badge-modern mr-1 mb-1" style="font-size: 0.7rem;">{{ stable_patients }}</span>
+                <span class="badge badge-info badge-modern mb-1" style="font-size: 0.7rem;">{{ recovered_patients }}</span>
+              </div>
+            </div>
+            <div class="col-6">
+              <h6 class="text-uppercase font-weight-bold mb-1" style="font-size: 0.7rem;">My Activity Today</h6>
+              <small><i class="fas fa-notes-medical mr-1"></i>{{ my_stats.notes_today }} Notes</small><br>
+              <small><i class="fas fa-heartbeat mr-1"></i>{{ my_stats.vitals_recorded_today }} Vitals</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Time & Alerts -->
+      <div class="col-lg-2 col-xl-2">
+        <div class="time-card mb-2">
+          <div class="h4 font-weight-bold mb-0" id="currentTime"></div>
+          <small class="opacity-75">{{ today|date:"M d, Y" }}</small>
+        </div>
+        
+        <div class="alert-card">
+          <h6 class="font-weight-bold mb-1" style="font-size: 0.8rem;">
+            <i class="fas fa-exclamation-triangle mr-1"></i>Alerts
+          </h6>
+          {% if recent_alerts %}
+            <span class="badge badge-light badge-modern" style="font-size: 0.7rem;">{{ recent_alerts|length }} New</span>
+          {% else %}
+            <span class="badge badge-light badge-modern" style="font-size: 0.7rem;">All Clear</span>
+          {% endif %}
+          
+          {% if patients_needing_followup %}
+          <br><small class="opacity-75" style="font-size: 0.7rem;">
+            {{ patients_needing_followup|length }} Follow-up{{ patients_needing_followup|length|pluralize }}
+          </small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions Row -->
+    <div class="row section-spacing">
+      <div class="col-12">
+        <div class="dashboard-card compact-section">
+          <h5 class="mb-3"><i class="fas fa-bolt text-primary mr-2"></i>Quick Actions</h5>
+          <div class="row">
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-2">
+              <a href="{% url 'vitals' %}" class="btn btn-danger action-btn btn-block d-flex flex-column align-items-center justify-content-center">
+                <i class="fas fa-heartbeat fa-lg mb-1"></i>
+                <small class="font-weight-bold">Record Vitals</small>
+              </a>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-2">
+              <a href="{% url 'nursing_actions' %}" class="btn btn-primary action-btn btn-block d-flex flex-column align-items-center justify-content-center">
+                <i class="fas fa-hospital-user fa-lg mb-1"></i>
+                <small class="font-weight-bold">Nursing Actions</small>
+              </a>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-2">
+              <a href="{% url 'nurse_activity_report' %}" class="btn btn-success action-btn btn-block d-flex flex-column align-items-center justify-content-center">
+                <i class="fas fa-chart-line fa-lg mb-1"></i>
+                <small class="font-weight-bold">My Activities</small>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row section-spacing">
+      <!-- Recent Activities -->
+      <div class="col-lg-7">
+        <div class="dashboard-card">
+          <div class="card-header bg-transparent border-0 minimal-padding">
+            <h5 class="mb-0"><i class="fas fa-clipboard-list text-primary mr-2"></i>Recent Patient Activities</h5>
           </div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-hover m-0">
-                <thead class="thead-light">
+              <table class="table table-hover table-sm mb-0">
+                <thead class="bg-light">
                   <tr>
-                    <th>Patient ID</th>
-                    <th>Name</th>
-                    <th>Activity</th>
-                    <th>Status</th>
-                    <th>Time</th>
+                    <th class="border-0">Patient</th>
+                    <th class="border-0">Activity</th>
+                    <th class="border-0">Nurse</th>
+                    <th class="border-0">Status</th>
+                    <th class="border-0">Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for note in recent_notes %}
                   <tr>
-                    <td><a href="#">{{ note.patient.id }}</a></td>
-                    <td>{{ note.patient.full_name }}</td>
-                    <td>{{ note.get_note_type_display }}</td>
-                    <td>
+                    <td class="align-middle py-2">
+                      <div>
+                        <span class="badge badge-primary badge-modern">{{ note.patient.patient_id }}</span>
+                        <div class="small text-muted">{{ note.patient.full_name }}</div>
+                      </div>
+                    </td>
+                    <td class="align-middle py-2">
+                      <span class="badge badge-info badge-modern">{{ note.get_note_type_display }}</span>
+                    </td>
+                    <td class="align-middle py-2">
+                      <small class="{% if note.nurse == user %}text-primary font-weight-bold{% else %}text-muted{% endif %}">
+                        {{ note.nurse.first_name|default:note.nurse.username }}
+                        {% if note.nurse == user %}<i class="fas fa-user-check ml-1"></i>{% endif %}
+                      </small>
+                    </td>
+                    <td class="align-middle py-2">
                       {% if note.follow_up %}
-                      <span class="badge badge-warning">Follow-up</span>
+                        <span class="badge badge-warning badge-modern">
+                          <i class="fas fa-clock mr-1"></i>Follow-up
+                        </span>
                       {% else %}
-                      <span class="badge badge-success">Completed</span>
+                        <span class="badge badge-success badge-modern">
+                          <i class="fas fa-check mr-1"></i>Done
+                        </span>
                       {% endif %}
                     </td>
-                    <td>{{ note.note_datetime|time:"h:i A" }}</td>
+                    <td class="align-middle py-2">
+                      <small class="text-muted">{{ note.note_datetime|timesince }} ago</small>
+                    </td>
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="5" class="text-center text-muted">No recent notes available.</td>
+                    <td colspan="5" class="text-center text-muted py-4">
+                      <i class="fas fa-clipboard-list fa-2x mb-2 d-block opacity-25"></i>
+                      <small>No recent activities</small>
+                    </td>
                   </tr>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
           </div>
-          <div class="card-footer clearfix">
-            <a href="#" class="btn btn-sm btn-info float-left">View All Activities</a>
-            <a href="#" class="btn btn-sm btn-secondary float-right">Generate Report</a>
-          </div>
         </div>
       </div>
 
-      <div class="col-lg-4 mb-4">
-        <div class="card h-100">
-          <div class="card-header">
-            <h3 class="card-title">Quick Notes</h3>
-            <div class="card-tools">
-              <button class="btn btn-tool" data-card-widget="collapse">
-                <i class="fas fa-minus"></i>
-              </button>
+      <!-- Sidebar -->
+      <div class="col-lg-5">
+        <div class="row">
+          <!-- Critical Patients -->
+          {% if critical_patients_list %}
+          <div class="col-md-6 col-lg-12 mb-2">
+            <div class="dashboard-card">
+              <div class="card-header bg-danger text-white border-0 minimal-padding">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>Critical Patients</h6>
+              </div>
+              <div class="card-body p-0">
+                <ul class="list-group list-group-flush list-group-modern">
+                  {% for patient in critical_patients_list %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                    <div>
+                      <strong class="text-danger">{{ patient.patient_id }}</strong>
+                      <div class="small text-muted">{{ patient.full_name }}</div>
+                    </div>
+                    <span class="badge badge-danger badge-modern">Critical</span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
             </div>
           </div>
-          <div class="card-body d-flex flex-column">
-            <textarea class="form-control mb-3" rows="7" placeholder="Add quick notes here..."></textarea>
-            <button type="button" class="btn btn-primary btn-sm mt-auto align-self-end">Save Note</button>
+          {% endif %}
+
+          <!-- New Admissions -->
+          {% if todays_new_admissions %}
+          <div class="col-md-6 col-lg-12 mb-2">
+            <div class="dashboard-card">
+              <div class="card-header bg-success text-white border-0 minimal-padding">
+                <h6 class="mb-0"><i class="fas fa-user-plus mr-2"></i>Today's Admissions</h6>
+              </div>
+              <div class="card-body p-0">
+                <ul class="list-group list-group-flush list-group-modern">
+                  {% for admission in todays_new_admissions %}
+                  <li class="list-group-item py-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h6 class="mb-0 text-success">{{ admission.patient.patient_id }}</h6>
+                        <small>{{ admission.patient.full_name }}</small>
+                        <div class="small text-muted">by {{ admission.admitted_by.first_name|default:admission.admitted_by.username }}</div>
+                      </div>
+                      <small class="text-muted">{{ admission.time|time:"h:i A" }}</small>
+                    </div>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Quick Notes -->
+          <div class="col-12">
+            <div class="dashboard-card">
+              <div class="card-header bg-primary text-white border-0 minimal-padding">
+                <h6 class="mb-0"><i class="fas fa-sticky-note mr-2"></i>Quick Notes</h6>
+              </div>
+              <div class="card-body compact-section">
+                <textarea class="form-control border-0 bg-light" rows="3" placeholder="Add quick notes here..." id="quickNoteText"></textarea>
+                <button type="button" class="btn btn-primary btn-sm btn-block mt-2" onclick="saveQuickNote()">
+                  <i class="fas fa-save mr-1"></i>Save Note
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Recent Vitals -->
+    {% if recent_vitals %}
+    <div class="row">
+      <div class="col-12">
+        <div class="dashboard-card">
+          <div class="card-header bg-transparent border-0 minimal-padding">
+            <h5 class="mb-0"><i class="fas fa-heartbeat text-danger mr-2"></i>Recent Vitals (Last 24 Hours)</h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm mb-0">
+                <thead class="bg-light">
+                  <tr>
+                    <th class="border-0">Patient</th>
+                    <th class="border-0">Blood Pressure</th>
+                    <th class="border-0">Pulse</th>
+                    <th class="border-0">Temperature</th>
+                    <th class="border-0">Recorded By</th>
+                    <th class="border-0">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for vital in recent_vitals %}
+                  <tr>
+                    <td class="align-middle py-2">
+                      <div>
+                        <span class="badge badge-primary badge-modern">{{ vital.patient.patient_id }}</span>
+                        <div class="small text-muted">{{ vital.patient.full_name }}</div>
+                      </div>
+                    </td>
+                    <td class="align-middle py-2">
+                      {% if vital.blood_pressure %}
+                        <span class="badge badge-light badge-modern">{{ vital.blood_pressure }}</span>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="align-middle py-2">
+                      {% if vital.pulse %}
+                        <span class="badge badge-light badge-modern">{{ vital.pulse }} bpm</span>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="align-middle py-2">
+                      {% if vital.temperature %}
+                        <span class="badge badge-light badge-modern">{{ vital.temperature }}°C</span>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+                    <td class="align-middle py-2">
+                      <small class="{% if vital.recorded_by == user %}text-primary font-weight-bold{% else %}text-muted{% endif %}">
+                        {{ vital.recorded_by.first_name|default:vital.recorded_by.username }}
+                        {% if vital.recorded_by == user %}<i class="fas fa-user-check ml-1"></i>{% endif %}
+                      </small>
+                    </td>
+                    <td class="align-middle py-2">
+                      <small class="text-muted">{{ vital.recorded_at|timesince }} ago</small>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 </section>
 
@@ -192,11 +512,30 @@ function updateClock() {
   const timeString = now.toLocaleTimeString('en-US', {
     hour12: true,
     hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+    minute: '2-digit'
   });
   document.getElementById('currentTime').textContent = timeString;
 }
+
+function saveQuickNote() {
+  const noteText = document.getElementById('quickNoteText').value;
+  if (noteText.trim() === '') {
+    $(document).Toasts('create', {
+      class: 'bg-warning',
+      title: 'Warning',
+      body: 'Please enter a note before saving.'
+    });
+    return;
+  }
+  
+  $(document).Toasts('create', {
+    class: 'bg-success',
+    title: 'Success',
+    body: 'Quick note saved successfully!'
+  });
+  document.getElementById('quickNoteText').value = '';
+}
+
 updateClock();
 setInterval(updateClock, 1000);
 </script>

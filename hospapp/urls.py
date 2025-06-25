@@ -67,6 +67,8 @@ urlpatterns = [
 
     path('ae/', views.ae, name='ae'),
 
+    ########################### Labs URLS ####################################
+
     path('l/home', views.laboratory, name='laboratory'),
     path('l/test_entry', views.lab_test_entry, name='lab_test_entry'),
     path('lab/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
@@ -74,6 +76,9 @@ urlpatterns = [
     path('l/internal_logs', views.lab_internal_logs, name='lab_internal_logs'),
     path('ajax/lab-log-detail/', views.lab_log_detail_ajax, name='lab_log_detail_ajax'),
     path('labtests/submit/<int:patient_id>/', views.submit_test_results, name='submit_test_results'),
+    path('lab/activity-report/', views.lab_activity_report, name='lab_activity_report'),
+
+    ########################### End Lab URLS ####################################
 
     path('p/home', views.pharmacy, name='pharmacy'),
     path('p/review', views.review_prescriptions, name='review_prescriptions'),

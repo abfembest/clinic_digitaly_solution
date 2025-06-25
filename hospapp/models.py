@@ -175,6 +175,7 @@ class Appointment(models.Model):
 class Referral(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     notes = models.TextField()
+    priority = models.CharField(blank=True, null=True)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

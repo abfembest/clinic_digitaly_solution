@@ -145,77 +145,145 @@ def logout_view(request):
 @login_required(login_url='home')
 def nurses(request):
     user = request.user
-
+    today = timezone.now().date()
+    
     # ✅ Get nurse profile
     nurse_profile = Staff.objects.filter(user=user, role='nurse').first()
-
-    # ✅ Dashboard stats
+    
+    # ✅ Patient Statistics
     active_patients = Patient.objects.filter(is_inpatient=True).count()
     critical_patients = Patient.objects.filter(status='critical').count()
     stable_patients = Patient.objects.filter(status='stable').count()
     recovered_patients = Patient.objects.filter(status='recovered').count()
-    todays_admissions = Admission.objects.filter(admission_date=now().date()).count()
-
-    # ✅ Recent activities
-    recent_notes = NursingNote.objects.select_related('patient').order_by('-note_datetime')[:5]
-
-    # ✅ Action shortcuts
-    quick_actions = [
-        {
-            'title': 'Admit New Patient',
-            'url': reverse('nursing_actions'),
-            'icon': 'fa-user-plus',
-            'color': 'success',
-            'description': 'Register and admit new patients'
-        },
-        {
-            'title': 'Record Vitals',
-            'url': reverse('vitals'),
-            'icon': 'fa-heartbeat',
-            'color': 'warning',
-            'description': 'Monitor and record vital signs'
-        },
-        {
-            'title': 'Prep for Consultation',
-            'url': reverse('nursing_actions') + '#monitor',
-            'icon': 'fa-stethoscope',
-            'color': 'primary',
-            'description': 'Prepare patients for doctor visits'
-        },
-        {
-            'title': 'Discharge Patient',
-            'url': reverse('nursing_actions') + '#discharge',
-            'icon': 'fa-door-open',
-            'color': 'danger',
-            'description': 'Process patient discharge'
-        },
-        {
-            'title': 'Monitor Patient Status',
-            'url': reverse('nursing_actions') + '#monitor',
-            'icon': 'fa-chart-line',
-            'color': 'dark',
-            'description': 'Update and monitor condition'
-        },
-        {
-            'title': 'Write Nursing Note',
-            'url': reverse('nursing_actions') + '#nursing_note',
-            'icon': 'fa-notes-medical',
-            'color': 'info',
-            'description': 'Document observations and updates'
-        },
-    ]
-
+    
+    # ✅ Today's activities
+    todays_admissions = Admission.objects.filter(
+        admission_date=today,
+        status='Admitted'
+    ).count()
+    
+    # ✅ Recent nursing notes (all nurses for overview, but highlight current nurse's notes)
+    recent_notes = NursingNote.objects.select_related('patient', 'nurse').order_by('-note_datetime')[:10]
+    
+    # ✅ My recent activities (nurse-specific)
+    my_recent_notes = NursingNote.objects.filter(
+        nurse=user
+    ).select_related('patient').order_by('-note_datetime')[:5]
+    
+    # ✅ Patients requiring follow-up (based on nursing notes)
+    patients_needing_followup = NursingNote.objects.filter(
+        follow_up__isnull=False
+    ).exclude(follow_up='').select_related('patient').order_by('-note_datetime')[:5]
+    
+    # ✅ Critical patients details for immediate attention
+    critical_patients_list = Patient.objects.filter(
+        status='critical',
+        is_inpatient=True
+    ).order_by('-date_registered')[:5]
+    
+    # ✅ Recent vitals recorded (last 24 hours)
+    recent_vitals = Vitals.objects.filter(
+        recorded_at__gte=timezone.now() - timedelta(hours=24)
+    ).select_related('patient', 'recorded_by').order_by('-recorded_at')[:8]
+    
+    # ✅ Today's discharges
+    todays_discharges = Admission.objects.filter(
+        discharge_date=today,
+        status='Discharged'
+    ).count()
+    
+    # ✅ Patients admitted today (detailed)
+    todays_new_admissions = Admission.objects.filter(
+        admission_date=today,
+        status='Admitted'
+    ).select_related('patient', 'admitted_by').order_by('-time')[:5]
+    
+    # ✅ My shift information
+    my_shift_today = ShiftAssignment.objects.filter(
+        staff=user,
+        date=today
+    ).select_related('shift').first()
+    
+    # ✅ Pending handovers (received by current nurse)
+    pending_handovers = HandoverLog.objects.filter(
+        recipient=user,
+        timestamp__date=today
+    ).select_related('patient', 'author').order_by('-timestamp')[:5]
+    
+    # ✅ Emergency alerts (recent)
+    recent_alerts = EmergencyAlert.objects.filter(
+        timestamp__gte=timezone.now() - timedelta(hours=24)
+    ).exclude(acknowledged_by=user).order_by('-timestamp')[:3]
+    
+    # ✅ Patients I've worked with recently (last 7 days)
+    my_recent_patients = Patient.objects.filter(
+        Q(nursing_notes__nurse=user) | 
+        Q(vitals__recorded_by=user)
+    ).filter(
+        Q(nursing_notes__created_at__gte=timezone.now() - timedelta(days=7)) |
+        Q(vitals__recorded_at__gte=timezone.now() - timedelta(days=7))
+    ).distinct().order_by('-date_registered')[:10]
+    
+    # ✅ Statistics for current nurse
+    my_stats = {
+        'notes_today': NursingNote.objects.filter(
+            nurse=user,
+            created_at__date=today
+        ).count(),
+        'vitals_recorded_today': Vitals.objects.filter(
+            recorded_by=user,
+            recorded_at__date=today
+        ).count(),
+        'patients_cared_this_week': Patient.objects.filter(
+            Q(nursing_notes__nurse=user) | Q(vitals__recorded_by=user)
+        ).filter(
+            Q(nursing_notes__created_at__gte=timezone.now() - timedelta(days=7)) |
+            Q(vitals__recorded_at__gte=timezone.now() - timedelta(days=7))
+        ).distinct().count()
+    }
+    
+    # ✅ Attendance status
+    my_attendance_today = Attendance.objects.filter(
+        staff=user,
+        date__date=today
+    ).first()
+    
     context = {
+        # Profile & Authentication
         'nurse_profile': nurse_profile,
+        'user': user,
+        
+        # Dashboard Statistics
         'active_patients': active_patients,
         'critical_patients': critical_patients,
         'stable_patients': stable_patients,
         'recovered_patients': recovered_patients,
-        'recent_notes': recent_notes,
         'todays_admissions': todays_admissions,
-        'quick_actions': quick_actions,
+        'todays_discharges': todays_discharges,
+        
+        # Recent Activities
+        'recent_notes': recent_notes,
+        'my_recent_notes': my_recent_notes,
+        'recent_vitals': recent_vitals,
+        'todays_new_admissions': todays_new_admissions,
+        
+        # Priority Items
+        'critical_patients_list': critical_patients_list,
+        'patients_needing_followup': patients_needing_followup,
+        'pending_handovers': pending_handovers,
+        'recent_alerts': recent_alerts,
+        
+        # Personal Work Data
+        'my_recent_patients': my_recent_patients,
+        'my_stats': my_stats,
+        'my_shift_today': my_shift_today,
+        'my_attendance_today': my_attendance_today,
+        
+        # Utility
+        'today': today,
+        'current_time': timezone.now(),
     }
-
+    
     return render(request, 'nurses/index.html', context)
 
 @login_required(login_url='home')
@@ -388,7 +456,8 @@ def refer_patient(request):
 
         Referral.objects.create(
             patient=patient,
-            department=department, #
+            department=department,
+            priority=priority, #
             notes=referral_notes #
         )
 
@@ -1041,6 +1110,8 @@ def monitoring(request):
 @login_required(login_url='home')                          
 def ae(request):     
     return render(request, 'ae/base.html')
+
+''' ############################################################################################################################ Laboratory View ############################################################################################################################ '''
 
 # Lab views
 @login_required(login_url='home')
@@ -6161,6 +6232,33 @@ def submit_test_results(request, patient_id):
         return redirect('lab_test_entry')
 
     return redirect('lab_test_entry')
+
+def lab_activity_report(request):
+    user = request.user
+    today = date.today()
+
+    total_tests_requested = LabTest.objects.count()
+
+    pending_tests = LabTest.objects.filter(status='pending').count()
+    completed_tests = LabTest.objects.filter(status='completed').count()
+    in_progress_tests = LabTest.objects.filter(status='in_progress').count()
+
+    recent_lab_activities = LabTest.objects.filter(
+        Q(performed_by=user) | Q(recorded_by=user)
+    ).order_by('-date_performed', '-requested_at')[:10]
+
+    recent_lab_files = LabResultFile.objects.filter(uploaded_by=user).order_by('-uploaded_at')[:5]
+
+    context = {
+        'total_tests_requested': total_tests_requested,
+        'pending_tests': pending_tests,
+        'completed_tests': completed_tests,
+        'in_progress_tests': in_progress_tests,
+        'recent_lab_activities': recent_lab_activities,
+        'recent_lab_files': recent_lab_files,
+    }
+
+    return render(request, 'laboratory/reports.html', context)
  
 
  #Doctor's fetching test results that were recommended

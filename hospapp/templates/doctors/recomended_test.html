@@ -283,7 +283,7 @@
                         {% for entry in unique_patients_with_tests %}
                         <tr data-patient-name="{{ entry.patient.full_name|lower }}">
                             <td>
-                                <span class="badge badge-secondary">{{ entry.patient.id }}</span>
+                                <span class="badge badge-secondary">{{ entry.patient.patient_id }}</span>
                             </td>
                             <td>
                                 <div>

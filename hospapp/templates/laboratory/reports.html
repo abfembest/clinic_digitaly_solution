@@ -1,0 +1,208 @@
+{% extends "laboratory/base.html" %}
+{% load static %}
+
+{% block title %}HMS | Lab Activity Report{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">
+                    <i class="fas fa-chart-line text-info mr-2"></i>
+                    My Lab Activity Dashboard
+                </h1>
+                <p class="text-muted mb-0">Overview of your daily and total laboratory activities</p>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'laboratory' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Lab Activity Report</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <div class="row">
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ total_tests_requested }}</h3>
+                        <p>Total Tests Requested</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <a href="{% url 'lab_test_entry' %}" class="small-box-footer">
+                        View All <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ pending_tests }}</h3>
+                        <p>Pending Tests</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <a href="{% url 'lab_test_entry' %}" class="small-box-footer">
+                        More info <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ completed_tests }}</h3>
+                        <p>Completed Tests</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                    <a href="{% url 'lab_internal_logs' %}" class="small-box-footer">
+                        More info <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
+                <div class="small-box bg-primary">
+                    <div class="inner">
+                        <h3>{{ in_progress_tests }}</h3>
+                        <p>Tests In Progress</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-vials"></i>
+                    </div>
+                    <a href="{% url 'lab_internal_logs' %}" class="small-box-footer">
+                        More info <i class="fas fa-arrow-circle-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-flask mr-2"></i>
+                            Recent Tests You Performed/Recorded
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-info">{{ recent_lab_activities|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Test Name</th>
+                                        <th>Status</th>
+                                        <th>Recorded At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for test in recent_lab_activities %}
+                                    <tr>
+                                        <td><strong>{{ test.patient.full_name }}</strong></td>
+                                        <td>{{ test.test_name }}</td>
+                                        <td>
+                                            <span class="badge badge-{% if test.status == 'completed' %}success{% elif test.status == 'pending' %}warning{% elif test.status == 'in_progress' %}info{% else %}secondary{% endif %}">
+                                                {{ test.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ test.date_performed|default:test.requested_at|date:"M d, Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-vials fa-2x mb-2"></i>
+                                            <br>No recent lab activities by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-file-upload mr-2"></i>
+                            Recent Result Files Uploaded By You
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-primary">{{ recent_lab_files|length }}</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>File</th>
+                                        <th>Uploaded At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for file in recent_lab_files %}
+                                    <tr>
+                                        <td><strong>{{ file.patient.full_name }}</strong></td>
+                                        <td><a href="{{ file.result_file.url }}" target="_blank">{{ file.result_file.name|cut:"lab_results/" }}</a></td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ file.uploaded_at|date:"M d, Y H:i" }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">
+                                            <i class="fas fa-file-pdf fa-2x mb-2"></i>
+                                            <br>No recent lab result files uploaded by you.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
