@@ -9,5 +9,3 @@ __pycache__/
 venv/
 
 clinic_digitaly_solution_clone/
-
-db.sqlite3
