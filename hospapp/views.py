@@ -1105,6 +1105,169 @@ def monitoring(request):
     }
     return render(request, "doctors/treatment_monitoring.html", context)
 
+def doctor_report(request):
+    """
+    Generate comprehensive report for logged-in doctor showing all their activities
+    """
+    user = request.user
+    
+    # Verify user is a doctor
+    try:
+        staff = Staff.objects.get(user=user)
+        if staff.role != 'doctor':
+            # Handle non-doctor users appropriately
+            return render(request, 'error.html', {
+                'message': 'Access denied. This report is only available for doctors.'
+            })
+    except Staff.DoesNotExist:
+        return render(request, 'error.html', {
+            'message': 'Staff profile not found.'
+        })
+    
+    # Get date range for filtering (default: last 30 days)
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    # Allow custom date range from request parameters
+    if request.GET.get('start_date'):
+        start_date = datetime.strptime(request.GET.get('start_date'), '%Y-%m-%d').date()
+    if request.GET.get('end_date'):
+        end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
+    
+    # 1. Consultations conducted by the doctor
+    consultations = Consultation.objects.filter(
+        doctor=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient', 'admission').order_by('-created_at')
+    
+    # 2. Prescriptions written by the doctor
+    prescriptions = Prescription.objects.filter(
+        prescribed_by=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient').order_by('-created_at')
+    
+    # 3. Admissions where doctor is assigned
+    admissions_assigned = Admission.objects.filter(
+        doctor_assigned=user,
+        admission_date__range=[start_date, end_date]
+    ).select_related('patient', 'admitted_by').order_by('-admission_date')
+    
+    # 4. Admissions conducted by the doctor
+    admissions_conducted = Admission.objects.filter(
+        admitted_by=user,
+        admission_date__range=[start_date, end_date]
+    ).select_related('patient', 'doctor_assigned').order_by('-admission_date')
+    
+    # 5. Discharges conducted by the doctor
+    discharges = Admission.objects.filter(
+        discharged_by=user,
+        discharge_date__range=[start_date, end_date]
+    ).select_related('patient', 'doctor_assigned').order_by('-discharge_date')
+    
+    # 6. Care plans created by the doctor
+    care_plans = CarePlan.objects.filter(
+        created_by=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient').order_by('-created_at')
+    
+    # 7. Referrals made by the doctor
+    referrals = Referral.objects.filter(
+        referred_by=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient', 'department').order_by('-created_at')
+    
+    # 8. Lab tests requested by the doctor
+    lab_tests = LabTest.objects.filter(
+        requested_by=user,
+        requested_at__date__range=[start_date, end_date]
+    ).select_related('patient', 'category').order_by('-requested_at')
+    
+    # 9. Vitals recorded by the doctor
+    vitals_recorded = Vitals.objects.filter(
+        recorded_by=user,
+        recorded_at__date__range=[start_date, end_date]
+    ).select_related('patient').order_by('-recorded_at')
+    
+    # 10. Patients registered by the doctor
+    patients_registered = Patient.objects.filter(
+        registered_by=user,
+        date_registered__date__range=[start_date, end_date]
+    ).order_by('-date_registered')
+    
+    # 11. Appointments scheduled by the doctor
+    appointments_scheduled = Appointment.objects.filter(
+        scheduled_by=user,
+        scheduled_time__date__range=[start_date, end_date]
+    ).select_related('patient', 'department').order_by('-scheduled_time')
+    
+    # 12. Doctor comments made
+    doctor_comments = DoctorComments.objects.filter(
+        doctor_name__icontains=f"{user.first_name} {user.last_name}",
+        date__date__range=[start_date, end_date]
+    ).order_by('-date')
+    
+    # 13. Get patients currently under doctor's care (active admissions)
+    current_patients = Patient.objects.filter(
+        admission__doctor_assigned=user,
+        admission__status='Admitted'
+    ).distinct()
+    
+    # Calculate summary statistics
+    summary_stats = {
+        'total_consultations': consultations.count(),
+        'total_prescriptions': prescriptions.count(),
+        'total_admissions_assigned': admissions_assigned.count(),
+        'total_admissions_conducted': admissions_conducted.count(),
+        'total_discharges': discharges.count(),
+        'total_care_plans': care_plans.count(),
+        'total_referrals': referrals.count(),
+        'total_lab_tests': lab_tests.count(),
+        'total_vitals': vitals_recorded.count(),
+        'total_patients_registered': patients_registered.count(),
+        'total_appointments_scheduled': appointments_scheduled.count(),
+        'total_comments': doctor_comments.count(),
+        'current_active_patients': current_patients.count(),
+    }
+    
+    # Get patient statistics by status for patients the doctor has seen
+    patient_consultations = consultations.values_list('patient_id', flat=True)
+    patient_status_stats = Patient.objects.filter(
+        id__in=patient_consultations
+    ).values('status').annotate(count=Count('status'))
+    
+    # Recent activities (last 7 days) for quick overview
+    recent_date = end_date - timedelta(days=7)
+    recent_activities = {
+        'consultations': consultations.filter(created_at__date__gte=recent_date).count(),
+        'prescriptions': prescriptions.filter(created_at__date__gte=recent_date).count(),
+        'admissions': admissions_conducted.filter(admission_date__gte=recent_date).count(),
+        'referrals': referrals.filter(created_at__date__gte=recent_date).count(),
+    }
+    
+    context = {
+        'doctor': staff,
+        'start_date': start_date,
+        'end_date': end_date,
+        'consultations': consultations[:20],  # Limit for performance
+        'prescriptions': prescriptions[:20],
+        'admissions_assigned': admissions_assigned[:20],
+        'admissions_conducted': admissions_conducted[:20],
+        'discharges': discharges[:20],
+        'care_plans': care_plans[:20],
+        'referrals': referrals[:20],
+        'lab_tests': lab_tests[:20],
+        'vitals_recorded': vitals_recorded[:20],
+        'patients_registered': patients_registered[:20],
+        'appointments_scheduled': appointments_scheduled[:20],
+        'doctor_comments': doctor_comments[:20],
+        'current_patients': current_patients,
+        'summary_stats': summary_stats,
+        'patient_status_stats': patient_status_stats,
+        'recent_activities': recent_activities,
+    }
+    
+    return render(request, 'doctors/reports.html', context)
+
 ''' ############################################################################################################################ End Doctors View ############################################################################################################################ '''
 
 @login_required(login_url='home')                          

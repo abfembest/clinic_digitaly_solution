@@ -130,6 +130,14 @@
                             </a>
                         </li>
 
+                        <li class="nav-header">REPORTS</li>
+                        <li class="nav-item">
+                            <a href="{% url 'doctor_report' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_activity_report' %}active{% endif %}">
+                                <i class="nav-icon fas fa-chart-line"></i>
+                                <p>My Activities</p>
+                            </a>
+                        </li>
+
                         <!-- Treatment & Monitoring -->
                         {% comment %}
                         <li class="nav-header">TREATMENT & MONITORING</li>
@@ -252,6 +260,7 @@
     <!--Select2-->
 
     <script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+    <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
     <script>
 
         //Select2
