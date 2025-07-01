@@ -49,6 +49,7 @@
             </div>
         </div>
 
+        <!-- Enhanced Statistics Cards -->
         <div class="row">
             <div class="col-lg-2 col-md-4 col-sm-6 col-12">
                 <div class="small-box bg-info">
@@ -118,6 +119,76 @@
             </div>
         </div>
 
+        <!-- Additional Stats Row -->
+        <div class="row mb-3">
+            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
+                <div class="small-box bg-purple">
+                    <div class="inner">
+                        <h3>{{ summary_stats.total_lab_tests }}</h3>
+                        <p>Lab Tests</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
+                <div class="small-box bg-teal">
+                    <div class="inner">
+                        <h3>{{ summary_stats.total_care_plans }}</h3>
+                        <p>Care Plans</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
+                <div class="small-box bg-orange">
+                    <div class="inner">
+                        <h3>{{ summary_stats.total_vitals }}</h3>
+                        <p>Vitals Recorded</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
+                <div class="small-box bg-indigo">
+                    <div class="inner">
+                        <h3>{{ summary_stats.total_patients_registered }}</h3>
+                        <p>Patients Registered</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
+                <div class="small-box bg-pink">
+                    <div class="inner">
+                        <h3>{{ summary_stats.total_appointments_scheduled }}</h3>
+                        <p>Appointments</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
+                <div class="small-box bg-dark">
+                    <div class="inner">
+                        <h3>{{ summary_stats.total_comments }}</h3>
+                        <p>Comments</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-comment-medical"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-6">
                 <div class="card">
@@ -159,9 +230,12 @@
                             <option value="consultation">Consultations</option>
                             <option value="prescription">Prescriptions</option>
                             <option value="admission">Admissions</option>
+                            <option value="discharge">Discharges</option>
                             <option value="referral">Referrals</option>
                             <option value="lab_test">Lab Tests</option>
                             <option value="care_plan">Care Plans</option>
+                            <option value="vitals">Vitals</option>
+                            <option value="appointment">Appointments</option>
                             <option value="comment">Comments</option>
                         </select>
                         <button class="advanced-btn" id="printTable">
@@ -206,9 +280,29 @@
     </div>
 </section>
 
+<!-- Activity Detail Modal -->
+<div class="modal fade" id="activityDetailModal" tabindex="-1" aria-labelledby="activityDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="activityDetailModalLabel">Activity Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="editActivityBtn" style="display: none;">Edit Activity</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.X/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
 
 <style>
@@ -431,6 +525,13 @@
         font-style: italic;
     }
 
+    /* Additional color classes for new stats boxes */
+    .bg-purple { background-color: #6f42c1 !important; }
+    .bg-teal { background-color: #20c997 !important; }
+    .bg-orange { background-color: #fd7e14 !important; }
+    .bg-indigo { background-color: #6610f2 !important; }
+    .bg-pink { background-color: #e83e8c !important; }
+
     @media print {
         .advanced-table-container { background: white !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
         .advanced-table-header, .advanced-table-controls, .advanced-pagination { display: none !important; }
@@ -452,7 +553,7 @@
 
 <script>
     $(function () {
-        // Charts code remains the same
+        // Charts code
         var patientStatusCanvas = $('#patientStatusChart').get(0).getContext('2d');
         var patientStatusData = {
             labels: [{% for entry in patient_status_stats %}'{{ entry.status|title }}',{% endfor %}],
@@ -476,172 +577,585 @@
         }
         new Chart(recentActivitiesCanvas, { type: 'bar', data: recentActivitiesData, options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false }}, scales: { y: { beginAtZero: true, ticks: { precision: 0 }}}}});
 
-        // Consolidated activities data
+        // Enhanced activities data with ALL activity types
         const allActivitiesData = [
             // Consultations
             {% for consultation in consultations %}
-            { date: "{{ consultation.created_at|date:"d F Y" }}", patient: "{{ consultation.patient.full_name|escapejs }}", type: "consultation", details: "{{ consultation.reason_for_consultation|truncatechars:50|escapejs }}", status: "{{ consultation.status|default:'Completed'|escapejs }}", rawDate: new Date("{{ consultation.created_at|date:'c' }}") },
+            { 
+                id: 'cons_{{ consultation.id }}',
+                date: "{{ consultation.created_at|date:"d F Y" }}", 
+                patient: "{{ consultation.patient.full_name|escapejs }}", 
+                type: "consultation", 
+                details: "{{ consultation.reason_for_consultation|truncatechars:50|escapejs }}", 
+                status: "{{ consultation.status|default:'Completed'|escapejs }}", 
+                rawDate: new Date("{{ consultation.created_at|date:'c' }}"),
+                fullData: {
+                    reason: "{{ consultation.reason_for_consultation|escapejs }}",
+                    diagnosis: "{{ consultation.diagnosis|default:'Not specified'|escapejs }}",
+                    patient_id: "{{ consultation.patient.id }}",
+                    admission: "{{ consultation.admission.id|default:'None' }}"
+                }
+            },
             {% endfor %}
             // Prescriptions
             {% for prescription in prescriptions %}
-            { date: "{{ prescription.created_at|date:"d F Y" }}", patient: "{{ prescription.patient.full_name|escapejs }}", type: "prescription", details: "{{ prescription.medication|truncatechars:50|escapejs }}", status: "{{ prescription.status|default:'Active'|escapejs }}", rawDate: new Date("{{ prescription.created_at|date:'c' }}") },
+            { 
+                id: 'pres_{{ prescription.id }}',
+                date: "{{ prescription.created_at|date:"d F Y" }}", 
+                patient: "{{ prescription.patient.full_name|escapejs }}", 
+                type: "prescription", 
+                details: "{{ prescription.medication|truncatechars:50|escapejs }}", 
+                status: "{{ prescription.status|default:'Active'|escapejs }}", 
+                rawDate: new Date("{{ prescription.created_at|date:'c' }}"),
+                fullData: {
+                    medication: "{{ prescription.medication|escapejs }}",
+                    dosage: "{{ prescription.dosage|escapejs }}",
+                    frequency: "{{ prescription.frequency|escapejs }}",
+                    duration: "{{ prescription.duration|escapejs }}",
+                    instructions: "{{ prescription.instructions|default:''|escapejs }}"
+                }
+            },
             {% endfor %}
-            // Admissions
+            // Admissions Assigned
             {% for admission in admissions_assigned %}
-            { date: "{{ admission.admission_date|date:"d F Y" }}", patient: "{{ admission.patient.full_name|escapejs }}", type: "admission", details: "Admitted by {{ admission.admitted_by.get_full_name|escapejs }}", status: "{{ admission.status|escapejs }}", rawDate: new Date("{{ admission.admission_date|date:'c' }}") },
+            { 
+                id: 'adm_{{ admission.id }}',
+                date: "{{ admission.admission_date|date:"d F Y" }}", 
+                patient: "{{ admission.patient.full_name|escapejs }}", 
+                type: "admission", 
+                details: "Admitted by {{ admission.admitted_by.get_full_name|escapejs }}", 
+                status: "{{ admission.status|escapejs }}", 
+                rawDate: new Date("{{ admission.admission_date|date:'c' }}"),
+                fullData: {
+                    admitted_by: "{{ admission.admitted_by.get_full_name|escapejs }}",
+                    reason: "{{ admission.reason|default:'Not specified'|escapejs }}",
+                    bed: "{{ admission.bed|default:'Not assigned'|escapejs }}",
+                    ward: "{{ admission.ward.name|default:'Not assigned'|escapejs }}"
+                }
+            },
+            {% endfor %}
+            // Discharges
+            {% for discharge in discharges %}
+            { 
+                id: 'disc_{{ discharge.id }}',
+                date: "{{ discharge.discharge_date|date:"d F Y" }}", 
+                patient: "{{ discharge.patient.full_name|escapejs }}", 
+                type: "discharge", 
+                details: "Discharged by {{ discharge.discharged_by.get_full_name|escapejs }}", 
+                status: "Completed", 
+                rawDate: new Date("{{ discharge.discharge_date|date:'c' }}"),
+                fullData: {
+                    admission_date: "{{ discharge.admission_date|date:"d F Y" }}",
+                    discharge_summary: "{{ discharge.discharge_summary|default:'Not provided'|escapejs }}",
+                    follow_up: "{{ discharge.follow_up_instructions|default:'None'|escapejs }}"
+                }
+            },
             {% endfor %}
             // Referrals
             {% for referral in referrals %}
-            { date: "{{ referral.created_at|date:"d F Y" }}", patient: "{{ referral.patient.full_name|escapejs }}", type: "referral", details: "To {{ referral.department.name|escapejs }}", status: "{{ referral.status|escapejs }}", rawDate: new Date("{{ referral.created_at|date:'c' }}") },
+            { 
+                id: 'ref_{{ referral.id }}',
+                date: "{{ referral.created_at|date:"d F Y" }}", 
+                patient: "{{ referral.patient.full_name|escapejs }}", 
+                type: "referral", 
+                details: "To {{ referral.department.name|escapejs }}", 
+                status: "{{ referral.status|escapejs }}", 
+                rawDate: new Date("{{ referral.created_at|date:'c' }}"),
+                fullData: {
+                    department: "{{ referral.department.name|escapejs }}",
+                    reason: "{{ referral.reason|escapejs }}",
+                    urgency: "{{ referral.urgency|default:'Normal'|escapejs }}",
+                    notes: "{{ referral.notes|default:'None'|escapejs }}"},
             {% endfor %}
             // Lab Tests
-            {% for test in lab_tests %}
-            { date: "{{ test.requested_at|date:"d F Y" }}", patient: "{{ test.patient.full_name|escapejs }}", type: "lab_test", details: "{{ test.category.name|escapejs }}", status: "{{ test.status|escapejs }}", rawDate: new Date("{{ test.requested_at|date:'c' }}") },
+            {% for lab_test in lab_tests %}
+            { 
+                id: 'lab_{{ lab_test.id }}',
+                date: "{{ lab_test.requested_at|date:"d F Y" }}", 
+                patient: "{{ lab_test.patient.full_name|escapejs }}", 
+                type: "lab_test", 
+                details: "{{ lab_test.category.name|escapejs }} - {{ lab_test.test_name|truncatechars:30|escapejs }}", 
+                status: "{{ lab_test.status|default:'Pending'|escapejs }}", 
+                rawDate: new Date("{{ lab_test.requested_at|date:'c' }}"),
+                fullData: {
+                    test_name: "{{ lab_test.test_name|escapejs }}",
+                    category: "{{ lab_test.category.name|escapejs }}",
+                    instructions: "{{ lab_test.special_instructions|default:'None'|escapejs }}",
+                    priority: "{{ lab_test.priority|default:'Normal'|escapejs }}"
+                }
+            },
             {% endfor %}
             // Care Plans
-            {% for plan in care_plans %}
-            { date: "{{ plan.created_at|date:"d F Y" }}", patient: "{{ plan.patient.full_name|escapejs }}", type: "care_plan", details: "{{ plan.title|truncatechars:50|escapejs }}", status: "{{ plan.status|escapejs }}", rawDate: new Date("{{ plan.created_at|date:'c' }}") },
+            {% for care_plan in care_plans %}
+            { 
+                id: 'care_{{ care_plan.id }}',
+                date: "{{ care_plan.created_at|date:"d F Y" }}", 
+                patient: "{{ care_plan.patient.full_name|escapejs }}", 
+                type: "care_plan", 
+                details: "{{ care_plan.plan_title|truncatechars:50|escapejs }}", 
+                status: "{{ care_plan.status|default:'Active'|escapejs }}", 
+                rawDate: new Date("{{ care_plan.created_at|date:'c' }}"),
+                fullData: {
+                    title: "{{ care_plan.plan_title|escapejs }}",
+                    description: "{{ care_plan.description|default:'No description'|escapejs }}",
+                    start_date: "{{ care_plan.start_date|date:"d F Y" }}",
+                    review_date: "{{ care_plan.review_date|date:"d F Y"|default:'Not set' }}"
+                }
+            },
+            {% endfor %}
+            // Vitals
+            {% for vital in vitals_recorded %}
+            { 
+                id: 'vital_{{ vital.id }}',
+                date: "{{ vital.recorded_at|date:"d F Y" }}", 
+                patient: "{{ vital.patient.full_name|escapejs }}", 
+                type: "vitals", 
+                details: "BP: {{ vital.blood_pressure|default:'--' }}, Temp: {{ vital.temperature|default:'--' }}°C", 
+                status: "Recorded", 
+                rawDate: new Date("{{ vital.recorded_at|date:'c' }}"),
+                fullData: {
+                    blood_pressure: "{{ vital.blood_pressure|default:'Not recorded' }}",
+                    temperature: "{{ vital.temperature|default:'Not recorded' }}",
+                    pulse: "{{ vital.pulse_rate|default:'Not recorded' }}",
+                    respiratory_rate: "{{ vital.respiratory_rate|default:'Not recorded' }}",
+                    weight: "{{ vital.weight|default:'Not recorded' }}",
+                    height: "{{ vital.height|default:'Not recorded' }}"
+                }
+            },
+            {% endfor %}
+            // Appointments
+            {% for appointment in appointments_scheduled %}
+            { 
+                id: 'app_{{ appointment.id }}',
+                date: "{{ appointment.scheduled_time|date:"d F Y" }}", 
+                patient: "{{ appointment.patient.full_name|escapejs }}", 
+                type: "appointment", 
+                details: "{{ appointment.department.name|escapejs }} - {{ appointment.scheduled_time|time:"H:i" }}", 
+                status: "{{ appointment.status|default:'Scheduled'|escapejs }}", 
+                rawDate: new Date("{{ appointment.scheduled_time|date:'c' }}"),
+                fullData: {
+                    department: "{{ appointment.department.name|escapejs }}",
+                    time: "{{ appointment.scheduled_time|time:"H:i" }}",
+                    notes: "{{ appointment.notes|default:'No notes'|escapejs }}",
+                    type: "{{ appointment.appointment_type|default:'General'|escapejs }}"
+                }
+            },
             {% endfor %}
             // Comments
             {% for comment in doctor_comments %}
-            { date: "{{ comment.date|date:"d F Y" }}", patient: "{{ comment.patient.full_name|default:'N/A'|escapejs }}", type: "comment", details: "{{ comment.comments|truncatechars:50|escapejs }}", status: "Active", rawDate: new Date("{{ comment.date|date:'c' }}") },
+            { 
+                id: 'comm_{{ comment.id }}',
+                date: "{{ comment.date|date:"d F Y" }}", 
+                patient: "{{ comment.patient.full_name|escapejs }}", 
+                type: "comment", 
+                details: "{{ comment.comments|truncatechars:50|escapejs }}", 
+                status: "Added", 
+                rawDate: new Date("{{ comment.date|date:'c' }}"),
+                fullData: {
+                    comment: "{{ comment.comment|escapejs }}",
+                    patient_id: "{{ comment.patient.patient_id|default:'Unknown' }}",
+                    category: "{{ comment.category|default:'General'|escapejs }}"
+                }
+            },
             {% endfor %}
-        ];
+        ].filter(item => item.date && item.patient && item.type); // Filter out any incomplete entries
 
         // Sort by date (newest first)
         allActivitiesData.sort((a, b) => b.rawDate - a.rawDate);
 
-        let filteredData = [...allActivitiesData];
+        // Pagination and filtering variables
         let currentPage = 1;
-        const rowsPerPage = 15;
-        let sortDirection = {};
+        const itemsPerPage = 10;
+        let filteredData = [...allActivitiesData];
 
-        function getActivityIcon(type) {
-            const icons = {
-                consultation: 'fas fa-stethoscope',
-                prescription: 'fas fa-prescription',
-                admission: 'fas fa-hospital-user',
-                referral: 'fas fa-share',
-                lab_test: 'fas fa-flask',
-                care_plan: 'fas fa-clipboard-list',
-                comment: 'fas fa-comment-medical'
-            };
-            return icons[type] || 'fas fa-file-medical';
+        // Function to get status badge class
+        function getStatusBadgeClass(status, type) {
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('active') || statusLower.includes('completed') || statusLower.includes('recorded')) {
+                return 'status-completed';
+            } else if (statusLower.includes('pending') || statusLower.includes('scheduled')) {
+                return 'status-pending';
+            } else if (statusLower.includes('cancelled') || statusLower.includes('inactive')) {
+                return 'status-cancelled';
+            } else {
+                return 'status-active';
+            }
         }
 
-        function getActivityColor(type) {
-            const colors = {
-                consultation: 'info',
-                prescription: 'success',
-                admission: 'warning',
-                referral: 'primary',
-                lab_test: 'info',
-                care_plan: 'success',
-                comment: 'secondary'
+        // Function to get activity type display name and icon
+        function getActivityTypeInfo(type) {
+            const types = {
+                'consultation': { name: 'Consultation', icon: 'fa-stethoscope', color: '#007bff' },
+                'prescription': { name: 'Prescription', icon: 'fa-prescription', color: '#28a745' },
+                'admission': { name: 'Admission', icon: 'fa-hospital-user', color: '#ffc107' },
+                'discharge': { name: 'Discharge', icon: 'fa-sign-out-alt', color: '#dc3545' },
+                'referral': { name: 'Referral', icon: 'fa-share', color: '#6f42c1' },
+                'lab_test': { name: 'Lab Test', icon: 'fa-flask', color: '#20c997' },
+                'care_plan': { name: 'Care Plan', icon: 'fa-clipboard-list', color: '#fd7e14' },
+                'vitals': { name: 'Vitals', icon: 'fa-heartbeat', color: '#e83e8c' },
+                'appointment': { name: 'Appointment', icon: 'fa-calendar-check', color: '#6610f2' },
+                'comment': { name: 'Comment', icon: 'fa-comment-medical', color: '#6c757d' }
             };
-            return colors[type] || 'light';
+            return types[type] || { name: type, icon: 'fa-file-medical', color: '#6c757d' };
         }
 
+        // Function to render table
         function renderTable() {
             const tableBody = document.getElementById('tableBody');
             const noResults = document.getElementById('noResults');
-
+            
             if (filteredData.length === 0) {
                 tableBody.innerHTML = '';
                 noResults.style.display = 'block';
+                updatePagination();
                 return;
             }
-
+            
             noResults.style.display = 'none';
-            const startIndex = (currentPage - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
+            
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
             const pageData = filteredData.slice(startIndex, endIndex);
-
+            
             tableBody.innerHTML = pageData.map(item => {
-                let statusClass = 'status-active';
-                const status = item.status.toLowerCase();
-                if (status.includes('completed') || status.includes('active')) statusClass = 'status-completed';
-                else if (status.includes('pending') || status.includes('waiting')) statusClass = 'status-pending';
-                else if (status.includes('cancelled') || status.includes('inactive')) statusClass = 'status-cancelled';
-
+                const typeInfo = getActivityTypeInfo(item.type);
+                const statusClass = getStatusBadgeClass(item.status, item.type);
+                
                 return `
-                    <tr>
-                        <td><strong>${item.date}</strong></td>
+                    <tr data-id="${item.id}">
+                        <td><strong>${item.date}</strong><br><small class="text-muted">${item.rawDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</small></td>
+                        <td><strong>${item.patient}</strong></td>
                         <td>
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; font-size: 0.75rem;">
-                                    <span class="text-white fw-bold">${item.patient.charAt(0)}</span>
-                                </div>
-                                <strong style="font-size: 0.85rem;">${item.patient}</strong>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge bg-${getActivityColor(item.type)} me-1">
-                                <i class="${getActivityIcon(item.type)} me-1"></i>${item.type.replace('_', ' ').toUpperCase()}
+                            <span style="color: ${typeInfo.color};">
+                                <i class="fas ${typeInfo.icon} mr-1"></i>
+                                ${typeInfo.name}
                             </span>
                         </td>
                         <td>${item.details}</td>
                         <td><span class="advanced-status-badge ${statusClass}">${item.status}</span></td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" title="View Details">
-                                <i class="bi bi-eye"></i>
+                            <button class="btn btn-sm btn-outline-primary view-details" data-id="${item.id}" title="View Details">
+                                <i class="fas fa-eye"></i>
                             </button>
                         </td>
                     </tr>
                 `;
             }).join('');
-
+            
             updatePagination();
         }
 
+        // Function to update pagination
         function updatePagination() {
-            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredData.length} total)`;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
         }
 
-        function searchAndFilter() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const activityFilter = document.getElementById('activityFilter').value;
+        // Function to show activity details in modal
+        function showActivityDetails(activityId) {
+            const activity = allActivitiesData.find(item => item.id === activityId);
+            if (!activity) return;
             
-            filteredData = allActivitiesData.filter(item => {
-                const matchesSearch = Object.values(item).some(value => 
-                    value.toString().toLowerCase().includes(searchTerm)
-                );
-                const matchesFilter = !activityFilter || item.type === activityFilter;
-                return matchesSearch && matchesFilter;
-            });
+            const typeInfo = getActivityTypeInfo(activity.type);
+            const modalTitle = document.getElementById('activityDetailModalLabel');
+            const modalBody = document.getElementById('modalBody');
             
+            modalTitle.innerHTML = `
+                <i class="fas ${typeInfo.icon} mr-2" style="color: ${typeInfo.color};"></i>
+                ${typeInfo.name} Details
+            `;
+            
+            let detailsHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calendar mr-1"></i> Date & Time</h6>
+                        <p>${activity.date} at ${activity.rawDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user mr-1"></i> Patient</h6>
+                        <p>${activity.patient}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle mr-1"></i> Status</h6>
+                        <p><span class="advanced-status-badge ${getStatusBadgeClass(activity.status, activity.type)}">${activity.status}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-tag mr-1"></i> Activity Type</h6>
+                        <p>${typeInfo.name}</p>
+                    </div>
+                </div>
+                <hr>
+            `;
+            
+            // Add specific details based on activity type
+            if (activity.fullData) {
+                detailsHTML += '<h6><i class="fas fa-list mr-1"></i> Additional Details</h6>';
+                detailsHTML += '<div class="row">';
+                
+                Object.entries(activity.fullData).forEach(([key, value]) => {
+                    if (value && value !== 'None' && value !== 'Not specified') {
+                        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        detailsHTML += `
+                            <div class="col-md-6 mb-2">
+                                <strong>${label}:</strong><br>
+                                <span class="text-muted">${value}</span>
+                            </div>
+                        `;
+                    }
+                });
+                
+                detailsHTML += '</div>';
+            }
+            
+            modalBody.innerHTML = detailsHTML;
+            
+            // Show modal (assuming Bootstrap modal)
+            const modal = new bootstrap.Modal(document.getElementById('activityDetailModal'));
+            modal.show();
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            filteredData = allActivitiesData.filter(item => 
+                item.patient.toLowerCase().includes(searchTerm) ||
+                item.details.toLowerCase().includes(searchTerm) ||
+                getActivityTypeInfo(item.type).name.toLowerCase().includes(searchTerm) ||
+                item.status.toLowerCase().includes(searchTerm)
+            );
             currentPage = 1;
             renderTable();
-        }
+        });
 
-        function sortTable(columnIndex) {
-            const columns = ['rawDate', 'patient', 'type', 'details', 'status'];
-            const column = columns[columnIndex];
-            sortDirection[column] = sortDirection[column] === 'asc' ? 'desc' : 'asc';
-
-            filteredData.sort((a, b) => {
-                let aVal = a[column];
-                let bVal = b[column];
-                if (column === 'rawDate') {
-                    return sortDirection[column] === 'asc' ? aVal - bVal : bVal - aVal;
-                }
-                return sortDirection[column] === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
-            });
-
+        // Activity filter
+        document.getElementById('activityFilter').addEventListener('change', function(e) {
+            const filterType = e.target.value;
+            if (filterType === '') {
+                filteredData = [...allActivitiesData];
+            } else {
+                filteredData = allActivitiesData.filter(item => item.type === filterType);
+            }
+            currentPage = 1;
             renderTable();
+        });
+
+        // Pagination event listeners
+        document.getElementById('prevBtn').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', function() {
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        });
+
+        // View details event listener
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.view-details')) {
+                const activityId = e.target.closest('.view-details').getAttribute('data-id');
+                showActivityDetails(activityId);
+            }
+        });
+
+        // Print functionality
+        document.getElementById('printTable').addEventListener('click', function() {
+            window.print();
+        });
+
+        // Export PDF functionality (basic implementation)
+        document.getElementById('exportPDF').addEventListener('click', function() {
+            // Create a simplified version for PDF export
+            const printContent = `
+                <h2>Doctor Activity Report</h2>
+                <p>Period: {{ start_date }} to {{ end_date }}</p>
+                <p>Total Activities: ${filteredData.length}</p>
+                <table border="1" style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa;">
+                            <th style="padding: 8px;">Date</th>
+                            <th style="padding: 8px;">Patient</th>
+                            <th style="padding: 8px;">Activity</th>
+                            <th style="padding: 8px;">Details</th>
+                            <th style="padding: 8px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredData.map(item => `
+                            <tr>
+                                <td style="padding: 8px;">${item.date}</td>
+                                <td style="padding: 8px;">${item.patient}</td>
+                                <td style="padding: 8px;">${getActivityTypeInfo(item.type).name}</td>
+                                <td style="padding: 8px;">${item.details}</td>
+                                <td style="padding: 8px;">${item.status}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Doctor Activity Report</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            table { width: 100%; border-collapse: collapse; }
+                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                            th { background-color: #f2f2f2; }
+                        </style>
+                    </head>
+                    <body>${printContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        });
+
+        // Table sorting functionality
+        window.sortTable = function(columnIndex) {
+            const isAscending = filteredData.sortDirection !== 'asc';
+            
+            filteredData.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(columnIndex) {
+                    case 0: // Date
+                        return isAscending ? a.rawDate - b.rawDate : b.rawDate - a.rawDate;
+                    case 1: // Patient
+                        aVal = a.patient.toLowerCase();
+                        bVal = b.patient.toLowerCase();
+                        break;
+                    case 2: // Activity Type
+                        aVal = getActivityTypeInfo(a.type).name.toLowerCase();
+                        bVal = getActivityTypeInfo(b.type).name.toLowerCase();
+                        break;
+                    case 3: // Details
+                        aVal = a.details.toLowerCase();
+                        bVal = b.details.toLowerCase();
+                        break;
+                    case 4: // Status
+                        aVal = a.status.toLowerCase();
+                        bVal = b.status.toLowerCase();
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (aVal < bVal) return isAscending ? -1 : 1;
+                if (aVal > bVal) return isAscending ? 1 : -1;
+                return 0;
+            });
+            
+            filteredData.sortDirection = isAscending ? 'asc' : 'desc';
+            currentPage = 1;
+            renderTable();
+        };
+
+        // Initialize table on page load
+        renderTable();
+
+        // Add some utility functions for better UX
+        function showToast(message, type = 'info') {
+            // Simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}!</strong> ${message}
+                <button type="button" class="btn-close" aria-label="Close"></button>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 5000);
+            
+            // Manual close
+            toast.querySelector('.btn-close').addEventListener('click', () => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            });
         }
 
-        // Event listeners
-        document.getElementById('searchInput').addEventListener('input', searchAndFilter);
-        document.getElementById('activityFilter').addEventListener('change', searchAndFilter);
-        document.getElementById('prevBtn').addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderTable(); }});
-        document.getElementById('nextBtn').addEventListener('click', () => { const totalPages = Math.ceil(filteredData.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; renderTable(); }});
-        document.getElementById('printTable').addEventListener('click', () => window.print());
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+F to focus search
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            
+            // Ctrl+P to print
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                document.getElementById('printTable').click();
+            }
+        });
 
-        renderTable();
+        // Show loading indicator during table operations
+        function showLoading() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        }
+
+        // Performance optimization: debounce search
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Apply debounced search
+        const debouncedSearch = debounce(function(searchTerm) {
+            filteredData = allActivitiesData.filter(item => 
+                item.patient.toLowerCase().includes(searchTerm) ||
+                item.details.toLowerCase().includes(searchTerm) ||
+                getActivityTypeInfo(item.type).name.toLowerCase().includes(searchTerm) ||
+                item.status.toLowerCase().includes(searchTerm)
+            );
+            currentPage = 1;
+            renderTable();
+        }, 300);
+
+        // Update search listener to use debounced version
+        document.getElementById('searchInput').removeEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            debouncedSearch(searchTerm);
+        });
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            debouncedSearch(searchTerm);
+        });
+
+        console.log('Doctor Activity Dashboard initialized successfully');
+        console.log(`Total activities loaded: ${allActivitiesData.length}`);
     });
 </script>
 {% endblock %}

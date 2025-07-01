@@ -623,8 +623,8 @@ class ServiceType(models.Model):
 class DoctorComments(models.Model):
     comments = models.TextField()
     date = models.DateTimeField(default=timezone.now)
-    doctor_name = models.CharField(max_length=100)
+    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='doctor_made_comments')
     labtech_name = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"Comment by Dr. {self.doctor_name} on {self.date.strftime('%Y-%m-%d')}"
+        return f"Comment by Dr. {self.doctor} on {self.date.strftime('%Y-%m-%d')}"

@@ -103,6 +103,8 @@ urlpatterns = [
     path('budget/delete/<int:budget_id>/', accts.delete_budget, name='delete_budget'),
     path('export_budget_data', accts.export_budget_data, name='export_budget_data'),
 
+    ########################### HR URLS ####################################
+
     path('hr/home', views.hr, name='hr'),
     path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
     path('hr/staff-profiles', views.staff_profiles, name='staff_profiles'),
@@ -111,6 +113,9 @@ urlpatterns = [
     path('hr/staff_attendance', views.staff_attendance, name='staff_attendance_shift'),
     path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
     path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),
+    path('my-activity-report/', views.hr_act_report, name='hr_act_report'),    
+
+    ########################### End HR URLS ####################################
 
     path('inventory/', views.inventory, name='inventory'),
 

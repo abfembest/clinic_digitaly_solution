@@ -714,7 +714,7 @@ def patient_history_ajax(request, patient_id):
     """Return patient history as JSON for AJAX requests"""
     try:
         patient = get_object_or_404(Patient, id=patient_id)
-        
+
         # Get recent consultations
         consultations = patient.consultations.order_by('-created_at')[:5]
         consultations_data = []
@@ -726,7 +726,7 @@ def patient_history_ajax(request, patient_id):
                 'advice': consultation.advice,
                 'doctor_name': consultation.doctor.get_full_name() if consultation.doctor else 'N/A'
             })
-        
+
         # Get recent prescriptions
         prescriptions = patient.prescriptions.order_by('-created_at')[:5]
         prescriptions_data = []
@@ -738,7 +738,7 @@ def patient_history_ajax(request, patient_id):
                 'start_date_formatted': prescription.start_date.strftime('%Y-%m-%d'),
                 'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'N/A'
             })
-        
+
         # Get recent lab tests
         lab_tests = patient.lab_tests.select_related('category').order_by('-requested_at')[:10]
         lab_tests_data = []
@@ -751,24 +751,24 @@ def patient_history_ajax(request, patient_id):
                 'normal_range': test.normal_range or 'N/A',
                 'status': test.get_status_display()
             })
-        
+
         # Get recent vitals
         vitals = patient.vitals_set.order_by('-recorded_at')[:5]
         vitals_data = []
         for vital in vitals:
             vitals_data.append({
                 'recorded_at_formatted': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
-                'blood_pressure': vital.blood_pressure,
-                'temperature': vital.temperature,
-                'pulse': vital.pulse,
-                'respiratory_rate': vital.respiratory_rate,
-                'weight': vital.weight,
-                'height': vital.height,
-                'bmi': vital.bmi,
-                'notes': vital.notes,
-                'recorded_by': vital.recorded_by
+                'blood_pressure': vital.blood_pressure or 'N/A', # Add 'N/A' for potentially null fields
+                'temperature': vital.temperature or 'N/A',
+                'pulse': vital.pulse or 'N/A',
+                'respiratory_rate': vital.respiratory_rate or 'N/A',
+                'weight': vital.weight or 'N/A',
+                'height': vital.height or 'N/A',
+                'bmi': vital.bmi or 'N/A',
+                'notes': vital.notes or 'N/A',
+                'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A'
             })
-        
+
         # Get recent nursing notes
         nursing_notes = patient.nursing_notes.order_by('-note_datetime')[:5]
         nursing_notes_data = []
@@ -776,24 +776,24 @@ def patient_history_ajax(request, patient_id):
             nursing_notes_data.append({
                 'note_datetime_formatted': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
                 'note_type_display': note.get_note_type_display(),
-                'notes': note.notes,
-                'patient_status': note.patient_status,
-                'nurse': note.nurse,
-                'follow_up': note.follow_up
+                'notes': note.notes or 'N/A',
+                'patient_status': note.patient_status or 'N/A',
+                'nurse': note.nurse.get_full_name() if note.nurse else 'N/A',
+                'follow_up': note.follow_up or 'N/A'
             })
-        
+
         # Get recent admissions
         admissions = patient.admission_set.order_by('-admission_date')[:3]
         admissions_data = []
         for admission in admissions:
             admissions_data.append({
                 'admission_date_formatted': admission.admission_date.strftime('%Y-%m-%d'),
-                'doctor_assigned': admission.doctor_assigned,
+                'doctor_assigned': admission.doctor_assigned.get_full_name() if admission.doctor_assigned else 'N/A',
                 'status': admission.get_status_display(),
                 'discharge_date_formatted': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else 'N/A',
                 'discharge_notes': admission.discharge_notes or 'N/A'
             })
-        
+
         # Prepare response data
         data = {
             'patient': {
@@ -815,13 +815,17 @@ def patient_history_ajax(request, patient_id):
             'nursing_notes': nursing_notes_data,
             'admissions': admissions_data
         }
-        
+
         return JsonResponse(data, safe=False)
-        
+
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        # Log the error for server-side debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("Error fetching patient history:")
+        return JsonResponse({'error': str(e), 'detail': 'An internal server error occurred while fetching patient history.'}, status=500)
 
 
 @login_required(login_url='home')
@@ -1202,7 +1206,7 @@ def doctor_report(request):
     
     # 12. Doctor comments made
     doctor_comments = DoctorComments.objects.filter(
-        doctor_name__icontains=f"{user.first_name} {user.last_name}",
+        doctor=user,
         date__date__range=[start_date, end_date]
     ).order_by('-date')
     
@@ -1259,7 +1263,7 @@ def doctor_report(request):
         'vitals_recorded': vitals_recorded[:20],
         'patients_registered': patients_registered[:20],
         'appointments_scheduled': appointments_scheduled[:20],
-        'doctor_comments': doctor_comments[:20],
+        'doctor_comments': doctor_comments,
         'current_patients': current_patients,
         'summary_stats': summary_stats,
         'patient_status_stats': patient_status_stats,
@@ -2259,6 +2263,284 @@ def staff_transitions(request):
 @login_required(login_url='home')
 def staff_certifications(request):
     return render(request, 'hr/certifications.html')
+
+def hr_act_report(request):
+    """
+    Comprehensive HR report view showing all HR-related activities
+    for the logged-in HR user
+    """
+    
+    # Verify user is HR staff
+    try:
+        hr_staff = Staff.objects.get(user=request.user, role='hr')
+    except Staff.DoesNotExist:
+        # Handle case where user is not HR staff
+        context = {
+            'error_message': 'Access denied. You must be HR staff to view this report.',
+            'is_hr': False
+        }
+        return render(request, 'hr_report.html', context)
+    
+    # Date range for filtering (default to current month)
+    today = timezone.now().date()
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    else:
+        start_date = today.replace(day=1)  # First day of current month
+    
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date = today
+    
+    # =====================================================
+    # STAFF MANAGEMENT DATA
+    # =====================================================
+    
+    # All staff members
+    all_staff = Staff.objects.select_related('user', 'department').all()
+    
+    # Active staff (users who are active)
+    active_staff = all_staff.filter(user__is_active=True)
+    
+    # Staff by role breakdown
+    staff_by_role = all_staff.values('role').annotate(count=Count('id')).order_by('role')
+    
+    # Staff by department breakdown
+    staff_by_department = all_staff.filter(department__isnull=False).values(
+        'department__name'
+    ).annotate(count=Count('id')).order_by('department__name')
+    
+    # Recently joined staff (last 30 days)
+    recent_staff = all_staff.filter(
+        date_joined__gte=today - timedelta(days=30)
+    ).select_related('user', 'department')
+    
+    # =====================================================
+    # ATTENDANCE DATA
+    # =====================================================
+    
+    # Attendance records for date range
+    attendance_records = Attendance.objects.filter(
+        date__date__range=[start_date, end_date]
+    ).select_related('staff').order_by('-date')
+    
+    # Attendance summary by status
+    attendance_summary = attendance_records.values('status').annotate(
+        count=Count('id')
+    ).order_by('status')
+    
+    # Staff with perfect attendance in the period
+    total_days = (end_date - start_date).days + 1
+    perfect_attendance_staff = []
+    
+    for staff_member in active_staff:
+        present_days = attendance_records.filter(
+            staff=staff_member.user,
+            status='Present'
+        ).count()
+        
+        if present_days == total_days:
+            perfect_attendance_staff.append(staff_member)
+    
+    # Recent absences (last 7 days)
+    recent_absences = attendance_records.filter(
+        date__date__gte=today - timedelta(days=7),
+        status__in=['Absent', 'On Leave']
+    ).select_related('staff')
+    
+    # =====================================================
+    # SHIFT MANAGEMENT DATA
+    # =====================================================
+    
+    # All shifts
+    all_shifts = Shift.objects.all()
+    
+    # Shift assignments for the date range
+    shift_assignments = ShiftAssignment.objects.filter(
+        date__range=[start_date, end_date]
+    ).select_related('staff', 'shift').order_by('-date')
+    
+    # Shift distribution
+    shift_distribution = shift_assignments.values('shift__name').annotate(
+        count=Count('id')
+    ).order_by('shift__name')
+    
+    # Current week's shift assignments
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    current_week_shifts = ShiftAssignment.objects.filter(
+        date__range=[week_start, week_end]
+    ).select_related('staff', 'shift').order_by('date', 'shift__name')
+    
+    # =====================================================
+    # STAFF TRANSITIONS DATA
+    # =====================================================
+    
+    # All staff transitions
+    all_transitions = StaffTransition.objects.filter(
+        date__range=[start_date, end_date]
+    ).order_by('-date')
+    
+    # Onboarding in the period
+    onboarding_transitions = all_transitions.filter(transition_type='onboarding')
+    
+    # Offboarding in the period
+    offboarding_transitions = all_transitions.filter(transition_type='offboarding')
+    
+    # Transitions created by this HR user
+    hr_created_transitions = all_transitions.filter(created_by=request.user)
+    
+    # =====================================================
+    # HANDOVER LOGS DATA
+    # =====================================================
+    
+    # Recent handover logs
+    recent_handovers = HandoverLog.objects.filter(
+        timestamp__date__range=[start_date, end_date]
+    ).select_related('author', 'recipient', 'patient').order_by('-timestamp')
+    
+    # Handovers by staff member
+    handover_summary = recent_handovers.values(
+        'author__first_name', 'author__last_name'
+    ).annotate(count=Count('id')).order_by('-count')
+    
+    # =====================================================
+    # DEPARTMENT DATA
+    # =====================================================
+    
+    # All departments with staff count
+    departments_with_staff = Department.objects.annotate(
+        staff_count=Count('staff')
+    ).order_by('name')
+    
+    # =====================================================
+    # HR METRICS & ANALYTICS
+    # =====================================================
+    
+    # Staff utilization rate (present vs total staff)
+    total_active_staff = active_staff.count()
+    if total_active_staff > 0:
+        latest_attendance_date = attendance_records.first()
+        if latest_attendance_date:
+            present_today = attendance_records.filter(
+                date__date=latest_attendance_date.date.date(),
+                status='Present'
+            ).count()
+            utilization_rate = (present_today / total_active_staff) * 100
+        else:
+            utilization_rate = 0
+    else:
+        utilization_rate = 0
+    
+    # Absenteeism rate
+    total_attendance_records = attendance_records.count()
+    absent_records = attendance_records.filter(status='Absent').count()
+    absenteeism_rate = (absent_records / total_attendance_records * 100) if total_attendance_records > 0 else 0
+    
+    # Turnover data (approximation based on transitions)
+    monthly_offboarding = offboarding_transitions.count()
+    turnover_rate = (monthly_offboarding / total_active_staff * 100) if total_active_staff > 0 else 0
+    
+    # =====================================================
+    # EXPENSE DATA (HR related)
+    # =====================================================
+    
+    # HR-related expenses (if any expense categories are HR-related)
+    hr_expenses = Expense.objects.filter(
+        expense_date__range=[start_date, end_date],
+        # Add filters for HR-related categories if they exist
+        # category__name__icontains='hr'  # Uncomment if you have HR expense categories
+    ).order_by('-expense_date')
+    
+    # Total HR expenses
+    total_hr_expenses = hr_expenses.aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    # Staff by role breakdown (add these lines after your existing staff_by_role query)
+    staff_roles = [item['role'] for item in staff_by_role]
+    staff_counts = [item['count'] for item in staff_by_role]
+
+    # Attendance summary by status (add these lines after your existing attendance_summary query)
+    attendance_statuses = [item['status'] for item in attendance_summary]
+    attendance_counts = [item['count'] for item in attendance_summary]
+    
+    # =====================================================
+    # COMPILE CONTEXT DATA
+    # =====================================================
+    
+    context = {
+        'is_hr': True,
+        'hr_staff': hr_staff,
+        'start_date': start_date,
+        'end_date': end_date,
+        'today': today,
+        
+        # Staff Data
+        'all_staff': all_staff,
+        'active_staff': active_staff,
+        'total_staff_count': all_staff.count(),
+        'active_staff_count': active_staff.count(),
+        'staff_by_role': staff_by_role,
+        'staff_by_department': staff_by_department,
+        'recent_staff': recent_staff,
+        
+        # Attendance Data
+        'attendance_records': attendance_records[:50],  # Limit for display
+        'attendance_summary': attendance_summary,
+        'perfect_attendance_staff': perfect_attendance_staff,
+        'recent_absences': recent_absences,
+        'utilization_rate': round(utilization_rate, 2),
+        'absenteeism_rate': round(absenteeism_rate, 2),
+        
+        # Shift Data
+        'all_shifts': all_shifts,
+        'shift_assignments': shift_assignments[:30],  # Limit for display
+        'shift_distribution': shift_distribution,
+        'current_week_shifts': current_week_shifts,
+        
+        # Transition Data
+        'all_transitions': all_transitions,
+        'onboarding_transitions': onboarding_transitions,
+        'offboarding_transitions': offboarding_transitions,
+        'hr_created_transitions': hr_created_transitions,
+        'turnover_rate': round(turnover_rate, 2),
+        
+        # Handover Data
+        'recent_handovers': recent_handovers[:30],  # Limit for display
+        'handover_summary': handover_summary[:10],  # Top 10
+        
+        # Department Data
+        'departments_with_staff': departments_with_staff,
+        
+        # Financial Data
+        'hr_expenses': hr_expenses[:20],  # Limit for display
+        'total_hr_expenses': total_hr_expenses,
+
+        'staff_roles_json': json.dumps(staff_roles), # New context variable
+        'staff_counts_json': json.dumps(staff_counts), # New context variable
+        'attendance_statuses_json': json.dumps(attendance_statuses), # New context variable
+        'attendance_counts_json': json.dumps(attendance_counts),
+        
+        # Summary Statistics
+        'summary_stats': {
+            'total_staff': all_staff.count(),
+            'active_staff': active_staff.count(),
+            'total_departments': departments_with_staff.count(),
+            'total_attendance_records': total_attendance_records,
+            'total_handovers': recent_handovers.count(),
+            'total_transitions': all_transitions.count(),
+            'utilization_rate': round(utilization_rate, 2),
+            'absenteeism_rate': round(absenteeism_rate, 2),
+            'turnover_rate': round(turnover_rate, 2),
+        }
+    }
+    
+    return render(request, 'hr/reports.html', context)
 
 ''' ############################################################################################################################ End HR View ############################################################################################################################ '''
 
@@ -6749,7 +7031,7 @@ def doc_test_comment(request, patient_id):
         comment_record = DoctorComments.objects.create(
             comments=comment_text,
             date=timezone.now(),
-            doctor_name=str(request.user),  # or request.user.get_full_name() if applicable
+            doctor=request.user,  # or request.user.get_full_name() if applicable
             labtech_name="LabTech Placeholder"  # Replace with actual logic if needed
         )
         # Update each LabTest with the new doctor_comments ID
