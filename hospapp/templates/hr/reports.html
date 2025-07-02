@@ -1,1200 +1,416 @@
-{% extends "doctors/base.html" %}
-{% load static %}
+{% extends 'hr/base.html' %}
 
-{% block title %}HMS | HR Activity Report{% endblock %}
+{% block title %}HR Activity Report{% endblock %}
 
 {% block content %}
 <div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">
-                    <i class="fas fa-users text-primary mr-2"></i>
-                    HR Management Dashboard
-                </h1>
-                <p class="text-muted mb-0">Comprehensive overview of HR activities from {{ start_date }} to {{ end_date }}</p>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-                    <li class="breadcrumb-item active">HR Report</li>
-                </ol>
-            </div>
-        </div>
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">HR Activity Report</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a href="#">Home</a></li>
+          <li class="breadcrumb-item"><a href="#">HR</a></li>
+          <li class="breadcrumb-item active">Activity Report</li>
+        </ol>
+      </div>
     </div>
+  </div>
 </div>
 
-<section class="content">
-    <div class="container-fluid">
-
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <form method="GET" class="form-inline">
-                            <div class="form-group mr-3">
-                                <label for="start_date" class="mr-2">From:</label>
-                                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
-                            </div>
-                            <div class="form-group mr-3">
-                                <label for="end_date" class="mr-2">To:</label>
-                                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
-                            </div>
-                            <button type="submit" class="btn btn-primary mr-2">Apply Filter</button>
-                            <button type="button" class="btn btn-secondary" onclick="resetDateFilter()">Reset</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+<div class="container-fluid">
+  
+  <!-- Date Range Filter -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Report Filters</h3>
         </div>
-
-        <div class="row">
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_staff }}</h3>
-                        <p>Total Staff</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                </div>
+        <div class="card-body">
+          <form method="GET" class="form-inline">
+            <div class="form-group mr-3">
+              <label for="start_date" class="mr-2">Start Date:</label>
+              <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
             </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        <h3>{{ summary_stats.active_staff }}</h3>
-                        <p>Active Staff</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                </div>
+            <div class="form-group mr-3">
+              <label for="end_date" class="mr-2">End Date:</label>
+              <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
             </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_departments }}</h3>
-                        <p>Departments</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-building"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-danger">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_attendance_records }}</h3>
-                        <p>Attendance Records</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-primary">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_handovers }}</h3>
-                        <p>Handovers</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_transitions }}</h3>
-                        <p>Transitions</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
-            </div>
+            <button type="submit" class="btn btn-primary">Filter Report</button>
+            <a href="{% url 'hr_act_report' %}" class="btn btn-secondary ml-2">Reset</a>
+          </form>
         </div>
-
-        <div class="row mb-3">
-            <div class="col-lg-3 col-md-6 col-12">
-                <div class="small-box bg-teal">
-                    <div class="inner">
-                        <h3>{{ summary_stats.utilization_rate }}%</h3>
-                        <p>Staff Utilization</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 col-12">
-                <div class="small-box bg-orange">
-                    <div class="inner">
-                        <h3>{{ summary_stats.absenteeism_rate }}%</h3>
-                        <p>Absenteeism Rate</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-times"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 col-12">
-                <div class="small-box bg-purple">
-                    <div class="inner">
-                        <h3>{{ summary_stats.turnover_rate }}%</h3>
-                        <p>Turnover Rate</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-sync-alt"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 col-12">
-                <div class="small-box bg-pink">
-                    <div class="inner">
-                        <h3>${{ total_hr_expenses|floatformat:0 }}</h3>
-                        <p>HR Expenses</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Staff by Role</h3>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="staffRoleChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Attendance Summary</h3>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="attendanceChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="container-fluid py-4">
-            <div class="advanced-table-container">
-                <div class="advanced-table-header">
-                    <h2><i class="fas fa-table"></i> Complete HR Activities Dashboard</h2>
-                    <p class="text-muted mb-0">All HR activities, staff records, and management data in one comprehensive view</p>
-                </div>
-
-                <div class="advanced-table-controls">
-                    <div class="advanced-search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search all HR activities...">
-                    </div>
-                    <div class="d-flex gap-2">
-                        <select id="activityFilter" class="form-control mr-2" style="width: auto;">
-                            <option value="">All Activities</option>
-                            <option value="staff">Staff Records</option>
-                            <option value="attendance">Attendance</option>
-                            <option value="shift">Shift Assignments</option>
-                            <option value="transition">Transitions</option>
-                            <option value="handover">Handovers</option>
-                            <option value="expense">Expenses</option>
-                        </select>
-                        <button class="advanced-btn" id="printTable">
-                            <i class="fas fa-print me-1"></i>Print
-                        </button>
-                        <button class="advanced-btn" id="exportPDF">
-                            <i class="fas fa-file-pdf me-1"></i>PDF
-                        </button>
-                    </div>
-                </div>
-
-                <div class="advanced-table-wrapper">
-                    <table class="table advanced-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable(0)">Date <i class="fas fa-sort ms-1"></i></th>
-                                <th onclick="sortTable(1)">Staff/Subject <i class="fas fa-sort ms-1"></i></th>
-                                <th onclick="sortTable(2)">Activity Type <i class="fas fa-sort ms-1"></i></th>
-                                <th onclick="sortTable(3)">Details <i class="fas fa-sort ms-1"></i></th>
-                                <th onclick="sortTable(4)">Department <i class="fas fa-sort ms-1"></i></th>
-                                <th onclick="sortTable(5)">Status <i class="fas fa-sort ms-1"></i></th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            {% for staff in all_staff %}
-                            <tr data-activity="staff">
-                                <td>{{ staff.date_joined|date:"Y-m-d" }}</td>
-                                <td>{{ staff.user.get_full_name }}</td>
-                                <td><span class="activity-badge activity-staff">Staff Record</span></td>
-                                <td>Role: {{ staff.get_role_display }} | Employee ID: {{ staff.employee_id|default:"N/A" }}</td>
-                                <td>{{ staff.department.name|default:"No Department" }}</td>
-                                <td>
-                                    {% if staff.user.is_active %}
-                                        <span class="advanced-status-badge status-active">Active</span>
-                                    {% else %}
-                                        <span class="advanced-status-badge status-inactive">Inactive</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewStaffDetail('{{ staff.id }}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-
-                            {% for attendance in attendance_records %}
-                            <tr data-activity="attendance">
-                                <td>{{ attendance.date|date:"Y-m-d H:i" }}</td>
-                                <td>{{ attendance.staff.get_full_name }}</td>
-                                <td><span class="activity-badge activity-attendance">Attendance</span></td>
-                                <td>
-                                    {% if attendance.check_in %}Check-in: {{ attendance.check_in|time:"H:i" }}{% endif %}
-                                    {% if attendance.check_out %} | Check-out: {{ attendance.check_out|time:"H:i" }}{% endif %}
-                                    {% if attendance.notes %} | Notes: {{ attendance.notes|truncatechars:50 }}{% endif %}
-                                </td>
-                                <td>{{ attendance.staff.staff.department.name|default:"N/A" }}</td>
-                                <td>
-                                    {% if attendance.status == "Present" %}
-                                        <span class="advanced-status-badge status-completed">{{ attendance.status }}</span>
-                                    {% elif attendance.status == "Absent" %}
-                                        <span class="advanced-status-badge status-cancelled">{{ attendance.status }}</span>
-                                    {% else %}
-                                        <span class="advanced-status-badge status-pending">{{ attendance.status }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewAttendanceDetail('{{ attendance.id }}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-
-                            {% for assignment in shift_assignments %}
-                            <tr data-activity="shift">
-                                <td>{{ assignment.date|date:"Y-m-d" }}</td>
-                                <td>{{ assignment.staff.get_full_name }}</td>
-                                <td><span class="activity-badge activity-shift">Shift Assignment</span></td>
-                                <td>
-                                    Shift: {{ assignment.shift.name }} 
-                                    ({{ assignment.shift.start_time|time:"H:i" }} - {{ assignment.shift.end_time|time:"H:i" }})
-                                    {% if assignment.notes %} | {{ assignment.notes|truncatechars:30 }}{% endif %}
-                                </td>
-                                <td>{{ assignment.staff.staff.department.name|default:"N/A" }}</td>
-                                <td>
-                                    {% if assignment.date >= today %}
-                                        <span class="advanced-status-badge status-active">Upcoming</span>
-                                    {% else %}
-                                        <span class="advanced-status-badge status-completed">Completed</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewShiftDetail('{{ assignment.id }}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-
-                            {% for transition in all_transitions %}
-                            <tr data-activity="transition">
-                                <td>{{ transition.date|date:"Y-m-d" }}</td>
-                                <td>{{ transition.staff.get_full_name }}</td>
-                                <td><span class="activity-badge activity-transition">{{ transition.get_transition_type_display }}</span></td>
-                                <td>
-                                    {% if transition.from_department %}From: {{ transition.from_department.name }}{% endif %}
-                                    {% if transition.to_department %} → To: {{ transition.to_department.name }}{% endif %}
-                                    {% if transition.notes %} | {{ transition.notes|truncatechars:40 }}{% endif %}
-                                </td>
-                                <td>
-                                    {% if transition.to_department %}{{ transition.to_department.name }}{% else %}{{ transition.from_department.name|default:"N/A" }}{% endif %}
-                                </td>
-                                <td>
-                                    {% if transition.status == "completed" %}
-                                        <span class="advanced-status-badge status-completed">Completed</span>
-                                    {% elif transition.status == "pending" %}
-                                        <span class="advanced-status-badge status-pending">Pending</span>
-                                    {% else %}
-                                        <span class="advanced-status-badge status-active">{{ transition.status|title }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewTransitionDetail('{{ transition.id }}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-
-                            {% for handover in recent_handovers %}
-                            <tr data-activity="handover">
-                                <td>{{ handover.timestamp|date:"Y-m-d H:i" }}</td>
-                                <td>{{ handover.author.get_full_name }} → {{ handover.recipient.get_full_name }}</td>
-                                <td><span class="activity-badge activity-handover">Handover</span></td>
-                                <td>
-                                    Patient: {{ handover.patient.first_name }} {{ handover.patient.last_name }}
-                                    {% if handover.notes %} | {{ handover.notes|truncatechars:40 }}{% endif %}
-                                </td>
-                                <td>{{ handover.author.staff.department.name|default:"N/A" }}</td>
-                                <td>
-                                    {% if handover.is_acknowledged %}
-                                        <span class="advanced-status-badge status-completed">Acknowledged</span>
-                                    {% else %}
-                                        <span class="advanced-status-badge status-pending">Pending</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewHandoverDetail('{{ handover.id }}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-
-                            {% for expense in hr_expenses %}
-                            <tr data-activity="expense">
-                                <td>{{ expense.expense_date|date:"Y-m-d" }}</td>
-                                <td>{{ expense.created_by.get_full_name|default:"System" }}</td>
-                                <td><span class="activity-badge activity-expense">HR Expense</span></td>
-                                <td>
-                                    {{ expense.description|truncatechars:50 }}
-                                    {% if expense.category %} | Category: {{ expense.category.name }}{% endif %}
-                                </td>
-                                <td>HR Department</td>
-                                <td>
-                                    {% if expense.status == "approved" %}
-                                        <span class="advanced-status-badge status-completed">${{ expense.amount }}</span>
-                                    {% elif expense.status == "pending" %}
-                                        <span class="advanced-status-badge status-pending">${{ expense.amount }}</span>
-                                    {% else %}
-                                        <span class="advanced-status-badge status-cancelled">${{ expense.amount }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewExpenseDetail('{{ expense.id }}')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <div id="noResults" class="no-results" style="display: none;">
-                        <i class="fas fa-search fs-1 text-muted"></i>
-                        <h4>No results found</h4>
-                        <p>Try adjusting your search criteria</p>
-                    </div>
-                </div>
-
-                <div class="advanced-pagination" id="pagination">
-                    <button id="prevBtn">← Previous</button>
-                    <span id="pageInfo">Page 1 of 1</span>
-                    <button id="nextBtn">Next →</button>
-                </div>
-            </div>
-        </div>
-
+      </div>
     </div>
-</section>
+  </div>
 
-<div class="modal fade" id="activityDetailModal" tabindex="-1" aria-labelledby="activityDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="activityDetailModalLabel">Activity Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="editActivityBtn" style="display: none;">Edit Activity</button>
-            </div>
+  <!-- Summary Statistics Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Summary Statistics</h3>
         </div>
+        <div class="card-body">
+          <table class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><i class="fas fa-users text-info"></i> Total Staff</td>
+                <td><span class="badge badge-info badge-lg">{{ summary_stats.total_staff }}</span></td>
+                <td>Total number of staff members in the system</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-user-check text-success"></i> Active Staff</td>
+                <td><span class="badge badge-success badge-lg">{{ summary_stats.active_staff }}</span></td>
+                <td>Currently active staff members</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-chart-pie text-warning"></i> Utilization Rate</td>
+                <td><span class="badge badge-warning badge-lg">{{ summary_stats.utilization_rate }}%</span></td>
+                <td>Staff utilization percentage</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-user-times text-danger"></i> Absenteeism Rate</td>
+                <td><span class="badge badge-danger badge-lg">{{ summary_stats.absenteeism_rate }}%</span></td>
+                <td>Staff absenteeism percentage</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Department Summary Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Department Summary</h3>
+        </div>
+        <div class="card-body">
+          <table id="departmentTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Department</th>
+                <th>Staff Count</th>
+                <th>Percentage</th>
+                <th>Distribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dept in departments_with_staff %}
+              <tr>
+                <td><strong>{{ dept.name }}</strong></td>
+                <td><span class="badge badge-primary">{{ dept.staff_count }}</span></td>
+                <td>{% widthratio dept.staff_count summary_stats.total_staff 100 %}%</td>
+                <td>
+                  <div class="progress">
+                    <div class="progress-bar bg-primary" role="progressbar" 
+                         style="width: {% widthratio dept.staff_count summary_stats.total_staff 100 %}%">
+                      {% widthratio dept.staff_count summary_stats.total_staff 100 %}%
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Staff Management Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Staff Management</h3>
+        </div>
+        <div class="card-body">
+          <table id="staffTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Department</th>
+                <th>Phone</th>
+                <th>Date Joined</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for staff in all_staff %}
+              <tr>
+                <td><strong>{{ staff.user.get_full_name }}</strong></td>
+                <td><span class="badge badge-info">{{ staff.get_role_display }}</span></td>
+                <td>{{ staff.department.name|default:"N/A" }}</td>
+                <td>{{ staff.phone_number|default:"N/A" }}</td>
+                <td>{{ staff.date_joined|date:"Y-m-d" }}</td>
+                <td>
+                  {% if staff.user.is_active %}
+                    <span class="badge badge-success">Active</span>
+                  {% else %}
+                    <span class="badge badge-danger">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-info view-details" data-type="staff" data-id="{{ staff.id }}">
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patient Activity Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Patient Activity</h3>
+        </div>
+        <div class="card-body">
+          <table id="patientActivityTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Activity Type</th>
+                <th>Staff Member</th>
+                <th>Details</th>
+                <th>Status</th>
+                <th>Additional Info</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for activity in patient_activities %}
+              <tr>
+                <td>{{ activity.date|date:"Y-m-d H:i" }}</td>
+                <td>{{ activity.activity_type }}</td>
+                <td>{{ activity.staff_member }}</td>
+                <td>{{ activity.details }}</td>
+                <td>
+                  {% if activity.status == 'Completed' %}
+                    <span class="badge badge-info">{{ activity.status }}</span>
+                  {% elif activity.status == 'Pending' %}
+                    <span class="badge badge-warning">{{ activity.status }}</span>
+                  {% else %}
+                    <span class="badge badge-danger">{{ activity.status }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ activity.additional_info }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shift Assignments Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Shift Assignments</h3>
+        </div>
+        <div class="card-body">
+          <table id="shiftTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Staff Name</th>
+                <th>Shift</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for shift in shift_assignments %}
+              <tr>
+                <td><strong>{{ shift.staff.get_full_name }}</strong></td>
+                <td><span class="badge badge-primary">{{ shift.shift.name }}</span></td>
+                <td>{{ shift.date|date:"Y-m-d" }}</td>
+                <td>
+                  <button class="btn btn-sm btn-info view-details" data-type="shift" data-id="{{ shift.id }}">
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Staff Transitions Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Staff Transitions</h3>
+        </div>
+        <div class="card-body">
+          <table id="transitionTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Staff Name</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>Created By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for transition in all_transitions %}
+              <tr>
+                <td><strong>{{ transition.full_name }}</strong></td>
+                <td>
+                  {% if transition.transition_type == 'onboarding' %}
+                    <span class="badge badge-success">{{ transition.get_transition_type_display }}</span>
+                  {% else %}
+                    <span class="badge badge-danger">{{ transition.get_transition_type_display }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ transition.date|date:"Y-m-d" }}</td>
+                <td>{{ transition.created_by.get_full_name|default:"N/A" }}</td>
+                <td>
+                  <button class="btn btn-sm btn-info view-details" data-type="transition" data-id="{{ transition.id }}">
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Handover Logs Table -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Recent Handover Logs</h3>
+        </div>
+        <div class="card-body">
+          <table id="handoverTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Patient</th>
+                <th>Timestamp</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for handover in recent_handovers %}
+              <tr>
+                <td><strong>{{ handover.author.get_full_name }}</strong></td>
+                <td><strong>{{ handover.recipient.get_full_name }}</strong></td>
+                <td>{{ handover.patient.full_name }}</td>
+                <td>{{ handover.timestamp|date:"Y-m-d H:i" }}</td>
+                <td>
+                  <button class="btn btn-sm btn-info view-details" data-type="handover" data-id="{{ handover.id }}">
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
+<!-- Modal for Details -->
+<div class="modal fade" id="detailModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="detailModalTitle">Details</h4>
+        <button type="button" class="close" data-dismiss="modal">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="detailModalBody">
+        Loading...
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
-
-<style>
-    .advanced-table-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 0.75rem;
-        border-radius: 10px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        margin: 0.75rem 0;
-    }
-
-    .advanced-table-header {
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 8px;
-        padding: 0.75rem;
-        margin-bottom: 0.75rem;
-        box-shadow: 0 3px 15px rgba(0,0,0,0.1);
-    }
-
-    .advanced-table-header h2 {
-        color: #2d3748;
-        font-weight: 700;
-        margin-bottom: 0.2rem;
-        font-size: 1.3rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .advanced-table-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 0.5rem;
-    }
-
-    .advanced-search-box {
-        position: relative;
-        flex: 1;
-        min-width: 150px;
-        max-width: 300px;
-    }
-
-    .advanced-search-box input {
-        border: 1px solid #e2e8f0;
-        border-radius: 18px;
-        padding: 6px 12px 6px 30px;
-        font-size: 0.85rem;
-        transition: all 0.3s ease;
-        background: rgba(255,255,255,0.9);
-        backdrop-filter: blur(5px);
-    }
-
-    .advanced-search-box input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        background: white;
-    }
-
-    .advanced-search-box i {
-        position: absolute;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #64748b;
-        z-index: 2;
-        font-size: 0.8rem;
-    }
-
-    .advanced-table-wrapper {
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-
-    .advanced-table {
-        margin-bottom: 0;
-        border: none;
-    }
-
-    .advanced-table thead th {
-        background: linear-gradient(135deg, #4a5568, #2d3748);
-        color: white;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        padding: 0.6rem;
-        border: none;
-        position: relative;
-        cursor: pointer;
-        transition: background 0.3s ease;
-        font-size: 0.75rem;
-    }
-
-    .advanced-table thead th:hover {
-        background: linear-gradient(135deg, #2d3748, #1a202c);
-    }
-
-    .advanced-table thead th::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-    }
-
-    .advanced-table tbody tr {
-        transition: all 0.3s ease;
-        border: none;
-    }
-
-    .advanced-table tbody tr:nth-child(even) {
-        background: rgba(248, 250, 252, 0.8);
-    }
-
-    .advanced-table tbody tr:hover {
-        background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-
-    .advanced-table tbody td {
-        padding: 0.6rem;
-        border: none;
-        vertical-align: middle;
-        font-weight: 500;
-        color: #2d3748;
-        font-size: 0.85rem;
-    }
-
-    .advanced-status-badge {
-        padding: 0.3rem 0.6rem;
-        border-radius: 15px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-
-    .activity-badge {
-        padding: 0.25rem 0.5rem;
-        border-radius: 12px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.2px;
-    }
-
-    .activity-staff { background: linear-gradient(135deg, #4299e1, #3182ce); color: white; }
-    .activity-attendance { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
-    .activity-shift { background: linear-gradient(135deg, #ed8936, #dd6b20); color: white; }
-    .activity-transition { background: linear-gradient(135deg, #9f7aea, #805ad5); color: white; }
-    .activity-handover { background: linear-gradient(135deg, #38b2ac, #319795); color: white; }
-    .activity-expense { background: linear-gradient(135deg, #f56565, #e53e3e); color: white; }
-
-    .status-active { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
-    .status-inactive { background: linear-gradient(135deg, #f56565, #e53e3e); color: white; }
-    .status-pending { background: linear-gradient(135deg, #ed8936, #dd6b20); color: white; }
-    .status-completed { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
-    .status-cancelled { background: linear-gradient(135deg, #f56565, #e53e3e); color: white; }
-
-    .advanced-btn {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border: none;
-        border-radius: 16px;
-        padding: 6px 14px;
-        color: white;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        font-size: 0.8rem;
-    }
-
-    .advanced-btn:hover {
-        background: linear-gradient(135deg, #5a67d8, #6b46c1);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-
-    .advanced-pagination {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-        padding: 0.6rem;
-        background: rgba(255,255,255,0.8);
-        backdrop-filter: blur(5px);
-        border-radius: 8px;
-    }
-
-    .advanced-pagination button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border: none;
-        border-radius: 5px;
-        padding: 5px 10px;
-        color: white;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        font-size: 0.8rem;
-    }
-
-    .advanced-pagination button:hover:not(:disabled) {
-        background: linear-gradient(135deg, #5a67d8, #6b46c1);
-        transform: translateY(-1px);
-    }
-
-    .advanced-pagination button:disabled {
-        background: #cbd5e0;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .advanced-pagination span {
-        color: #4a5568;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-
-    /* Completing the CSS from where it stopped */
-.no-results {
-    text-align: center;
-    padding: 1.5rem;
-    color: #64748b;
-    font-style: italic;
-}
-
-.no-results i {
-    margin-bottom: 0.5rem;
-    color: #cbd5e0;
-}
-
-.no-results h4 {
-    color: #4a5568;
-    margin-bottom: 0.3rem;
-}
-
-.no-results p {
-    color: #718096;
-    font-size: 0.9rem;
-}
-
-/* Additional responsive styles */
-@media (max-width: 768px) {
-    .advanced-table-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .advanced-search-box {
-        max-width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
-    .advanced-table-container {
-        padding: 0.5rem;
-    }
-    
-    .advanced-table-header h2 {
-        font-size: 1.1rem;
-    }
-    
-    .advanced-table thead th,
-    .advanced-table tbody td {
-        padding: 0.4rem;
-        font-size: 0.75rem;
-    }
-    
-    .activity-badge,
-    .advanced-status-badge {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.4rem;
-    }
-}
-
-/* Chart container responsive */
-@media (max-width: 576px) {
-    .col-md-6 {
-        margin-bottom: 1rem;
-    }
-}
-
-/* Print styles */
-@media print {
-    .advanced-table-controls,
-    .advanced-pagination {
-        display: none !important;
-    }
-    
-    .advanced-table-container {
-        background: white !important;
-        box-shadow: none !important;
-    }
-    
-    .advanced-table thead th {
-        background: #f8f9fa !important;
-        color: #000 !important;
-    }
-    
-    .advanced-table tbody tr:hover {
-        transform: none !important;
-        box-shadow: none !important;
-    }
-}
-</style>
-
 <script>
-// Global variables
-let currentPage = 1;
-let itemsPerPage = 50;
-let allRows = [];
-let filteredRows = [];
-let sortDirection = {};
+$(function () {
+  // Initialize DataTables
+  function initDataTable(selector) {
+    $(selector).DataTable({
+      "responsive": true,
+      "lengthChange": false,
+      "autoWidth": false,
+      "pageLength": 10,
+      "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+    }).buttons().container().appendTo(selector + '_wrapper .col-md-6:eq(0)');
+  }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    initializeTable();
-    initializeCharts();
-    setupEventListeners();
+  // Initialize all tables
+  initDataTable("#departmentTable");
+  initDataTable("#staffTable");
+  initDataTable("#attendanceTable");
+  initDataTable("#shiftTable");
+  initDataTable("#transitionTable");
+  initDataTable("#handoverTable");
+  initDataTable("#patientActivityTable");
+
+  // Detail modal handler
+  $('.view-details').on('click', function() {
+    var type = $(this).data('type');
+    var id = $(this).data('id');
+    
+    $('#detailModalTitle').text('Loading...');
+    $('#detailModalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</div>');
+    $('#detailModal').modal('show');
+    
+    $.get('/hr/activity-detail/' + type + '/' + id + '/')
+      .done(function(data) {
+        $('#detailModalTitle').text(data.title);
+        $('#detailModalBody').html(data.content);
+      })
+      .fail(function() {
+        $('#detailModalTitle').text('Error');
+        $('#detailModalBody').html('<div class="alert alert-danger">Failed to load details.</div>');
+      });
+  });
 });
-
-// Table initialization
-function initializeTable() {
-    const tbody = document.getElementById('tableBody');
-    allRows = Array.from(tbody.querySelectorAll('tr'));
-    filteredRows = [...allRows];
-    updatePagination();
-    displayPage(1);
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(performSearch, 300));
-    }
-
-    // Activity filter
-    const activityFilter = document.getElementById('activityFilter');
-    if (activityFilter) {
-        activityFilter.addEventListener('change', performFilter);
-    }
-
-    // Print functionality
-    const printBtn = document.getElementById('printTable');
-    if (printBtn) {
-        printBtn.addEventListener('click', printTable);
-    }
-
-    // PDF export
-    const exportBtn = document.getElementById('exportPDF');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportToPDF);
-    }
-
-    // Pagination
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            if (currentPage > 1) {
-                displayPage(currentPage - 1);
-            }
-        });
-    }
-    
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                displayPage(currentPage + 1);
-            }
-        });
-    }
-}
-
-// Debounce function for search
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Search functionality
-function performSearch() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-    const activityType = document.getElementById('activityFilter').value;
-    
-    filteredRows = allRows.filter(row => {
-        // Activity type filter
-        if (activityType && row.dataset.activity !== activityType) {
-            return false;
-        }
-        
-        // Search term filter
-        if (searchTerm) {
-            const rowText = row.textContent.toLowerCase();
-            return rowText.includes(searchTerm);
-        }
-        
-        return true;
-    });
-    
-    currentPage = 1;
-    updatePagination();
-    displayPage(1);
-    showNoResults(filteredRows.length === 0);
-}
-
-// Filter functionality
-function performFilter() {
-    performSearch(); // Reuse search logic with filter
-}
-
-// Display current page
-function displayPage(page) {
-    currentPage = page;
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    
-    // Hide all rows
-    allRows.forEach(row => row.style.display = 'none');
-    
-    // Show rows for current page
-    const rowsToShow = filteredRows.slice(startIndex, endIndex);
-    rowsToShow.forEach(row => row.style.display = '');
-    
-    updatePaginationButtons();
-}
-
-// Update pagination info and buttons
-function updatePagination() {
-    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-    const pageInfo = document.getElementById('pageInfo');
-    
-    if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    }
-    
-    updatePaginationButtons();
-}
-
-function updatePaginationButtons() {
-    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    
-    if (prevBtn) {
-        prevBtn.disabled = currentPage <= 1;
-    }
-    
-    if (nextBtn) {
-        nextBtn.disabled = currentPage >= totalPages;
-    }
-}
-
-// Show/hide no results message
-function showNoResults(show) {
-    const noResults = document.getElementById('noResults');
-    const tableBody = document.getElementById('tableBody');
-    
-    if (noResults && tableBody) {
-        noResults.style.display = show ? 'block' : 'none';
-        tableBody.style.display = show ? 'none' : '';
-    }
-}
-
-// Table sorting
-function sortTable(columnIndex) {
-    const table = document.querySelector('.advanced-table');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => row.style.display !== 'none');
-    
-    // Determine sort direction
-    const currentDirection = sortDirection[columnIndex] || 'asc';
-    const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-    sortDirection[columnIndex] = newDirection;
-    
-    // Sort rows
-    rows.sort((a, b) => {
-        const aValue = a.cells[columnIndex].textContent.trim().toLowerCase();
-        const bValue = b.cells[columnIndex].textContent.trim().toLowerCase();
-        
-        // Handle dates
-        if (columnIndex === 0) {
-            const aDate = new Date(aValue);
-            const bDate = new Date(bValue);
-            return newDirection === 'asc' ? aDate - bDate : bDate - aDate;
-        }
-        
-        // Handle numbers (like amounts)
-        const aNum = parseFloat(aValue.replace(/[^\d.-]/g, ''));
-        const bNum = parseFloat(bValue.replace(/[^\d.-]/g, ''));
-        
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-            return newDirection === 'asc' ? aNum - bNum : bNum - aNum;
-        }
-        
-        // Handle text
-        if (newDirection === 'asc') {
-            return aValue.localeCompare(bValue);
-        } else {
-            return bValue.localeCompare(aValue);
-        }
-    });
-    
-    // Re-append sorted rows
-    rows.forEach(row => tbody.appendChild(row));
-    
-    // Update sort indicators
-    updateSortIndicators(columnIndex, newDirection);
-}
-
-function updateSortIndicators(activeColumn, direction) {
-    const headers = document.querySelectorAll('.advanced-table thead th');
-    headers.forEach((header, index) => {
-        const icon = header.querySelector('i');
-        if (icon) {
-            if (index === activeColumn) {
-                icon.className = direction === 'asc' ? 'fas fa-sort-up ms-1' : 'fas fa-sort-down ms-1';
-            } else {
-                icon.className = 'fas fa-sort ms-1';
-            }
-        }
-    });
-}
-
-// Print functionality
-function printTable() {
-    window.print();
-}
-
-// PDF export (basic implementation)
-function exportToPDF() {
-    // This would require a PDF library like jsPDF
-    // For now, we'll use the browser's print to PDF
-    alert('Use your browser\'s "Print to PDF" option from the print dialog.');
-    printTable();
-}
-
-// Chart initialization
-function initializeCharts() {
-    initializeStaffRoleChart();
-    initializeAttendanceChart();
-}
-
-function initializeStaffRoleChart() {
-    const ctx = document.getElementById('staffRoleChart');
-    if (!ctx) return;
-    
-    // Data passed from Django view
-    const staffRoleLabels = JSON.parse("{{ staff_roles_json|safe }}");
-    const staffRoleCounts = JSON.parse("{{ staff_counts_json|safe }}");
-
-    const staffRoleData = {
-        labels: staffRoleLabels,
-        datasets: [{
-            data: staffRoleCounts,
-            backgroundColor: [
-                '#667eea', // Purple-blue
-                '#764ba2', // Darker purple
-                '#f093fb', // Pink-purple
-                '#f5576c'  // Red-pink
-            ],
-            hoverBackgroundColor: [
-                '#5c6ac4',
-                '#6b4291',
-                '#e678ed',
-                '#ed425a'
-            ],
-            borderWidth: 0
-        }]
-    };
-    
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: staffRoleData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed !== null) {
-                                label += context.parsed + ' staff';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function initializeAttendanceChart() {
-    const ctx = document.getElementById('attendanceChart');
-    if (!ctx) return;
-    
-    // Data passed from Django view
-    const attendanceLabels = JSON.parse("{{ attendance_statuses_json|safe }}");
-    const attendanceCounts = JSON.parse("{{ attendance_counts_json|safe }}");
-
-    const attendanceData = {
-        labels: attendanceLabels,
-        datasets: [{
-            data: attendanceCounts,
-            backgroundColor: [
-                '#48bb78', // Green (Present)
-                '#f56565', // Red (Absent)
-                '#ed8936', // Orange (On Leave)
-                '#4299e1'  // Blue (Other/Unspecified)
-            ],
-            hoverBackgroundColor: [
-                '#38a169',
-                '#c53030',
-                '#dd6b20',
-                '#3182ce'
-            ],
-            borderWidth: 0
-        }]
-    };
-    
-    new Chart(ctx, {
-        type: 'pie',
-        data: attendanceData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed !== null) {
-                                label += context.parsed + ' records';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Detail view functions - These will require Django API endpoints to fetch data
-function viewStaffDetail(staffId) {
-    showModal('Staff Details', `Loading staff details for ID: ${staffId}...`);
-    // TODO: Implement AJAX call to fetch staff details, e.g.:
-    // fetch(`/api/staff/${staffId}/`).then(response => response.json()).then(data => {
-    //     document.getElementById('modalBody').innerHTML = `<p><strong>Name:</strong> ${data.full_name}</p>`;
-    // });
-}
-
-function viewAttendanceDetail(attendanceId) {
-    showModal('Attendance Details', `Loading attendance details for ID: ${attendanceId}...`);
-    // TODO: Implement AJAX call to fetch attendance details
-}
-
-function viewShiftDetail(shiftId) {
-    showModal('Shift Details', `Loading shift details for ID: ${shiftId}...`);
-    // TODO: Implement AJAX call to fetch shift details
-}
-
-function viewTransitionDetail(transitionId) {
-    showModal('Transition Details', `Loading transition details for ID: ${transitionId}...`);
-    // TODO: Implement AJAX call to fetch transition details
-}
-
-function viewHandoverDetail(handoverId) {
-    showModal('Handover Details', `Loading handover details for ID: ${handoverId}...`);
-    // TODO: Implement AJAX call to fetch handover details
-}
-
-function viewExpenseDetail(expenseId) {
-    showModal('Expense Details', `Loading expense details for ID: ${expenseId}...`);
-    // TODO: Implement AJAX call to fetch expense details
-}
-
-// Modal helper function
-function showModal(title, content) {
-    const modal = document.getElementById('activityDetailModal');
-    const modalTitle = document.getElementById('activityDetailModalLabel');
-    const modalBody = document.getElementById('modalBody');
-    
-    if (modal && modalTitle && modalBody) {
-        modalTitle.textContent = title;
-        modalBody.innerHTML = content;
-        
-        // Show modal using Bootstrap 5
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-    }
-}
-
-// Utility functions
-function resetDateFilter() {
-    document.getElementById('start_date').value = '';
-    document.getElementById('end_date').value = '';
-    document.querySelector('form.form-inline').submit(); // Submit to refresh without dates
-}
-
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(amount);
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-function formatTime(timeString) {
-    if (!timeString) return 'N/A';
-    // Assumes timeString is 'HH:MM:SS' or similar. Adjust if it's a full ISO date string.
-    const [hours, minutes] = timeString.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
-    return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    });
-}
 </script>
 {% endblock %}

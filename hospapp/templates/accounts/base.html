@@ -214,6 +214,14 @@
                             </a>
                         </li>
 
+                        <li class="nav-header">REPORTS</li>
+                        <li class="nav-item">
+                            <a href="{% url 'acct_report' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_activity_report' %}active{% endif %}">
+                                <i class="nav-icon fas fa-chart-line"></i>
+                                <p>My Activities</p>
+                            </a>
+                        </li>
+
                         <li class="nav-item has-treeview">
                             <a href="{% url 'logout' %}" class="nav-link">
                                 <i class="nav-icon fas fa-lock-open"></i>

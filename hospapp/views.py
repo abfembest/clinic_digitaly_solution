@@ -2542,6 +2542,99 @@ def hr_act_report(request):
     
     return render(request, 'hr/reports.html', context)
 
+# Add this new AJAX view for HR activity details
+@login_required
+@require_GET
+def get_hr_activity_detail(request, activity_type, id):
+    try:
+        if activity_type == 'staff':
+            staff = get_object_or_404(Staff, id=id)
+            data = {
+                'title': f"Staff: {staff.user.get_full_name()}",
+                'content': f"""
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Role:</strong> {staff.get_role_display()}</p>
+                            <p><strong>Department:</strong> {staff.department.name if staff.department else 'None'}</p>
+                            <p><strong>Joined:</strong> {staff.date_joined}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong> {'Active' if staff.user.is_active else 'Inactive'}</p>
+                            <p><strong>Phone:</strong> {staff.phone_number or 'N/A'}</p>
+                            <p><strong>Email:</strong> {staff.user.email}</p>
+                        </div>
+                    </div>
+                """
+            }
+        
+        elif activity_type == 'attendance':
+            attendance = get_object_or_404(Attendance, id=id)
+            data = {
+                'title': f"Attendance: {attendance.staff.get_full_name()}",
+                'content': f"""
+                    <p><strong>Date:</strong> {attendance.date}</p>
+                    <p><strong>Status:</strong> {attendance.status}</p>
+                    <p><strong>Staff:</strong> {attendance.staff.get_full_name()}</p>
+                """
+            }
+            
+        elif activity_type == 'shift':
+            shift = get_object_or_404(ShiftAssignment, id=id)
+            data = {
+                'title': f"Shift Assignment",
+                'content': f"""
+                    <p><strong>Staff:</strong> {shift.staff.get_full_name()}</p>
+                    <p><strong>Shift:</strong> {shift.shift.name}</p>
+                    <p><strong>Date:</strong> {shift.date}</p>
+                """
+            }
+            
+        elif activity_type == 'transition':
+            transition = get_object_or_404(StaffTransition, id=id)
+            data = {
+                'title': f"Staff Transition",
+                'content': f"""
+                    <p><strong>Staff:</strong> {transition.full_name}</p>
+                    <p><strong>Type:</strong> {transition.get_transition_type_display()}</p>
+                    <p><strong>Date:</strong> {transition.date}</p>
+                    <p><strong>Notes:</strong> {transition.notes or 'None'}</p>
+                """
+            }
+            
+        elif activity_type == 'handover':
+            handover = get_object_or_404(HandoverLog, id=id)
+            data = {
+                'title': f"Handover Details",
+                'content': f"""
+                    <p><strong>From:</strong> {handover.author.get_full_name()}</p>
+                    <p><strong>To:</strong> {handover.recipient.get_full_name()}</p>
+                    <p><strong>Patient:</strong> {handover.patient.full_name}</p>
+                    <p><strong>Time:</strong> {handover.timestamp}</p>
+                    <p><strong>Notes:</strong> {handover.notes}</p>
+                """
+            }
+            
+        elif activity_type == 'expense':
+            expense = get_object_or_404(Expense, id=id)
+            data = {
+                'title': f"Expense Details",
+                'content': f"""
+                    <p><strong>Amount:</strong> ${expense.amount}</p>
+                    <p><strong>Category:</strong> {expense.category.name}</p>
+                    <p><strong>Date:</strong> {expense.expense_date}</p>
+                    <p><strong>Description:</strong> {expense.description}</p>
+                    <p><strong>Status:</strong> {expense.get_status_display()}</p>
+                """
+            }
+            
+        else:
+            return JsonResponse({'error': 'Invalid activity type'}, status=400)
+            
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 ''' ############################################################################################################################ End HR View ############################################################################################################################ '''
 
 @login_required(login_url='home')             

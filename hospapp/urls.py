@@ -87,7 +87,7 @@ urlpatterns = [
     path('p/inventory', views.manage_inventory, name='manage_inventory'),
     path('p/reorder_alerts', views.reorder_alerts, name='reorder_alerts'),
 
-    
+    ########################### ACCTS URLS ####################################
 
     path('a/home', views.accounts, name='accounts'),
     path('a/payment_tracker', accts.payment_tracker_view, name="patient_payment_tracker"),
@@ -102,6 +102,9 @@ urlpatterns = [
     path('budget-analytics/', accts.budget_analytics, name='budget_analytics'),
     path('budget/delete/<int:budget_id>/', accts.delete_budget, name='delete_budget'),
     path('export_budget_data', accts.export_budget_data, name='export_budget_data'),
+    path('my-activity-report/', accts.acct_report, name='acct_report'),
+
+    ########################### END ACCTS URLS ####################################
 
     ########################### HR URLS ####################################
 
@@ -113,7 +116,8 @@ urlpatterns = [
     path('hr/staff_attendance', views.staff_attendance, name='staff_attendance_shift'),
     path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
     path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),
-    path('my-activity-report/', views.hr_act_report, name='hr_act_report'),    
+    path('my-activity-report/', views.hr_act_report, name='hr_act_report'),
+    path('activity-details/<str:activity_type>/<int:id>/', views.get_hr_activity_detail, name='get_hr_activity_detail'),
 
     ########################### End HR URLS ####################################
 

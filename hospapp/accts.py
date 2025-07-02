@@ -33,7 +33,7 @@ from decimal import Decimal
 # Import your models (adjust the import path as needed)
 from .models import (
     Patient, PatientBill, Payment, ServiceType, 
-    ExpenseCategory, Expense, Budget, PaymentUpload
+    ExpenseCategory, Expense, Budget, PaymentUpload, Staff
 )
 from .models import Patient  # Adjust import path as needed
 
@@ -952,6 +952,245 @@ def financial_reports(request):
     }
 
     return render(request, 'accounts/financial_reports.html', context)
+
+def acct_report(request):
+    """
+    Generate activity report for account user showing all their responsibilities
+    and financial activities they've been involved in.
+    """
+    user = request.user
+    
+    # Verify user has account role
+    try:
+        staff = Staff.objects.get(user=user)
+        if staff.role != 'account':
+            return render(request, 'error.html', {
+                'message': 'Access denied. This report is only for account users.'
+            })
+    except Staff.DoesNotExist:
+        return render(request, 'error.html', {
+            'message': 'Staff profile not found.'
+        })
+    
+    # Get date range for filtering (default to current month)
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    
+    if from_date:
+        from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+    else:
+        from_date = timezone.now().replace(day=1).date()  # First day of current month
+    
+    if to_date:
+        to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
+    else:
+        from_date_obj = timezone.now().replace(day=1)
+        if from_date_obj.month == 12:
+            next_month = from_date_obj.replace(year=from_date_obj.year + 1, month=1)
+        else:
+            next_month = from_date_obj.replace(month=from_date_obj.month + 1)
+        to_date = (next_month - timedelta(days=1)).date()  # Last day of current month
+    
+    # ==== EXPENSE MANAGEMENT ====
+    # Expenses requested by this account user
+    requested_expenses = Expense.objects.filter(
+        requested_by=user,
+        created_at__date__range=[from_date, to_date]
+    ).order_by('-created_at')
+    
+    # Expenses approved by this account user
+    approved_expenses = Expense.objects.filter(
+        approved_by=user,
+        created_at__date__range=[from_date, to_date]
+    ).order_by('-created_at')
+    
+    # Expense summary statistics
+    expense_stats = {
+        'total_requested': requested_expenses.aggregate(
+            total=Sum('amount'), count=Count('id')
+        ),
+        'total_approved': approved_expenses.aggregate(
+            total=Sum('amount'), count=Count('id')
+        ),
+        'pending_approval': Expense.objects.filter(
+            status='pending',
+            created_at__date__range=[from_date, to_date]
+        ).aggregate(total=Sum('amount'), count=Count('id')),
+    }
+    
+    # ==== BUDGET MANAGEMENT ====
+    # Budgets created by this account user
+    budgets_created = Budget.objects.filter(
+        created_by=user,
+        created_at__date__range=[from_date, to_date]
+    ).order_by('-created_at')
+    
+    # Current year/month budget overview
+    current_year = timezone.now().year
+    current_month = timezone.now().month
+    current_budgets = Budget.objects.filter(
+        year=current_year,
+        month=current_month
+    )
+    
+    budget_overview = []
+    for budget in current_budgets:
+        budget_overview.append({
+            'category': budget.category.name,
+            'allocated': budget.allocated_amount,
+            'spent': budget.spent_amount,
+            'remaining': budget.remaining_amount(),
+            'percentage_used': round(budget.percentage_used(), 2)
+        })
+    
+    # ==== BILLING & PAYMENTS ====
+    # Bills created by this account user
+    bills_created = PatientBill.objects.filter(
+        created_by=user,
+        created_at__date__range=[from_date, to_date]
+    ).order_by('-created_at')
+    
+    # Payments processed by this account user
+    payments_processed = Payment.objects.filter(
+        processed_by=user,
+        payment_date__date__range=[from_date, to_date]
+    ).order_by('-payment_date')
+    
+    # Payment uploads handled by this account user
+    payment_uploads = PaymentUpload.objects.filter(
+        uploaded_by=user,
+        upload_date__date__range=[from_date, to_date]
+    ).order_by('-upload_date')
+    
+    # Billing and payment statistics
+    billing_stats = {
+        'bills_created': bills_created.aggregate(
+            total_amount=Sum('total_amount'),
+            count=Count('id')
+        ),
+        'payments_processed': payments_processed.aggregate(
+            total_amount=Sum('amount'),
+            count=Count('id')
+        ),
+        'outstanding_bills': PatientBill.objects.filter(
+            status__in=['pending', 'partial']
+        ).aggregate(
+            total=Sum('final_amount'),
+            count=Count('id')
+        ),
+    }
+    
+    # ==== FINANCIAL SUMMARY ====
+    # Overall financial activity summary
+    financial_summary = {
+        'total_revenue_processed': payments_processed.filter(
+            status='completed'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
+        
+        'total_expenses_approved': approved_expenses.filter(
+            status='approved'
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
+        
+        'bills_pending_payment': PatientBill.objects.filter(
+            status='pending'
+        ).count(),
+        
+        'recent_activities_count': (
+            requested_expenses.count() + 
+            approved_expenses.count() + 
+            bills_created.count() + 
+            payments_processed.count()
+        )
+    }
+    
+    # ==== RECENT ACTIVITIES (Combined Timeline) ====
+    recent_activities = []
+    
+    # Add expense activities
+    for expense in requested_expenses[:10]:
+        recent_activities.append({
+            'type': 'expense_requested',
+            'description': f'Requested expense: {expense.description}',
+            'amount': expense.amount,
+            'date': expense.created_at,
+            'status': expense.status,
+            'reference': expense.receipt_number or 'N/A'
+        })
+    
+    for expense in approved_expenses[:10]:
+        recent_activities.append({
+            'type': 'expense_approved',
+            'description': f'Approved expense: {expense.description}',
+            'amount': expense.amount,
+            'date': expense.created_at,
+            'status': expense.status,
+            'reference': expense.receipt_number or 'N/A'
+        })
+    
+    # Add billing activities
+    for bill in bills_created[:10]:
+        recent_activities.append({
+            'type': 'bill_created',
+            'description': f'Created bill for {bill.patient.full_name}',
+            'amount': bill.total_amount,
+            'date': bill.created_at,
+            'status': bill.status,
+            'reference': bill.bill_number
+        })
+    
+    # Add payment activities
+    for payment in payments_processed[:10]:
+        recent_activities.append({
+            'type': 'payment_processed',
+            'description': f'Processed payment for {payment.patient.full_name}',
+            'amount': payment.amount,
+            'date': payment.payment_date,
+            'status': payment.status,
+            'reference': payment.payment_reference or 'N/A'
+        })
+    
+    # Sort recent activities by date (most recent first)
+    recent_activities.sort(key=lambda x: x['date'], reverse=True)
+    recent_activities = recent_activities[:20]  # Limit to 20 most recent
+    
+    # ==== SYSTEM DATA FOR DROPDOWNS ====
+    expense_categories = ExpenseCategory.objects.filter(is_active=True)
+    service_types = ServiceType.objects.filter(is_active=True)
+    
+    context = {
+        'staff': staff,
+        'from_date': from_date,
+        'to_date': to_date,
+        
+        # Expenses
+        'requested_expenses': requested_expenses,
+        'approved_expenses': approved_expenses,
+        'expense_stats': expense_stats,
+        
+        # Budgets
+        'budgets_created': budgets_created,
+        'budget_overview': budget_overview,
+        
+        # Billing & Payments
+        'bills_created': bills_created,
+        'payments_processed': payments_processed,
+        'payment_uploads': payment_uploads,
+        'billing_stats': billing_stats,
+        
+        # Summary
+        'financial_summary': financial_summary,
+        'recent_activities': recent_activities,
+        
+        # System data
+        'expense_categories': expense_categories,
+        'service_types': service_types,
+        
+        # Report metadata
+        'report_generated_at': timezone.now(),
+        'report_period': f"{from_date} to {to_date}",
+    }
+    
+    return render(request, 'accounts/acct_report.html', context)
 
 @login_required
 def budget_planning(request):
