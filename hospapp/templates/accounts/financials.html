@@ -3,248 +3,249 @@
 {% block title %}HMS | Expense Management{% endblock %}
 
 {% block content %}
-<!-- Content Header -->
-<div class="content-header">
-  <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1 class="m-0"><i class="fas fa-wallet text-primary"></i> Expense Management</h1>
-      </div>
-      <div class="col-sm-6">
-        <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item"><a href="#">Home</a></li>
-          <li class="breadcrumb-item active">Expenses</li>
-        </ol>
+  <!-- Content Header -->
+  <div class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0">Expense Management</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-right">
+            <li class="breadcrumb-item"><a href="#">Home</a></li>
+            <li class="breadcrumb-item active">Expenses</li>
+          </ol>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Main content -->
-<section class="content">
-  <div class="container-fluid">
-    
-    <!-- Stats Cards -->
-    <div class="row">
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-warning">
-          <div class="inner">
-            <h3>₦{{ total_pending|default:"0"|floatformat:0 }}</h3>
-            <p>Pending</p>
+  <!-- Main content -->
+  <section class="content">
+    <div class="container-fluid">
+      
+      <!-- Stats Cards -->
+      <div class="row mb-4">
+        <div class="col-lg-3 col-md-6">
+          <div class="info-box">
+            <span class="info-box-icon bg-warning"><i class="fas fa-clock"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">Pending</span>
+              <span class="info-box-number">₦{{ total_pending|default:"0"|floatformat:0 }}</span>
+            </div>
           </div>
-          <div class="icon"><i class="fas fa-clock"></i></div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="info-box">
+            <span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">Approved</span>
+              <span class="info-box-number">₦{{ total_approved|default:"0"|floatformat:0 }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="info-box">
+            <span class="info-box-icon bg-info"><i class="fas fa-money-bill-wave"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">Paid Out</span>
+              <span class="info-box-number">₦{{ total_paid|default:"0"|floatformat:0 }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="info-box">
+            <span class="info-box-icon bg-danger"><i class="fas fa-times"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">Rejected</span>
+              <span class="info-box-number">{{ rejected_count|default:"0" }}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-success">
-          <div class="inner">
-            <h3>₦{{ total_approved|default:"0"|floatformat:0 }}</h3>
-            <p>Approved</p>
-          </div>
-          <div class="icon"><i class="fas fa-check"></i></div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-info">
-          <div class="inner">
-            <h3>₦{{ total_paid|default:"0"|floatformat:0 }}</h3>
-            <p>Paid Out</p>
-          </div>
-          <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-6">
-        <div class="small-box bg-danger">
-          <div class="inner">
-            <h3>{{ rejected_count|default:"0" }}</h3>
-            <p>Rejected</p>
-          </div>
-          <div class="icon"><i class="fas fa-times"></i></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- New Expense Form -->
-    <div class="card card-primary">
-      <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-plus mr-2"></i>New Expense Request</h3>
-      </div>
-      <form method="post" id="expense-form">
-        <div class="card-body">
-          {% csrf_token %}
-          <input type="hidden" name="type" value="Expenditure">
-          
-          <div class="row">
-            <div class="col-md-4">
-              <div class="form-group">
-                <label for="amount">Amount (₦) <span class="text-danger">*</span></label>
-                <div class="input-group">
-                  <div class="input-group-prepend">
-                    <span class="input-group-text">₦</span>
+      <!-- New Expense Form -->
+      <div class="card card-outline card-primary">
+        <div class="card-header">
+          <h3 class="card-title">New Expense Request</h3>
+        </div>
+        <form method="post" id="expense-form">
+          <div class="card-body">
+            {% csrf_token %}
+            <input type="hidden" name="type" value="Expenditure">
+            
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label for="amount">Amount (₦)</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">₦</span>
+                    </div>
+                    <input type="number" id="amount" name="amount" class="form-control" 
+                           step="0.01" min="0" required placeholder="0.00">
                   </div>
-                  <input type="number" id="amount" name="amount" class="form-control" 
-                         step="0.01" min="0" required placeholder="0.00">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="description">Description</label>
+                  <input type="text" id="description" name="description" class="form-control" 
+                         required placeholder="Brief description of expense" maxlength="200">
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div class="form-group">
+                  <label>&nbsp;</label>
+                  <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-plus mr-1"></i>Submit
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="col-md-8">
-              <div class="form-group">
-                <label for="description">Description <span class="text-danger">*</span></label>
-                <input type="text" id="description" name="description" class="form-control" 
-                       required placeholder="Brief description of expense purpose" maxlength="200">
+          </div>
+        </form>
+      </div>
+
+      <!-- Expense History -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Expense History</h3>
+          <div class="card-tools">
+            <div class="input-group input-group-sm" style="width: 250px;">
+              <input type="text" class="form-control float-right" placeholder="Search..." id="table-search">
+              <div class="input-group-append">
+                <button type="button" class="btn btn-default">
+                  <i class="fas fa-search"></i>
+                </button>
               </div>
             </div>
           </div>
         </div>
-        <div class="card-footer">
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-paper-plane mr-1"></i>Submit Request
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Expense History -->
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Expense History</h3>
-        <div class="card-tools">
-          <div class="input-group input-group-sm" style="width: 200px;">
-            <input type="text" class="form-control" placeholder="Search..." id="table-search">
-            <div class="input-group-append">
-              <div class="input-group-text"><i class="fas fa-search"></i></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="card-body p-0">
-        <table class="table table-striped" id="expenses-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Description</th>
-              <th class="text-right">Amount</th>
-              {% if user.profile.role == "admin" %}
-              <th class="text-center">Actions</th>
-              {% endif %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for tx in transactions %}
-            <tr>
-              <td>
-                <span class="text-muted">{{ tx.date|date:"M d, Y" }}</span>
-                {% if tx.created_at %}<br><small class="text-muted">{{ tx.created_at|date:"g:i A" }}</small>{% endif %}
-              </td>
-              <td>
-                {% if tx.status == "pending" %}
-                  <span class="badge badge-warning">Pending</span>
-                {% elif tx.status == "approved" %}
-                  <span class="badge badge-info">Approved</span>
-                {% elif tx.status == "rejected" %}
-                  <span class="badge badge-danger">Rejected</span>
-                {% elif tx.status == "paid" %}
-                  <span class="badge badge-success">Paid</span>
+        
+        <div class="card-body table-responsive p-0">
+          <table class="table table-hover text-nowrap">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Description</th>
+                <th class="text-right">Amount</th>
+                {% if user.profile.role == "admin" %}
+                <th class="text-center">Actions</th>
                 {% endif %}
-              </td>
-              <td>{{ tx.description|default:"-"|truncatechars:60 }}</td>
-              <td class="text-right font-weight-bold">₦{{ tx.amount|floatformat:2 }}</td>
-              {% if user.profile.role == "admin" %}
-              <td class="text-center">
-                {% if tx.status == "pending" %}
-                  <div class="btn-group btn-group-sm">
+              </tr>
+            </thead>
+            <tbody>
+              {% for tx in transactions %}
+              <tr>
+                <td>
+                  <div class="text-sm">{{ tx.date|date:"M d, Y" }}</div>
+                  {% if tx.created_at %}<small class="text-muted">{{ tx.created_at|date:"g:i A" }}</small>{% endif %}
+                </td>
+                <td>
+                  {% if tx.status == "pending" %}
+                    <span class="badge badge-warning">Pending</span>
+                  {% elif tx.status == "approved" %}
+                    <span class="badge badge-info">Approved</span>
+                  {% elif tx.status == "rejected" %}
+                    <span class="badge badge-danger">Rejected</span>
+                  {% elif tx.status == "paid" %}
+                    <span class="badge badge-success">Paid</span>
+                  {% endif %}
+                </td>
+                <td>{{ tx.description|default:"-"|truncatechars:60 }}</td>
+                <td class="text-right">
+                  <span class="text-bold">₦{{ tx.amount|floatformat:2 }}</span>
+                </td>
+                {% if user.profile.role == "admin" %}
+                <td class="text-center">
+                  {% if tx.status == "pending" %}
+                    <div class="btn-group">
+                      <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="expense_id" value="{{ tx.id }}">
+                        <button type="submit" class="btn btn-sm btn-success" title="Approve">
+                          <i class="fas fa-check"></i>
+                        </button>
+                      </form>
+                      <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <input type="hidden" name="expense_id" value="{{ tx.id }}">
+                        <button type="submit" class="btn btn-sm btn-danger" title="Reject">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </form>
+                    </div>
+                  {% elif tx.status == "approved" %}
                     <form method="post" class="d-inline">
                       {% csrf_token %}
-                      <input type="hidden" name="action" value="approve">
+                      <input type="hidden" name="action" value="mark_paid">
                       <input type="hidden" name="expense_id" value="{{ tx.id }}">
-                      <button type="submit" class="btn btn-success btn-sm" title="Approve">
-                        <i class="fas fa-check"></i>
+                      <button type="submit" class="btn btn-sm btn-primary" title="Mark Paid">
+                        <i class="fas fa-money-bill"></i>
                       </button>
                     </form>
-                    <form method="post" class="d-inline">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="reject">
-                      <input type="hidden" name="expense_id" value="{{ tx.id }}">
-                      <button type="submit" class="btn btn-danger btn-sm" title="Reject">
-                        <i class="fas fa-times"></i>
-                      </button>
-                    </form>
+                  {% else %}
+                    <i class="fas fa-check-circle text-success"></i>
+                  {% endif %}
+                </td>
+                {% endif %}
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="{% if user.profile.role == 'admin' %}5{% else %}4{% endif %}" class="text-center">
+                  <div class="text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>No expense requests found</p>
                   </div>
-                {% elif tx.status == "approved" %}
-                  <form method="post" class="d-inline">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="mark_paid">
-                    <input type="hidden" name="expense_id" value="{{ tx.id }}">
-                    <button type="submit" class="btn btn-primary btn-sm" title="Mark Paid">
-                      <i class="fas fa-money-bill"></i>
-                    </button>
-                  </form>
-                {% else %}
-                  <span class="text-muted"><i class="fas fa-check-circle"></i></span>
-                {% endif %}
-              </td>
-              {% endif %}
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="{% if user.profile.role == 'admin' %}5{% else %}4{% endif %}" class="text-center py-4">
-                <div class="text-muted">
-                  <i class="fas fa-inbox fa-2x mb-2"></i>
-                  <p class="mb-0">No expense requests found</p>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer clearfix">
+          <ul class="pagination pagination-sm m-0 float-right">
+            {% if page_obj.has_previous %}
+              <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>
+            {% endif %}
+            
+            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+            
+            {% if page_obj.has_next %}
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>
+              <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+            {% endif %}
+          </ul>
+        </div>
+        {% endif %}
       </div>
-      
-      <!-- Pagination -->
-      {% if page_obj.paginator.num_pages > 1 %}
-      <div class="card-footer clearfix">
-        <ul class="pagination pagination-sm m-0 float-right">
-          {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>
-          {% endif %}
-          
-          <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
-          
-          {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
-          {% endif %}
-        </ul>
-      </div>
-      {% endif %}
+
     </div>
-
-  </div>
-</section>
-
-<style>
-.small-box { transition: transform 0.2s; }
-.small-box:hover { transform: translateY(-2px); }
-.table th { border-top: none; font-weight: 600; }
-.badge { font-size: 0.75em; }
-.btn-group .btn { margin-right: 2px; }
-.card { box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2); }
-</style>
+  </section>
 
 <script>
-$(document).ready(function() {
+$(function() {
   // Form validation
   $('#expense-form').on('submit', function(e) {
-    if (!$('#amount').val() || $('#amount').val() <= 0) {
+    const amount = $('#amount').val();
+    const description = $('#description').val().trim();
+    
+    if (!amount || amount <= 0) {
       e.preventDefault();
-      alert('Please enter a valid amount');
+      toastr.error('Please enter a valid amount');
       return false;
     }
-    if (!$('#description').val().trim()) {
+    if (!description) {
       e.preventDefault();
-      alert('Please provide a description');
+      toastr.error('Please provide a description');
       return false;
     }
   });
@@ -252,14 +253,15 @@ $(document).ready(function() {
   // Search functionality
   $('#table-search').on('keyup', function() {
     const value = $(this).val().toLowerCase();
-    $('#expenses-table tbody tr').filter(function() {
+    $('table tbody tr').filter(function() {
       $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
     });
   });
   
   // Confirm admin actions
   $('button[title="Approve"], button[title="Reject"], button[title="Mark Paid"]').click(function(e) {
-    if (!confirm('Are you sure?')) {
+    const action = $(this).attr('title');
+    if (!confirm(`Are you sure you want to ${action.toLowerCase()} this expense?`)) {
       e.preventDefault();
     }
   });

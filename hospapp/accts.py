@@ -589,28 +589,35 @@ def income_expenditure_view(request):
                 expense = Expense.objects.get(id=expense_id)
                 
                 # Only admins can approve/reject/mark as paid
-                if hasattr(request.user, 'profile') and request.user.profile.role == 'admin':
+                # Assuming 'profile' is related to 'User' and has a 'role' attribute
+                if hasattr(request.user, 'staff') and request.user.staff.role == 'admin': # Changed from 'profile' to 'staff' based on models.py
                     if action == 'approve':
                         expense.status = 'approved'
                         expense.approved_by = request.user
-                        expense.approved_at = timezone.now()
+                        # The `approved_at` field is not defined in the Expense model based on models.py.
+                        # If you intend to have this field, please add it to your Expense model.
+                        # expense.approved_at = timezone.now() 
                         expense.save()
-                        messages.success(request, f'Expense request #{expense_id} has been approved.')
+                        messages.success(request, f'Expense request #{expense.id} has been approved.')
                     elif action == 'reject':
                         expense.status = 'rejected'
                         expense.approved_by = request.user
-                        expense.approved_at = timezone.now()
+                        # The `approved_at` field is not defined in the Expense model based on models.py.
+                        # If you intend to have this field, please add it to your Expense model.
+                        # expense.approved_at = timezone.now()
                         expense.save()
-                        messages.success(request, f'Expense request #{expense_id} has been rejected.')
+                        messages.success(request, f'Expense request #{expense.id} has been rejected.')
                     elif action == 'mark_paid':
                         # Check if expense is in approved status
                         if expense.status != 'approved':
-                            messages.error(request, f'Expense request #{expense_id} must be approved before it can be marked as paid.')
+                            messages.error(request, f'Expense request #{expense.id} must be approved before it can be marked as paid.')
                         else:
                             expense.status = 'paid'
-                            expense.paid_at = timezone.now()
+                            # The `paid_at` field is not defined in the Expense model based on models.py.
+                            # If you intend to have this field, please add it to your Expense model.
+                            # expense.paid_at = timezone.now() 
                             expense.save()
-                            messages.success(request, f'Expense request #{expense_id} has been marked as paid.')
+                            messages.success(request, f'Expense request #{expense.id} has been marked as paid.')
                 else:
                     messages.error(request, 'Only administrators can perform actions on expense requests.')
             except Expense.DoesNotExist:
@@ -638,6 +645,7 @@ def income_expenditure_view(request):
 
             # Only allow Expenditure input from the form
             if transaction_type == 'Expenditure':
+                # Ensure 'General' category exists or create it
                 category, _ = ExpenseCategory.objects.get_or_create(name="General")
                 Expense.objects.create(
                     category=category,
@@ -657,64 +665,79 @@ def income_expenditure_view(request):
         except Exception as e:
             messages.error(request, f"Error submitting request: {str(e)}")
 
-        return redirect('income_expenditure')
+        return redirect('institution_financials')
+
+    # For GET requests or after POST redirection
+    
+    # Initialize transactions list before use
+    transactions = []
 
     # Get expense records with proper ordering (newest first)
     expenses_queryset = Expense.objects.select_related('requested_by', 'approved_by').order_by('-created_at', '-id')
+
+    try:
+        payments_queryset = Payment.objects.all().order_by('-payment_date') # Order payments as well
+    except Exception: # Handle case where Payment model might not exist yet
+        payments_queryset = [] # Or raise a more specific error
     
     # Calculate summary statistics
     total_pending = expenses_queryset.filter(status='pending').aggregate(
-        total=Sum('amount'))['total'] or 0
+        total=Sum('amount'))['total'] or Decimal('0.00')
     total_approved = expenses_queryset.filter(status='approved').aggregate(
-        total=Sum('amount'))['total'] or 0
+        total=Sum('amount'))['total'] or Decimal('0.00')
     total_paid = expenses_queryset.filter(status='paid').aggregate(
-        total=Sum('amount'))['total'] or 0
+        total=Sum('amount'))['total'] or Decimal('0.00')
     rejected_count = expenses_queryset.filter(status='rejected').count()
 
-
-    # Pagination - 15 expenses per page
-    paginator = Paginator(expenses_queryset, 15)
-
-    for p in payments:
+    # Consolidate payments and expenses into a single transactions list
+    for p in payments_queryset:
         transactions.append({
-            'date': p['payment_date'].date(),
+            'id': p.id, # Add ID for potential future use (e.g., detail view)
+            'date': p.payment_date.date(),
+            'created_at': p.payment_date, # Use payment_date for created_at equivalent
             'type': 'Income',
-            'description': p['notes'] or '',
-            'amount': p['amount']
+            'description': p.notes or 'Payment received', # Provide a default description
+            'amount': p.amount,
+            'status': p.status,
+            'processed_by': p.processed_by.get_full_name() if p.processed_by else 'N/A',
+            # Add other relevant payment fields if needed in template
         })
 
-    for e in expenses:
+    for e in expenses_queryset:
         transactions.append({
-            'date': e['expense_date'],
-            'type': 'Expenditure',
-            'description': e['description'],
-            'amount': e['amount']
+            'id': e.id,
+            'date': e.expense_date,
+            'created_at': e.created_at,
+            'description': e.description,
+            'amount': e.amount,
+            'status': e.status,
+            'requested_by': e.requested_by.get_full_name() if e.requested_by else 'N/A',
+            'approved_by': e.approved_by.get_full_name() if e.approved_by else 'N/A',
+            # Add other relevant expense fields if needed in template
         })
 
-    transactions.sort(key=lambda x: x['date'], reverse=True)
+    # Sort the combined list by date (and then by created_at for same-day entries, if available)
+    # Ensure 'date' is always a date object for consistent sorting
+    transactions.sort(key=lambda x: (x['date'], x.get('created_at', datetime.min)), reverse=True)
 
-    # Pagination - 10 transactions per page
-    paginator = Paginator(transactions, 20)
+
+    # Pagination for the combined transactions list
+    paginator = Paginator(transactions, 15) # Use 15 as in the template comment
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
-    # Format transactions for template compatibility
-    transactions = []
-    for expense in page_obj:
-        transactions.append({
-            'id': expense.id,
-            'date': expense.expense_date,
-            'created_at': expense.created_at,
-            'description': expense.description,
-            'amount': expense.amount,
-            'status': expense.status,
-            'requested_by': expense.requested_by,
-            'approved_by': expense.approved_by,
-        })
+    # The `transactions` variable passed to context should be `page_obj`'s object_list
+    # However, your template iterates directly over `transactions` and expects specific fields.
+    # So, we need to adjust the structure to match what the template expects.
+    # The `page_obj` already contains the correctly paginated and sorted items.
+    # We should directly pass `page_obj.object_list` if the template expects a simple list of dicts.
+    # But since the template uses `tx.id`, `tx.date`, etc., directly passing `page_obj`
+    # (which allows iteration) is the correct approach. The problem was the
+    # re-assignment of `transactions` right before the context.
 
     context = {
         'page_obj': page_obj,
-        'transactions': transactions,
+        'transactions': page_obj.object_list, # Pass the list of items for iteration
         'total_pending': total_pending,
         'total_approved': total_approved,
         'total_paid': total_paid,
@@ -1190,7 +1213,7 @@ def acct_report(request):
         'report_period': f"{from_date} to {to_date}",
     }
     
-    return render(request, 'accounts/acct_report.html', context)
+    return render(request, 'accounts/reports.html', context)
 
 @login_required
 def budget_planning(request):

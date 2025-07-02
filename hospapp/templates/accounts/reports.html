@@ -1,0 +1,457 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Account Activity Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-bottom: none;
+    }
+    
+    .table-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .table thead th {
+        background-color: #495057;
+        color: white;
+        border: none;
+        font-weight: 600;
+        padding: 1rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .table tbody td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .activity-type {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: white;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+    }
+    
+    .type-expense { background-color: #ffc107; color: #000; }
+    .type-revenue { background-color: #28a745; }
+    .type-bill { background-color: #17a2b8; }
+    .type-payment { background-color: #6f42c1; }
+    .type-budget { background-color: #fd7e14; }
+    
+    .status-badge {
+        padding: 0.3rem 0.7rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        display: inline-block;
+        min-width: 80px;
+        text-align: center;
+    }
+    
+    .status-pending { background-color: #ffc107; color: #000; }
+    .status-approved { background-color: #28a745; color: white; }
+    .status-paid { background-color: #28a745; color: white; }
+    .status-completed { background-color: #28a745; color: white; }
+    .status-rejected { background-color: #dc3545; color: white; }
+    .status-partial { background-color: #fd7e14; color: white; }
+    .status-outstanding { background-color: #dc3545; color: white; }
+    .status-created { background-color: #17a2b8; color: white; }
+    
+    .amount-positive {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #28a745;
+    }
+    
+    .amount-negative {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #dc3545;
+    }
+    
+    .amount-neutral {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #6c757d;
+    }
+    
+    .reference-text {
+        font-family: 'Courier New', monospace;
+        font-size: 0.8rem;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+    }
+    
+    .print-btn {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    
+    .summary-stats {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .text-revenue { color: #28a745; }
+    .text-expense { color: #dc3545; }
+    .text-pending { color: #ffc107; }
+    .text-activities { color: #17a2b8; }
+    
+    @media print {
+        .no-print { display: none !important; }
+        .report-header { background: #333 !important; }
+        .table-container { box-shadow: none !important; }
+    }
+    
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+        .activity-type, .status-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+        }
+        .stat-item {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Report Header -->
+    <div class="report-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-chart-line me-3"></i>
+                    Complete Account Activity Report
+                </h1>
+                <p class="mb-0">
+                    <i class="fas fa-user me-2"></i>{{ staff.user.get_full_name|default:"All Staff" }}
+                    <span class="mx-3">|</span>
+                    <i class="fas fa-calendar me-2"></i>All Time Activities
+                </p>
+            </div>
+            <div class="col-md-4 text-end no-print">
+                <button onclick="window.print()" class="btn print-btn me-2">
+                    <i class="fas fa-print me-2"></i>Print Report
+                </button>
+                <small class="text-light d-block mt-2">
+                    Generated: {% now "M d, Y H:i" %}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="summary-stats">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value text-revenue">₦{{ total_revenue|default:0|floatformat:2 }}</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value text-expense">₦{{ total_expenses|default:0|floatformat:2 }}</div>
+                    <div class="stat-label">Total Expenses</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value text-pending">{{ pending_items|default:0 }}</div>
+                    <div class="stat-label">Pending Items</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <div class="stat-value text-activities">{{ total_activities|default:0 }}</div>
+                    <div class="stat-label">Total Activities</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comprehensive Activity Table -->
+    <div class="table-container">
+        <div class="table-header">
+            <h3><i class="fas fa-list me-2"></i>All Account Activities</h3>
+        </div>
+        <div class="table-responsive" style="max-height: 800px; overflow-y: auto;">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Reference</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Category</th>
+                        <th>Staff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Expenses -->
+                    {% for expense in all_expenses %}
+                    <tr>
+                        <td>{{ expense.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="activity-type type-expense">
+                                <i class="fas fa-receipt me-1"></i>EXPENSE
+                            </span>
+                        </td>
+                        <td>{{ expense.description|default:"Expense Request" }}</td>
+                        <td><span class="reference-text">EXP-{{ expense.id }}</span></td>
+                        <td class="amount-negative">₦{{ expense.amount|floatformat:2 }}</td>
+                        <td>
+                            <span class="status-badge status-{{ expense.status }}">
+                                {{ expense.status|capfirst }}
+                            </span>
+                        </td>
+                        <td>{{ expense.category|default:"General" }}</td>
+                        <td>{{ expense.staff.user.get_full_name|default:"N/A" }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Bills -->
+                    {% for bill in all_bills %}
+                    <tr>
+                        <td>{{ bill.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="activity-type type-bill">
+                                <i class="fas fa-file-invoice me-1"></i>BILL
+                            </span>
+                        </td>
+                        <td>Bill for {{ bill.patient.full_name|default:"Patient" }}</td>
+                        <td><span class="reference-text">{{ bill.bill_number|default:bill.id }}</span></td>
+                        <td class="amount-positive">₦{{ bill.total_amount|floatformat:2 }}</td>
+                        <td>
+                            <span class="status-badge status-{{ bill.status }}">
+                                {{ bill.status|capfirst }}
+                            </span>
+                        </td>
+                        <td>Billing</td>
+                        <td>{{ bill.created_by.get_full_name|default:"System" }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Payments -->
+                    {% for payment in all_payments %}
+                    <tr>
+                        <td>{{ payment.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="activity-type type-payment">
+                                <i class="fas fa-credit-card me-1"></i>PAYMENT
+                            </span>
+                        </td>
+                        <td>Payment {{ payment.payment_method|default:"processed" }}</td>
+                        <td><span class="reference-text">PAY-{{ payment.id }}</span></td>
+                        <td class="amount-positive">₦{{ payment.amount|floatformat:2 }}</td>
+                        <td>
+                            <span class="status-badge status-{{ payment.status }}">
+                                {{ payment.status|capfirst }}
+                            </span>
+                        </td>
+                        <td>Payment</td>
+                        <td>{{ payment.processed_by.get_full_name|default:"System" }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Budget Activities -->
+                    {% for budget in budget_activities %}
+                    <tr>
+                        <td>{{ budget.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="activity-type type-budget">
+                                <i class="fas fa-chart-pie me-1"></i>BUDGET
+                            </span>
+                        </td>
+                        <td>Budget allocation: {{ budget.category }}</td>
+                        <td><span class="reference-text">BUD-{{ budget.id }}</span></td>
+                        <td class="amount-neutral">₦{{ budget.allocated_amount|floatformat:2 }}</td>
+                        <td>
+                            <span class="status-badge status-approved">
+                                Active
+                            </span>
+                        </td>
+                        <td>{{ budget.category }}</td>
+                        <td>{{ budget.created_by.get_full_name|default:"Admin" }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Revenue/Income entries -->
+                    {% for revenue in revenue_entries %}
+                    <tr>
+                        <td>{{ revenue.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="activity-type type-revenue">
+                                <i class="fas fa-money-bill-wave me-1"></i>REVENUE
+                            </span>
+                        </td>
+                        <td>{{ revenue.description|default:"Revenue Entry" }}</td>
+                        <td><span class="reference-text">REV-{{ revenue.id }}</span></td>
+                        <td class="amount-positive">₦{{ revenue.amount|floatformat:2 }}</td>
+                        <td>
+                            <span class="status-badge status-completed">
+                                Completed
+                            </span>
+                        </td>
+                        <td>{{ revenue.source|default:"Revenue" }}</td>
+                        <td>{{ revenue.recorded_by.get_full_name|default:"System" }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Fallback row if no data -->
+                    {% if not all_expenses and not all_bills and not all_payments and not budget_activities and not revenue_entries %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No account activities found in the system.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Report Footer -->
+    <div class="mt-5 pt-4 border-top text-center text-muted">
+        <p>
+            <strong>Hospital Management System</strong> - Complete Account Activity Report<br>
+            Generated on {% now "l, F d, Y \a\t H:i" %}<br>
+            <small>This report contains all recorded financial activities in the system</small>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Print functionality
+function printReport() {
+    window.print();
+}
+
+// Table row highlighting
+document.addEventListener('DOMContentLoaded', function() {
+    const tableRows = document.querySelectorAll('.table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+
+    // Add sorting functionality to table headers
+    const headers = document.querySelectorAll('.table thead th');
+    headers.forEach((header, index) => {
+        if (index < 7) { // Don't make the last column sortable
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', function() {
+                sortTable(index);
+            });
+        }
+    });
+});
+
+// Simple table sorting function
+function sortTable(columnIndex) {
+    const table = document.querySelector('.table tbody');
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const isNumeric = columnIndex === 4; // Amount column
+    const isDate = columnIndex === 0; // Date column
+    
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].textContent.trim();
+        const bValue = b.cells[columnIndex].textContent.trim();
+        
+        if (isNumeric) {
+            const aNum = parseFloat(aValue.replace(/[₦,]/g, ''));
+            const bNum = parseFloat(bValue.replace(/[₦,]/g, ''));
+            return aNum - bNum;
+        } else if (isDate) {
+            return new Date(aValue) - new Date(bValue);
+        } else {
+            return aValue.localeCompare(bValue);
+        }
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => table.appendChild(row));
+}
+
+// Auto-refresh notification (optional)
+console.log('Account Activity Report loaded successfully');
+</script>
+{% endblock %}
