@@ -2,6 +2,8 @@
 
 {% load humanize %}
 
+{% load static %}
+
 {% block title %}HMS | Accounts Home{% endblock %}
 
 {% block extra_css %}
@@ -469,6 +471,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
 <script>
 // Pass Django data to JavaScript - ensuring data is available
 const chartData = {

@@ -756,27 +756,29 @@ def financial_reports(request):
     # Define date ranges
     today = now().date()
     last_30_days_start = today - timedelta(days=29)
-    last_7_days_start = today - timedelta(days=6)
+    # last_7_days_start = today - timedelta(days=6) # Not used in HTML, can be removed if not needed elsewhere
     current_month_start = today.replace(day=1)
     current_year_start = today.replace(month=1, day=1)
-    
+
     # ===== INCOME CALCULATIONS =====
     # Last 30 days income
     income_30_days = Payment.objects.filter(
         status='completed',
-        payment_date__date__range=(last_30_days_start, today)).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        payment_date__date__range=(last_30_days_start, today)
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
     # Current month income
     income_current_month = Payment.objects.filter(
         status='completed',
         payment_date__date__gte=current_month_start
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     # Current year income
     income_current_year = Payment.objects.filter(
         status='completed',
         payment_date__date__gte=current_year_start
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     # Today's income
     income_today = Payment.objects.filter(
         status='completed',
@@ -788,17 +790,17 @@ def financial_reports(request):
     expenditure_30_days = Expense.objects.filter(
         expense_date__range=(last_30_days_start, today)
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     # Current month expenditure
     expenditure_current_month = Expense.objects.filter(
         expense_date__gte=current_month_start
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     # Current year expenditure
     expenditure_current_year = Expense.objects.filter(
         expense_date__gte=current_year_start
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
+
     # Today's expenditure
     expenditure_today = Expense.objects.filter(
         expense_date=today
@@ -810,54 +812,20 @@ def financial_reports(request):
     net_current_year = income_current_year - expenditure_current_year
     net_today = income_today - expenditure_today
 
-    # ===== DAILY BREAKDOWN (Last 30 Days) =====
+    # ===== DAILY BREAKDOWN FOR CHARTS (Last 30 Days) =====
     date_labels = [(last_30_days_start + timedelta(days=i)) for i in range(30)]
-    
-    # Initialize daily data
+
     daily_income_dict = OrderedDict()
     daily_expenditure_dict = OrderedDict()
     daily_net_dict = OrderedDict()
-    
+
     for date_obj in date_labels:
         date_str = date_obj.strftime('%Y-%m-%d')
-        daily_income_dict[date_str] = 0
-        daily_expenditure_dict[date_str] = 0
-        daily_net_dict[date_str] = 0
+        daily_income_dict[date_str] = 0.00
+        daily_expenditure_dict[date_str] = 0.00
+        daily_net_dict[date_str] = 0.00
 
-    # Get daily income
-    # Define date range (last 30 days)
-    end_date = now().date()
-    start_date = end_date - timedelta(days=29)
-
-    # ===== INCOME CALCULATION =====
-    total_income = Payment.objects.filter(
-        status='completed',
-        payment_date__date__range=(start_date, end_date)
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-    # ===== EXPENDITURE CALCULATION =====
-    # Calculate all expenses regardless of status (all firm expenditures)
-    total_expenditure = Expense.objects.filter(
-        expense_date__range=(start_date, end_date)
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-    # ===== NET BALANCE =====
-    net_balance = total_income - total_expenditure
-
-    # ===== CHART DATA PREPARATION =====
-    # Create date range for chart
-    date_labels = [(start_date + timedelta(days=i)) for i in range(30)]
-    
-    # Initialize daily dictionaries
-    daily_income_dict = OrderedDict()
-    daily_expenditure_dict = OrderedDict()
-    
-    for date_obj in date_labels:
-        date_str = date_obj.strftime('%Y-%m-%d')
-        daily_income_dict[date_str] = 0
-        daily_expenditure_dict[date_str] = 0
-
-    # Get daily income data
+    # Populate daily income data
     daily_income_qs = Payment.objects.filter(
         status='completed',
         payment_date__date__range=(last_30_days_start, today)
@@ -867,23 +835,19 @@ def financial_reports(request):
 
     for entry in daily_income_qs:
         day_str = entry['payment_date__date'].strftime('%Y-%m-%d')
-        if day_str in daily_income_dict:
-            daily_income_dict[day_str] = float(entry['day_total'])
+        daily_income_dict[day_str] = float(entry['day_total'])
 
-    # Get daily expenditure
+    # Populate daily expenditure data
     daily_expenditure_qs = Expense.objects.filter(
-        expense_date__range=(last_30_days_start, today)),
-    # Get daily expenditure data (all expenses)
-    daily_expenditure_qs = Expense.objects.filter(
-        expense_date__range=(start_date, end_date)
+        expense_date__range=(last_30_days_start, today)
     ).values('expense_date').annotate(
         day_total=Sum('amount')
     ).order_by('expense_date')
 
     for entry in daily_expenditure_qs:
         day_str = entry['expense_date'].strftime('%Y-%m-%d')
-        if day_str in daily_expenditure_dict:
-            daily_expenditure_dict[day_str] = float(entry['day_total'])
+        daily_expenditure_dict[day_str] = float(entry['day_total'])
+
     # Calculate daily net
     for date_str in daily_income_dict.keys():
         daily_net_dict[date_str] = daily_income_dict[date_str] - daily_expenditure_dict[date_str]
@@ -900,36 +864,48 @@ def financial_reports(request):
     recent_income = Payment.objects.filter(
         status='completed'
     ).select_related('patient').order_by('-payment_date')[:5]
-    
+
     recent_expenses = Expense.objects.select_related('category').order_by('-expense_date')[:5]
 
     # ===== MONTHLY COMPARISON (Last 6 Months) =====
     monthly_data = []
     for i in range(6):
-        month_start = (today.replace(day=1) - timedelta(days=32*i)).replace(day=1)
-        next_month = (month_start + timedelta(days=32)).replace(day=1)
+        # Calculate month_start correctly for the past 6 months
+        # Get the first day of the current month
+        current_month_first_day = today.replace(day=1)
+        # Subtract 'i' months from the current month's first day
+        # This approach correctly handles month transitions and leap years
+        month_offset = (current_month_first_day.month - 1 - i) % 12
+        year_offset = current_month_first_day.year - ((current_month_first_day.month - 1 - i) // 12)
+        month_start = date(year_offset, month_offset + 1, 1)
+
+        # Calculate the first day of the next month
+        if month_start.month == 12:
+            next_month = date(month_start.year + 1, 1, 1)
+        else:
+            next_month = date(month_start.year, month_start.month + 1, 1)
         
         month_income = Payment.objects.filter(
             status='completed',
             payment_date__date__gte=month_start,
             payment_date__date__lt=next_month
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        
+
         month_expenditure = Expense.objects.filter(
             expense_date__gte=month_start,
             expense_date__lt=next_month
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        
-        monthly_data.insert(0, {
+
+        monthly_data.insert(0, { # Insert at the beginning to maintain chronological order
             'month': month_start.strftime('%b %Y'),
             'income': float(month_income),
             'expenditure': float(month_expenditure),
             'net': float(month_income - month_expenditure)
         })
 
-    # Format chart labels
+    # Prepare chart labels (format dates for display)
     chart_labels = [date_obj.strftime('%m-%d') for date_obj in date_labels]
-    
+
     context = {
         # Summary totals
         'income_30_days': income_30_days,
@@ -944,42 +920,32 @@ def financial_reports(request):
         'income_today': income_today,
         'expenditure_today': expenditure_today,
         'net_today': net_today,
-        
-        # Chart data
+
+        # Chart data for daily trend
         'chart_labels': json.dumps(chart_labels),
         'daily_income_data': json.dumps(list(daily_income_dict.values())),
         'daily_expenditure_data': json.dumps(list(daily_expenditure_dict.values())),
         'daily_net_data': json.dumps(list(daily_net_dict.values())),
-        
-        # Monthly comparison
+
+        # Monthly comparison chart data
         'monthly_labels': json.dumps([item['month'] for item in monthly_data]),
-        'monthly_income': json.dumps([item['income'] for item in monthly_data]),
-        'monthly_expenditure': json.dumps([item['expenditure'] for item in monthly_data]),
+        # 'monthly_income': json.dumps([item['income'] for item in monthly_data]), # Not directly used by chart, only net
+        # 'monthly_expenditure': json.dumps([item['expenditure'] for item in monthly_data]), # Not directly used by chart, only net
         'monthly_net': json.dumps([item['net'] for item in monthly_data]),
-        
+
         # Additional data
         'top_expense_categories': top_expense_categories,
         'recent_income': recent_income,
         'recent_expenses': recent_expenses,
-        'date_range': f"{last_30_days_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}",}
-    # Prepare chart labels (format dates for display)
-    chart_labels = [date_obj.strftime('%m-%d') for date_obj in date_labels]
-        
-    context = {
-        'total_income': total_income,
-        'total_expenditure': total_expenditure,
-        'net_balance': net_balance,
-        'chart_labels': json.dumps(chart_labels),
-        'chart_data': json.dumps(list(daily_income_dict.values())),
-        'expenditure_data': json.dumps(list(daily_expenditure_dict.values())),
+        'date_range': f"{last_30_days_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}",
     }
 
     return render(request, 'accounts/financial_reports.html', context)
 
 def acct_report(request):
     """
-    Generate activity report for account user showing all their responsibilities
-    and financial activities they've been involved in.
+    Generate comprehensive activity report showing all financial activities
+    in the system for account users.
     """
     user = request.user
     
@@ -995,222 +961,85 @@ def acct_report(request):
             'message': 'Staff profile not found.'
         })
     
-    # Get date range for filtering (default to current month)
+    # Get date range for filtering (optional - if you want to add filters later)
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
     
-    if from_date:
-        from_date = datetime.strptime(from_date, '%Y-%m-%d').date()
-    else:
-        from_date = timezone.now().replace(day=1).date()  # First day of current month
+    # For now, let's get ALL data (remove date filtering to see if data appears)
+    # You can add date filtering back later once data is showing
     
-    if to_date:
-        to_date = datetime.strptime(to_date, '%Y-%m-%d').date()
-    else:
-        from_date_obj = timezone.now().replace(day=1)
-        if from_date_obj.month == 12:
-            next_month = from_date_obj.replace(year=from_date_obj.year + 1, month=1)
-        else:
-            next_month = from_date_obj.replace(month=from_date_obj.month + 1)
-        to_date = (next_month - timedelta(days=1)).date()  # Last day of current month
+    # ==== GET ALL EXPENSES ====
+    all_expenses = Expense.objects.all().order_by('-created_at')
     
-    # ==== EXPENSE MANAGEMENT ====
-    # Expenses requested by this account user
-    requested_expenses = Expense.objects.filter(
-        requested_by=user,
-        created_at__date__range=[from_date, to_date]
-    ).order_by('-created_at')
+    # ==== GET ALL BILLS ====
+    all_bills = PatientBill.objects.all().order_by('-created_at')
     
-    # Expenses approved by this account user
-    approved_expenses = Expense.objects.filter(
-        approved_by=user,
-        created_at__date__range=[from_date, to_date]
-    ).order_by('-created_at')
+    # ==== GET ALL PAYMENTS ====
+    all_payments = Payment.objects.all().order_by('-payment_date')
     
-    # Expense summary statistics
-    expense_stats = {
-        'total_requested': requested_expenses.aggregate(
-            total=Sum('amount'), count=Count('id')
-        ),
-        'total_approved': approved_expenses.aggregate(
-            total=Sum('amount'), count=Count('id')
-        ),
-        'pending_approval': Expense.objects.filter(
-            status='pending',
-            created_at__date__range=[from_date, to_date]
-        ).aggregate(total=Sum('amount'), count=Count('id')),
-    }
+    # ==== GET BUDGET ACTIVITIES ====
+    budget_activities = Budget.objects.all().order_by('-created_at')
     
-    # ==== BUDGET MANAGEMENT ====
-    # Budgets created by this account user
-    budgets_created = Budget.objects.filter(
-        created_by=user,
-        created_at__date__range=[from_date, to_date]
-    ).order_by('-created_at')
+    # ==== GET REVENUE ENTRIES ====
+    # You might need to adjust this based on your actual revenue model
+    # For now, I'll assume you might track revenue separately or through payments
+    revenue_entries = []  # Add your revenue model here if you have one
     
-    # Current year/month budget overview
-    current_year = timezone.now().year
-    current_month = timezone.now().month
-    current_budgets = Budget.objects.filter(
-        year=current_year,
-        month=current_month
+    # ==== CALCULATE SUMMARY STATISTICS ====
+    
+    # Total Revenue (from completed payments)
+    total_revenue = all_payments.filter(
+        status='completed'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    # Total Expenses (approved expenses)
+    total_expenses = all_expenses.filter(
+        status='approved'
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    # Count pending items (expenses + bills)
+    pending_expenses = all_expenses.filter(status='pending').count()
+    pending_bills = all_bills.filter(status='pending').count()
+    pending_items = pending_expenses + pending_bills
+    
+    # Total activities count
+    total_activities = (
+        all_expenses.count() + 
+        all_bills.count() + 
+        all_payments.count() + 
+        budget_activities.count() + 
+        len(revenue_entries)
     )
     
-    budget_overview = []
-    for budget in current_budgets:
-        budget_overview.append({
-            'category': budget.category.name,
-            'allocated': budget.allocated_amount,
-            'spent': budget.spent_amount,
-            'remaining': budget.remaining_amount(),
-            'percentage_used': round(budget.percentage_used(), 2)
-        })
-    
-    # ==== BILLING & PAYMENTS ====
-    # Bills created by this account user
-    bills_created = PatientBill.objects.filter(
-        created_by=user,
-        created_at__date__range=[from_date, to_date]
-    ).order_by('-created_at')
-    
-    # Payments processed by this account user
-    payments_processed = Payment.objects.filter(
-        processed_by=user,
-        payment_date__date__range=[from_date, to_date]
-    ).order_by('-payment_date')
-    
-    # Payment uploads handled by this account user
-    payment_uploads = PaymentUpload.objects.filter(
-        uploaded_by=user,
-        upload_date__date__range=[from_date, to_date]
-    ).order_by('-upload_date')
-    
-    # Billing and payment statistics
-    billing_stats = {
-        'bills_created': bills_created.aggregate(
-            total_amount=Sum('total_amount'),
-            count=Count('id')
-        ),
-        'payments_processed': payments_processed.aggregate(
-            total_amount=Sum('amount'),
-            count=Count('id')
-        ),
-        'outstanding_bills': PatientBill.objects.filter(
-            status__in=['pending', 'partial']
-        ).aggregate(
-            total=Sum('final_amount'),
-            count=Count('id')
-        ),
-    }
-    
-    # ==== FINANCIAL SUMMARY ====
-    # Overall financial activity summary
-    financial_summary = {
-        'total_revenue_processed': payments_processed.filter(
-            status='completed'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
-        
-        'total_expenses_approved': approved_expenses.filter(
-            status='approved'
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
-        
-        'bills_pending_payment': PatientBill.objects.filter(
-            status='pending'
-        ).count(),
-        
-        'recent_activities_count': (
-            requested_expenses.count() + 
-            approved_expenses.count() + 
-            bills_created.count() + 
-            payments_processed.count()
-        )
-    }
-    
-    # ==== RECENT ACTIVITIES (Combined Timeline) ====
-    recent_activities = []
-    
-    # Add expense activities
-    for expense in requested_expenses[:10]:
-        recent_activities.append({
-            'type': 'expense_requested',
-            'description': f'Requested expense: {expense.description}',
-            'amount': expense.amount,
-            'date': expense.created_at,
-            'status': expense.status,
-            'reference': expense.receipt_number or 'N/A'
-        })
-    
-    for expense in approved_expenses[:10]:
-        recent_activities.append({
-            'type': 'expense_approved',
-            'description': f'Approved expense: {expense.description}',
-            'amount': expense.amount,
-            'date': expense.created_at,
-            'status': expense.status,
-            'reference': expense.receipt_number or 'N/A'
-        })
-    
-    # Add billing activities
-    for bill in bills_created[:10]:
-        recent_activities.append({
-            'type': 'bill_created',
-            'description': f'Created bill for {bill.patient.full_name}',
-            'amount': bill.total_amount,
-            'date': bill.created_at,
-            'status': bill.status,
-            'reference': bill.bill_number
-        })
-    
-    # Add payment activities
-    for payment in payments_processed[:10]:
-        recent_activities.append({
-            'type': 'payment_processed',
-            'description': f'Processed payment for {payment.patient.full_name}',
-            'amount': payment.amount,
-            'date': payment.payment_date,
-            'status': payment.status,
-            'reference': payment.payment_reference or 'N/A'
-        })
-    
-    # Sort recent activities by date (most recent first)
-    recent_activities.sort(key=lambda x: x['date'], reverse=True)
-    recent_activities = recent_activities[:20]  # Limit to 20 most recent
-    
-    # ==== SYSTEM DATA FOR DROPDOWNS ====
-    expense_categories = ExpenseCategory.objects.filter(is_active=True)
-    service_types = ServiceType.objects.filter(is_active=True)
+    # Debug: Print counts to see what data you have
+    print(f"Debug - Expenses: {all_expenses.count()}")
+    print(f"Debug - Bills: {all_bills.count()}")
+    print(f"Debug - Payments: {all_payments.count()}")
+    print(f"Debug - Budget Activities: {budget_activities.count()}")
+    print(f"Debug - Total Activities: {total_activities}")
     
     context = {
         'staff': staff,
+        
+        # Data for the template (matching template variable names)
+        'all_expenses': all_expenses,
+        'all_bills': all_bills,
+        'all_payments': all_payments,
+        'budget_activities': budget_activities,
+        'revenue_entries': revenue_entries,
+        
+        # Summary statistics (matching template variable names)
+        'total_revenue': total_revenue,
+        'total_expenses': total_expenses,
+        'pending_items': pending_items,
+        'total_activities': total_activities,
+        
+        # Date range (if needed later)
         'from_date': from_date,
         'to_date': to_date,
         
-        # Expenses
-        'requested_expenses': requested_expenses,
-        'approved_expenses': approved_expenses,
-        'expense_stats': expense_stats,
-        
-        # Budgets
-        'budgets_created': budgets_created,
-        'budget_overview': budget_overview,
-        
-        # Billing & Payments
-        'bills_created': bills_created,
-        'payments_processed': payments_processed,
-        'payment_uploads': payment_uploads,
-        'billing_stats': billing_stats,
-        
-        # Summary
-        'financial_summary': financial_summary,
-        'recent_activities': recent_activities,
-        
-        # System data
-        'expense_categories': expense_categories,
-        'service_types': service_types,
-        
         # Report metadata
         'report_generated_at': timezone.now(),
-        'report_period': f"{from_date} to {to_date}",
     }
     
     return render(request, 'accounts/reports.html', context)

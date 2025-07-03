@@ -277,7 +277,7 @@
                             </span>
                         </td>
                         <td>{{ expense.category|default:"General" }}</td>
-                        <td>{{ expense.staff.user.get_full_name|default:"N/A" }}</td>
+                        <td>{{ expense.requested_by.get_full_name|default:"N/A" }}</td>
                     </tr>
                     {% endfor %}
 

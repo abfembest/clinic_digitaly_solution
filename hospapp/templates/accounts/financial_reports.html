@@ -4,7 +4,6 @@
 
 {% block content %}
 
-<!-- Content Header -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -19,7 +18,6 @@
 <section class="content">
     <div class="container-fluid">
         
-        <!-- Summary Cards Row 1 - Today's Performance -->
         <div class="row mb-4">
             <div class="col-12">
                 <h5 class="mb-3">Today's Performance</h5>
@@ -48,22 +46,22 @@
                                 <h3>₦{{ expenditure_today|floatformat:2 }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-credit-card fa-2x"></i>
+                                <i class="fas fa-money-check-alt fa-2x"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card {% if net_today >= 0 %}bg-primary{% else %}bg-warning{% endif %} text-white">
+                <div class="card bg-primary text-white">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
-                                <h6 class="card-title">Today's Net</h6>
+                                <h6 class="card-title">Today's Net Balance</h6>
                                 <h3>₦{{ net_today|floatformat:2 }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-chart-line fa-2x"></i>
+                                <i class="fas fa-balance-scale fa-2x"></i>
                             </div>
                         </div>
                     </div>
@@ -71,299 +69,323 @@
             </div>
         </div>
 
-        <!-- Summary Cards Row 2 - Last 30 Days -->
         <div class="row mb-4">
             <div class="col-12">
-                <h5 class="mb-3">Last 30 Days Summary</h5>
+                <h5 class="mb-3">Performance Overview</h5>
             </div>
             <div class="col-md-4">
-                <div class="card border-success">
-                    <div class="card-body text-center">
-                        <h6 class="text-success">Total Income</h6>
-                        <h3 class="text-success">₦{{ income_30_days|floatformat:2 }}</h3>
-                        <small class="text-muted">Last 30 days</small>
+                <div class="card card-outline card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">Last 30 Days</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Income
+                                <span class="badge badge-success badge-pill">₦{{ income_30_days|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Expenditure
+                                <span class="badge badge-danger badge-pill">₦{{ expenditure_30_days|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Net Balance
+                                <span class="badge badge-primary badge-pill">₦{{ net_30_days|floatformat:2 }}</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card border-danger">
-                    <div class="card-body text-center">
-                        <h6 class="text-danger">Total Expenditure</h6>
-                        <h3 class="text-danger">₦{{ expenditure_30_days|floatformat:2 }}</h3>
-                        <small class="text-muted">Last 30 days</small>
+                <div class="card card-outline card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">Current Month</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Income
+                                <span class="badge badge-success badge-pill">₦{{ income_current_month|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Expenditure
+                                <span class="badge badge-danger badge-pill">₦{{ expenditure_current_month|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Net Balance
+                                <span class="badge badge-primary badge-pill">₦{{ net_current_month|floatformat:2 }}</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card border-{% if net_30_days >= 0 %}success{% else %}warning{% endif %}">
-                    <div class="card-body text-center">
-                        <h6 class="text-{% if net_30_days >= 0 %}success{% else %}warning{% endif %}">Net Balance</h6>
-                        <h3 class="text-{% if net_30_days >= 0 %}success{% else %}warning{% endif %}">₦{{ net_30_days|floatformat:2 }}</h3>
-                        <small class="text-muted">Last 30 days</small>
+                <div class="card card-outline card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">Current Year</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Income
+                                <span class="badge badge-success badge-pill">₦{{ income_current_year|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Expenditure
+                                <span class="badge badge-danger badge-pill">₦{{ expenditure_current_year|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Net Balance
+                                <span class="badge badge-primary badge-pill">₦{{ net_current_year|floatformat:2 }}</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Period Comparison -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Period Comparison</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="text-center p-3 border rounded">
-                                    <h6 class="text-muted">This Month</h6>
-                                    <div class="mb-2">
-                                        <span class="text-success">Income: ₦{{ income_current_month|floatformat:2 }}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="text-danger">Expenditure: ₦{{ expenditure_current_month|floatformat:2 }}</span>
-                                    </div>
-                                    <div>
-                                        <strong class="text-{% if net_current_month >= 0 %}success{% else %}warning{% endif %}">
-                                            Net: ₦{{ net_current_month|floatformat:2 }}
-                                        </strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="text-center p-3 border rounded">
-                                    <h6 class="text-muted">This Year</h6>
-                                    <div class="mb-2">
-                                        <span class="text-success">Income: ₦{{ income_current_year|floatformat:2 }}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="text-danger">Expenditure: ₦{{ expenditure_current_year|floatformat:2 }}</span>
-                                    </div>
-                                    <div>
-                                        <strong class="text-{% if net_current_year >= 0 %}success{% else %}warning{% endif %}">
-                                            Net: ₦{{ net_current_year|floatformat:2 }}
-                                        </strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="text-center p-3 border rounded">
-                                    <h6 class="text-muted">Average Daily (30 days)</h6>
-                                    <div class="mb-2">
-                                        <span class="text-success">Income: ₦{% widthratio income_30_days 30 1 %}</span>
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="text-danger">Expenditure: ₦{% widthratio expenditure_30_days 30 1 %}</span>
-                                    </div>
-                                    <div>
-                                        <strong class="text-{% if net_30_days >= 0 %}success{% else %}warning{% endif %}">
-                                            Net: ₦{% widthratio net_30_days 30 1 %}
-                                        </strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="row mb-4">
-            <!-- Daily Trend Chart -->
-            <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Daily Financial Trend (Last 30 Days)</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="dailyTrendChart" height="100"></canvas>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Monthly Comparison Chart -->
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>6-Month Comparison</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="monthlyChart" height="200"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Additional Analytics -->
         <div class="row">
-            <!-- Top Expense Categories -->
-            <div class="col-lg-6">
-                <div class="card">
+            <div class="col-md-6">
+                <div class="card card-outline card-primary">
                     <div class="card-header">
-                        <h5>Top Expense Categories (This Month)</h5>
+                        <h3 class="card-title">Daily Trend (Last 30 Days)</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        {% if top_expense_categories %}
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Category</th>
-                                            <th>Amount</th>
-                                            <th>Count</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for category in top_expense_categories %}
-                                        <tr>
-                                            <td>{{ category.category__name|default:"Uncategorized" }}</td>
-                                            <td class="text-danger">₦{{ category.total_amount|floatformat:2 }}</td>
-                                            <td>{{ category.expense_count }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <p class="text-muted">No expense data available</p>
-                        {% endif %}
+                        <div class="chart">
+                            <canvas id="dailyTrendChart" style="height:250px; min-height:250px"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Recent Transactions -->
-            <div class="col-lg-6">
-                <div class="card">
+            <div class="col-md-6">
+                <div class="card card-outline card-primary">
                     <div class="card-header">
-                        <h5>Recent Transactions</h5>
+                        <h3 class="card-title">Monthly Net Balance (Last 6 Months)</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-12">
-                                <h6 class="text-success">Recent Income</h6>
-                                {% if recent_income %}
-                                    {% for payment in recent_income %}
-                                    <div class="d-flex justify-content-between border-bottom py-2">
-                                        <div>
-                                            <small>{{ payment.patient.full_name }}</small><br>
-                                            <small class="text-muted">{{ payment.payment_date|date:"M d, Y H:i" }}</small>
-                                        </div>
-                                        <div class="text-success">₦{{ payment.amount|floatformat:2 }}</div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted small">No recent income</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <div class="row">
-                            <div class="col-12">
-                                <h6 class="text-danger">Recent Expenses</h6>
-                                {% if recent_expenses %}
-                                    {% for expense in recent_expenses %}
-                                    <div class="d-flex justify-content-between border-bottom py-2">
-                                        <div>
-                                            <small>{{ expense.description }}</small><br>
-                                            <small class="text-muted">{{ expense.expense_date|date:"M d, Y" }}</small>
-                                        </div>
-                                        <div class="text-danger">₦{{ expense.amount|floatformat:2 }}</div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted small">No recent expenses</p>
-                                {% endif %}
-                            </div>
+                        <div class="chart">
+                            <canvas id="monthlyChart" style="height:250px; min-height:250px"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-<<<<<<< Updated upstream
-</section>
 
-<!-- Chart Scripts -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-outline card-warning">
+                    <div class="card-header">
+                        <h3 class="card-title">Top 5 Expense Categories (Current Month)</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="products-list product-list-in-card pl-2 pr-2">
+                            {% for category in top_expense_categories %}
+                            <li class="item">
+                                <div class="product-img">
+                                    <i class="fas fa-tags text-muted"></i>
+                                </div>
+                                <div class="product-info">
+                                    <a href="javascript:void(0)" class="product-title">{{ category.category__name }}
+                                        <span class="badge badge-warning float-right">₦{{ category.total_amount|floatformat:2 }}</span>
+                                    </a>
+                                    <span class="product-description">
+                                        {{ category.expense_count }} expenses
+                                    </span>
+                                </div>
+                            </li>
+                            {% empty %}
+                            <li class="item text-center text-muted">No expenses recorded for this month.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card card-outline card-secondary">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Transactions</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-pills flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link">
+                                    <i class="fas fa-arrow-alt-circle-up text-success"></i> Income
+                                    <span class="float-right text-muted"><small>Last 5</small></span>
+                                </a>
+                            </li>
+                            {% for income in recent_income %}
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <span class="text-success">₦{{ income.amount|floatformat:2 }}</span>
+                                    <span class="text-muted text-sm ml-2">{{ income.payment_date|date:"M d, Y" }}</span>
+                                    <p class="float-right badge badge-light">{{ income.patient.full_name }}</p>
+                                </a>
+                            </li>
+                            {% empty %}
+                            <li class="nav-item">
+                                <a class="nav-link text-muted text-center">No recent income transactions.</a>
+                            </li>
+                            {% endfor %}
+                            <li class="nav-item">
+                                <a class="nav-link">
+                                    <i class="fas fa-arrow-alt-circle-down text-danger"></i> Expenses
+                                    <span class="float-right text-muted"><small>Last 5</small></span>
+                                </a>
+                            </li>
+                            {% for expense in recent_expenses %}
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <span class="text-danger">₦{{ expense.amount|floatformat:2 }}</span>
+                                    <span class="text-muted text-sm ml-2">{{ expense.expense_date|date:"M d, Y" }}</span>
+                                    <p class="float-right badge badge-light">{{ expense.category.name }}</p>
+                                </a>
+                            </li>
+                            {% empty %}
+                            <li class="nav-item">
+                                <a class="nav-link text-muted text-center">No recent expense transactions.</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    
-    // Daily Trend Chart
-    var dailyCtx = document.getElementById('dailyTrendChart').getContext('2d');
-    new Chart(dailyCtx, {
-=======
-  </section>
-  
-  <!-- Chart Script -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      var ctx = document.getElementById('financialChart').getContext('2d');
-      new Chart(ctx, {
->>>>>>> Stashed changes
-        type: 'line',
-        data: {
-            labels: {{ chart_labels|safe }},
-            datasets: [
-                {
-                    label: 'Daily Income',
-                    data: {{ daily_income_data|safe }},
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    borderColor: '#28a745',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.1
-                },
-                {
-                    label: 'Daily Expenditure',
-                    data: {{ daily_expenditure_data|safe }},
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    borderColor: '#dc3545',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.1
-                },
-                {
-                    label: 'Daily Net',
-                    data: {{ daily_net_data|safe }},
-                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                    borderColor: '#007bff',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.1
-                }
-            ]
+$(function () {
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error("Chart.js is not loaded. Please ensure the script tag is correct and accessible.");
+        return;
+    }
+
+    // Daily Trend Chart (Last 30 Days)
+    var dailyTrendCanvas = $('#dailyTrendChart').get(0).getContext('2d');
+    var dailyTrendChartData = {
+        labels: {{ chart_labels|safe }},
+        datasets: [
+            {
+                label: 'Income',
+                backgroundColor: 'rgba(40,167,69,0.9)', // Bootstrap success color
+                borderColor: 'rgba(40,167,69,0.8)',
+                pointRadius: false,
+                pointColor: '#28a745',
+                pointStrokeColor: 'rgba(40,167,69,1)',
+                pointHighlightFill: '#fff',
+                pointHighlightStroke: 'rgba(40,167,69,1)',
+                data: {{ daily_income_data|safe }}
+            },
+            {
+                label: 'Expenditure',
+                backgroundColor: 'rgba(220,53,69,0.9)', // Bootstrap danger color
+                borderColor: 'rgba(220,53,69,0.8)',
+                pointRadius: false,
+                pointColor: '#dc3545',
+                pointStrokeColor: 'rgba(220,53,69,1)',
+                pointHighlightFill: '#fff',
+                pointHighlightStroke: 'rgba(220,53,69,1)',
+                data: {{ daily_expenditure_data|safe }}
+            },
+            {
+                label: 'Net Balance',
+                backgroundColor: 'rgba(0,123,255,0.7)', // Bootstrap primary color
+                borderColor: 'rgba(0,123,255,0.6)',
+                pointRadius: false,
+                pointColor: '#007bff',
+                pointStrokeColor: 'rgba(0,123,255,1)',
+                pointHighlightFill: '#fff',
+                pointHighlightStroke: 'rgba(0,123,255,1)',
+                data: {{ daily_net_data|safe }}
+            }
+        ]
+    };
+
+    var dailyTrendChartOptions = {
+        maintainAspectRatio: false,
+        responsive: true,
+        legend: {
+            display: true // Show legend for multiple datasets
         },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '₦' + value.toLocaleString();
-                        }
+        tooltips: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+                label: function(tooltipItem, data) {
+                    var label = data.datasets[tooltipItem.datasetIndex].label || '';
+                    if (label) {
+                        label += ': ';
                     }
-                }
-            },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        return context.dataset.label + ': ₦' + context.parsed.y.toLocaleString();
-                    }
+                    label += '₦' + tooltipItem.yLabel.toLocaleString();
+                    return label;
                 }
             }
+        },
+        hover: {
+            mode: 'nearest',
+            intersect: true
+        },
+        scales: {
+            xAxes: [{
+                gridLines: {
+                    display: false,
+                },
+                ticks: {
+                    // This callback ensures labels are displayed even if there are many dates
+                    autoSkip: true,
+                    maxTicksLimit: 10 // Adjust as needed
+                }
+            }],
+            yAxes: [{
+                gridLines: {
+                    display: true,
+                },
+                ticks: {
+                    beginAtZero: true,
+                    callback: function(value, index, values) {
+                        return '₦' + value.toLocaleString();
+                    }
+                }
+            }]
         }
+    };
+
+    // This will create a Line chart
+    new Chart(dailyTrendCanvas, {
+        type: 'line',
+        data: dailyTrendChartData,
+        options: dailyTrendChartOptions
     });
 
-    // Monthly Comparison Chart
+
+    // Monthly Net Balance Chart (Last 6 Months)
     var monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
     new Chart(monthlyCtx, {
         type: 'bar',
@@ -374,10 +396,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     label: 'Net Income',
                     data: {{ monthly_net|safe }},
                     backgroundColor: function(context) {
-                        return context.parsed.y >= 0 ? '#28a745' : '#ffc107';
+                        // context.datasetIndex and context.dataIndex are available here
+                        var value = context.dataset.data[context.dataIndex];
+                        return value >= 0 ? 'rgba(40,167,69,0.9)' : 'rgba(255,193,7,0.9)'; // Green for positive, Amber for negative/zero
                     },
                     borderColor: function(context) {
-                        return context.parsed.y >= 0 ? '#28a745' : '#ffc107';
+                        var value = context.dataset.data[context.dataIndex];
+                        return value >= 0 ? 'rgba(40,167,69,1)' : 'rgba(255,193,7,1)';
                     },
                     borderWidth: 1
                 }
@@ -385,25 +410,29 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
+            maintainAspectRatio: false,
+            legend: {
+                display: false // No need for legend as there's only one dataset
             },
             scales: {
-                y: {
+                xAxes: [{
+                    gridLines: {
+                        display: false
+                    }
+                }],
+                yAxes: [{
                     beginAtZero: true,
                     ticks: {
-                        callback: function(value) {
+                        callback: function(value, index, values) {
                             return '₦' + value.toLocaleString();
                         }
                     }
-                }
+                }]
             },
-            tooltip: {
+            tooltips: {
                 callbacks: {
-                    label: function(context) {
-                        return 'Net: ₦' + context.parsed.y.toLocaleString();
+                    label: function(tooltipItem, data) {
+                        return 'Net: ₦' + tooltipItem.yLabel.toLocaleString();
                     }
                 }
             }
