@@ -7308,7 +7308,7 @@ def fetch_patient_activity(request):
 
         # 4. VITALS
         vitals_qs = apply_date_filter(
-            Vitals.objects.filter(patient=patient).order_by('-recorded_at'),
+            Vitals.objects.filter(patient=patient).select_related('recorded_by').order_by('-recorded_at'),
             date_from_param,
             date_to_param,
             'recorded_at',
@@ -7319,7 +7319,7 @@ def fetch_patient_activity(request):
             vitals.append({
                 'id': vital.id,
                 'recorded_at': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
-                'recorded_by': vital.recorded_by,
+                'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'Unknown',
                 'temperature': vital.temperature,
                 'blood_pressure': vital.blood_pressure,
                 'pulse': vital.pulse,
@@ -7348,22 +7348,22 @@ def fetch_patient_activity(request):
         for request_id, tests_in_group in grouped_lab_tests.items():
             first_test = tests_in_group[0]
 
-            # Fetch Doctor Comment
+            # Fetch Doctor Comment - CORRECTED
             doctor_comment_data = None
             if first_test.doctor_comments:
                 try:
-                    comment = DoctorComments.objects.get(id=first_test.doctor_comments)
+                    comment = DoctorComments.objects.select_related('doctor').get(id=first_test.doctor_comments)
                     doctor_comment_data = {
                         "id": comment.id,
                         "comment": comment.comments,
-                        "doctor_name": comment.doctor_name,
+                        "doctor_name": comment.doctor.get_full_name() if comment.doctor else 'Unknown',  # FIXED
                         "labtech_name": comment.labtech_name,
                         "date": comment.date.strftime('%Y-%m-%d %H:%M')
                     }
                 except DoctorComments.DoesNotExist:
                     doctor_comment_data = None
 
-            # Fetch Lab Result File
+            # Fetch Lab Result File - CORRECTED
             lab_file_data = None
             if first_test.labresulttestid:
                 try:
@@ -7440,9 +7440,9 @@ def fetch_patient_activity(request):
 
         lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True)
 
-        # 6. NURSING NOTES
+        # 6. NURSING NOTES - CORRECTED
         nursing_notes_qs = apply_date_filter(
-            patient.nursing_notes.order_by('-note_datetime'),
+            patient.nursing_notes.select_related('nurse').order_by('-note_datetime'),
             date_from_param,
             date_to_param,
             'note_datetime',
@@ -7453,7 +7453,7 @@ def fetch_patient_activity(request):
             nursing_notes.append({
                 'id': note.id,
                 'note_datetime': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
-                'nurse': note.nurse,
+                'nurse': note.nurse.get_full_name() if note.nurse else 'Unknown',  # FIXED
                 'note_type': note.get_note_type_display(),
                 'note_type_code': note.note_type,
                 'notes': note.notes,
@@ -7462,9 +7462,9 @@ def fetch_patient_activity(request):
                 'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
             })
 
-        # 7. ADMISSIONS
+        # 7. ADMISSIONS - CORRECTED
         admissions_qs = apply_date_filter(
-            Admission.objects.filter(patient=patient).order_by('-admission_date'),
+            Admission.objects.filter(patient=patient).select_related('admitted_by', 'discharged_by', 'doctor_assigned').order_by('-admission_date'),
             date_from_param,
             date_to_param,
             'admission_date',
@@ -7476,11 +7476,12 @@ def fetch_patient_activity(request):
                 'id': admission.id,
                 'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
                 'admitted_on': admission.admitted_on.strftime('%Y-%m-%d'),
-                'admitted_by': admission.admitted_by or '',
-                'doctor_assigned': admission.doctor_assigned,
+                'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'Unknown',  # FIXED
+                'doctor_assigned': admission.doctor_assigned.get_full_name() if admission.doctor_assigned else 'Unknown',  # FIXED
                 'status': admission.status,
+                'admission_reason': admission.admission_reason or '',  # ADDED
                 'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else '',
-                'discharged_by': admission.discharged_by or '',
+                'discharged_by': admission.discharged_by.get_full_name() if admission.discharged_by else '',  # FIXED
                 'discharge_notes': admission.discharge_notes or '',
                 'time': admission.time.strftime('%H:%M') if admission.time else '',
             })
@@ -7503,19 +7504,22 @@ def fetch_patient_activity(request):
                 'plan_of_care': plan.plan_of_care,
             })
 
-        # 9. REFERRALS (No date filtering since Referral model doesn't have created_at)
+        # 9. REFERRALS - CORRECTED
         referrals = []
-        referrals_qs = Referral.objects.filter(patient=patient).select_related('department')
+        referrals_qs = Referral.objects.filter(patient=patient).select_related('department', 'referred_by').order_by('-created_at')
         for referral in referrals_qs:
             referrals.append({
                 'id': referral.id,
                 'department': referral.department.name,
                 'notes': referral.notes,
+                'priority': referral.priority or '',  # ADDED
+                'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'Unknown',  # ADDED
+                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),  # ADDED
             })
 
-        # 10. APPOINTMENTS
+        # 10. APPOINTMENTS - CORRECTED
         appointments_qs = apply_date_filter(
-            Appointment.objects.filter(patient=patient).select_related('department').order_by('-scheduled_time'),
+            Appointment.objects.filter(patient=patient).select_related('department', 'scheduled_by').order_by('-scheduled_time'),
             date_from_param,
             date_to_param,
             'scheduled_time',
@@ -7527,11 +7531,12 @@ def fetch_patient_activity(request):
                 'id': appointment.id,
                 'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
                 'department': appointment.department.name,
+                'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'Unknown',  # ADDED
             })
 
         # 11. BILLS
         bills_qs = apply_date_filter(
-            patient.bills.prefetch_related('items__service_type').order_by('-created_at'),
+            patient.bills.select_related('created_by').prefetch_related('items__service_type').order_by('-created_at'),
             date_from_param,
             date_to_param,
             'created_at',
@@ -7553,6 +7558,7 @@ def fetch_patient_activity(request):
                 'id': bill.id,
                 'bill_number': bill.bill_number,
                 'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': bill.created_by.get_full_name() if bill.created_by else 'Unknown',  # ADDED
                 'total_amount': float(bill.total_amount),
                 'discount_amount': float(bill.discount_amount),
                 'final_amount': float(bill.final_amount),
@@ -7588,9 +7594,9 @@ def fetch_patient_activity(request):
                 'notes': payment.notes or '',
             })
 
-        # 13. HANDOVER LOGS
+        # 13. HANDOVER LOGS - CORRECTED
         handover_logs_qs = apply_date_filter(
-            HandoverLog.objects.filter(patient=patient).select_related('author').order_by('-timestamp'),
+            HandoverLog.objects.filter(patient=patient).select_related('author', 'recipient').order_by('-timestamp'),
             date_from_param,
             date_to_param,
             'timestamp',
@@ -7602,6 +7608,7 @@ def fetch_patient_activity(request):
                 'id': log.id,
                 'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M'),
                 'author': log.author.get_full_name() if log.author else 'Unknown',
+                'recipient': log.recipient.get_full_name() if log.recipient else 'Unknown',  # ADDED
                 'notes': log.notes,
             })
 
