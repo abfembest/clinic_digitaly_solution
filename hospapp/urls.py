@@ -56,6 +56,9 @@ urlpatterns = [
     path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
     path('fetch-activity/', views.fetch_patient_activity, name='fetch_patient_activity'),
     path('d/report', views.doctor_report, name='doctor_report'),
+    path('d/start_ivf', views.start_ivf, name='start_ivf'),
+    
+    
 
     ########################### End Doctors URLS #################################
 

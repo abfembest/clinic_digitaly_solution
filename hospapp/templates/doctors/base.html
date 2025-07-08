@@ -126,7 +126,13 @@
                         <li class="nav-item">
                             <a href="{% url 'recomended_tests' %}" class="nav-link {% if request.resolver_match.url_name == 'recomended_tests' %}active{% endif %}">
                                 <i class="nav-icon fas fa-flask"></i>
-                                <p>Recommended IVF</p>
+                                <p>IVF Test Results</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'start_ivf' %}" class="nav-link {% if request.resolver_match.url_name == 'start_ivf' %}active{% endif %}">
+                                <i class="nav-icon fas fa-flask"></i>
+                                <p>IVF Cycle</p>
                             </a>
                         </li>
 

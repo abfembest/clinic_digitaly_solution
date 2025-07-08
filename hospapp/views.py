@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem
+from .models import (Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem,IVFPackage, TreatmentLocation, IVFRecord)
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
@@ -20,6 +20,7 @@ from django.db.models import Sum, F
 from django.utils.timezone import localdate, now
 from django.utils import timezone
 from django.db.models.functions import TruncDate
+from django.views.decorators.http import require_http_methods
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Count
 from .models import Admission
@@ -7743,3 +7744,34 @@ def filter_activities(request):
             return export_to_pdf(patient, labtests, comments, vitals, payments)
 
     return render(request, 'doctors/filtered_records.html', context)
+
+
+
+#IVF ROUTE
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def start_ivf(request):
+    if request.method == 'GET':
+        context = {
+            'patients': Patient.objects.only('id', 'full_name'),
+            'packages': IVFPackage.objects.only('id', 'name'),
+            'locations': TreatmentLocation.objects.only('id', 'name'),
+            'ivf_records': IVFRecord.objects.filter(status='open')
+        }
+        return render(request, 'doctors/start_ivf.html', context)
+
+    try:
+        data = json.loads(request.body)
+        IVFRecord.objects.create(
+            patient_id=data.get('patient_name'),
+            ivf_package_id=data.get('ivf_package'),
+            treatment_location_id=data.get('treatment_location'),
+            doctor_name=data.get('doctor_name'),
+            doctor_comments=data.get('doctor_comments', ''),
+            created_by=request.user  # If your model supports user tracking
+        )
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+#return render(request, 'doctors/start_ivf.html')

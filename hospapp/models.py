@@ -1,6 +1,7 @@
 from decimal import Decimal
 from datetime import date, datetime
 from email.policy import default
+from tokenize import blank_re
 from xmlrpc.client import boolean
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
@@ -628,3 +629,37 @@ class DoctorComments(models.Model):
 
     def __str__(self):
         return f"Comment by Dr. {self.doctor} on {self.date.strftime('%Y-%m-%d')}"
+
+
+# =============================================================================
+# IVF MODELS
+# =============================================================================
+
+
+class IVFPackage(models.Model):
+    name = models.CharField(max_length=255)
+    Decription = models.CharField(max_length=255)
+    price = models.FloatField(max_length=255, default=0.00)
+    created_on = models.DateTimeField(default=timezone.now)
+
+class TreatmentLocation(models.Model):
+    name = models.CharField(max_length=255)
+    address = models.CharField(max_length=255, blank=True)
+
+class IVFRecord(models.Model):
+    """test_request_id = models.ForeignKey(
+        'LabTest',  # Reference the LabTest model
+        to_field='test_request_id',  # Link to the UUID field on LabTest
+        db_index=True,
+        on_delete=models.CASCADE,
+        related_name='ivf_records', unique=True
+    )"""
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    ivf_package = models.ForeignKey(IVFPackage, on_delete=models.SET_NULL, null=True)
+    treatment_location = models.ForeignKey(TreatmentLocation, on_delete=models.SET_NULL, null=True)
+    doctor_name = models.CharField(max_length=255)
+    doctor_comments = models.TextField(blank=True)
+    created_on = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=255, default = "open")
+    
+    

@@ -5,336 +5,43 @@
 {% block title %}Doctors | Request for tests{% endblock %}
 {%block content%}
 
+{%include "doctors/doctors.css"%}
 
-<style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-       /* body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }*/
-
-        .container {
-            max-width: 800px;
-            margin: 1px auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            padding: 5px;
-            text-align: center;
-            color: white;
-        }
-
-            .header h1 {
-                font-size: 2.5rem;
-                margin-bottom: 5px;
-                font-weight: 300;
-            }
-
-            .header p {
-                opacity: 0.9;
-                font-size: 1.0rem;
-            }
-
-        .content {
-            padding: 10px;
-        }
-
-        .test-section {
-            background: #f8f9ff;
-            border-radius: 15px;
-            padding: 10px;
-            margin-bottom: 5px;
-            border: 2px solid #e8ecff;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-            .test-section:hover {
-                border-color: #4facfe;
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(79, 172, 254, 0.15);
-            }
-
-        .section-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .section-title {
-            font-size: 1.3rem;
-            color: #2d3748;
-            font-weight: 400;
-        }
-
-        .remove-section {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            margin-left: auto;
-        }
-
-            .remove-section:hover {
-                background: #ff5252;
-                transform: scale(1.05);
-            }
-
-        .form-group {
-            margin-bottom: 10px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #4a5568;
-        }
-
-        select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            background: white;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-            select:focus {
-                outline: none;
-                border-color: #4facfe;
-                box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
-            }
-
-        .subcategories {
-            display: none;
-            background: white;
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            margin-top: 2px;
-        }
-
-            .subcategories.show {
-                display: block;
-                animation: slideIn 0.3s ease;
-            }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .subcategories h4 {
-            color: #2d3748;
-            margin-bottom: 5px;
-            font-size: 1.1rem;
-        }
-
-        .checkbox-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 7px;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background: #f7fafc;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-        }
-
-            .checkbox-item:hover {
-                background: #edf2f7;
-            }
-
-            .checkbox-item input[type="checkbox"] {
-                margin-right: 6px;
-                width: 18px;
-                height: 18px;
-                accent-color: #4facfe;
-            }
-
-            .checkbox-item label {
-                margin: 0;
-                cursor: pointer;
-                font-weight: 400;
-                color: #2d3748;
-            }
-
-        .actions {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            color: #2d3748;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .results {
-            background: #f0fff4;
-            border: 2px solid #9ae6b4;
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 10px;
-            display: none;
-        }
-
-            .results.show {
-                display: block;
-                animation: slideIn 0.3s ease;
-            }
-
-            .results h3 {
-                color: #22543d;
-                margin-bottom: 15px;
-            }
-
-        .result-item {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 7px;
-            border-left: 4px solid #4facfe;
-        }
-
-        .result-category {
-            font-weight: 300;
-            color: #2d3748;
-            margin-bottom: 2px;
-        }
-
-        .result-tests {
-            color: #4a5568;
-            line-height: 1.0;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-
-            .content {
-                padding: 20px;
-            }
-
-            .header {
-                padding: 20px;
-            }
-
-                .header h1 {
-                    font-size: 2rem;
-                }
-
-            .checkbox-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .actions {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .btn {
-                width: 100%;
-                max-width: 300px;
-            }
-        }
-    </style>
-
-    <div class="container">
-        <div class="header">
-            <h1>Medical Test Selection</h1>
-            <p>Select the medical tests you need from the categories below</p>
-        </div>
-
-        <div class="content">
-            <div class="form-group">
-                <h3 id="selectpatient"></h3>
-                <div id="results" class="results">
-                    <h3>Selected Tests sent to the Lab.</h3>
-                    <div id="resultContent"></div>
-                </div>
-                <label>Select Patient</label>
-                <select class="form-control select2" name="patient_id" id="patient-select" required>
-                    <option value="" disabled selected>-- Choose Patient --</option>
-                    {% for patient in patients %}
-                    <option value="{{ patient.id }}">{{ patient.id }}-{{ patient.full_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div id="testSections"></div>
-
-            <div class="actions">
-                <button class="btn btn-secondary" onclick="addNewTestSection()">+ Add New Test Category</button>
-                <button class="btn btn-primary" onclick="submitSelection()">Submit Selection</button>
-            </div>
-
-            
-        </div>
+<div class="container">
+    <div class="header">
+        <h1>Medical Test Selection</h1>
+        <p>Select the medical tests you need from the categories below</p>
     </div>
 
-    <script>
+    <div class="content">
+        <div class="form-group">
+            <h3 id="selectpatient"></h3>
+            <div id="results" class="results">
+                <h3>Selected Tests sent to the Lab.</h3>
+                <div id="resultContent"></div>
+            </div>
+            <label>Select Patient</label>
+            <select class="form-control" name="patient_id" id="patient-select" required>
+                <option value="" disabled selected>-- Choose Patient --</option>
+                {% for patient in patients %}
+                <option value="{{ patient.id }}" class="form-control">{{ patient.id }}-{{ patient.full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="testSections"></div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" onclick="addNewTestSection()">+ Add New Test Category</button>
+            <button class="btn btn-primary" onclick="submitSelection()">Submit Selection</button>
+        </div>
+
+
+    </div>
+</div>
+
+<script>
     const testCategories = {
         {% for cat in categories %}
             "{{ cat.name }}": [
@@ -344,7 +51,7 @@
             ]{% if not forloop.last %}, {% endif %}
         {% endfor %}
     };
-    
+
 
     let sectionCounter = 0;
 
@@ -450,7 +157,7 @@
     subcategoriesDiv.classList.remove('show');
     }
     }
-    
+
     // ====================================================================
     // START OF CORRECTED CODE
     // ====================================================================
@@ -555,6 +262,6 @@
     // END OF CORRECTED CODE
     // ====================================================================
 
-    </script>
+</script>
 
     {%endblock%}

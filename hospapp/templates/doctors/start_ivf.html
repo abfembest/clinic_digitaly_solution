@@ -1,0 +1,159 @@
+{% extends "doctors/base.html" %}
+
+{% load static %}
+
+{% block title %}Doctors | IVF Treatment Form{% endblock %}
+{%block content%}
+
+{%include "doctors/doctors.css"%}
+
+
+
+<div class="ivf-form-container mt-5">
+    <div class="card shadow">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-heartbeat"></i>
+                IVF Treatment Form
+            </h5>
+            <i class="fas fa-baby form-icon"></i>
+        </div>
+        <div class="card-body">
+            <div class="success-message" id="successMessage">
+                <i class="fas fa-check-circle"></i>
+                <span>Form submitted successfully!</span>
+            </div>
+
+            <form id="ivfForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="patient_name" class="form-label">
+                            <i class="fas fa-user"></i> Patient Name
+                        </label>
+                        <select id="patient_name" class="form-select select2" required>
+                            <option value="">Select patient</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ivf_package" class="form-label">
+                            <i class="fas fa-box"></i> IVF Package
+                        </label>
+                        <select id="ivf_package" class="form-select select2" required>
+                            <option value="">Choose a package</option>
+                            {% for package in packages %}
+                            <option value="{{ package.id }}">{{ package.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="treatment_location" class="form-label">
+                            <i class="fas fa-map-marker-alt"></i> Treatment Location
+                        </label>
+                        <select id="treatment_location" class="form-select select2" required>
+                            <option value="">Select location</option>
+                            {% for location in locations %}
+                            <option value="{{ location.id }}">{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="doctor_name" class="form-label">
+                            <i class="fas fa-user-md"></i> Doctor's Name
+                        </label>
+                        <input type="text" class="form-select" id="doctor_name" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="doctor_comments" class="form-label">
+                        <i class="fas fa-comments"></i> Doctor's Comments
+                    </label>
+                    <textarea id="doctor_comments" class="form-control" rows="3" placeholder="Enter any additional comments or special instructions..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-paper-plane"></i> Submit Treatment Form
+                </button>
+            </form>
+
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+<script>
+    $(document).ready(function () {
+        $('.select2').select2({
+            width: '100%', // Ensures full-width appearance
+            placeholder: 'Select an option',
+           
+        });
+    });
+</script>
+<script>
+
+    // Handle form submission
+    $('#ivfForm').on('submit', function (e) {
+        e.preventDefault();
+
+        const payload = {
+            patient_name: $('#patient_name').val(),
+            ivf_package: $('#ivf_package').val(),
+            treatment_location: $('#treatment_location').val(),
+            doctor_name: $('#doctor_name').val(),
+            doctor_comments: $('#doctor_comments').val(),
+        };
+
+        $.ajax({
+            url: '/start_ivf/',
+            type: 'POST',
+            data: JSON.stringify(payload),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            success: function (response) {
+                alert('Form submitted successfully!');
+                $('#ivfForm')[0].reset();
+                $('.select2').val(null).trigger('change');
+            },
+            error: function () {
+                alert('Error submitting form');
+            }
+        });
+    });
+
+    // CSRF token function for AJAX
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === name + '=') {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+
+</script>
+
+    {%endblock%}
