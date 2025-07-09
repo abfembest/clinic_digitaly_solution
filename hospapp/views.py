@@ -7757,7 +7757,8 @@ def start_ivf(request):
             'patients': Patient.objects.only('id', 'full_name'),
             'packages': IVFPackage.objects.only('id', 'name'),
             'locations': TreatmentLocation.objects.only('id', 'name'),
-            'ivf_records': IVFRecord.objects.filter(status='open')
+            # Fetch IVF records with 'open' or 'pending' status for the table
+            'ivf_records': IVFRecord.objects.filter(status__in=['open', 'pending']).select_related('patient', 'ivf_package', 'treatment_location')
         }
         return render(request, 'doctors/start_ivf.html', context)
 
@@ -7769,9 +7770,37 @@ def start_ivf(request):
             treatment_location_id=data.get('treatment_location'),
             doctor_name=data.get('doctor_name'),
             doctor_comments=data.get('doctor_comments', ''),
-            created_by=request.user  # If your model supports user tracking
         )
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-#return render(request, 'doctors/start_ivf.html')
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_ivf_status(request):
+    """
+    Updates the status of an IVF record.
+    Expected payload: {'record_id': <int>, 'new_status': <string>}
+    """
+    try:
+        data = json.loads(request.body)
+        record_id = data.get('record_id')
+        new_status = data.get('new_status')
+
+        if not record_id or not new_status:
+            return JsonResponse({'error': 'Missing record_id or new_status'}, status=400)
+
+        ivf_record = get_object_or_404(IVFRecord, id=record_id)
+
+        # Define allowed status transitions (optional, but good practice)
+        allowed_statuses = ['pending', 'in_progress', 'completed', 'cancelled']
+        if new_status not in allowed_statuses:
+            return JsonResponse({'error': f'Invalid status: {new_status}'}, status=400)
+
+        ivf_record.status = new_status
+        ivf_record.save()
+
+        return JsonResponse({'success': True, 'message': f'IVF Record {record_id} status updated to {new_status}'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
