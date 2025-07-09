@@ -7757,8 +7757,8 @@ def start_ivf(request):
             'patients': Patient.objects.only('id', 'full_name'),
             'packages': IVFPackage.objects.only('id', 'name'),
             'locations': TreatmentLocation.objects.only('id', 'name'),
-            # Fetch IVF records with 'open' or 'pending' status for the table
-            'ivf_records': IVFRecord.objects.filter(status__in=['open', 'pending']).select_related('patient', 'ivf_package', 'treatment_location')
+            'open_pending_ivf_records': IVFRecord.objects.filter(status__in=['open', 'pending']).select_related('patient', 'ivf_package', 'treatment_location'),
+            'in_progress_ivf_records': IVFRecord.objects.filter(status='in_progress').select_related('patient', 'ivf_package', 'treatment_location'),
         }
         return render(request, 'doctors/start_ivf.html', context)
 

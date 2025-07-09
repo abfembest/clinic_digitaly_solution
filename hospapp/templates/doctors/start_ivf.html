@@ -8,160 +8,439 @@
 
 {%include "doctors/doctors.css"%}
 
+<section class="content">
+    <div class="container-fluid">
+        <div class="ivf-form-container mt-5">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-heartbeat"></i>
+                        IVF Treatment Form
+                    </h5>
+                    <i class="fas fa-baby form-icon"></i>
+                </div>
+                <div class="card-body">
+                    <form id="ivfForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="patient_name" class="form-label">
+                                    <i class="fas fa-user"></i> Patient Name
+                                </label>
+                                <select id="patient_name" class="form-select select2" required>
+                                    <option value="">Select patient</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-<div class="ivf-form-container mt-5">
-    <div class="card shadow">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-heartbeat"></i>
-                IVF Treatment Form
-            </h5>
-            <i class="fas fa-baby form-icon"></i>
-        </div>
-        <div class="card-body">
-            <!-- Custom Success/Error Message Box -->
-            <div id="customAlertModal" class="custom-modal">
-                <div class="custom-modal-content">
-                    <div class="modal-icon" id="modalIcon"></div>
-                    <h3 class="modal-title" id="modalTitle"></h3>
-                    <p class="modal-message" id="modalMessage"></p>
-                    <button class="modal-close-btn" id="modalCloseBtn">OK</button>
+                            <div class="form-group">
+                                <label for="ivf_package" class="form-label">
+                                    <i class="fas fa-box"></i> IVF Package
+                                </label>
+                                <select id="ivf_package" class="form-select select2" required>
+                                    <option value="">Choose a package</option>
+                                    {% for package in packages %}
+                                    <option value="{{ package.id }}">{{ package.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="treatment_location" class="form-label">
+                                    <i class="fas fa-map-marker-alt"></i> Treatment Location
+                                </label>
+                                <select id="treatment_location" class="form-select select2" required>
+                                    <option value="">Select location</option>
+                                    {% for location in locations %}
+                                    <option value="{{ location.id }}">{{ location.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="doctor_name" class="form-label">
+                                    <i class="fas fa-user-md"></i> Doctor's Name
+                                </label>
+                                <input type="text" class="form-select" id="doctor_name"
+                                    value="{{ request.user.get_full_name }}" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="doctor_comments" class="form-label">
+                                <i class="fas fa-comments"></i> Doctor's Comments
+                            </label>
+                            <textarea id="doctor_comments" class="form-control" rows="3"
+                                placeholder="Enter any additional comments or special instructions..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-paper-plane"></i> Submit Treatment Form
+                        </button>
+                    </form>
                 </div>
             </div>
+        </div>
 
-            <form id="ivfForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="patient_name" class="form-label">
-                            <i class="fas fa-user"></i> Patient Name
-                        </label>
-                        <select id="patient_name" class="form-select select2" required>
-                            <option value="">Select patient</option>
-                            {% for patient in patients %}
-                            <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                            {% endfor %}
-                        </select>
+        <!-- IVF Records Table with Grouped Sections -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-list-alt mr-2"></i>
+                            IVF Cycles Management
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
                     </div>
+                    <div class="card-body">
+                        <!-- Active/Pending Cycles Section -->
+                        {% if open_pending_ivf_records %}
+                        <div class="mb-4">
+                            <h5 class="text-warning mb-3">
+                                <i class="fas fa-clock mr-2"></i>
+                                Active & Pending Cycles ({{ open_pending_ivf_records|length }})
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped table-hover">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th><i class="fas fa-user mr-1"></i>Patient</th>
+                                            <th><i class="fas fa-box mr-1"></i>IVF Package</th>
+                                            <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
+                                            <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
+                                            <th><i class="fas fa-comments mr-1"></i>Comments</th>
+                                            <th><i class="fas fa-flag mr-1"></i>Status</th>
+                                            <th><i class="fas fa-calendar mr-1"></i>Created</th>
+                                            <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in open_pending_ivf_records %}
+                                        <tr id="ivf-record-{{ record.id }}">
+                                            <td>
+                                                <strong>{{ record.patient.full_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ record.patient.patient_id }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-info">{{ record.ivf_package.name }}</span>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-map-marker-alt text-muted mr-1"></i>
+                                                {{ record.treatment_location.name }}
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">{{ record.doctor_name }}</span>
+                                            </td>
+                                            <td>
+                                                {% if record.doctor_comments %}
+                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
+                                                    {{ record.doctor_comments }}
+                                                </span>
+                                                {% else %}
+                                                <span class="text-muted font-italic">No comments</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if record.status == 'open' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-unlock mr-1"></i>Open
+                                                </span>
+                                                {% elif record.status == 'pending' %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-hourglass-half mr-1"></i>Pending
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ record.created_on|date:"M d, Y" }}<br>
+                                                    {{ record.created_on|date:"H:i" }}
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group">
+                                                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#actionModal"
+                                                        data-id="{{ record.id }}" data-action="in_progress" data-title="Start IVF Cycle"
+                                                        data-message="Are you sure you want to start this IVF cycle?"
+                                                        data-confirm-text="Start Cycle" data-confirm-class="btn-success"
+                                                        title="Start Cycle">
+                                                        <i class="fas fa-play"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
+                                                        data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
+                                                        data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
+                                                        data-confirm-text="Cancel Cycle" data-confirm-class="btn-danger"
+                                                        title="Cancel Cycle">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
 
-                    <div class="form-group">
-                        <label for="ivf_package" class="form-label">
-                            <i class="fas fa-box"></i> IVF Package
-                        </label>
-                        <select id="ivf_package" class="form-select select2" required>
-                            <option value="">Choose a package</option>
-                            {% for package in packages %}
-                            <option value="{{ package.id }}">{{ package.name }}</option>
-                            {% endfor %}
-                        </select>
+                        <!-- In Progress Cycles Section -->
+                        {% if in_progress_ivf_records %}
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-spinner mr-2"></i>
+                                In Progress Cycles ({{ in_progress_ivf_records|length }})
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped table-hover">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th><i class="fas fa-user mr-1"></i>Patient</th>
+                                            <th><i class="fas fa-box mr-1"></i>IVF Package</th>
+                                            <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
+                                            <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
+                                            <th><i class="fas fa-comments mr-1"></i>Comments</th>
+                                            <th><i class="fas fa-flag mr-1"></i>Status</th>
+                                            <th><i class="fas fa-calendar mr-1"></i>Created</th>
+                                            <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in in_progress_ivf_records %}
+                                        <tr id="ivf-record-{{ record.id }}" class="table-info">
+                                            <td>
+                                                <strong>{{ record.patient.full_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ record.patient.patient_id }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-info">{{ record.ivf_package.name }}</span>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-map-marker-alt text-muted mr-1"></i>
+                                                {{ record.treatment_location.name }}
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">{{ record.doctor_name }}</span>
+                                            </td>
+                                            <td>
+                                                {% if record.doctor_comments %}
+                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
+                                                    {{ record.doctor_comments }}
+                                                </span>
+                                                {% else %}
+                                                <span class="text-muted font-italic">No comments</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-primary">
+                                                    <i class="fas fa-cog fa-spin mr-1"></i>In Progress
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ record.created_on|date:"M d, Y" }}<br>
+                                                    {{ record.created_on|date:"H:i" }}
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group">
+                                                    <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#actionModal"
+                                                        data-id="{{ record.id }}" data-action="completed" data-title="Complete IVF Cycle"
+                                                        data-message="Are you sure you want to mark this IVF cycle as completed?"
+                                                        data-confirm-text="Complete Cycle" data-confirm-class="btn-primary"
+                                                        title="Complete Cycle">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
+                                                        data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
+                                                        data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
+                                                        data-confirm-text="Cancel Cycle" data-confirm-class="btn-danger"
+                                                        title="Cancel Cycle">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Completed/Cancelled Cycles Section -->
+                        {% if completed_cancelled_ivf_records %}
+                        <div class="mb-4">
+                            <h5 class="text-secondary mb-3">
+                                <i class="fas fa-archive mr-2"></i>
+                                Completed & Cancelled Cycles ({{ completed_cancelled_ivf_records|length }})
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped table-hover">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th><i class="fas fa-user mr-1"></i>Patient</th>
+                                            <th><i class="fas fa-box mr-1"></i>IVF Package</th>
+                                            <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
+                                            <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
+                                            <th><i class="fas fa-comments mr-1"></i>Comments</th>
+                                            <th><i class="fas fa-flag mr-1"></i>Status</th>
+                                            <th><i class="fas fa-calendar mr-1"></i>Created</th>
+                                            <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in completed_cancelled_ivf_records %}
+                                        <tr id="ivf-record-{{ record.id }}" class="table-light">
+                                            <td>
+                                                <strong>{{ record.patient.full_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ record.patient.patient_id }}</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-info">{{ record.ivf_package.name }}</span>
+                                            </td>
+                                            <td>
+                                                <i class="fas fa-map-marker-alt text-muted mr-1"></i>
+                                                {{ record.treatment_location.name }}
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">{{ record.doctor_name }}</span>
+                                            </td>
+                                            <td>
+                                                {% if record.doctor_comments %}
+                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
+                                                    {{ record.doctor_comments }}
+                                                </span>
+                                                {% else %}
+                                                <span class="text-muted font-italic">No comments</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if record.status == 'completed' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle mr-1"></i>Completed
+                                                </span>
+                                                {% elif record.status == 'cancelled' %}
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-times-circle mr-1"></i>Cancelled
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ record.created_on|date:"M d, Y" }}<br>
+                                                    {{ record.created_on|date:"H:i" }}
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#viewModal"
+                                                    data-id="{{ record.id }}" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- No Records Message -->
+                        {% if not open_pending_ivf_records and not in_progress_ivf_records and not completed_cancelled_ivf_records %}
+                        <div class="callout callout-info">
+                            <h5><i class="fas fa-info"></i> No Records Found</h5>
+                            <p>No IVF cycles found. Start by creating a new IVF treatment above.</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="treatment_location" class="form-label">
-                            <i class="fas fa-map-marker-alt"></i> Treatment Location
-                        </label>
-                        <select id="treatment_location" class="form-select select2" required>
-                            <option value="">Select location</option>
-                            {% for location in locations %}
-                            <option value="{{ location.id }}">{{ location.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="doctor_name" class="form-label">
-                            <i class="fas fa-user-md"></i> Doctor's Name
-                        </label>
-                        <input type="text" class="form-select" id="doctor_name" value="{{ request.user.get_full_name }}"
-                            readonly />
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="doctor_comments" class="form-label">
-                        <i class="fas fa-comments"></i> Doctor's Comments
-                    </label>
-                    <textarea id="doctor_comments" class="form-control" rows="3"
-                        placeholder="Enter any additional comments or special instructions..."></textarea>
-                </div>
-
-                <button type="submit" class="btn-submit">
-                    <i class="fas fa-paper-plane"></i> Submit Treatment Form
+<!-- Action Confirmation Modal -->
+<div class="modal fade" id="actionModal" tabindex="-1" role="dialog" aria-labelledby="actionModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="actionModalLabel">Confirm Action</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
                 </button>
-            </form>
+            </div>
+            <div class="modal-body">
+                <p id="actionModalMessage">Are you sure you want to perform this action?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" id="confirmActionBtn">Confirm</button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Table for Pending IVF Cycles -->
-<div class="ivf-table-container mt-5">
-    <div class="card shadow">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-list-alt"></i>
-                Pending IVF Cycles
-            </h5>
-        </div>
-        <div class="card-body">
-            {% if ivf_records %}
-            <div class="table-responsive">
-                <table class="ivf-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>IVF Package</th>
-                            <th>Location</th>
-                            <th>Doctor</th>
-                            <th>Comments</th>
-                            <th>Status</th>
-                            <th>Created On</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in ivf_records %}
-                        <tr id="ivf-record-{{ record.id }}">
-                            <td>{{ record.patient.full_name }}</td>
-                            <td>{{ record.ivf_package.name }}</td>
-                            <td>{{ record.treatment_location.name }}</td>
-                            <td>{{ record.doctor_name }}</td>
-                            <td>{{ record.doctor_comments|default:"N/A" }}</td>
-                            <td>
-                                <span class="status-badge status-{{ record.status|lower }}">
-                                    {{ record.status|capfirst }}
-                                </span>
-                            </td>
-                            <td>{{ record.created_on|date:"M d, Y H:i" }}</td>
-                            <td>
-                                {% if record.status == 'open' or record.status == 'pending' %}
-                                <button class="action-btn btn-start" data-id="{{ record.id }}"
-                                    data-action="in_progress">
-                                    <i class="fas fa-play"></i> Start Cycle
-                                </button>
-                                <button class="action-btn btn-cancel" data-id="{{ record.id }}" data-action="cancelled">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
-                                {% elif record.status == 'in_progress' %}
-                                <button class="action-btn btn-complete" data-id="{{ record.id }}"
-                                    data-action="completed">
-                                    <i class="fas fa-check"></i> Complete Cycle
-                                </button>
-                                <button class="action-btn btn-cancel" data-id="{{ record.id }}" data-action="cancelled">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
-                                {% else %}
-                                <span class="text-muted">No actions</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<!-- View Details Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1" role="dialog" aria-labelledby="viewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="viewModalLabel">IVF Cycle Details</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-            {% else %}
-            <p class="text-center text-muted">No pending IVF cycles found.</p>
-            {% endif %}
+            <div class="modal-body">
+                <div id="viewModalContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Toast Notifications -->
+<div class="toast-container position-fixed" style="top: 20px; right: 20px; z-index: 1050;">
+    <div id="successToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success mr-2"></i>
+            <strong class="mr-auto">Success</strong>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="toast-body text-white" id="successToastMessage">
+            <!-- Success message will be inserted here -->
+        </div>
+    </div>
+
+    <div id="errorToast" class="toast bg-danger" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-exclamation-triangle text-danger mr-2"></i>
+            <strong class="mr-auto">Error</strong>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="toast-body text-white" id="errorToastMessage">
+            <!-- Error message will be inserted here -->
         </div>
     </div>
 </div>
@@ -172,38 +451,24 @@
 <script>
     $(document).ready(function () {
         $('.select2').select2({
-            width: '100%', // Ensures full-width appearance
+            width: '100%',
             placeholder: 'Select an option',
         });
 
-        // Function to show custom modal
-        function showCustomModal(type, title, message) {
-            const modal = $('#customAlertModal');
-            const icon = $('#modalIcon');
-            const modalTitle = $('#modalTitle');
-            const modalMessage = $('#modalMessage');
+        // Variables to store action data
+        let currentRecordId = null;
+        let currentAction = null;
 
-            // Reset classes
-            modal.removeClass('modal-success modal-error');
-            icon.removeClass('fa-check-circle fa-times-circle');
-
-            if (type === 'success') {
-                modal.addClass('modal-success');
-                icon.addClass('fas fa-check-circle');
-            } else if (type === 'error') {
-                modal.addClass('modal-error');
-                icon.addClass('fas fa-times-circle');
-            }
-
-            modalTitle.text(title);
-            modalMessage.text(message);
-            modal.css('display', 'flex'); // Show the modal
+        // Function to show toast notifications
+        function showToast(type, message) {
+            const toastId = type === 'success' ? '#successToast' : '#errorToast';
+            const messageId = type === 'success' ? '#successToastMessage' : '#errorToastMessage';
+            
+            $(messageId).text(message);
+            $(toastId).toast({
+                delay: 5000
+            }).toast('show');
         }
-
-        // Close custom modal
-        $('#modalCloseBtn').on('click', function () {
-            $('#customAlertModal').css('display', 'none'); // Hide the modal
-        });
 
         // Handle form submission
         $('#ivfForm').on('submit', function (e) {
@@ -218,7 +483,7 @@
             };
 
             $.ajax({
-                url: '{% url "start_ivf" %}', // Using named URL
+                url: '{% url "start_ivf" %}',
                 type: 'POST',
                 data: JSON.stringify(payload),
                 contentType: 'application/json',
@@ -227,31 +492,52 @@
                 },
                 success: function (response) {
                     if (response.success) {
-                        showCustomModal('success', 'Success!', 'Form submitted successfully!');
+                        showToast('success', 'IVF treatment form submitted successfully!');
                         $('#ivfForm')[0].reset();
                         $('.select2').val(null).trigger('change');
-                        location.reload(); // Simple reload to refresh the table
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
                     } else {
-                        showCustomModal('error', 'Error!', 'Error submitting form: ' + response.error);
+                        showToast('error', 'Error submitting form: ' + response.error);
                     }
                 },
                 error: function (xhr) {
-                    showCustomModal('error', 'Error!', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
+                    showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
                 }
             });
         });
 
-        // Handle action button clicks for IVF records
-        $(document).on('click', '.action-btn', function () {
-            const recordId = $(this).data('id');
-            const action = $(this).data('action'); // e.g., 'in_progress', 'completed', 'cancelled'
+        // Handle action modal
+        $('#actionModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            currentRecordId = button.data('id');
+            currentAction = button.data('action');
+            
+            const modal = $(this);
+            modal.find('.modal-title').text(button.data('title'));
+            modal.find('#actionModalMessage').text(button.data('message'));
+            
+            const confirmBtn = modal.find('#confirmActionBtn');
+            confirmBtn.text(button.data('confirm-text'));
+            confirmBtn.removeClass().addClass('btn ' + button.data('confirm-class'));
+        });
+
+        // Handle confirm action
+        $('#confirmActionBtn').on('click', function () {
+            const $button = $(this);
+            const originalHtml = $button.html();
+            
+            // Show loading state
+            $button.html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+            $button.prop('disabled', true);
 
             $.ajax({
-                url: '{% url "update_ivf_status" %}', // Using named URL
+                url: '{% url "update_ivf_status" %}',
                 type: 'POST',
                 data: JSON.stringify({
-                    record_id: recordId,
-                    new_status: action
+                    record_id: currentRecordId,
+                    new_status: currentAction
                 }),
                 contentType: 'application/json',
                 headers: {
@@ -259,16 +545,60 @@
                 },
                 success: function (response) {
                     if (response.success) {
-                        showCustomModal('success', 'Success!', response.message);
-                        location.reload(); // Reload the page to reflect the status change
+                        $('#actionModal').modal('hide');
+                        showToast('success', response.message);
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
                     } else {
-                        showCustomModal('error', 'Error!', 'Failed to update status: ' + response.error);
+                        showToast('error', 'Failed to update status: ' + response.error);
+                        $button.html(originalHtml);
+                        $button.prop('disabled', false);
                     }
                 },
                 error: function (xhr) {
-                    showCustomModal('error', 'Error!', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
+                    showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
+                    $button.html(originalHtml);
+                    $button.prop('disabled', false);
                 }
             });
+        });
+
+        // Handle view modal
+        $('#viewModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const recordId = button.data('id');
+            
+            $('#viewModalContent').html(`
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading details...</p>
+                </div>
+            `);
+            
+            // You can implement AJAX call here to fetch detailed information
+            // For now, showing placeholder content
+            setTimeout(() => {
+                $('#viewModalContent').html(`
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Patient Information</h6>
+                            <p><strong>Record ID:</strong> ${recordId}</p>
+                            <p><strong>Status:</strong> <span class="badge badge-secondary">View Only</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Treatment Details</h6>
+                            <p class="text-muted">Detailed information would be loaded here via AJAX...</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="callout callout-info">
+                            <h5>Additional Information</h5>
+                            <p>This is a completed or cancelled IVF cycle. No further actions are available.</p>
+                        </div>
+                    </div>
+                `);
+            }, 1000);
         });
 
         // CSRF token function for AJAX
@@ -287,7 +617,6 @@
             return cookieValue;
         }
     });
-
 </script>
 
 {%endblock%}
