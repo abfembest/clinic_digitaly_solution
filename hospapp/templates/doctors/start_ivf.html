@@ -62,7 +62,7 @@
 
                             <div class="form-group">
                                 <label for="doctor_name" class="form-label">
-                                    <i class="fas fa-user-md"></i> Doctor's Name
+                                    <i class="fas fa-user-md"></i> Doctor&apos;s Name
                                 </label>
                                 <input type="text" class="form-select" id="doctor_name"
                                     value="{{ request.user.get_full_name }}" readonly />
@@ -71,7 +71,7 @@
 
                         <div class="form-group">
                             <label for="doctor_comments" class="form-label">
-                                <i class="fas fa-comments"></i> Doctor's Comments
+                                <i class="fas fa-comments"></i> Doctor&apos;s Comments
                             </label>
                             <textarea id="doctor_comments" class="form-control" rows="3"
                                 placeholder="Enter any additional comments or special instructions..."></textarea>
@@ -85,14 +85,14 @@
             </div>
         </div>
 
-        <!-- IVF Records Table with Grouped Sections -->
+        <!-- IVF Records Table (Consolidated) -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">
                             <i class="fas fa-list-alt mr-2"></i>
-                            IVF Cycles Management
+                            All IVF Cycles
                         </h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -104,263 +104,155 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <!-- Active/Pending Cycles Section -->
-                        {% if open_pending_ivf_records %}
-                        <div class="mb-4">
-                            <h5 class="text-warning mb-3">
-                                <i class="fas fa-clock mr-2"></i>
-                                Active & Pending Cycles ({{ open_pending_ivf_records|length }})
-                            </h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-striped table-hover">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                            <th><i class="fas fa-box mr-1"></i>IVF Package</th>
-                                            <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
-                                            <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
-                                            <th><i class="fas fa-comments mr-1"></i>Comments</th>
-                                            <th><i class="fas fa-flag mr-1"></i>Status</th>
-                                            <th><i class="fas fa-calendar mr-1"></i>Created</th>
-                                            <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for record in open_pending_ivf_records %}
-                                        <tr id="ivf-record-{{ record.id }}">
-                                            <td>
-                                                <strong>{{ record.patient.full_name }}</strong>
-                                                <br>
-                                                <small class="text-muted">{{ record.patient.patient_id }}</small>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-info">{{ record.ivf_package.name }}</span>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-map-marker-alt text-muted mr-1"></i>
-                                                {{ record.treatment_location.name }}
-                                            </td>
-                                            <td>
-                                                <span class="text-muted">{{ record.doctor_name }}</span>
-                                            </td>
-                                            <td>
-                                                {% if record.doctor_comments %}
-                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
-                                                    {{ record.doctor_comments }}
-                                                </span>
-                                                {% else %}
-                                                <span class="text-muted font-italic">No comments</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if record.status == 'open' %}
-                                                <span class="badge badge-success">
-                                                    <i class="fas fa-unlock mr-1"></i>Open
-                                                </span>
-                                                {% elif record.status == 'pending' %}
-                                                <span class="badge badge-warning">
-                                                    <i class="fas fa-hourglass-half mr-1"></i>Pending
-                                                </span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    {{ record.created_on|date:"M d, Y" }}<br>
-                                                    {{ record.created_on|date:"H:i" }}
-                                                </small>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group">
-                                                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#actionModal"
-                                                        data-id="{{ record.id }}" data-action="in_progress" data-title="Start IVF Cycle"
-                                                        data-message="Are you sure you want to start this IVF cycle?"
-                                                        data-confirm-text="Start Cycle" data-confirm-class="btn-success"
-                                                        title="Start Cycle">
-                                                        <i class="fas fa-play"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
-                                                        data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
-                                                        data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
-                                                        data-confirm-text="Cancel Cycle" data-confirm-class="btn-danger"
-                                                        title="Cancel Cycle">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- In Progress Cycles Section -->
-                        {% if in_progress_ivf_records %}
-                        <div class="mb-4">
-                            <h5 class="text-primary mb-3">
-                                <i class="fas fa-spinner mr-2"></i>
-                                In Progress Cycles ({{ in_progress_ivf_records|length }})
-                            </h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-striped table-hover">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                            <th><i class="fas fa-box mr-1"></i>IVF Package</th>
-                                            <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
-                                            <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
-                                            <th><i class="fas fa-comments mr-1"></i>Comments</th>
-                                            <th><i class="fas fa-flag mr-1"></i>Status</th>
-                                            <th><i class="fas fa-calendar mr-1"></i>Created</th>
-                                            <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for record in in_progress_ivf_records %}
-                                        <tr id="ivf-record-{{ record.id }}" class="table-info">
-                                            <td>
-                                                <strong>{{ record.patient.full_name }}</strong>
-                                                <br>
-                                                <small class="text-muted">{{ record.patient.patient_id }}</small>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-info">{{ record.ivf_package.name }}</span>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-map-marker-alt text-muted mr-1"></i>
-                                                {{ record.treatment_location.name }}
-                                            </td>
-                                            <td>
-                                                <span class="text-muted">{{ record.doctor_name }}</span>
-                                            </td>
-                                            <td>
-                                                {% if record.doctor_comments %}
-                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
-                                                    {{ record.doctor_comments }}
-                                                </span>
-                                                {% else %}
-                                                <span class="text-muted font-italic">No comments</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-primary">
-                                                    <i class="fas fa-cog fa-spin mr-1"></i>In Progress
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    {{ record.created_on|date:"M d, Y" }}<br>
-                                                    {{ record.created_on|date:"H:i" }}
-                                                </small>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group">
-                                                    <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#actionModal"
-                                                        data-id="{{ record.id }}" data-action="completed" data-title="Complete IVF Cycle"
-                                                        data-message="Are you sure you want to mark this IVF cycle as completed?"
-                                                        data-confirm-text="Complete Cycle" data-confirm-class="btn-primary"
-                                                        title="Complete Cycle">
-                                                        <i class="fas fa-check"></i>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
-                                                        data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
-                                                        data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
-                                                        data-confirm-text="Cancel Cycle" data-confirm-class="btn-danger"
-                                                        title="Cancel Cycle">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- Completed/Cancelled Cycles Section -->
-                        {% if completed_cancelled_ivf_records %}
-                        <div class="mb-4">
-                            <h5 class="text-secondary mb-3">
-                                <i class="fas fa-archive mr-2"></i>
-                                Completed & Cancelled Cycles ({{ completed_cancelled_ivf_records|length }})
-                            </h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-striped table-hover">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                            <th><i class="fas fa-box mr-1"></i>IVF Package</th>
-                                            <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
-                                            <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
-                                            <th><i class="fas fa-comments mr-1"></i>Comments</th>
-                                            <th><i class="fas fa-flag mr-1"></i>Status</th>
-                                            <th><i class="fas fa-calendar mr-1"></i>Created</th>
-                                            <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for record in completed_cancelled_ivf_records %}
-                                        <tr id="ivf-record-{{ record.id }}" class="table-light">
-                                            <td>
-                                                <strong>{{ record.patient.full_name }}</strong>
-                                                <br>
-                                                <small class="text-muted">{{ record.patient.patient_id }}</small>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-info">{{ record.ivf_package.name }}</span>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-map-marker-alt text-muted mr-1"></i>
-                                                {{ record.treatment_location.name }}
-                                            </td>
-                                            <td>
-                                                <span class="text-muted">{{ record.doctor_name }}</span>
-                                            </td>
-                                            <td>
-                                                {% if record.doctor_comments %}
-                                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
-                                                    {{ record.doctor_comments }}
-                                                </span>
-                                                {% else %}
-                                                <span class="text-muted font-italic">No comments</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if record.status == 'completed' %}
-                                                <span class="badge badge-success">
-                                                    <i class="fas fa-check-circle mr-1"></i>Completed
-                                                </span>
-                                                {% elif record.status == 'cancelled' %}
-                                                <span class="badge badge-danger">
-                                                    <i class="fas fa-times-circle mr-1"></i>Cancelled
-                                                </span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    {{ record.created_on|date:"M d, Y" }}<br>
-                                                    {{ record.created_on|date:"H:i" }}
-                                                </small>
-                                            </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#viewModal"
-                                                    data-id="{{ record.id }}" title="View Details">
-                                                    <i class="fas fa-eye"></i>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th><i class="fas fa-user mr-1"></i>Patient</th>
+                                        <th><i class="fas fa-box mr-1"></i>IVF Package</th>
+                                        <th><i class="fas fa-map-marker-alt mr-1"></i>Location</th>
+                                        <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
+                                        <th><i class="fas fa-comments mr-1"></i>Comments</th>
+                                        <th><i class="fas fa-flag mr-1"></i>Status</th>
+                                        <th><i class="fas fa-calendar mr-1"></i>Created</th>
+                                        <th class="text-center"><i class="fas fa-cogs mr-1"></i>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in all_ivf_records %}
+                                    <tr id="ivf-record-{{ record.id }}" class="
+                                        {% if record.status == 'in_progress' %}table-info
+                                        {% elif record.status == 'completed' %}table-success
+                                        {% elif record.status == 'cancelled' %}table-danger
+                                        {% endif %}
+                                    ">
+                                        <td>
+                                            <strong>{{ record.patient.full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ record.patient.patient_id }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-info">{{ record.ivf_package.name }}</span>
+                                        </td>
+                                        <td>
+                                            <i class="fas fa-map-marker-alt text-muted mr-1"></i>
+                                            {{ record.treatment_location.name }}
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">{{ record.doctor_name }}</span>
+                                        </td>
+                                        <td>
+                                            {% if record.doctor_comments %}
+                                            <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ record.doctor_comments }}">
+                                                {{ record.doctor_comments }}
+                                            </span>
+                                            {% else %}
+                                            <span class="text-muted font-italic">No comments</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.status == 'open' %}
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-unlock mr-1"></i>Open
+                                            </span>
+                                            {% elif record.status == 'pending' %}
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-hourglass-half mr-1"></i>Pending
+                                            </span>
+                                            {% elif record.status == 'in_progress' %}
+                                            <span class="badge badge-primary">
+                                                <i class="fas fa-cog fa-spin mr-1"></i>In Progress
+                                            </span>
+                                            {% elif record.status == 'stimulation' %}
+                                            <span class="badge badge-info">
+                                                <i class="fas fa-syringe mr-1"></i>Stimulation
+                                            </span>
+                                            {% elif record.status == 'egg_retrieval' %}
+                                            <span class="badge badge-info">
+                                                <i class="fas fa-egg mr-1"></i>Egg Retrieval
+                                            </span>
+                                            {% elif record.status == 'fertilization' %}
+                                            <span class="badge badge-info">
+                                                <i class="fas fa-flask mr-1"></i>Fertilization
+                                            </span>
+                                            {% elif record.status == 'embryo_transfer' %}
+                                            <span class="badge badge-info">
+                                                <i class="fas fa-baby-carriage mr-1"></i>Embryo Transfer
+                                            </span>
+                                            {% elif record.status == 'luteal_phase' %}
+                                            <span class="badge badge-info">
+                                                <i class="fas fa-calendar-alt mr-1"></i>Luteal Phase
+                                            </span>
+                                            {% elif record.status == 'pregnancy_test' %}
+                                            <span class="badge badge-info">
+                                                <i class="fas fa-vial mr-1"></i>Pregnancy Test
+                                            </span>
+                                            {% elif record.status == 'completed' %}
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-check-circle mr-1"></i>Completed
+                                            </span>
+                                            {% elif record.status == 'cancelled' %}
+                                            <span class="badge badge-danger">
+                                                <i class="fas fa-times-circle mr-1"></i>Cancelled
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ record.created_on|date:"M d, Y" }}<br>
+                                                {{ record.created_on|date:"H:i" }}
+                                            </small>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group">
+                                                {% if record.status == 'open' or record.status == 'pending' %}
+                                                <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#actionModal"
+                                                    data-id="{{ record.id }}" data-action="in_progress" data-title="Start IVF Cycle"
+                                                    data-message="Are you sure you want to start this IVF cycle?"
+                                                    data-confirm-text="Start Cycle" data-confirm-class="btn-success"
+                                                    title="Start Cycle">
+                                                    <i class="fas fa-play"></i> Start
                                                 </button>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
+                                                    data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
+                                                    data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
+                                                    data-confirm-text="Cancel Cycle" data-confirm-class="btn-danger"
+                                                    title="Cancel Cycle">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                                {% elif record.status == 'in_progress' or record.status == 'stimulation' or record.status == 'egg_retrieval' or record.status == 'fertilization' or record.status == 'embryo_transfer' or record.status == 'luteal_phase' or record.status == 'pregnancy_test' %}
+                                                <button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#progressModal" data-record-id="{{ record.id }}" title="View/Update Progress">
+                                                    <i class="fas fa-eye"></i> Progress
+                                                </button>
+                                                <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#actionModal"
+                                                    data-id="{{ record.id }}" data-action="completed" data-title="Complete IVF Cycle"
+                                                    data-message="Are you sure you want to mark this IVF cycle as completed?"
+                                                    data-confirm-text="Complete Cycle" data-confirm-class="btn-primary"
+                                                    title="Complete Cycle">
+                                                    <i class="fas fa-check"></i> Complete
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
+                                                    data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
+                                                    data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
+                                                    data-confirm-text="Cancel Cycle" data-confirm-class="btn-danger"
+                                                    title="Cancel Cycle">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                                {% elif record.status == 'completed' or record.status == 'cancelled' %}
+                                                <button class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#progressModal"
+                                                    data-record-id="{{ record.id }}" title="View Details">
+                                                    <i class="fas fa-eye"></i> View Progress
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        {% endif %}
-
                         <!-- No Records Message -->
-                        {% if not open_pending_ivf_records and not in_progress_ivf_records and not completed_cancelled_ivf_records %}
+                        {% if not all_ivf_records %}
                         <div class="callout callout-info">
                             <h5><i class="fas fa-info"></i> No Records Found</h5>
                             <p>No IVF cycles found. Start by creating a new IVF treatment above.</p>
@@ -394,19 +286,51 @@
     </div>
 </div>
 
-<!-- View Details Modal -->
-<div class="modal fade" id="viewModal" tabindex="-1" role="dialog" aria-labelledby="viewModalLabel" aria-hidden="true">
+<!-- Progress/Timeline Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title" id="viewModalLabel">IVF Cycle Details</h4>
+                <h4 class="modal-title" id="progressModalLabel">IVF Cycle Progress & Actions</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <div id="viewModalContent">
-                    <!-- Content will be loaded dynamically -->
+                <div id="progressModalHeader">
+                    <!-- Record details will be loaded here -->
+                </div>
+                <hr>
+                <h5>Update Progress</h5>
+                <form id="updateProgressForm" class="mb-4">
+                    <input type="hidden" id="progressRecordId">
+                    <div class="form-group">
+                        <label for="newProgressStatus">Change Status:</label>
+                        <select id="newProgressStatus" class="form-control">
+                            {% for status_value, status_label in ivf_progress_statuses %}
+                            <option value="{{ status_value }}">{{ status_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="progressComments">Comments:</label>
+                        <textarea id="progressComments" class="form-control" rows="3" placeholder="Add comments for this update..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm" id="submitProgressUpdateBtn">
+                        <i class="fas fa-save"></i> Save Progress Update
+                    </button>
+                    <button type="button" class="btn btn-info btn-sm ml-2" id="addCommentOnlyBtn">
+                        <i class="fas fa-comment"></i> Add Comment Only
+                    </button>
+                </form>
+                <hr>
+                <h5>Progress Timeline</h5>
+                <div class="timeline" id="progressTimelineContent">
+                    <!-- Timeline will be loaded dynamically -->
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading timeline...</p>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -418,11 +342,11 @@
 
 <!-- Success/Error Toast Notifications -->
 <div class="toast-container position-fixed" style="top: 20px; right: 20px; z-index: 1050;">
-    <div id="successToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="successToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true" data-delay="7000">
         <div class="toast-header">
-            <i class="fas fa-check-circle text-success mr-2"></i>
-            <strong class="mr-auto">Success</strong>
-            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <i class="fas fa-check-circle text-white mr-2"></i> <!-- Changed text-success to text-white for better contrast on bg-success -->
+            <strong class="mr-auto text-white">Success</strong>
+            <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
         </div>
@@ -431,11 +355,11 @@
         </div>
     </div>
 
-    <div id="errorToast" class="toast bg-danger" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="errorToast" class="toast bg-danger" role="alert" aria-live="assertive" aria-atomic="true" data-delay="7000">
         <div class="toast-header">
-            <i class="fas fa-exclamation-triangle text-danger mr-2"></i>
-            <strong class="mr-auto">Error</strong>
-            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <i class="fas fa-exclamation-triangle text-white mr-2"></i> <!-- Changed text-danger to text-white for better contrast on bg-danger -->
+            <strong class="mr-auto text-white">Error</strong>
+            <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
         </div>
@@ -446,14 +370,22 @@
 </div>
 
 <!-- Scripts -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+<script src="{% static 'dist/js/adminlte.min.js' %}"></script>
 <script>
     $(document).ready(function () {
-        $('.select2').select2({
-            width: '100%',
-            placeholder: 'Select an option',
-        });
+        // Ensure Select2 is initialized only if it's available
+        if ($.fn.select2) {
+            $('.select2').select2({
+                width: '100%',
+                placeholder: 'Select an option',
+                allowClear: true // Allows clearing the selection
+            });
+        } else {
+            console.warn('Select2 not found. Ensure it is loaded in your base template.');
+        }
 
         // Variables to store action data
         let currentRecordId = null;
@@ -465,12 +397,26 @@
             const messageId = type === 'success' ? '#successToastMessage' : '#errorToastMessage';
             
             $(messageId).text(message);
-            $(toastId).toast({
-                delay: 5000
-            }).toast('show');
+            $(toastId).toast('show'); // No need to set delay here if data-delay is on the HTML element
         }
 
-        // Handle form submission
+        // CSRF token function for AJAX
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === name + '=') {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Handle form submission for new IVF record
         $('#ivfForm').on('submit', function (e) {
             e.preventDefault();
 
@@ -492,12 +438,16 @@
                 },
                 success: function (response) {
                     if (response.success) {
-                        showToast('success', 'IVF treatment form submitted successfully!');
+                        showToast('success', response.message);
                         $('#ivfForm')[0].reset();
-                        $('.select2').val(null).trigger('change');
+                        // Only trigger change if select2 is initialized
+                        if ($.fn.select2) {
+                            $('.select2').val(null).trigger('change');
+                        }
+                        // Reload the page after a short delay to see the updated table
                         setTimeout(() => {
                             location.reload();
-                        }, 1500);
+                        }, 2000); 
                     } else {
                         showToast('error', 'Error submitting form: ' + response.error);
                     }
@@ -508,7 +458,7 @@
             });
         });
 
-        // Handle action modal
+        // Handle action confirmation modal (Start/Complete/Cancel)
         $('#actionModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
             currentRecordId = button.data('id');
@@ -523,7 +473,7 @@
             confirmBtn.removeClass().addClass('btn ' + button.data('confirm-class'));
         });
 
-        // Handle confirm action
+        // Handle confirm action for Start/Complete/Cancel
         $('#confirmActionBtn').on('click', function () {
             const $button = $(this);
             const originalHtml = $button.html();
@@ -537,7 +487,8 @@
                 type: 'POST',
                 data: JSON.stringify({
                     record_id: currentRecordId,
-                    new_status: currentAction
+                    new_status: currentAction,
+                    comments: `Status changed to '${currentAction}' via action button.` // Default comment
                 }),
                 contentType: 'application/json',
                 headers: {
@@ -548,13 +499,13 @@
                         $('#actionModal').modal('hide');
                         showToast('success', response.message);
                         setTimeout(() => {
-                            location.reload();
-                        }, 1500);
+                            location.reload(); // Reload to update table sections
+                        }, 2000);
                     } else {
                         showToast('error', 'Failed to update status: ' + response.error);
-                        $button.html(originalHtml);
-                        $button.prop('disabled', false);
                     }
+                    $button.html(originalHtml);
+                    $button.prop('disabled', false);
                 },
                 error: function (xhr) {
                     showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
@@ -564,58 +515,440 @@
             });
         });
 
-        // Handle view modal
-        $('#viewModal').on('show.bs.modal', function (event) {
+        // Handle Progress/Timeline Modal
+        $('#progressModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
-            const recordId = button.data('id');
-            
-            $('#viewModalContent').html(`
+            const recordId = button.data('record-id');
+            $('#progressRecordId').val(recordId); // Set the hidden input for updates
+
+            // Reset form fields
+            $('#newProgressStatus').val('');
+            $('#progressComments').val('');
+
+            // Show loading state for timeline
+            $('#progressTimelineContent').html(`
                 <div class="text-center">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p class="mt-2">Loading details...</p>
+                    <p class="mt-2">Loading timeline...</p>
                 </div>
             `);
-            
-            // You can implement AJAX call here to fetch detailed information
-            // For now, showing placeholder content
-            setTimeout(() => {
-                $('#viewModalContent').html(`
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-primary">Patient Information</h6>
-                            <p><strong>Record ID:</strong> ${recordId}</p>
-                            <p><strong>Status:</strong> <span class="badge badge-secondary">View Only</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-primary">Treatment Details</h6>
-                            <p class="text-muted">Detailed information would be loaded here via AJAX...</p>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <div class="callout callout-info">
-                            <h5>Additional Information</h5>
-                            <p>This is a completed or cancelled IVF cycle. No further actions are available.</p>
-                        </div>
-                    </div>
-                `);
-            }, 1000);
+
+            // Fetch progress data
+            $.ajax({
+                url: `/ivf/progress/${recordId}/`,
+                type: 'GET',
+                success: function (response) {
+                    if (response.success) {
+                        const recordDetails = response.record_details;
+                        const timeline = response.timeline;
+
+                        // Populate modal header
+                        $('#progressModalHeader').html(`
+                            <p><strong>Patient:</strong> ${recordDetails.patient_name}</p>
+                            <p><strong>IVF Package:</strong> ${recordDetails.ivf_package}</p>
+                            <p><strong>Current Status:</strong> <span class="badge badge-primary">${recordDetails.current_status}</span></p>
+                            <p><strong>Doctor:</strong> ${recordDetails.doctor_name}</p>
+                            <p><strong>Cycle Started On:</strong> ${recordDetails.created_on}</p>
+                        `);
+
+                        // Populate the status dropdown with the current status pre-selected
+                        // Normalize the status string to match option values (lowercase, replace spaces with underscores)
+                        const currentStatusNormalized = recordDetails.current_status.toLowerCase().replace(/ /g, '_');
+                        $('#newProgressStatus').val(currentStatusNormalized);
+
+
+                        // Render timeline using AdminLTE3 classes
+                        let timelineHtml = '<div class="timeline">';
+                        if (timeline.length > 0) {
+                            timeline.forEach(entry => {
+                                // Determine icon and color based on entry type or status
+                                let iconClass = 'fas fa-info-circle'; // Default icon
+                                let badgeClass = 'bg-secondary'; // Default color
+                                let title = '';
+                                let bodyContent = '';
+                                let recordedBy = 'N/A';
+
+                                switch (entry.type) {
+                                    case 'status_update':
+                                        iconClass = 'fas fa-sync-alt';
+                                        title = `Status Update: ${entry.status}`;
+                                        bodyContent = entry.comments ? `<p>${entry.comments}</p>` : '<p class="text-muted font-italic">No specific comments for this update.</p>';
+                                        recordedBy = entry.updated_by;
+                                        
+                                        switch (entry.status.toLowerCase().replace(/ /g, '_')) {
+                                            case 'open': badgeClass = 'bg-success'; break;
+                                            case 'pending': badgeClass = 'bg-warning'; break;
+                                            case 'in_progress': badgeClass = 'bg-primary'; break;
+                                            case 'stimulation': badgeClass = 'bg-info'; break;
+                                            case 'egg_retrieval': badgeClass = 'bg-info'; break;
+                                            case 'fertilization': badgeClass = 'bg-info'; break;
+                                            case 'embryo_transfer': badgeClass = 'bg-info'; break;
+                                            case 'luteal_phase': badgeClass = 'bg-info'; break;
+                                            case 'pregnancy_test': badgeClass = 'bg-info'; break;
+                                            case 'completed': badgeClass = 'bg-success'; break;
+                                            case 'cancelled': badgeClass = 'bg-danger'; break;
+                                            default: badgeClass = 'bg-secondary'; break;
+                                        }
+                                        break;
+                                    case 'vitals':
+                                        iconClass = 'fas fa-heartbeat';
+                                        badgeClass = 'bg-danger';
+                                        title = `Vitals Recorded`;
+                                        bodyContent = `
+                                            <p><strong>BP:</strong> ${entry.blood_pressure || 'N/A'}</p>
+                                            <p><strong>Temp:</strong> ${entry.temperature || 'N/A'}°C</p>
+                                            <p><strong>Pulse:</strong> ${entry.pulse || 'N/A'} bpm</p>
+                                            <p><strong>Resp Rate:</strong> ${entry.respiratory_rate || 'N/A'}</p>
+                                            <p><strong>Weight:</strong> ${entry.weight || 'N/A'} kg</p>
+                                            <p><strong>Height:</strong> ${entry.height || 'N/A'} cm</p>
+                                            <p><strong>BMI:</strong> ${entry.bmi || 'N/A'}</p>
+                                            ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                        `;
+                                        recordedBy = entry.recorded_by;
+                                        break;
+                                    case 'lab_test':
+                                        iconClass = 'fas fa-flask';
+                                        badgeClass = 'bg-purple';
+                                        title = `Lab Test: ${entry.test_name}`;
+                                        bodyContent = `
+                                            <p><strong>Status:</strong> ${entry.status}</p>
+                                            <p><strong>Result:</strong> ${entry.result_value || 'N/A'}</p>
+                                            ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                            <p>Requested by: ${entry.requested_by}</p>
+                                            <p>Performed by: ${entry.performed_by}</p>
+                                        `;
+                                        recordedBy = entry.requested_by; // Or performed_by, depending on preference
+                                        break;
+                                    case 'consultation':
+                                        iconClass = 'fas fa-user-md';
+                                        badgeClass = 'bg-primary';
+                                        title = `Consultation by Dr. ${entry.doctor}`;
+                                        bodyContent = `
+                                            <p><strong>Symptoms:</strong> ${entry.symptoms}</p>
+                                            <p><strong>Diagnosis:</strong> ${entry.diagnosis_summary}</p>
+                                            <p><strong>Advice:</strong> ${entry.advice}</p>
+                                        `;
+                                        recordedBy = entry.doctor;
+                                        break;
+                                    case 'nursing_note':
+                                        iconClass = 'fas fa-notes-medical';
+                                        badgeClass = 'bg-teal';
+                                        title = `Nursing Note (${entry.note_type})`;
+                                        bodyContent = `
+                                            <p>${entry.notes}</p>
+                                            <p>Nurse: ${entry.nurse}</p>
+                                        `;
+                                        recordedBy = entry.nurse;
+                                        break;
+                                    default:
+                                        iconClass = 'fas fa-question-circle';
+                                        badgeClass = 'bg-secondary';
+                                        title = `Unknown Event Type`;
+                                        bodyContent = `<p>Details: ${JSON.stringify(entry)}</p>`;
+                                        recordedBy = 'System';
+                                        break;
+                                }
+
+                                timelineHtml += `
+                                    <!-- timeline item -->
+                                    <div>
+                                        <i class="${iconClass} ${badgeClass}"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="far fa-clock"></i> ${entry.timestamp}</span>
+                                            <h3 class="timeline-header">${title}</h3>
+                                            <div class="timeline-body">
+                                                ${bodyContent}
+                                            </div>
+                                            <div class="timeline-footer">
+                                                <small class="text-muted">Recorded by: ${recordedBy}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- END timeline item -->
+                                `;
+                            });
+                            // Add the "End of timeline" entry
+                            timelineHtml += `
+                                <div>
+                                    <i class="fas fa-clock bg-gray"></i>
+                                </div>
+                            `;
+                        } else {
+                            timelineHtml += `
+                                <div>
+                                    <div class="timeline-item">
+                                        <h3 class="timeline-header">No progress updates yet.</h3>
+                                        <div class="timeline-body">
+                                            <p class="text-muted">This cycle has just started or has no recorded progress entries.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        timelineHtml += '</div>'; // Close .timeline div
+                        $('#progressTimelineContent').html(timelineHtml);
+                    } else {
+                        $('#progressModalHeader').html(`<p class="text-danger">Error loading record details: ${response.error}</p>`);
+                        $('#progressTimelineContent').html(`<p class="text-danger">Error loading timeline: ${response.error}</p>`);
+                    }
+                },
+                error: function (xhr) {
+                    const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
+                    $('#progressModalHeader').html(`<p class="text-danger">Error: ${errorMessage}</p>`);
+                    $('#progressTimelineContent').html(`<p class="text-danger">Error: ${errorMessage}</p>`);
+                }
+            });
         });
 
-        // CSRF token function for AJAX
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === name + '=') {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
+        // Handle submitting progress update
+        $('#updateProgressForm').on('submit', function(e) {
+            e.preventDefault();
+            const recordId = $('#progressRecordId').val();
+            const newStatus = $('#newProgressStatus').val();
+            const comments = $('#progressComments').val();
+
+            if (!newStatus) {
+                showToast('error', 'Please select a new status.');
+                return;
             }
-            return cookieValue;
-        }
+
+            const $button = $('#submitProgressUpdateBtn');
+            const originalHtml = $button.html();
+            $button.html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            $button.prop('disabled', true);
+            $('#addCommentOnlyBtn').prop('disabled', true);
+
+
+            $.ajax({
+                url: '{% url "update_ivf_status" %}', // Use the existing update status endpoint
+                type: 'POST',
+                data: JSON.stringify({
+                    record_id: recordId,
+                    new_status: newStatus,
+                    comments: comments
+                }),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('success', response.message);
+                        // Reload the page after a short delay to see the updated table and potentially new buttons
+                        setTimeout(() => {
+                            location.reload(); 
+                        }, 2000);
+                        // Reset form fields
+                        $('#progressComments').val('');
+                        $('#progressModal').modal('hide'); // Hide the modal after successful update
+                    } else {
+                        showToast('error', 'Failed to update progress: ' + response.error);
+                    }
+                    $button.html(originalHtml);
+                    $button.prop('disabled', false);
+                    $('#addCommentOnlyBtn').prop('disabled', false);
+                },
+                error: function(xhr) {
+                    showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
+                    $button.html(originalHtml);
+                    $button.prop('disabled', false);
+                }
+            });
+        });
+
+        // Handle adding comment only
+        $('#addCommentOnlyBtn').on('click', function() {
+            const recordId = $('#progressRecordId').val();
+            const comments = $('#progressComments').val();
+
+            if (!comments) {
+                showToast('error', 'Please enter comments to add.');
+                return;
+            }
+
+            const $button = $(this);
+            const originalHtml = $button.html();
+            $button.html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+            $button.prop('disabled', true);
+            $('#submitProgressUpdateBtn').prop('disabled', true);
+
+            $.ajax({
+                url: '{% url "add_ivf_progress_comment" %}', // New endpoint for comments only
+                type: 'POST',
+                data: JSON.stringify({
+                    record_id: recordId,
+                    comments: comments
+                }),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('success', response.message);
+                        // Reload the progress modal content to show the updated timeline
+                        // Instead of hiding and showing the modal, just re-fetch the timeline data
+                        // and update the content without closing the modal.
+                        // This provides a smoother UX.
+                        $.ajax({
+                            url: `/ivf/progress/${recordId}/`,
+                            type: 'GET',
+                            success: function (response) {
+                                if (response.success) {
+                                    const timeline = response.timeline;
+                                    let timelineHtml = '<div class="timeline">'; // Changed to div
+                                    if (timeline.length > 0) {
+                                        timeline.forEach(entry => {
+                                            let iconClass = 'fas fa-info-circle'; 
+                                            let badgeClass = 'bg-secondary'; 
+                                            let title = '';
+                                            let bodyContent = '';
+                                            let recordedBy = 'N/A';
+
+                                            switch (entry.type) {
+                                                case 'status_update':
+                                                    iconClass = 'fas fa-sync-alt';
+                                                    title = `Status Update: ${entry.status}`;
+                                                    bodyContent = entry.comments ? `<p>${entry.comments}</p>` : '<p class="text-muted font-italic">No specific comments for this update.</p>';
+                                                    recordedBy = entry.updated_by;
+                                                    
+                                                    switch (entry.status.toLowerCase().replace(/ /g, '_')) {
+                                                        case 'open': badgeClass = 'bg-success'; break;
+                                                        case 'pending': badgeClass = 'bg-warning'; break;
+                                                        case 'in_progress': badgeClass = 'bg-primary'; break;
+                                                        case 'stimulation': badgeClass = 'bg-info'; break;
+                                                        case 'egg_retrieval': badgeClass = 'bg-info'; break;
+                                                        case 'fertilization': badgeClass = 'bg-info'; break;
+                                                        case 'embryo_transfer': badgeClass = 'bg-info'; break;
+                                                        case 'luteal_phase': badgeClass = 'bg-info'; break;
+                                                        case 'pregnancy_test': badgeClass = 'bg-info'; break;
+                                                        case 'completed': badgeClass = 'bg-success'; break;
+                                                        case 'cancelled': badgeClass = 'bg-danger'; break;
+                                                        default: badgeClass = 'bg-secondary'; break;
+                                                    }
+                                                    break;
+                                                case 'vitals':
+                                                    iconClass = 'fas fa-heartbeat';
+                                                    badgeClass = 'bg-danger';
+                                                    title = `Vitals Recorded`;
+                                                    bodyContent = `
+                                                        <p><strong>BP:</strong> ${entry.blood_pressure || 'N/A'}</p>
+                                                        <p><strong>Temp:</strong> ${entry.temperature || 'N/A'}°C</p>
+                                                        <p><strong>Pulse:</strong> ${entry.pulse || 'N/A'} bpm</p>
+                                                        <p><strong>Resp Rate:</strong> ${entry.respiratory_rate || 'N/A'}</p>
+                                                        <p><strong>Weight:</strong> ${entry.weight || 'N/A'} kg</p>
+                                                        <p><strong>Height:</strong> ${entry.height || 'N/A'} cm</p>
+                                                        <p><strong>BMI:</strong> ${entry.bmi || 'N/A'}</p>
+                                                        ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                                    `;
+                                                    recordedBy = entry.recorded_by;
+                                                    break;
+                                                case 'lab_test':
+                                                    iconClass = 'fas fa-flask';
+                                                    badgeClass = 'bg-purple';
+                                                    title = `Lab Test: ${entry.test_name}`;
+                                                    bodyContent = `
+                                                        <p><strong>Status:</strong> ${entry.status}</p>
+                                                        <p><strong>Result:</strong> ${entry.result_value || 'N/A'}</p>
+                                                        ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                                        <p>Requested by: ${entry.requested_by}</p>
+                                                        <p>Performed by: ${entry.performed_by}</p>
+                                                    `;
+                                                    recordedBy = entry.requested_by; // Or performed_by, depending on preference
+                                                    break;
+                                                case 'consultation':
+                                                    iconClass = 'fas fa-user-md';
+                                                    badgeClass = 'bg-primary';
+                                                    title = `Consultation by Dr. ${entry.doctor}`;
+                                                    bodyContent = `
+                                                        <p><strong>Symptoms:</strong> ${entry.symptoms}</p>
+                                                        <p><strong>Diagnosis:</strong> ${entry.diagnosis_summary}</p>
+                                                        <p><strong>Advice:</strong> ${entry.advice}</p>
+                                                    `;
+                                                    recordedBy = entry.doctor;
+                                                    break;
+                                                case 'nursing_note':
+                                                    iconClass = 'fas fa-notes-medical';
+                                                    badgeClass = 'bg-teal';
+                                                    title = `Nursing Note (${entry.note_type})`;
+                                                    bodyContent = `
+                                                        <p>${entry.notes}</p>
+                                                        <p>Nurse: ${entry.nurse}</p>
+                                                    `;
+                                                    recordedBy = entry.nurse;
+                                                    break;
+                                                default:
+                                                    iconClass = 'fas fa-question-circle';
+                                                    badgeClass = 'bg-secondary';
+                                                    title = `Unknown Event Type`;
+                                                    bodyContent = `<p>Details: ${JSON.stringify(entry)}</p>`;
+                                                    recordedBy = 'System';
+                                                    break;
+                                            }
+                                            timelineHtml += `
+                                                <!-- timeline item -->
+                                                <div>
+                                                    <i class="${iconClass} ${badgeClass}"></i>
+                                                    <div class="timeline-item">
+                                                        <span class="time"><i class="far fa-clock"></i> ${entry.timestamp}</span>
+                                                        <h3 class="timeline-header">${title}</h3>
+                                                        <div class="timeline-body">
+                                                            ${bodyContent}
+                                                        </div>
+                                                        <div class="timeline-footer">
+                                                            <small class="text-muted">Recorded by: ${recordedBy}</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- END timeline item -->
+                                            `;
+                                        });
+                                        // Add the "End of timeline" entry
+                                        timelineHtml += `
+                                            <div>
+                                                <i class="fas fa-clock bg-gray"></i>
+                                            </div>
+                                        `;
+                                    } else {
+                                        timelineHtml += `
+                                            <div>
+                                                <div class="timeline-item">
+                                                    <h3 class="timeline-header">No progress updates yet.</h3>
+                                                    <div class="timeline-body">
+                                                        <p class="text-muted">This cycle has just started or has no recorded progress entries.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }
+                                    timelineHtml += '</div>'; // Close .timeline div
+                                    $('#progressTimelineContent').html(timelineHtml);
+                                } else {
+                                    $('#progressTimelineContent').html(`<p class="text-danger">Error reloading timeline: ${response.error}</p>`);
+                                }
+                            },
+                            error: function(xhr) {
+                                const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
+                                $('#progressTimelineContent').html(`<p class="text-danger">Error reloading timeline: ${errorMessage}</p>`);
+                            }
+                        });
+                        // Reset comments field
+                        $('#progressComments').val('');
+                    } else {
+                        showToast('error', 'Failed to add comment: ' + response.error);
+                    }
+                    $button.html(originalHtml);
+                    $button.prop('disabled', false);
+                    $('#submitProgressUpdateBtn').prop('disabled', false);
+                },
+                error: function(xhr) {
+                    showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
+                    $button.html(originalHtml);
+                    $button.prop('disabled', false);
+                    $('#submitProgressUpdateBtn').prop('disabled', false);
+                }
+            });
+        });
     });
 </script>
 

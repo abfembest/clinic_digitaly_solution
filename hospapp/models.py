@@ -654,12 +654,59 @@ class IVFRecord(models.Model):
         on_delete=models.CASCADE,
         related_name='ivf_records', unique=True
     )"""
+    # Define STATUS_CHOICES directly in IVFRecord for its 'status' field
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('stimulation', 'Stimulation Phase'),
+        ('egg_retrieval', 'Egg Retrieval'),
+        ('fertilization', 'Fertilization'),
+        ('embryo_transfer', 'Embryo Transfer'),
+        ('luteal_phase', 'Luteal Phase'),
+        ('pregnancy_test', 'Pregnancy Test'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     ivf_package = models.ForeignKey(IVFPackage, on_delete=models.SET_NULL, null=True)
     treatment_location = models.ForeignKey(TreatmentLocation, on_delete=models.SET_NULL, null=True)
     doctor_name = models.CharField(max_length=255)
     doctor_comments = models.TextField(blank=True)
     created_on = models.DateTimeField(default=timezone.now)
-    status = models.CharField(max_length=255, default = "open")
+    status = models.CharField(max_length=255, choices=STATUS_CHOICES, default="open") # Added choices here
     
-    
+    def __str__(self):
+        return f"IVF Record for {self.patient.full_name} - Status: {self.status}"
+
+class IVFProgressUpdate(models.Model):
+    """
+    Records progress updates for an IVF cycle.
+    """
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('stimulation', 'Stimulation Phase'),
+        ('egg_retrieval', 'Egg Retrieval'),
+        ('fertilization', 'Fertilization'),
+        ('embryo_transfer', 'Embryo Transfer'),
+        ('luteal_phase', 'Luteal Phase'),
+        ('pregnancy_test', 'Pregnancy Test'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    ivf_record = models.ForeignKey(IVFRecord, on_delete=models.CASCADE, related_name='progress_updates')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    comments = models.TextField(blank=True, null=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name_plural = "IVF Progress Updates"
+
+    def __str__(self):
+        return f"Progress for {self.ivf_record.patient.full_name} - {self.status} on {self.timestamp.strftime('%Y-%m-%d %H:%M')}"

@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from .models import (Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem,IVFPackage, TreatmentLocation, IVFRecord)
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem,IVFPackage, TreatmentLocation, IVFRecord, IVFProgressUpdate
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
@@ -7757,21 +7757,36 @@ def start_ivf(request):
             'patients': Patient.objects.only('id', 'full_name'),
             'packages': IVFPackage.objects.only('id', 'name'),
             'locations': TreatmentLocation.objects.only('id', 'name'),
-            'open_pending_ivf_records': IVFRecord.objects.filter(status__in=['open', 'pending']).select_related('patient', 'ivf_package', 'treatment_location'),
-            'in_progress_ivf_records': IVFRecord.objects.filter(status='in_progress').select_related('patient', 'ivf_package', 'treatment_location'),
+            'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
+            'ivf_progress_statuses': IVFProgressUpdate.STATUS_CHOICES
         }
         return render(request, 'doctors/start_ivf.html', context)
 
     try:
         data = json.loads(request.body)
-        IVFRecord.objects.create(
-            patient_id=data.get('patient_name'),
-            ivf_package_id=data.get('ivf_package'),
-            treatment_location_id=data.get('treatment_location'),
-            doctor_name=data.get('doctor_name'),
-            doctor_comments=data.get('doctor_comments', ''),
+        patient_id = data.get('patient_name')
+        ivf_package_id = data.get('ivf_package')
+        treatment_location_id = data.get('treatment_location')
+        doctor_name = data.get('doctor_name')
+        doctor_comments = data.get('doctor_comments', '')
+
+        ivf_record = IVFRecord.objects.create(
+            patient_id=patient_id,
+            ivf_package_id=ivf_package_id,
+            treatment_location_id=treatment_location_id,
+            doctor_name=doctor_name,
+            doctor_comments=doctor_comments,
+            status='open'
         )
-        return JsonResponse({'success': True})
+
+        IVFProgressUpdate.objects.create(
+            ivf_record=ivf_record,
+            status='open',
+            comments='IVF cycle initiated.',
+            updated_by=request.user
+        )
+
+        return JsonResponse({'success': True, 'message': 'IVF treatment form submitted successfully!'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -7779,28 +7794,149 @@ def start_ivf(request):
 @login_required
 @require_http_methods(["POST"])
 def update_ivf_status(request):
-    """
-    Updates the status of an IVF record.
-    Expected payload: {'record_id': <int>, 'new_status': <string>}
-    """
     try:
         data = json.loads(request.body)
         record_id = data.get('record_id')
         new_status = data.get('new_status')
+        comments = data.get('comments', '')
 
         if not record_id or not new_status:
             return JsonResponse({'error': 'Missing record_id or new_status'}, status=400)
 
         ivf_record = get_object_or_404(IVFRecord, id=record_id)
 
-        # Define allowed status transitions (optional, but good practice)
-        allowed_statuses = ['pending', 'in_progress', 'completed', 'cancelled']
+        allowed_statuses = [choice[0] for choice in IVFProgressUpdate.STATUS_CHOICES]
+        
         if new_status not in allowed_statuses:
             return JsonResponse({'error': f'Invalid status: {new_status}'}, status=400)
 
         ivf_record.status = new_status
         ivf_record.save()
 
+        IVFProgressUpdate.objects.create(
+            ivf_record=ivf_record,
+            status=new_status,
+            comments=comments,
+            updated_by=request.user
+        )
+
         return JsonResponse({'success': True, 'message': f'IVF Record {record_id} status updated to {new_status}'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+@require_http_methods(["GET"])
+def get_ivf_progress(request, record_id):
+    ivf_record = get_object_or_404(IVFRecord, id=record_id)
+    patient = ivf_record.patient
+    
+    timeline_entries = []
+
+    # 1. Add IVFProgressUpdate entries
+    progress_updates = IVFProgressUpdate.objects.filter(ivf_record=ivf_record).order_by('timestamp')
+    for update in progress_updates:
+        timeline_entries.append({
+            'type': 'status_update', # <--- Added 'type' here
+            'status': update.get_status_display(),
+            'comments': update.comments,
+            'updated_by': update.updated_by.get_full_name() if update.updated_by else 'N/A',
+            'timestamp': update.timestamp,
+        })
+
+    # 2. Add Vitals entries for the patient, around the IVF record creation time
+    vitals_records = Vitals.objects.filter(patient=patient).order_by('recorded_at')
+    for vital in vitals_records:
+        timeline_entries.append({
+            'type': 'vitals', # <--- Added 'type' here
+            'blood_pressure': vital.blood_pressure,
+            'temperature': vital.temperature,
+            'pulse': vital.pulse,
+            'respiratory_rate': vital.respiratory_rate,
+            'weight': vital.weight,
+            'height': vital.height,
+            'bmi': vital.bmi,
+            'notes': vital.notes,
+            'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
+            'timestamp': vital.recorded_at,
+        })
+
+    # 3. Add LabTest entries for the patient, around the IVF record creation time
+    lab_tests = LabTest.objects.filter(patient=patient).order_by('requested_at')
+    for test in lab_tests:
+        timeline_entries.append({
+            'type': 'lab_test', # <--- Added 'type' here
+            'test_name': test.test_name,
+            'status': test.get_status_display(),
+            'result_value': test.result_value,
+            'notes': test.notes,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+            'timestamp': test.requested_at,
+        })
+
+    # 4. Add Consultation entries for the patient
+    consultations = Consultation.objects.filter(patient=patient).order_by('created_at')
+    for consultation in consultations:
+        timeline_entries.append({
+            'type': 'consultation', # <--- Added 'type' here
+            'symptoms': consultation.symptoms,
+            'diagnosis_summary': consultation.diagnosis_summary,
+            'advice': consultation.advice,
+            'doctor': consultation.doctor.get_full_name() if consultation.doctor else 'N/A',
+            'timestamp': consultation.created_at,
+        })
+
+    # 5. Add NursingNote entries for the patient
+    nursing_notes = NursingNote.objects.filter(patient=patient).order_by('note_datetime')
+    for note in nursing_notes:
+        timeline_entries.append({
+            'type': 'nursing_note', # <--- Added 'type' here
+            'note_type': note.get_note_type_display(),
+            'notes': note.notes,
+            'nurse': note.nurse.get_full_name() if note.nurse else 'N/A',
+            'timestamp': note.note_datetime,
+        })
+
+    # Sort all entries by timestamp
+    timeline_entries.sort(key=lambda x: x['timestamp'])
+
+    # Format timestamps for JSON response
+    formatted_timeline_entries = []
+    for entry in timeline_entries:
+        entry['timestamp'] = entry['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+        formatted_timeline_entries.append(entry)
+
+    current_record_details = {
+        'patient_name': ivf_record.patient.full_name,
+        'ivf_package': ivf_record.ivf_package.name if ivf_record.ivf_package else 'N/A',
+        'current_status': ivf_record.get_status_display(),
+        'doctor_name': ivf_record.doctor_name,
+        'created_on': ivf_record.created_on.strftime('%Y-%m-%d %H:%M:%S'),
+        'id': ivf_record.id,
+    }
+
+    return JsonResponse({'success': True, 'record_details': current_record_details, 'timeline': formatted_timeline_entries})
+
+@login_required
+@require_http_methods(["POST"])
+def add_ivf_progress_comment(request):
+    try:
+        data = json.loads(request.body)
+        record_id = data.get('record_id')
+        comments = data.get('comments', '')
+
+        if not record_id or not comments:
+            return JsonResponse({'error': 'Missing record_id or comments'}, status=400)
+
+        ivf_record = get_object_or_404(IVFRecord, id=record_id)
+
+        IVFProgressUpdate.objects.create(
+            ivf_record=ivf_record,
+            status=ivf_record.status,
+            comments=comments,
+            updated_by=request.user
+        )
+
+        return JsonResponse({'success': True, 'message': 'Comment added to IVF progress successfully!'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)

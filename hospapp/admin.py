@@ -3,7 +3,7 @@ from .models import (
     Admission, Appointment, CarePlan, Consultation, Department,
     EmergencyAlert, HandoverLog, LabResultFile, LabTest, NursingNote, Patient, Prescription, Staff,
     Referral, Shift, Attendance, ShiftAssignment, Vitals, TestCategory,
-    TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload, DoctorComments, IVFPackage, TreatmentLocation, IVFRecord
+    TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload, DoctorComments, IVFPackage, TreatmentLocation, IVFRecord, IVFProgressUpdate
 )
 
 admin.site.register(Admission)
@@ -41,3 +41,4 @@ admin.site.register(DoctorComments)
 admin.site.register(IVFRecord)
 admin.site.register(IVFPackage)
 admin.site.register(TreatmentLocation)
+admin.site.register(IVFProgressUpdate)
