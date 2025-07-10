@@ -542,14 +542,31 @@
                         const recordDetails = response.record_details;
                         const timeline = response.timeline;
 
-                        // Populate modal header
-                        $('#progressModalHeader').html(`
-                            <p><strong>Patient:</strong> ${recordDetails.patient_name}</p>
-                            <p><strong>IVF Package:</strong> ${recordDetails.ivf_package}</p>
-                            <p><strong>Current Status:</strong> <span class="badge badge-primary">${recordDetails.current_status}</span></p>
-                            <p><strong>Doctor:</strong> ${recordDetails.doctor_name}</p>
-                            <p><strong>Cycle Started On:</strong> ${recordDetails.created_on}</p>
-                        `);
+                               // Populate modal header
+                                $('#progressModalHeader').html(`
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Patient</th>
+                                                <th>IVF Package</th>
+                                                <th>Current Status</th>
+                                                <th>Doctor</th>
+                                                <th>Cycle Started On</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>${recordDetails.patient_name}</td>
+                                                <td>${recordDetails.ivf_package}</td>
+                                                <td><span class="badge badge-primary">${recordDetails.current_status}</span></td>
+                                                <td>${recordDetails.doctor_name}</td>
+                                                <td>${recordDetails.created_on}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                `);
+
+
 
                         // Populate the status dropdown with the current status pre-selected
                         // Normalize the status string to match option values (lowercase, replace spaces with underscores)
@@ -590,20 +607,40 @@
                                             default: badgeClass = 'bg-secondary'; break;
                                         }
                                         break;
-                                    case 'vitals':
-                                        iconClass = 'fas fa-heartbeat';
-                                        badgeClass = 'bg-danger';
-                                        title = `Vitals Recorded`;
-                                        bodyContent = `
-                                            <p><strong>BP:</strong> ${entry.blood_pressure || 'N/A'}</p>
-                                            <p><strong>Temp:</strong> ${entry.temperature || 'N/A'}°C</p>
-                                            <p><strong>Pulse:</strong> ${entry.pulse || 'N/A'} bpm</p>
-                                            <p><strong>Resp Rate:</strong> ${entry.respiratory_rate || 'N/A'}</p>
-                                            <p><strong>Weight:</strong> ${entry.weight || 'N/A'} kg</p>
-                                            <p><strong>Height:</strong> ${entry.height || 'N/A'} cm</p>
-                                            <p><strong>BMI:</strong> ${entry.bmi || 'N/A'}</p>
-                                            ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
-                                        `;
+                                       case 'vitals':
+                                                iconClass = 'fas fa-heartbeat';
+                                                badgeClass = 'bg-danger';
+                                                title = `Vitals Recorded`;
+                                                bodyContent = `
+                                                    <table class="table table-sm table-bordered">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>BP</th>
+                                                                <th>Temp (°C)</th>
+                                                                <th>Pulse (bpm)</th>
+                                                                <th>Resp Rate</th>
+                                                                <th>Weight (kg)</th>
+                                                                <th>Height (cm)</th>
+                                                                <th>BMI</th>
+                                                                ${entry.notes ? '<th>Notes</th>' : ''}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>${entry.blood_pressure || 'N/A'}</td>
+                                                                <td>${entry.temperature || 'N/A'}°C</td>
+                                                                <td>${entry.pulse || 'N/A'} bpm</td>
+                                                                <td>${entry.respiratory_rate || 'N/A'}</td>
+                                                                <td>${entry.weight || 'N/A'} kg</td>
+                                                                <td>${entry.height || 'N/A'} cm</td>
+                                                                <td>${entry.bmi || 'N/A'}</td>
+                                                                ${entry.notes ? `<td>${entry.notes}</td>` : ''}
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                `;
+                                                break;
+
                                         recordedBy = entry.recorded_by;
                                         break;
                                     case 'lab_test':
