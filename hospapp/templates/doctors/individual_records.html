@@ -557,7 +557,6 @@
             <div class="mb-2">
                 <strong>Request ID:</strong> ${requestId} <br>
                 <strong>Requested At:</strong> ${group.requested_at || 'N/A'} <br>
-                <strong>Requested By:</strong> ${group.doctor_name || 'N/A'}
             </div>
             ${Object.entries(group.categories).map(([category, tests]) => `
                 <div class="lab-category border-start ps-3 mt-3 mb-3">
