@@ -1,0 +1,224 @@
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" >
+<style >
+/* Scoped styles for the vitals form */
+.vitals-form-container {
+    /*background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);*/
+    min-height: 100vh;
+    padding: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+}
+
+.vitals-form-container .card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.95);
+    overflow: hidden;
+}
+
+.vitals-form-container .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px;
+    text-align: center;
+}
+
+    .vitals-form-container .card-header h4 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.3rem;
+    }
+
+.vitals-form-container .card-body {
+    padding: 15px;
+}
+
+.vitals-form-container .form-group {
+    margin-bottom: 10px;
+}
+
+    .vitals-form-container .form-group label {
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+
+        .vitals-form-container .form-group label i {
+            margin-right: 8px;
+            color: #667eea;
+            width: 16px;
+        }
+
+.vitals-form-container .form-control {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+}
+
+    .vitals-form-container .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background: white;
+    }
+
+    .vitals-form-container .form-control::placeholder {
+        color: #a0aec0;
+        font-style: italic;
+    }
+
+.vitals-form-container textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.vitals-form-container .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 8px 24px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+    .vitals-form-container .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+/* Select2 custom styling */
+.vitals-form-container .select2-container {
+    width: 100% !important;
+}
+
+.vitals-form-container .select2-container--default .select2-selection--single {
+    height: 36px !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    background: #f8fafc !important;
+    padding: 0 !important;
+}
+
+    .vitals-form-container .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 32px !important;
+        padding-left: 12px !important;
+        color: #4a5568 !important;
+        font-size: 0.85rem !important;
+    }
+
+    .vitals-form-container .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 32px !important;
+        right: 10px !important;
+    }
+
+.vitals-form-container .select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    background: white !important;
+}
+
+.vitals-form-container .select2-dropdown {
+    border: 2px solid #667eea !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.vitals-form-container .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #667eea !important;
+}
+
+/* Form sections */
+.vitals-form-container .form-section {
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-left: 4px solid #667eea;
+}
+
+    .vitals-form-container .form-section h6 {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+
+/* Input groups with icons */
+.vitals-form-container .input-group {
+    position: relative;
+}
+
+.vitals-form-container .input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667eea;
+    z-index: 3;
+}
+
+.vitals-form-container .form-control.has-icon {
+    padding-left: 45px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .vitals-form-container {
+        padding: 5px;
+    }
+
+        .vitals-form-container .card-body {
+            padding: 10px;
+        }
+
+        .vitals-form-container .form-section {
+            padding: 10px;
+        }
+}
+
+/* Animation */
+.vitals-form-container .form-group {
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+    .vitals-form-container .form-group:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .vitals-form-container .form-group:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .vitals-form-container .form-group:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .vitals-form-container .form-group:nth-child(4) {
+        animation-delay: 0.4s;
+    }
+
+    .vitals-form-container .form-group:nth-child(5) {
+        animation-delay: 0.5s;
+    }
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+</style >

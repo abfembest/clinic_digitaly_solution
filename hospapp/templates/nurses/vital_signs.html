@@ -4,110 +4,313 @@
 {% block title %}Nurse | Record Vitals{% endblock %}
 
 {% block content %}
-<div class="content-header">
-  <div class="container-fluid">
-    <h4 class="mb-2">Record Patient Vitals</h4>
-  </div>
-</div>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css" rel="stylesheet">
+<!-- Select2 CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+<!-- Font Awesome for icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
+{%include "nurses/nurses.css"%}
 <section class="content">
-  <div class="container-fluid">
-    <div class="card card-outline card-success">
-      <div class="card-header">
-        <h5 class="card-title mb-0">Enter Vital Signs</h5>
-      </div>
-      <div class="card-body">
-          <form method="POST" action="{% url 'record_vitals' %}">
-              {% csrf_token %}
+    <div class="container-fluid">
+
+        <div class="vitals-form-container">
+            <div class="container">
+                <div class="row justify-content-center" style="margin: 0;">
+                    <div class="col-lg-11 col-xl-10">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4><i class="fas fa-heartbeat me-2"></i>Patient Vitals Recording</h4>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{% url 'record_vitals' %}">
+                                    {% csrf_token %}
+
+                                    <div class="row">
+                                        <!-- Left Column -->
+                                        <div class="col-md-6">
+                                            <!-- Patient Selection Section -->
+                                            <div class="form-section">
+                                                <h6><i class="fas fa-user-injured me-2"></i>Patient Information</h6>
+                                                <div class="form-group">
+                                                    <label for="patient_id">
+                                                        <i class="fas fa-id-card"></i>
+                                                        Patient ID
+                                                    </label>
+                                                    <select name="patient_id" id="patient_id" class="form-control" required autocomplete="off">
+                                                        <option value="" disabled selected>Select Patient</option>
+                                                        {% for patient in patients %}
+                                                        <option value="{{ patient.id }}">
+                                                            {{ patient.id }}- {{ patient.full_name }} </                                       option>
+                                                            {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Vital Signs Section -->
+                                            <div class="form-section">
+                                                <h6><i class="fas fa-thermometer-half me-2"></i>Vital Signs</h6>
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <div class="form-group">
+                                                            <label for="temperature">
+                                                                <i class="fas fa-thermometer-half"></i>
+                                                                Temperature (°C)
+                                                            </label>
+                                                            <input type="number" step="0.1" name="temperature" id="temperature" class="form-control" placeholder="36.6" autocomplete="off">
+
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="form-group">
+                                                            <label for="blood_pressure">
+                                                                <i class="fas fa-tint"></i>
+                                                                Blood Pressure
+                                                            </label>
+                                                            <input type="text" name="blood_pressure" id="blood_pressure" class="form-control" placeholder="120/80" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-6">
+                                                        <div class="form-group">
+                                                            <label for="pulse">
+                                                                <i class="fas fa-heartbeat"></i>
+                                                                Pulse (bpm)
+                                                            </label>
+                                                            <input type="number" name="pulse" id="pulse" class="form-control" placeholder="72" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="form-group">
+                                                            <label for="respiratory_rate">
+                                                                <i class="fas fa-lungs"></i>
+                                                                Respiratory Rate
+                                                            </label>
+                                                            <input type="number" name="respiratory_rate" id="respiratory_rate" class="form-control" placeholder="16" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Right Column -->
+                                        <div class="col-md-6">
+                                            <!-- Physical Measurements Section -->
+                                            <div class="form-section">
+                                                <h6><i class="fas fa-weight me-2"></i>Physical Measurements</h6>
+                                                <div class="row">
+                                                    <div class="col-4">
+                                                        <div class="form-group">
+                                                            <label for="height">
+                                                                <i class="fas fa-ruler-vertical"></i>
+                                                                Height (cm)
+                                                            </label>
+                                                            <input type="number" step="0.1" name="height" id="height" class="form-control" placeholder="170" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <div class="form-group">
+                                                            <label for="weight">
+                                                                <i class="fas fa-weight-scale"></i>
+                                                                Weight (kg)
+                                                            </label>
+                                                            <input type="number" step="0.1" name="weight" id="weight" class="form-control" placeholder="70.5" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <div class="form-group">
+                                                            <label for="bmi">
+                                                                <i class="fas fa-calculator"></i>
+                                                                BMI
+                                                            </label>
+                                                            <input type="text" id="bmi" class="form-control" readonly name="bmi" placeholder="Auto">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Additional Notes Section -->
+                                            <div class="form-section">
+                                                <h6><i class="fas fa-sticky-note me-2"></i>Additional Information</h6>
+                                                <div class="form-group">
+                                                    <textarea name="notes" id="notes" class="form-control" rows="2" placeholder="Enter observations or comments"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Submit Button -->
+                                    <div class="text-center mt-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>
+                                            Submit Vitals
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
 
-              <div class="form-row">
-                  <div class="form-group col-md-6">
-                      <label for="patient_id">Patient ID</label>
-                      <select name="patient_id" id="patient_id" class="form-control" required autocomplete="off">
-                          <option value="" disabled selected>Select Patient</option>
-                          {% for patient in patients %}
-                          <option value="{{ patient.id }}">{{ patient.id }}- {{ patient.full_name }} </option>
-                          {% endfor %}
-                      </select>
-                  </div>
 
-                  <div class="form-group col-md-6">
-                      <label for="temperature">Temperature (°C)</label>
-                      <input type="number" step="0.1" name="temperature" id="temperature" class="form-control" placeholder="e.g. 36.6" autocomplete="off">
-                  </div>
+        <!--
+                <form method="POST" action="{% url 'record_vitals' %}">
+                    {% csrf_token %}
 
-              </div>
 
-              <div class="form-row">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="patient_id">Patient ID</label>
+                            <select name="patient_id" id="patient_id" class="form-control" required autocomplete="off">
+                                <option value="" disabled selected>Select Patient</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.id }}- {{ patient.full_name }} </option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-                  <div class="form-group col-md-4">
-                      <label for="height">Height (cm)</label>
-                      <input type="number" step="0.1" name="height" id="height" class="form-control" placeholder="e.g. 170" autocomplete="off">
-                  </div>
-                  <div class="form-group col-md-4">
-                      <label for="blood_pressure">Blood Pressure</label>
-                      <input type="text" name="blood_pressure" id="blood_pressure" class="form-control" placeholder="e.g. 120/80" autocomplete="off">
-                  </div>
-                  <div class="form-group col-md-4">
-                      <label for="pulse">Pulse (bpm)</label>
-                      <input type="number" name="pulse" id="pulse" class="form-control" placeholder="e.g. 72" autocomplete="off">
-                  </div>
-              </div>
+                        <div class="form-group col-md-6">
+                            <label for="temperature">Temperature (°C)</label>
 
-              <div class="form-row">
+                        </div>
 
-                  <div class="form-group col-md-4">
-                      <label for="respiratory_rate">Respiratory Rate</label>
-                      <input type="number" name="respiratory_rate" id="respiratory_rate" class="form-control" placeholder="e.g. 16" autocomplete="off">
-                  </div>
-                  <div class="form-group col-md-4">
-                      <label for="weight">Weight (kg)</label>
-                      <input type="number" step="0.1" name="weight" id="weight" class="form-control" placeholder="e.g. 70.5" autocomplete="off">
-                  </div>
+                    </div>
 
-                  <div class="form-group col-md-4">
-                      <label for="bmi">BMI</label>
-                      <input type="text" id="bmi" class="form-control" readonly name="bmi" placeholder="Auto-calculated">
-                  </div>
-              </div>
+                    <div class="form-row">
 
-              <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="height">Height (cm)</label>
+                            <input type="number" step="0.1" name="height" id="height" class="form-control" placeholder="e.g. 170" autocomplete="off">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="blood_pressure">Blood Pressure</label>
+                            <input type="text" name="blood_pressure" id="blood_pressure" class="form-control" placeholder="e.g. 120/80" autocomplete="off">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="pulse">Pulse (bpm)</label>
+                            <input type="number" name="pulse" id="pulse" class="form-control" placeholder="e.g. 72" autocomplete="off">
+                        </div>
+                    </div>
 
-                  <div class="form-group col-md-8">
-                      <label for="notes">Additional Notes</label>
-                      <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Enter any additional observations or comments"></textarea>
-                  </div>
-              </div>
+                    <div class="form-row">
 
-             
+                        <div class="form-group col-md-4">
+                            <label for="respiratory_rate">Respiratory Rate</label>
+                            <input type="number" name="respiratory_rate" id="respiratory_rate" class="form-control" placeholder="e.g. 16" autocomplete="off">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="weight">Weight (kg)</label>
+                            <input type="number" step="0.1" name="weight" id="weight" class="form-control" placeholder="e.g. 70.5" autocomplete="off">
+                        </div>
 
-              <div class="form-group text-center">
-                  <button type="submit" class="btn btn-secondary px-4">Submit Vitals</button>
-              </div>
-          </form>
-      </div>
+                        <div class="form-group col-md-4">
+                            <label for="bmi">BMI</label>
+                            <input type="text" id="bmi" class="form-control" readonly name="bmi" placeholder="Auto-calculated">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+
+                        <div class="form-group col-md-8">
+                            <label for="notes">Additional Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Enter any additional observations or comments"></textarea>
+                        </div>
+                    </div>
+
+
+
+                    <div class="form-group text-center">
+                        <button type="submit" class="btn btn-secondary px-4">Submit Vitals</button>
+                    </div>
+                </form>
+            </div>
+        </div>-->
     </div>
-  </div>
 </section>
 
+
 <script>
-  function calculateBMI() {
-    const weight = parseFloat(document.getElementById('weight').value);
-    const heightCm = parseFloat(document.getElementById('height').value);
-    const bmiInput = document.getElementById('bmi');
+    function calculateBMI() {
+        const weight = parseFloat(document.getElementById('weight').value);
+        const heightCm = parseFloat(document.getElementById('height').value);
+        const bmiInput = document.getElementById('bmi');
 
-    if (weight > 0 && heightCm > 0) {
-      const heightM = heightCm / 100;
-      const bmi = weight / (heightM * heightM);
-      bmiInput.value = bmi.toFixed(2);
-    } else {
-      bmiInput.value = '';
+        if (weight > 0 && heightCm > 0) {
+            const heightM = heightCm / 100;
+            const bmi = weight / (heightM * heightM);
+            bmiInput.value = bmi.toFixed(2);
+        } else {
+            bmiInput.value = '';
+        }
     }
-  }
 
-  document.getElementById('weight').addEventListener('input', calculateBMI);
-  document.getElementById('height').addEventListener('input', calculateBMI);
+    document.getElementById('weight').addEventListener('input', calculateBMI);
+    document.getElementById('height').addEventListener('input', calculateBMI);
+</script>
+
+
+<!-- jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.bundle.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        // Initialize Select2 on the patient selection dropdown
+        $('.vitals-form-container #patient_id').select2({
+            placeholder: 'Search and select a patient...',
+            allowClear: true,
+            width: '100%',
+            theme: 'default',
+            language: {
+                searching: function () {
+                    return 'Searching patients...';
+                },
+                noResults: function () {
+                    return 'No patients found';
+                }
+            }
+        });
+
+        // Auto-calculate BMI when height and weight are entered
+        function calculateBMI() {
+            const height = parseFloat($('.vitals-form-container #height').val());
+            const weight = parseFloat($('.vitals-form-container #weight').val());
+
+            if (height && weight && height > 0) {
+                const heightInMeters = height / 100;
+                const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+                $('.vitals-form-container #bmi').val(bmi);
+            } else {
+                $('.vitals-form-container #bmi').val('');
+            }
+        }
+
+        // Bind BMI calculation to height and weight inputs
+        $('.vitals-form-container #height, .vitals-form-container #weight').on('input', calculateBMI);
+
+        // Form validation and enhancement
+        $('.vitals-form-container form').on('submit', function (e) {
+            // Add any additional validation here if needed
+            const patientId = $('.vitals-form-container #patient_id').val();
+            if (!patientId) {
+                e.preventDefault();
+                alert('Please select a patient before submitting.');
+                return false;
+            }
+        });
+
+        // Add floating label effect
+        $('.vitals-form-container .form-control').on('focus blur', function (e) {
+            $(this).parent().toggleClass('focused', e.type === 'focus' || this.value.length > 0);
+        });
+    });
 </script>
 
 {% endblock %}
