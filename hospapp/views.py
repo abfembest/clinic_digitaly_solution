@@ -7847,21 +7847,22 @@ def get_ivf_progress(request, record_id):
 
     # 2. Add Vitals entries for the patient, around the IVF record creation time
     # This retrieves all vitals for the patient, not just the first one.
-    vitals_records = Vitals.objects.filter(patient=patient).order_by('recorded_at')
-    for vital in vitals_records:
+    vital = Vitals.objects.filter(patient=patient).order_by('-recorded_at').first()
+    if vital:
         timeline_entries.append({
-            'type': 'vitals',
-            'blood_pressure': vital.blood_pressure,
-            'temperature': vital.temperature,
-            'pulse': vital.pulse,
-            'respiratory_rate': vital.respiratory_rate,
-            'weight': vital.weight,
-            'height': vital.height,
-            'bmi': vital.bmi,
-            'notes': vital.notes,
-            'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
-            'timestamp': vital.recorded_at,
-        })
+        'type': 'vitals',
+        'blood_pressure': vital.blood_pressure,
+        'temperature': vital.temperature,
+        'pulse': vital.pulse,
+        'respiratory_rate': vital.respiratory_rate,
+        'weight': vital.weight,
+        'height': vital.height,
+        'bmi': vital.bmi,
+        'notes': vital.notes,
+        'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
+        'timestamp': vital.recorded_at,
+    })
+    
 
 
     # 3. Add LabTest entries for the patient, around the IVF record creation time
@@ -7876,6 +7877,7 @@ def get_ivf_progress(request, record_id):
             'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
             'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
             'timestamp': test.requested_at,
+            'test_request_id': test.test_request_id,
         })
 
     # 4. Add Consultation entries for the patient

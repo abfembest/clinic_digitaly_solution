@@ -519,69 +519,82 @@
             
             // Generate Lab Tests HTML, grouped by request ID with DataTables inside each group
             let labTestsHtml = '';
+
             if (data.lab_test_groups.length > 0) {
-                labTestsHtml = data.lab_test_groups.map(group => `
-                    <div class="lab-group">
-                        <div class="lab-group-header">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Request ID: ${group.request_id}</strong>
-                                    <small class="text-muted ms-2">
-                                        <i class="fas fa-calendar me-1"></i>
-                                        ${group.requested_at}
-                                    </small>
+                // Step 1: Flatten and tag each test with its group metadata
+                const allTests = data.lab_test_groups.flatMap(group => {
+                    return group.tests.map(test => ({
+                        ...test,
+                        request_id: group.request_id,
+                        requested_at: group.requested_at,
+                        doctor_name: group.doctor_name
+                    }));
+                });
+
+                // Step 2: Group by request_id
+                const groupedByRequest = {};
+                allTests.forEach(test => {
+                    if (!groupedByRequest[test.request_id]) {
+                        groupedByRequest[test.request_id] = {
+                            requested_at: test.requested_at,
+                            doctor_name: test.doctor_name,
+                            categories: {}
+                        };
+                    }
+
+                    // Step 3: Group within each request_id by category
+                    const categoryGroup = groupedByRequest[test.request_id].categories;
+                    if (!categoryGroup[test.category]) {
+                        categoryGroup[test.category] = [];
+                    }
+
+                    categoryGroup[test.category].push(test);
+                });
+
+                // Step 4: Render all groups and subgroups
+                labTestsHtml = Object.entries(groupedByRequest).map(([requestId, group]) => `
+        <div class="lab-group border rounded mb-4 p-3 shadow-sm">
+            <div class="mb-2">
+                <strong>Request ID:</strong> ${requestId} <br>
+                <strong>Requested At:</strong> ${group.requested_at || 'N/A'} <br>
+                <strong>Requested By:</strong> ${group.doctor_name || 'N/A'}
+            </div>
+            ${Object.entries(group.categories).map(([category, tests]) => `
+                <div class="lab-category border-start ps-3 mt-3 mb-3">
+                    <h6 class="text-primary mb-2">Category: ${category || 'Uncategorized'}</h6>
+                    ${tests.map(test => `
+                        <div class="lab-test-entry mb-3 p-2 border rounded bg-light">
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Test Name:</strong> ${test.test_name || 'N/A'}</div>
+                                <div class="col-md-4"><strong>Result:</strong> ${test.result_value || 'N/A'}</div>
+                                <div class="col-md-4"><strong>Normal Range:</strong> ${test.normal_range || 'N/A'}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-md-4"><strong>Notes:</strong> ${test.notes || 'N/A'}</div>
+                                <div class="col-md-4"><strong>Date Performed:</strong> ${test.date_performed || 'N/A'}</div>
+                                <div class="col-md-4">
+                                    <strong>Status:</strong> 
+                                    <span class="badge status-badge ${test.status_code === 'completed' ? 'bg-success' :
+                        test.status_code === 'in_progress' ? 'bg-warning text-dark' :
+                            test.status_code === 'cancelled' ? 'bg-danger' : 'bg-secondary'
+                    }">${test.status}</span>
                                 </div>
-                                <span class="badge bg-primary">Requested By: ${group.doctor_name || 'N/A'}</span>
                             </div>
                         </div>
-                        <div class="lab-group-body">
-                            <div class="table-responsive">
-                                <table id="labTestsTable_${group.request_id}" class="table table-bordered table-hover lab-test-group-table" style="width:100%">
-                                    <thead>
-                                        <tr>
-                                            <th>Test Name</th>
-                                            <th>Category</th>
-                                            <th>Result</th>
-                                            <th>Normal Range</th>
-                                            <th>Notes</th>
-                                            <th>Date Performed</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${group.tests.map(test => `
-                                            <tr>
-                                                <td>${test.test_name || 'N/A'}</td>
-                                                <td>${test.category || 'N/A'}</td>
-                                                <td>${test.result_value || 'N/A'}</td>
-                                                <td>${test.normal_range || 'N/A'}</td>
-                                                <td>${test.notes || 'N/A'}</td>
-                                                <td>${test.date_performed || 'N/A'}</td>
-                                                <td>
-                                                    <span class="badge status-badge ${
-                                                        test.status_code === 'completed' ? 'bg-success' : 
-                                                        test.status_code === 'in_progress' ? 'bg-warning' : 
-                                                        test.status_code === 'cancelled' ? 'bg-danger' : 'bg-secondary'
-                                                    }">
-                                                        ${test.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+                    `).join('')}
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
             } else {
                 labTestsHtml = `
-                    <div class="empty-state">
-                        <i class="fas fa-vial"></i>
-                        <h5>No Laboratory Tests</h5>
-                        <p>No laboratory test records found for this patient.</p>
-                    </div>`;
+        <div class="empty-state text-center my-4">
+            <i class="fas fa-vial fa-2x mb-2 text-muted"></i>
+            <h5>No Laboratory Tests</h5>
+            <p class="text-muted">No laboratory test records found for this patient.</p>
+        </div>`;
             }
+
 
             // Create HTML for patient records
             const html = `
