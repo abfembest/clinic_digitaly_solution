@@ -7844,10 +7844,11 @@ def get_ivf_progress(request, record_id):
         })
 
     # 2. Add Vitals entries for the patient, around the IVF record creation time
-    vitals_records = Vitals.objects.filter(patient=patient).order_by('recorded_at')
-    for vital in vitals_records:
+
+    vital = Vitals.objects.filter(patient=patient).order_by('-recorded_at').first()
+    if vital:
         timeline_entries.append({
-            'type': 'vitals', # <--- Added 'type' here
+            'type': 'vitals',
             'blood_pressure': vital.blood_pressure,
             'temperature': vital.temperature,
             'pulse': vital.pulse,
@@ -7858,7 +7859,8 @@ def get_ivf_progress(request, record_id):
             'notes': vital.notes,
             'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
             'timestamp': vital.recorded_at,
-        })
+    })
+
 
     # 3. Add LabTest entries for the patient, around the IVF record creation time
     lab_tests = LabTest.objects.filter(patient=patient).order_by('requested_at')
