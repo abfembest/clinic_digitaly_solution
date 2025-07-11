@@ -7,6 +7,22 @@
 
 {%include "doctors/doctors.css"%}
 
+{# Removed custom Select2 styling, as select2-bootstrap4-theme handles it #}
+
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">IVF Test Request</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'doctors' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Request IVF Test</li>
+                </ol>
+            </div>
+        </div>
+    </div></section>
 
 <div class="container">
     <div class="header">
@@ -21,11 +37,11 @@
                 <h3>Selected Tests sent to the Lab.</h3>
                 <div id="resultContent"></div>
             </div>
-            <label>Select Patient</label>
-            <select class="form-control" name="patient_id" id="patient-select" required>
+            <label for="patient-select">Select Patient</label>
+            <select class="form-control select2bs4" name="patient_id" id="patient-select" required>
                 <option value="" disabled selected>-- Choose Patient --</option>
                 {% for patient in patients %}
-                <option value="{{ patient.id }}" class="form-control">{{ patient.id }}-{{ patient.full_name }}</option>
+                <option value="{{ patient.id }}">{{ patient.id }}-{{ patient.full_name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -36,12 +52,23 @@
             <button class="btn btn-secondary" onclick="addNewTestSection()">+ Add New Test Category</button>
             <button class="btn btn-primary" onclick="submitSelection()">Submit Selection</button>
         </div>
-
-
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 on the patient-select dropdown with the Bootstrap 4 theme
+        $('#patient-select').select2({
+            theme: 'bootstrap4',
+            placeholder: "-- Choose Patient --",
+            allowClear: false // Set to false to remove the "x" (cancel) button
+        });
+
+        addNewTestSection(); // Keep initial section addition
+    });
+
     const testCategories = {
         {% for cat in categories %}
             "{{ cat.name }}": [
@@ -52,115 +79,136 @@
         {% endfor %}
     };
 
-
     let sectionCounter = 0;
 
-    // Initialize with first test section
-    document.addEventListener('DOMContentLoaded', function() {
-    addNewTestSection();
-    });
-
     function addNewTestSection() {
-    sectionCounter++;
-    const sectionsContainer = document.getElementById('testSections');
+        sectionCounter++;
+        const sectionsContainer = document.getElementById('testSections');
 
-    const sectionDiv = document.createElement('div');
-    sectionDiv.className = 'test-section';
-    sectionDiv.id = `section-${sectionCounter}`;
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'test-section';
+        sectionDiv.id = `section-${sectionCounter}`;
 
-    sectionDiv.innerHTML = `
-    <div class="section-header">
-        <h4 class="section-title">Test Category #${sectionCounter}</h4>
-        ${sectionCounter > 1 ? `<button class="remove-section" onclick="removeSection(${sectionCounter})">Remove</button>` : ''}
-    </div>
+        sectionDiv.innerHTML = `
+        <div class="section-header">
+            <h4 class="section-title">Test Category #${sectionCounter}</h4>
+            ${sectionCounter > 1 ? `<button class="remove-section" onclick="removeSection(${sectionCounter})">Remove</button>` : ''}
+        </div>
 
-    <div class="form-group">
-        <label for="category-${sectionCounter}">Select Test Category:</label>
-        <select id="category-${sectionCounter}" onchange="updateSubcategories(${sectionCounter})">
-            <option value="" disabled selected>-- Choose a test category --</option>
-            ${Object.keys(testCategories).map(category =>
-            `
-            <option value="${category}">${category}</option>`
-            ).join('')}
-        </select>
-    </div>
+        <div class="form-group">
+            <label for="category-${sectionCounter}">Select Test Category:</label>
+            <select class="form-control select2bs4" id="category-${sectionCounter}" onchange="updateSubcategories(${sectionCounter})">
+                <option value="" disabled selected>-- Choose a test category --</option>
+                ${Object.keys(testCategories).map(category =>
+                `
+                <option value="${category}">${category}</option>`
+                ).join('')}
+            </select>
+        </div>
 
-    <div id="subcategories-${sectionCounter}" class="subcategories">
-        <h4>Available Tests:</h4>
-        <div id="subcategory-list-${sectionCounter}" class="checkbox-grid">
-            </div>
-    </div>
-    `;
+        <div id="subcategories-${sectionCounter}" class="subcategories">
+            <h4>Available Tests:</h4>
+            <div id="subcategory-list-${sectionCounter}" class="checkbox-grid">
+                </div>
+        </div>
+        `;
 
-    sectionsContainer.appendChild(sectionDiv);
+        sectionsContainer.appendChild(sectionDiv);
 
-    // Add entrance animation
-    setTimeout(() => {
-    sectionDiv.style.animation = 'slideIn 0.3s ease';
-    }, 10);
+        // Initialize Select2 on the newly added category select
+        $(`#category-${sectionCounter}`).select2({
+            theme: 'bootstrap4',
+            placeholder: "-- Choose a test category --",
+            allowClear: false // Set to false for no clear button
+        });
+
+        // Add entrance animation
+        setTimeout(() => {
+            sectionDiv.style.animation = 'slideIn 0.3s ease';
+        }, 10);
     }
 
     function removeSection(sectionId) {
-    const section = document.getElementById(`section-${sectionId}`);
-    if (section) {
-    section.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => {
-    section.remove();
-    }, 300);
-    }
+        const section = document.getElementById(`section-${sectionId}`);
+        if (section) {
+            section.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                // Destroy Select2 instance before removing the element
+                $(`#category-${sectionId}`).select2('destroy');
+                section.remove();
+            }, 300);
+        }
     }
 
-    // Add slideOut animation
+    // Add slideOut animation (already defined in your original code)
     const style = document.createElement('style');
     style.textContent = `
     @keyframes slideOut {
-    from {
-    opacity: 1;
-    transform: translateY(0);
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
     }
-    to {
-    opacity: 0;
-    transform: translateY(-20px);
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
+    .subcategories {
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+    }
+    .subcategories.show {
+        max-height: 500px; /* Or a suitable value to fit content */
+        opacity: 1;
     }
     `;
     document.head.appendChild(style);
 
     function updateSubcategories(sectionId) {
-    const categorySelect = document.getElementById(`category-${sectionId}`);
-    const subcategoriesDiv = document.getElementById(`subcategories-${sectionId}`);
-    const subcategoryList = document.getElementById(`subcategory-list-${sectionId}`);
+        const categorySelect = document.getElementById(`category-${sectionId}`);
+        const subcategoriesDiv = document.getElementById(`subcategories-${sectionId}`);
+        const subcategoryList = document.getElementById(`subcategory-list-${sectionId}`);
 
-    const selectedCategory = categorySelect.value;
+        const selectedCategory = categorySelect.value;
 
-    if (selectedCategory && testCategories[selectedCategory]) {
-    // Clear previous subcategories
-    subcategoryList.innerHTML = '';
+        if (selectedCategory && testCategories[selectedCategory]) {
+            // Clear previous subcategories
+            subcategoryList.innerHTML = '';
 
-    // Add new subcategories
-    testCategories[selectedCategory].forEach((subcategory, index) => {
-    const checkboxItem = document.createElement('div');
-    checkboxItem.className = 'checkbox-item';
+            // Add new subcategories
+            testCategories[selectedCategory].forEach((subcategory, index) => {
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'checkbox-item';
 
-    checkboxItem.innerHTML = `
-    <input type="checkbox" id="sub-${sectionId}-${index}" name="subcategory-${sectionId}" value="${subcategory}">
-    <label for="sub-${sectionId}-${index}">${subcategory}</label>
-    `;
+                checkboxItem.innerHTML = `
+                <input type="checkbox" id="sub-${sectionId}-${index}" name="subcategory-${sectionId}" value="${subcategory}">
+                <label for="sub-${sectionId}-${index}">${subcategory}</label>
+                `;
 
-    subcategoryList.appendChild(checkboxItem);
-    });
+                subcategoryList.appendChild(checkboxItem);
+            });
 
-    // Show subcategories with animation
-    subcategoriesDiv.classList.add('show');
-    } else {
-    // Hide subcategories
-    subcategoriesDiv.classList.remove('show');
+            // Show subcategories with animation
+            subcategoriesDiv.classList.add('show');
+        } else {
+            // Hide subcategories
+            subcategoriesDiv.classList.remove('show');
+            subcategoryList.innerHTML = ''; // Clear tests when no category is selected
+        }
     }
-    }
 
-    // ====================================================================
-    // START OF CORRECTED CODE
-    // ====================================================================
     function submitSelection() {
         const results = [];
         const sections = document.querySelectorAll('.test-section');
@@ -173,7 +221,6 @@
         patientError.innerHTML = '';
         resultContent.innerHTML = '';
         resultsDiv.classList.remove('show');
-
 
         if (!patientId) {
             patientError.innerHTML = '<p style="color: #e53e3e; font-style: italic;">Please select a patient.</p>';
@@ -258,10 +305,5 @@
         // Also log to console for development/debugging
         console.log('Selected Medical Tests:', results);
     }
-    // ====================================================================
-    // END OF CORRECTED CODE
-    // ====================================================================
-
 </script>
-
-    {%endblock%}
+{%endblock%}

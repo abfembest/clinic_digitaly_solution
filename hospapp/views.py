@@ -7754,7 +7754,7 @@ def filter_activities(request):
 def start_ivf(request):
     if request.method == 'GET':
         context = {
-            'patients': Patient.objects.only('id', 'full_name'),
+            'patients': Patient.objects.only('id', 'full_name', 'patient_id'),
             'packages': IVFPackage.objects.only('id', 'name'),
             'locations': TreatmentLocation.objects.only('id', 'name'),
             'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
@@ -7770,23 +7770,25 @@ def start_ivf(request):
         doctor_name = data.get('doctor_name')
         doctor_comments = data.get('doctor_comments', '')
 
+        # Create IVF record with 'in_progress' status immediately
         ivf_record = IVFRecord.objects.create(
             patient_id=patient_id,
             ivf_package_id=ivf_package_id,
             treatment_location_id=treatment_location_id,
             doctor_name=doctor_name,
             doctor_comments=doctor_comments,
-            status='open'
+            status='in_progress'  # Set status to in_progress directly
         )
 
+        # Record the initial status update in the progress timeline
         IVFProgressUpdate.objects.create(
             ivf_record=ivf_record,
-            status='open',
-            comments='IVF cycle initiated.',
+            status='in_progress',
+            comments='IVF cycle initiated and started.',
             updated_by=request.user
         )
 
-        return JsonResponse({'success': True, 'message': 'IVF treatment form submitted successfully!'})
+        return JsonResponse({'success': True, 'message': 'IVF treatment form submitted and cycle started successfully!'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -7836,7 +7838,7 @@ def get_ivf_progress(request, record_id):
     progress_updates = IVFProgressUpdate.objects.filter(ivf_record=ivf_record).order_by('timestamp')
     for update in progress_updates:
         timeline_entries.append({
-            'type': 'status_update', # <--- Added 'type' here
+            'type': 'status_update', 
             'status': update.get_status_display(),
             'comments': update.comments,
             'updated_by': update.updated_by.get_full_name() if update.updated_by else 'N/A',
@@ -7844,9 +7846,9 @@ def get_ivf_progress(request, record_id):
         })
 
     # 2. Add Vitals entries for the patient, around the IVF record creation time
-
-    vital = Vitals.objects.filter(patient=patient).order_by('-recorded_at').first()
-    if vital:
+    # This retrieves all vitals for the patient, not just the first one.
+    vitals_records = Vitals.objects.filter(patient=patient).order_by('recorded_at')
+    for vital in vitals_records:
         timeline_entries.append({
             'type': 'vitals',
             'blood_pressure': vital.blood_pressure,
@@ -7859,14 +7861,14 @@ def get_ivf_progress(request, record_id):
             'notes': vital.notes,
             'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
             'timestamp': vital.recorded_at,
-    })
+        })
 
 
     # 3. Add LabTest entries for the patient, around the IVF record creation time
     lab_tests = LabTest.objects.filter(patient=patient).order_by('requested_at')
     for test in lab_tests:
         timeline_entries.append({
-            'type': 'lab_test', # <--- Added 'type' here
+            'type': 'lab_test', 
             'test_name': test.test_name,
             'status': test.get_status_display(),
             'result_value': test.result_value,
@@ -7880,7 +7882,7 @@ def get_ivf_progress(request, record_id):
     consultations = Consultation.objects.filter(patient=patient).order_by('created_at')
     for consultation in consultations:
         timeline_entries.append({
-            'type': 'consultation', # <--- Added 'type' here
+            'type': 'consultation', 
             'symptoms': consultation.symptoms,
             'diagnosis_summary': consultation.diagnosis_summary,
             'advice': consultation.advice,
@@ -7892,7 +7894,7 @@ def get_ivf_progress(request, record_id):
     nursing_notes = NursingNote.objects.filter(patient=patient).order_by('note_datetime')
     for note in nursing_notes:
         timeline_entries.append({
-            'type': 'nursing_note', # <--- Added 'type' here
+            'type': 'nursing_note', 
             'note_type': note.get_note_type_display(),
             'notes': note.notes,
             'nurse': note.nurse.get_full_name() if note.nurse else 'N/A',
@@ -7934,7 +7936,7 @@ def add_ivf_progress_comment(request):
 
         IVFProgressUpdate.objects.create(
             ivf_record=ivf_record,
-            status=ivf_record.status,
+            status=ivf_record.status,  # Use the current status of the record for the comment
             comments=comments,
             updated_by=request.user
         )

@@ -15,7 +15,7 @@
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-heartbeat"></i>
-                        IVF Treatment Form
+                        Start IVF Cycle
                     </h5>
                     <i class="fas fa-baby form-icon"></i>
                 </div>
@@ -78,14 +78,13 @@
                         </div>
 
                         <button type="submit" class="btn-submit">
-                            <i class="fas fa-paper-plane"></i> Submit Treatment Form
+                            <i class="fas fa-paper-plane"></i> Submit IVF Cycle
                         </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- IVF Records Table (Consolidated) -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
@@ -105,7 +104,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped table-hover">
+                            <table id="ivfRecordsTable" class="table table-bordered table-striped table-hover">
                                 <thead class="thead-light">
                                     <tr>
                                         <th><i class="fas fa-user mr-1"></i>Patient</th>
@@ -206,13 +205,6 @@
                                         <td class="text-center">
                                             <div class="btn-group">
                                                 {% if record.status == 'open' or record.status == 'pending' %}
-                                                <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#actionModal"
-                                                    data-id="{{ record.id }}" data-action="in_progress" data-title="Start IVF Cycle"
-                                                    data-message="Are you sure you want to start this IVF cycle?"
-                                                    data-confirm-text="Start Cycle" data-confirm-class="btn-success"
-                                                    title="Start Cycle">
-                                                    <i class="fas fa-play"></i> Start
-                                                </button>
                                                 <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#actionModal"
                                                     data-id="{{ record.id }}" data-action="cancelled" data-title="Cancel IVF Cycle"
                                                     data-message="Are you sure you want to cancel this IVF cycle? This action cannot be undone."
@@ -251,7 +243,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <!-- No Records Message -->
                         {% if not all_ivf_records %}
                         <div class="callout callout-info">
                             <h5><i class="fas fa-info"></i> No Records Found</h5>
@@ -265,7 +256,6 @@
     </div>
 </section>
 
-<!-- Action Confirmation Modal -->
 <div class="modal fade" id="actionModal" tabindex="-1" role="dialog" aria-labelledby="actionModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -286,7 +276,6 @@
     </div>
 </div>
 
-<!-- Progress/Timeline Modal -->
 <div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -298,8 +287,7 @@
             </div>
             <div class="modal-body">
                 <div id="progressModalHeader">
-                    <!-- Record details will be loaded here -->
-                </div>
+                    </div>
                 <hr>
                 <h5>Update Progress</h5>
                 <form id="updateProgressForm" class="mb-4">
@@ -326,7 +314,6 @@
                 <hr>
                 <h5>Progress Timeline</h5>
                 <div class="timeline" id="progressTimelineContent">
-                    <!-- Timeline will be loaded dynamically -->
                     <div class="text-center">
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                         <p class="mt-2">Loading timeline...</p>
@@ -340,39 +327,45 @@
     </div>
 </div>
 
-<!-- Success/Error Toast Notifications -->
 <div class="toast-container position-fixed" style="top: 20px; right: 20px; z-index: 1050;">
     <div id="successToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true" data-delay="7000">
         <div class="toast-header">
-            <i class="fas fa-check-circle text-white mr-2"></i> <!-- Changed text-success to text-white for better contrast on bg-success -->
-            <strong class="mr-auto text-white">Success</strong>
+            <i class="fas fa-check-circle text-white mr-2"></i> <strong class="mr-auto text-white">Success</strong>
             <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
         </div>
         <div class="toast-body text-white" id="successToastMessage">
-            <!-- Success message will be inserted here -->
-        </div>
+            </div>
     </div>
 
     <div id="errorToast" class="toast bg-danger" role="alert" aria-live="assertive" aria-atomic="true" data-delay="7000">
         <div class="toast-header">
-            <i class="fas fa-exclamation-triangle text-white mr-2"></i> <!-- Changed text-danger to text-white for better contrast on bg-danger -->
-            <strong class="mr-auto text-white">Error</strong>
+            <i class="fas fa-exclamation-triangle text-white mr-2"></i> <strong class="mr-auto text-white">Error</strong>
             <button type="button" class="ml-2 mb-1 close text-white" data-dismiss="toast" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
         </div>
         <div class="toast-body text-white" id="errorToastMessage">
-            <!-- Error message will be inserted here -->
-        </div>
+            </div>
     </div>
 </div>
 
-<!-- Scripts -->
 <script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
 <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/jszip/jszip.min.js' %}"></script>
+<script src="{% static 'plugins/pdfmake/pdfmake.min.js' %}"></script>
+<script src="{% static 'plugins/pdfmake/vfs_fonts.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
 <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
 <script>
     $(document).ready(function () {
@@ -386,6 +379,34 @@
         } else {
             console.warn('Select2 not found. Ensure it is loaded in your base template.');
         }
+
+        // Initialize DataTable
+        var ivfTable = $('#ivfRecordsTable').DataTable({
+            "paging": true,
+            "lengthChange": true,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "columnDefs": [
+                { "orderable": false, "targets": [7] } // Disable ordering on the Actions column
+            ],
+            "order": [[6, "desc"]], // Order by Created column (index 6) in descending order
+            "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+        });
+
+        ivfTable.buttons().container().appendTo('#ivfRecordsTable_wrapper .col-md-6:eq(0)');
+
+        // Custom search for patient ID
+        $('#ivfRecordsTable_filter label').append(
+            '<input type="search" id="patientIdSearch" class="form-control form-control-sm ml-2" placeholder="Search Patient ID">'
+        );
+
+        $('#patientIdSearch').on('keyup', function() {
+            ivfTable.column(0).search(this.value).draw(); // Assuming Patient ID is in the first column
+        });
+
 
         // Variables to store action data
         let currentRecordId = null;
@@ -458,7 +479,7 @@
             });
         });
 
-        // Handle action confirmation modal (Start/Complete/Cancel)
+        // Handle action confirmation modal (Complete/Cancel)
         $('#actionModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget);
             currentRecordId = button.data('id');
@@ -473,7 +494,7 @@
             confirmBtn.removeClass().addClass('btn ' + button.data('confirm-class'));
         });
 
-        // Handle confirm action for Start/Complete/Cancel
+        // Handle confirm action for Complete/Cancel
         $('#confirmActionBtn').on('click', function () {
             const $button = $(this);
             const originalHtml = $button.html();
@@ -687,7 +708,6 @@
                                 }
 
                                 timelineHtml += `
-                                    <!-- timeline item -->
                                     <div>
                                         <i class="${iconClass} ${badgeClass}"></i>
                                         <div class="timeline-item">
@@ -701,8 +721,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- END timeline item -->
-                                `;
+                                    `;
                             });
                             // Add the "End of timeline" entry
                             timelineHtml += `
@@ -923,7 +942,6 @@
                                                     break;
                                             }
                                             timelineHtml += `
-                                                <!-- timeline item -->
                                                 <div>
                                                     <i class="${iconClass} ${badgeClass}"></i>
                                                     <div class="timeline-item">
@@ -937,8 +955,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- END timeline item -->
-                                            `;
+                                                `;
                                         });
                                         // Add the "End of timeline" entry
                                         timelineHtml += `

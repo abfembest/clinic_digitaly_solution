@@ -241,14 +241,13 @@
                         </div>
                         <div class="card-body">
                             <div class="form-group">
-                                <label for="main-patient-select-input">Patient Name</label>
-                                <input class="form-control" list="patients-datalist" id="main-patient-select-input"
-                                       placeholder="Type to search patient..." required>
-                                <datalist id="patients-datalist">
+                                <label for="main-patient-select">Patient Name</label>
+                                <select class="form-control select2" id="main-patient-select" required>
+                                    <option value="">Select a patient</option>
                                     {% for patient in patients %}
-                                    <option value="{{ patient.full_name }}" data-id="{{ patient.id }}" class="select2"></option>
+                                    <option value="{{ patient.id }}" data-full-name="{{ patient.full_name }}">{{ patient.full_name }}</option>
                                     {% endfor %}
-                                </datalist>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -371,15 +370,15 @@
     </section>
 </div>
 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const mainPatientSelectInput = document.getElementById('main-patient-select-input');
-        const patientsDatalist = document.getElementById('patients-datalist');
+        const mainPatientSelect = document.getElementById('main-patient-select');
         const historyContainer = document.getElementById('patient-history');
         const historyContent = document.getElementById('history-content');
         const historyPatientNameSpan = document.getElementById('history-patient-name');
-
 
         // Hidden patient ID inputs for each form
         const diagnosisPatientIdInput = document.getElementById('diagnosis-patient-id');
@@ -389,15 +388,44 @@
         // Get base URL from Django template for AJAX
         const baseUrl = "{% url 'patient_history_ajax' 0 %}".replace('/0/', '/'); // remove dummy 0
 
-        mainPatientSelectInput.addEventListener('input', function () {
-            const selectedOption = patientsDatalist.querySelector(`option[value="${this.value}"]`);
-            let patientId = null;
-            let patientName = null;
+        // Initialize Select2 with custom matcher and explicit width
+        $('#main-patient-select').select2({
+            placeholder: "Search by patient name or ID...",
+            allowClear: false, // Set to false to remove the "cancel" or clear button
+            width: '100%', // Explicitly set width to 100%
+            matcher: function(params, data) {
+                // If there are no search terms, return all of the data
+                if ($.trim(params.term) === '') {
+                    return data;
+                }
 
-            if (selectedOption) {
-                patientId = selectedOption.dataset.id;
-                patientName = this.value; // Get the full name from the input value
+                // Do not display the item if there is no 'text' property
+                if (typeof data.text === 'undefined') {
+                    return null;
+                }
 
+                // Convert search term and data to lowercase for case-insensitive comparison
+                const termLower = params.term.toLowerCase();
+                const textLower = data.text.toLowerCase();
+                const idLower = String(data.id).toLowerCase(); // Ensure ID is treated as a string for comparison
+
+                // Check if the text (full name) or the ID includes the search term
+                if (textLower.includes(termLower) || idLower.includes(termLower)) {
+                    return data;
+                }
+
+                // Return `null` if the term should not be displayed
+                return null;
+            }
+        });
+
+        $(mainPatientSelect).on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            let patientId = selectedOption.val();
+            // We get the full name from the 'data-full-name' attribute set in the option tag
+            let patientName = selectedOption.data('full-name');
+
+            if (patientId) {
                 // Set the patient_id in all hidden inputs
                 diagnosisPatientIdInput.value = patientId;
                 prescriptionPatientIdInput.value = patientId;
@@ -432,6 +460,7 @@
                 historyContent.innerHTML = ''; // Clear content
             }
         });
+
 
         function renderPatientHistory(data) {
             let html = '';
@@ -597,20 +626,6 @@
             historyContent.innerHTML = html;
         }
     });
-</script>
-<!--Select2-->
-<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
-<script>
-
-    //Select2
-    $(function () {
-        //Initialize Select2 Elements
-        $('.select2').select2()
-
-        //Initialize Select2 Elements
-        $('.select2bs4').select2({
-            theme: 'bootstrap4'
-        })
 </script>
 
 {% endblock %}

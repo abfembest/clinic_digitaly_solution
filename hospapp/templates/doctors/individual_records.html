@@ -269,6 +269,7 @@
         font-weight: bold;
     }
 
+    /* Original .lab-group and .lab-test-item styles are now used for group display */
     .lab-group {
         border: 1px solid #e9ecef;
         border-radius: 8px;
@@ -318,7 +319,8 @@
                                 <label for="patientSelect" class="form-label">
                                     <i class="fas fa-user icon-accent"></i> Select Patient
                                 </label>
-                                <select class="form-select form-select-sm form-control" id="patientSelect" name="patient_id" required>
+                                {# Apply select2bs4 class for AdminLTE3 Select2 styling #}
+                                <select class="form-control select2bs4" id="patientSelect" name="patient_id" required>
                                     <option value="" disabled selected>Select a patient</option>
                                     {% for patient in patients %}
                                     <option value="{{ patient.id }}">{{ patient.full_name }} (ID: {{ patient.id }})</option>
@@ -399,13 +401,28 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
-<script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'dist/js/adminlte.min.js' %}"></script>
+{# DataTables CSS and JS are already linked in base.html, as well as Select2 CSS #}
+{# Adding DataTables JS here, assuming base.html doesn't already have it fully #}
+{% block extra_scripts %}
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
 
 <script>
     $(document).ready(function() {
+        // Initialize Select2 on patientSelect
+        $('#patientSelect').select2({
+            theme: 'bootstrap4',
+            placeholder: "Select a patient",
+            allowClear: true // Allow clearing selection for patient filter
+        });
+
         // Date filter toggle
         const allDatesRadio = $('#allDates');
         const betweenDatesRadio = $('#betweenDates');
@@ -500,6 +517,72 @@
                 minute: '2-digit'
             });
             
+            // Generate Lab Tests HTML, grouped by request ID with DataTables inside each group
+            let labTestsHtml = '';
+            if (data.lab_test_groups.length > 0) {
+                labTestsHtml = data.lab_test_groups.map(group => `
+                    <div class="lab-group">
+                        <div class="lab-group-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Request ID: ${group.request_id}</strong>
+                                    <small class="text-muted ms-2">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        ${group.requested_at}
+                                    </small>
+                                </div>
+                                <span class="badge bg-primary">Requested By: ${group.doctor_name || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="lab-group-body">
+                            <div class="table-responsive">
+                                <table id="labTestsTable_${group.request_id}" class="table table-bordered table-hover lab-test-group-table" style="width:100%">
+                                    <thead>
+                                        <tr>
+                                            <th>Test Name</th>
+                                            <th>Category</th>
+                                            <th>Result</th>
+                                            <th>Normal Range</th>
+                                            <th>Notes</th>
+                                            <th>Date Performed</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${group.tests.map(test => `
+                                            <tr>
+                                                <td>${test.test_name || 'N/A'}</td>
+                                                <td>${test.category || 'N/A'}</td>
+                                                <td>${test.result_value || 'N/A'}</td>
+                                                <td>${test.normal_range || 'N/A'}</td>
+                                                <td>${test.notes || 'N/A'}</td>
+                                                <td>${test.date_performed || 'N/A'}</td>
+                                                <td>
+                                                    <span class="badge status-badge ${
+                                                        test.status_code === 'completed' ? 'bg-success' : 
+                                                        test.status_code === 'in_progress' ? 'bg-warning' : 
+                                                        test.status_code === 'cancelled' ? 'bg-danger' : 'bg-secondary'
+                                                    }">
+                                                        ${test.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                labTestsHtml = `
+                    <div class="empty-state">
+                        <i class="fas fa-vial"></i>
+                        <h5>No Laboratory Tests</h5>
+                        <p>No laboratory test records found for this patient.</p>
+                    </div>`;
+            }
+
             // Create HTML for patient records
             const html = `
                 <div class="profile-card card mb-4">
@@ -572,7 +655,7 @@
                                 <a class="nav-link" id="vitals-tab" data-toggle="tab" href="#vitals" role="tab">Vitals (${data.vitals.length})</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" id="lab-tab" data-toggle="tab" href="#lab" role="tab">Lab Tests (${data.lab_test_groups.length})</a>
+                                <a class="nav-link" id="lab-tab" data-toggle="tab" href="#lab" role="tab">Lab Tests (${data.lab_test_groups.length})</a> {# Display group count #}
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" id="nursing-notes-tab" data-toggle="tab" href="#nursing-notes" role="tab">Nursing Notes (${data.nursing_notes.length})</a>
@@ -602,63 +685,31 @@
                         
                         <div class="tab-content" id="patientRecordsTabContent">
                             <div class="tab-pane fade show active" id="overview" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="section-card">
-                                            <h5 class="section-title">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                Patient Information
-                                            </h5>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <p><strong>Blood Group:</strong> ${patient.blood_group || 'N/A'}</p>
-                                                    <p><strong>Marital Status:</strong> ${patient.marital_status || 'N/A'}</p>
-                                                    <p><strong>Phone:</strong> ${patient.phone || 'N/A'}</p>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <p><strong>Email:</strong> ${patient.email || 'N/A'}</p>
-                                                    <p><strong>Address:</strong> ${patient.address || 'N/A'}</p>
-                                                    <p><strong>Status:</strong> ${patient.status}</p>
-                                                </div>
-                                            </div>
-                                            
-                                            <h5 class="section-title mt-4">
-                                                <i class="fas fa-user-friends me-2"></i>
-                                                Next of Kin
-                                            </h5>
-                                            <p><strong>Name:</strong> ${patient.next_of_kin_name || 'N/A'}</p>
-                                            <p><strong>Relationship:</strong> ${patient.next_of_kin_relationship || 'N/A'}</p>
-                                            <p><strong>Phone:</strong> ${patient.next_of_kin_phone || 'N/A'}</p>
+                                <div class="section-card">
+                                    <h5 class="section-title">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Patient Information
+                                    </h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Blood Group:</strong> ${patient.blood_group || 'N/A'}</p>
+                                            <p><strong>Marital Status:</strong> ${patient.marital_status || 'N/A'}</p>
+                                            <p><strong>Phone:</strong> ${patient.phone || 'N/A'}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Email:</strong> ${patient.email || 'N/A'}</p>
+                                            <p><strong>Address:</strong> ${patient.address || 'N/A'}</p>
+                                            <p><strong>Status:</strong> ${patient.status}</p>
                                         </div>
                                     </div>
                                     
-                                    <div class="col-md-6">
-                                        <div class="section-card">
-                                            <h5 class="section-title">
-                                                <i class="fas fa-heartbeat me-2"></i>
-                                                Medical Summary
-                                            </h5>
-                                            <p><strong>Diagnosis:</strong> ${patient.diagnosis || 'No diagnosis recorded'}</p>
-                                            <p><strong>Current Medication:</strong> ${patient.medication || 'No current medication'}</p>
-                                            <p><strong>Notes:</strong> ${patient.notes || 'No additional notes'}</p>
-                                            
-                                            <h5 class="section-title mt-4">
-                                                <i class="fas fa-procedures me-2"></i>
-                                                Current Admission Status
-                                            </h5>
-                                            <p>${data.summary.current_admission ? 
-                                                '<span class="badge bg-danger">Currently Admitted</span>' : 
-                                                '<span class="badge bg-success">Not Admitted</span>'}
-                                            </p>
-                                            
-                                            <h5 class="section-title mt-4">
-                                                <i class="fas fa-file-invoice-dollar me-2"></i>
-                                                Billing Summary
-                                            </h5>
-                                            <p><strong>Total Bills:</strong> ${data.summary.total_bills}</p>
-                                            <p><strong>Outstanding Bills:</strong> ${data.summary.outstanding_bills}</p>
-                                        </div>
-                                    </div>
+                                    <h5 class="section-title mt-4">
+                                        <i class="fas fa-user-friends me-2"></i>
+                                        Next of Kin
+                                    </h5>
+                                    <p><strong>Name:</strong> ${patient.next_of_kin_name || 'N/A'}</p>
+                                    <p><strong>Relationship:</strong> ${patient.next_of_kin_relationship || 'N/A'}</p>
+                                    <p><strong>Phone:</strong> ${patient.next_of_kin_phone || 'N/A'}</p>
                                 </div>
                             </div>
                             
@@ -779,132 +830,7 @@
                                         Laboratory Test Results
                                     </h5>
                                     
-                                    ${data.lab_test_groups.length > 0 ? 
-                                        data.lab_test_groups.map(group => `
-                                            <div class="lab-group">
-                                                <div class="lab-group-header">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <div>
-                                                            <strong>Test Request ID: ${group.request_id}</strong>
-                                                            <small class="text-muted ms-2">
-                                                                <i class="fas fa-calendar me-1"></i>
-                                                                ${group.requested_at}
-                                                            </small>
-                                                        </div>
-                                                        <div>
-                                                            <span class="badge status-badge ${
-                                                                group.group_status === 'completed' ? 'bg-success' : 
-                                                                group.group_status === 'in_progress' ? 'bg-warning' : 
-                                                                group.group_status === 'mixed' ? 'bg-info' : 'bg-secondary'
-                                                            }">
-                                                                ${group.group_status.replace('_', ' ').toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mt-2">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-user-md me-1"></i>
-                                                            Requested by: ${group.requested_by || group.doctor_name}
-                                                            <span class="mx-2">|</span>
-                                                            <i class="fas fa-flask me-1"></i>
-                                                            ${group.tests_count} tests
-                                                            <span class="mx-2">|</span>
-                                                            <i class="fas fa-check-circle me-1"></i>
-                                                            ${group.completed_tests}/${group.tests_count} completed
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                                <div class="lab-group-body">
-                                                    ${group.tests.map(test => `
-                                                        <div class="lab-test-item">
-                                                            <div class="d-flex justify-content-between align-items-start">
-                                                                <div class="flex-grow-1">
-                                                                    <h6 class="mb-1">${test.test_name}</h6>
-                                                                    <small class="text-muted">${test.category}</small>
-                                                                    
-                                                                    ${test.result_value ? `
-                                                                        <div class="mt-2">
-                                                                            <strong>Result:</strong> ${test.result_value}
-                                                                            ${test.normal_range ? `
-                                                                                <small class="text-muted ms-2">(Normal: ${test.normal_range})</small>
-                                                                            ` : ''}
-                                                                        </div>
-                                                                    ` : ''}
-                                                                    
-                                                                    ${test.notes ? `
-                                                                        <div class="mt-1">
-                                                                            <small><strong>Notes:</strong> ${test.notes}</small>
-                                                                        </div>
-                                                                    ` : ''}
-                                                                    
-                                                                    ${test.date_performed ? `
-                                                                        <div class="mt-1">
-                                                                            <small class="text-muted">
-                                                                                <i class="fas fa-calendar-check me-1"></i>
-                                                                                Performed: ${test.date_performed}
-                                                                            </small>
-                                                                        </div>
-                                                                    ` : ''}
-                                                                </div>
-                                                                <div class="ms-3">
-                                                                    <span class="badge status-badge ${
-                                                                        test.status_code === 'completed' ? 'bg-success' : 
-                                                                        test.status_code === 'in_progress' ? 'bg-warning' : 
-                                                                        test.status_code === 'cancelled' ? 'bg-danger' : 'bg-secondary'
-                                                                    }">
-                                                                        ${test.status}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    `).join('')}
-                                                    
-                                                    ${group.doctor_comment ? `
-                                                        <div class="mt-3 p-3" style="background-color: #f8f9fa; border-radius: 8px;">
-                                                            <h6 class="mb-2">
-                                                                <i class="fas fa-comment-medical me-2"></i>
-                                                                Doctor's Comment
-                                                            </h6>
-                                                            <p class="mb-1">${group.doctor_comment.comment}</p>
-                                                            <small class="text-muted">
-                                                                <i class="fas fa-user-md me-1"></i>
-                                                                ${group.doctor_comment.doctor_name}
-                                                                <span class="mx-2">|</span>
-                                                                <i class="fas fa-calendar me-1"></i>
-                                                                ${group.doctor_comment.date}
-                                                            </small>
-                                                        </div>
-                                                    ` : ''}
-                                                    
-                                                    ${group.result_file ? `
-                                                        <div class="mt-3 p-3" style="background-color: #e8f4f8; border-radius: 8px;">
-                                                            <h6 class="mb-2">
-                                                                <i class="fas fa-file-medical me-2"></i>
-                                                                Lab Result File
-                                                            </h6>
-                                                            <div class="d-flex align-items-center">
-                                                                <a href="${group.result_file.file_url}" 
-                                                                   class="btn btn-sm btn-outline-primary me-3" 
-                                                                   target="_blank">
-                                                                    <i class="fas fa-eye me-1"></i>
-                                                                    View ${group.result_file.file_name}
-                                                                </a>
-                                                                <small class="text-muted">
-                                                                    <i class="fas fa-upload me-1"></i>
-                                                                    Uploaded by ${group.result_file.uploaded_by} on ${group.result_file.uploaded_at}
-                                                                </small>
-                                                            </div>
-                                                        </div>
-                                                    ` : ''}
-                                                </div>
-                                            </div>
-                                        `).join('') :
-                                        `<div class="empty-state">
-                                            <i class="fas fa-vial"></i>
-                                            <h5>No Laboratory Tests</h5>
-                                            <p>No laboratory test records found for this patient.</p>
-                                        </div>`
-                                    }
+                                    ${labTestsHtml}
                                 </div>
                             </div>
 
@@ -1200,8 +1126,36 @@
                 e.preventDefault();
                 $(this).tab('show');
             });
+
+            // Initialize DataTables for ALL Lab Tests tables ONLY if the tab becomes active
+            function initializeLabTables() {
+                $('.lab-test-group-table').each(function() {
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        $(this).DataTable().destroy();
+                    }
+                    $(this).DataTable({
+                        "paging": true,
+                        "lengthChange": true,
+                        "searching": true,
+                        "ordering": true,
+                        "info": true,
+                        "autoWidth": false,
+                        "responsive": true,
+                        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"] // Example buttons
+                    }).buttons().container().appendTo($(this).closest('.lab-group-body').find('.dataTables_wrapper .col-md-6:eq(0)'));
+                });
+            }
+
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+                if (e.target.id === 'lab-tab') {
+                    initializeLabTables();
+                }
+            });
+            // Also initialize if the lab tab is already active when content is loaded (e.g., on first load with pre-selected patient)
+            if ($('#lab-tab').hasClass('active')) {
+                initializeLabTables();
+            }
         }
     });
 </script>
-
 {% endblock %}
