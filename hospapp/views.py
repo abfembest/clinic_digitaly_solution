@@ -659,6 +659,15 @@ def nurse_activity_report(request):
     }
     return render(request, 'nurses/reports.html', context)
 
+@login_required
+@require_http_methods(["GET"])
+def nurse_view_ivf_progress(request):
+    
+    context = {
+        'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
+    }
+    return render(request, 'nurses/ivf_progress.html', context)
+
 ''' ############################################################################################################################ End Nurses View ############################################################################################################################ '''
 
 ''' ############################################################################################################################ Doctors View ############################################################################################################################ '''
@@ -6786,6 +6795,14 @@ def lab_activity_report(request):
     }
 
     return render(request, 'laboratory/reports.html', context)
+
+@login_required
+@require_http_methods(["GET"])
+def lab_view_ivf_progress(request):
+    context = {
+        'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
+    }
+    return render(request, 'laboratory/ivf_progress.html', context)
  
 
  #Doctor's fetching test results that were recommended

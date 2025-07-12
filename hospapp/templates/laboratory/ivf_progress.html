@@ -1,0 +1,410 @@
+{% extends "laboratory/base.html" %}
+
+{% load static %}
+
+{% block title %}Lab | IVF Progress View{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1>IVF Progress Overview</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active">IVF Progress</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-list-alt"></i>
+                            Current IVF Records
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <table id="ivfRecordsTable" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Patient ID</th>
+                                    <th>Image</th>
+                                    <th>Patient Name</th>
+                                    <th>Package</th>
+                                    <th>Location</th>
+                                    <th>Start Date</th>
+                                    <th>Current Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in all_ivf_records %}
+                                <tr data-record-id="{{ record.id }}">
+                                    <td>{{ record.patient.patient_id }}</td>
+                                    <td>
+                                        {% if record.patient.photo %}
+                                            <img src="{{ record.patient.photo.url }}" alt="Patient Image" class="img-circle" width="40" height="40">
+                                        {% else %}
+                                            <img src="{% static 'dist/img/user2-160x160.jpg' %}" alt="Default Avatar" class="img-circle" width="40" height="40">
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.patient.full_name }}</td>
+                                    <td>{{ record.ivf_package.name }}</td>
+                                    <td>{{ record.treatment_location.name }}</td>
+                                    <td>{{ record.created_on|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <span class="badge
+                                            {% if record.status == 'open' %}badge-secondary
+                                            {% elif record.status == 'pending' %}badge-warning
+                                            {% elif record.status == 'in_progress' %}badge-info
+                                            {% elif record.status == 'stimulation' %}badge-primary
+                                            {% elif record.status == 'egg_retrieval' %}badge-success
+                                            {% elif record.status == 'fertilization' %}badge-light text-dark border
+                                            {% elif record.status == 'embryo_transfer' %}badge-dark
+                                            {% elif record.status == 'luteal_phase' %}badge-danger
+                                            {% elif record.status == 'pregnancy_test' %}badge-warning
+                                            {% elif record.status == 'completed' %}badge-success
+                                            {% elif record.status == 'cancelled' %}badge-danger
+                                            {% endif %}">
+                                            {{ record.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-primary btn-sm viewProgressBtn"
+                                            data-record-id="{{ record.id }}"
+                                            data-patient-name="{{ record.patient.full_name }}">
+                                            <i class="fas fa-eye"></i> View Progress
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+<div class="modal fade" id="ivfProgressModal" tabindex="-1" role="dialog" aria-labelledby="ivfProgressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title" id="ivfProgressModalLabel">
+                    <i class="fas fa-chart-line"></i>
+                    IVF Progress for <span id="timelinePatientName"></span>
+                </h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="info-box">
+                            <span class="info-box-icon bg-info"><i class="fas fa-box"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Package</span>
+                                <span class="info-box-number" id="timelinePackage">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-box">
+                            <span class="info-box-icon bg-success"><i class="fas fa-calendar-alt"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Start Date</span>
+                                <span class="info-box-number" id="timelineStartDate">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-box">
+                            <span class="info-box-icon bg-warning"><i class="fas fa-heartbeat"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Current Status</span>
+                                <span class="info-box-number">
+                                    <span class="badge badge-secondary" id="currentStatusBadge">-</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-clock"></i>
+                                    Treatment Timeline
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="timeline" id="progressTimelineContent">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/jszip/jszip.min.js' %}"></script>
+<script src="{% static 'plugins/pdfmake/pdfmake.min.js' %}"></script>
+<script src="{% static 'plugins/pdfmake/vfs_fonts.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
+
+<script>
+$(function () {
+    // Initialize DataTable
+    $("#ivfRecordsTable").DataTable({
+        "responsive": true,
+        "lengthChange": true, // Enable lengthChange
+        "autoWidth": false,
+        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"],
+        "order": [[5, "desc"]], // Start Date column (index 5)
+        "columnDefs": [
+            {
+                "targets": [1], // Image column (Patient Image)
+                "orderable": false,
+                "searchable": false
+            },
+            {
+                "targets": [7], // Actions column
+                "orderable": false,
+                "searchable": false
+            }
+        ],
+        // Add lengthMenu and dom options
+        "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]], // Options for "Show X entries"
+        "dom": 'lBfrtip' // 'l' for length menu, 'B' for buttons, 'f' for filtering, 'r' for processing, 't' for table, 'i' for info, 'p' for pagination
+    }).buttons().container().appendTo('#ivfRecordsTable_wrapper .col-md-6:eq(0)');
+
+    // View Progress Button Click Handler
+    $('.viewProgressBtn').on('click', function() {
+        const recordId = $(this).data('record-id');
+        const patientName = $(this).data('patient-name');
+
+        // Set patient name in modal
+        $('#timelinePatientName').text(patientName);
+        
+        // Show modal
+        $('#ivfProgressModal').modal('show');
+        
+        // Show loading in timeline
+        $('#progressTimelineContent').html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading timeline...</p>
+            </div>
+        `);
+
+        // Load progress data
+        $.ajax({
+            url: `/ivf/progress/${recordId}/`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const recordDetails = response.record_details;
+                    const timeline = response.timeline;
+
+                    // Update info boxes
+                    $('#timelinePackage').text(recordDetails.ivf_package);
+                    $('#timelineStartDate').text(recordDetails.created_on);
+                    $('#currentStatusBadge').text(recordDetails.current_status);
+
+                    // Update status badge color
+                    let statusClass = '';
+                    switch (recordDetails.current_status) {
+                        case 'Open': statusClass = 'badge-secondary'; break;
+                        case 'Pending': statusClass = 'badge-warning'; break;
+                        case 'In Progress': statusClass = 'badge-info'; break;
+                        case 'Stimulation Phase': statusClass = 'badge-primary'; break;
+                        case 'Egg Retrieval': statusClass = 'badge-success'; break;
+                        case 'Fertilization': statusClass = 'badge-light text-dark border'; break;
+                        case 'Embryo Transfer': statusClass = 'badge-dark'; break;
+                        case 'Luteal Phase': statusClass = 'badge-danger'; break;
+                        case 'Pregnancy Test': statusClass = 'badge-warning'; break;
+                        case 'Completed': statusClass = 'badge-success'; break;
+                        case 'Cancelled': statusClass = 'badge-danger'; break;
+                        default: statusClass = 'badge-secondary';
+                    }
+                    $('#currentStatusBadge').removeClass().addClass('badge ' + statusClass);
+
+                    // Build timeline HTML
+                    let timelineHtml = '';
+                    if (timeline.length > 0) {
+                        timeline.forEach(entry => {
+                            let iconClass = 'fas fa-info-circle';
+                            let bgColorClass = 'bg-info';
+
+                            switch (entry.type) {
+                                case 'status_update':
+                                    iconClass = 'fas fa-sync-alt';
+                                    switch (entry.status) {
+                                        case 'Open': bgColorClass = 'bg-secondary'; break;
+                                        case 'Pending': bgColorClass = 'bg-warning'; break;
+                                        case 'In Progress': bgColorClass = 'bg-info'; break;
+                                        case 'Stimulation Phase': bgColorClass = 'bg-primary'; break;
+                                        case 'Egg Retrieval': bgColorClass = 'bg-success'; break;
+                                        case 'Fertilization': bgColorClass = 'bg-light'; break;
+                                        case 'Embryo Transfer': bgColorClass = 'bg-dark'; break;
+                                        case 'Luteal Phase': bgColorClass = 'bg-danger'; break;
+                                        case 'Pregnancy Test': bgColorClass = 'bg-warning'; break;
+                                        case 'Completed': bgColorClass = 'bg-success'; break;
+                                        case 'Cancelled': bgColorClass = 'bg-danger'; break;
+                                        default: bgColorClass = 'bg-info';
+                                    }
+                                    break;
+                                case 'vitals':
+                                    iconClass = 'fas fa-heartbeat';
+                                    bgColorClass = 'bg-danger';
+                                    break;
+                                case 'lab_test':
+                                    iconClass = 'fas fa-vial';
+                                    bgColorClass = 'bg-purple';
+                                    break;
+                                case 'consultation':
+                                    iconClass = 'fas fa-user-md';
+                                    bgColorClass = 'bg-primary';
+                                    break;
+                                case 'nursing_note':
+                                    iconClass = 'fas fa-notes-medical';
+                                    bgColorClass = 'bg-teal';
+                                    break;
+                            }
+
+                            timelineHtml += `
+                                <div class="time-label">
+                                    <span class="${bgColorClass}">${entry.timestamp.split(' ')[0]}</span>
+                                </div>
+                                <div>
+                                    <i class="${iconClass} ${bgColorClass}"></i>
+                                    <div class="timeline-item">
+                                        <span class="time"><i class="fas fa-clock"></i> ${entry.timestamp.split(' ')[1]}</span>
+                                        <h3 class="timeline-header">
+                                            ${entry.type === 'status_update' ? `Status Update: ${entry.status}` : ''}
+                                            ${entry.type === 'vitals' ? 'Vitals Recorded' : ''}
+                                            ${entry.type === 'lab_test' ? `Lab Test: ${entry.test_name} (${entry.status})` : ''}
+                                            ${entry.type === 'consultation' ? 'Consultation' : ''}
+                                            ${entry.type === 'nursing_note' ? `Nursing Note: ${entry.note_type}` : ''}
+                                        </h3>
+                                        <div class="timeline-body">
+                            `;
+
+                            if (entry.type === 'status_update') {
+                                timelineHtml += `
+                                    <strong>Status:</strong> ${entry.status || 'N/A'}<br>
+                                    <strong>Comments:</strong> ${entry.comments || 'N/A'}<br>
+                                    <strong>Updated By:</strong> ${entry.updated_by || 'N/A'}
+                                `;
+                            } else if (entry.type === 'vitals') {
+                                timelineHtml += `
+                                    <strong>Blood Pressure:</strong> ${entry.blood_pressure || 'N/A'}<br>
+                                    <strong>Temperature:</strong> ${entry.temperature || 'N/A'}<br>
+                                    <strong>Pulse:</strong> ${entry.pulse || 'N/A'}<br>
+                                    <strong>Respiratory Rate:</strong> ${entry.respiratory_rate || 'N/A'}<br>
+                                    <strong>Weight:</strong> ${entry.weight || 'N/A'} kg<br>
+                                    <strong>Height:</strong> ${entry.height || 'N/A'} cm<br>
+                                    <strong>BMI:</strong> ${entry.bmi || 'N/A'}<br>
+                                    <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                    <strong>Recorded By:</strong> ${entry.recorded_by || 'N/A'}
+                                `;
+                            } else if (entry.type === 'lab_test') {
+                                timelineHtml += `
+                                    <strong>Test Name:</strong> ${entry.test_name || 'N/A'}<br>
+                                    <strong>Status:</strong> ${entry.status || 'N/A'}<br>
+                                    <strong>Result:</strong> ${entry.result_value || 'N/A'}<br>
+                                    <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                    <strong>Requested By:</strong> ${entry.requested_by || 'N/A'}<br>
+                                    <strong>Performed By:</strong> ${entry.performed_by || 'N/A'}<br>
+                                    <strong>Test Request ID:</strong> ${entry.test_request_id || 'N/A'}
+                                `;
+                            } else if (entry.type === 'consultation') {
+                                timelineHtml += `
+                                    <strong>Symptoms:</strong> ${entry.symptoms || 'N/A'}<br>
+                                    <strong>Diagnosis:</strong> ${entry.diagnosis_summary || 'N/A'}<br>
+                                    <strong>Advice:</strong> ${entry.advice || 'N/A'}<br>
+                                    <strong>Consultant:</strong> ${entry.doctor || 'N/A'}
+                                `;
+                            } else if (entry.type === 'nursing_note') {
+                                timelineHtml += `
+                                    <strong>Note Type:</strong> ${entry.note_type || 'N/A'}<br>
+                                    <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                    <strong>Nurse:</strong> ${entry.nurse || 'N/A'}
+                                `;
+                            }
+
+                            timelineHtml += `
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        timelineHtml += `
+                            <div>
+                                <i class="far fa-clock bg-gray"></i>
+                            </div>
+                        `;
+                    } else {
+                        timelineHtml = `
+                            <div class="callout callout-info">
+                                <h5><i class="fas fa-info"></i> No Timeline Data</h5>
+                                <p>No timeline events are available for this record yet.</p>
+                            </div>
+                        `;
+                    }
+                    $('#progressTimelineContent').html(timelineHtml);
+                } else {
+                    $('#progressTimelineContent').html(`
+                        <div class="callout callout-danger">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
+                            <p>Error loading timeline: ${response.error}</p>
+                        </div>
+                    `);
+                }
+            },
+            error: function (xhr) {
+                const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
+                $('#progressTimelineContent').html(`
+                    <div class="callout callout-danger">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
+                        <p>Error loading timeline: ${errorMessage}</p>
+                    </div>
+                `);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

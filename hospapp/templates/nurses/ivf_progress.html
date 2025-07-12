@@ -1,0 +1,295 @@
+{% extends "nurses/base.html" %}
+
+{% load static %}
+
+{% block title %}Nurses | IVF Progress View{% endblock %}
+
+{%block content%}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0 text-dark">IVF Progress Overview</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active">IVF Progress</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+<section class="content">
+    <div class="container-fluid">
+        <div class="card shadow">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-list-alt mr-1"></i> Current IVF Records
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="ivfRecordsTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Patient Name</th>
+                                <th>Package</th>
+                                <th>Location</th>
+                                <th>Doctor</th>
+                                <th>Start Date</th>
+                                <th>Current Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in all_ivf_records %}
+                            <tr data-record-id="{{ record.id }}">
+                                <td>{{ record.patient.patient_id }}</td>
+                                <td>{{ record.patient.full_name }}</td>
+                                <td>{{ record.ivf_package.name }}</td>
+                                <td>{{ record.treatment_location.name }}</td>
+                                <td>{{ record.doctor_name }}</td>
+                                <td>{{ record.created_on|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if record.status == 'open' %}badge-secondary
+                                        {% elif record.status == 'pending' %}badge-warning
+                                        {% elif record.status == 'in_progress' %}badge-info
+                                        {% elif record.status == 'stimulation' %}badge-primary
+                                        {% elif record.status == 'egg_retrieval' %}badge-success
+                                        {% elif record.status == 'fertilization' %}badge-light text-dark border
+                                        {% elif record.status == 'embryo_transfer' %}badge-dark
+                                        {% elif record.status == 'luteal_phase' %}badge-danger
+                                        {% elif record.status == 'pregnancy_test' %}badge-warning
+                                        {% elif record.status == 'completed' %}badge-success
+                                        {% elif record.status == 'cancelled' %}badge-danger
+                                        {% endif %}">
+                                        {{ record.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary viewProgressBtn"
+                                        data-record-id="{{ record.id }}"
+                                        data-patient-name="{{ record.patient.full_name }}">
+                                        <i class="fas fa-eye"></i> View Progress
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="ivfProgressModal" tabindex="-1" role="dialog" aria-labelledby="ivfProgressModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="ivfProgressModalLabel">
+                    <i class="fas fa-chart-line mr-2"></i> IVF Progress Timeline for <span
+                        id="timelinePatientName"></span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <p><strong>Package:</strong> <span id="timelinePackage"></span></p>
+                        <p><strong>Doctor:</strong> <span id="timelineDoctor"></span></p>
+                        <p><strong>Start Date:</strong> <span id="timelineStartDate"></span></p>
+                        <p><strong>Current Status:</strong> <span class="badge badge-secondary ml-2"
+                                id="currentStatusBadge"></span></p>
+                    </div>
+                </div>
+                <hr>
+
+                <div id="progressTimelineContent" class="timeline">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+<script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+
+<script>
+    $(document).ready(function () {
+        // Initialize DataTables
+        $('#ivfRecordsTable').DataTable({
+            "paging": true,
+            "lengthChange": true,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "order": [[5, "desc"]] // Order by start date (column 5) descending
+        });
+
+        // Initialize Select2 (if any select elements are added later, e.g., for filters)
+        $('.select2').select2({
+            placeholder: "Select an option",
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Event listener for "View Progress" buttons
+        $(document).on('click', '.viewProgressBtn', function () {
+            const recordId = $(this).data('record-id');
+            const patientName = $(this).data('patient-name');
+            const url = `{% url 'get_ivf_progress' 0 %}`.replace('0', recordId); // Django URL reverse
+
+            // Populate modal header details
+            $('#timelinePatientName').text(patientName);
+            // Clear previous timeline content and show loading spinner
+            $('#progressTimelineContent').html('<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x text-muted"></i><p class="mt-3">Loading timeline...</p></div>');
+
+            // Show the modal
+            $('#ivfProgressModal').modal('show');
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function (response) {
+                    if (response.success) {
+                        const recordDetails = response.record_details;
+                        const timeline = response.timeline;
+
+                        $('#timelinePackage').text(recordDetails.ivf_package);
+                        $('#timelineDoctor').text(recordDetails.doctor_name);
+                        $('#timelineStartDate').text(recordDetails.created_on);
+                        $('#currentStatusBadge').text(recordDetails.current_status);
+
+                        let timelineHtml = '';
+                        if (timeline.length > 0) {
+                            // Sort timeline entries by timestamp in descending order for display
+                            timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                            let lastDate = '';
+                            timeline.forEach(entry => {
+                                let iconClass = 'fas fa-info'; // Default icon
+                                let bgColorClass = 'bg-secondary'; // Default background color
+
+                                // Assign icons and AdminLTE3 background colors based on entry type
+                                if (entry.type === 'status_update') {
+                                    iconClass = 'fas fa-clipboard-check';
+                                    bgColorClass = 'bg-primary';
+                                } else if (entry.type === 'vitals') {
+                                    iconClass = 'fas fa-heartbeat';
+                                    bgColorClass = 'bg-success';
+                                } else if (entry.type === 'lab_test') {
+                                    iconClass = 'fas fa-flask';
+                                    bgColorClass = 'bg-info';
+                                } else if (entry.type === 'consultation') {
+                                    iconClass = 'fas fa-user-md';
+                                    bgColorClass = 'bg-warning'; // Orange
+                                } else if (entry.type === 'nursing_note') {
+                                    iconClass = 'fas fa-notes-medical';
+                                    bgColorClass = 'bg-purple'; // AdminLTE3 has bg-purple
+                                }
+
+                                const entryDate = new Date(entry.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                if (entryDate !== lastDate) {
+                                    timelineHtml += `
+                                        <div class="time-label">
+                                            <span class="bg-gray">${entryDate}</span>
+                                        </div>
+                                    `;
+                                    lastDate = entryDate;
+                                }
+
+                                timelineHtml += `
+                                    <div>
+                                        <i class="${iconClass} ${bgColorClass}"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="far fa-clock"></i> ${new Date(entry.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <h3 class="timeline-header"><a href="#">${entry.type.replace(/_/g, ' ').toUpperCase()}</a></h3>
+                                            <div class="timeline-body">
+                                `;
+                                if (entry.type === 'status_update') {
+                                    timelineHtml += `
+                                        <strong>Status:</strong> ${entry.status}<br>
+                                        <strong>Comments:</strong> ${entry.comments || 'N/A'}<br>
+                                        <strong>Updated By:</strong> ${entry.updated_by}
+                                    `;
+                                } else if (entry.type === 'vitals') {
+                                    timelineHtml += `
+                                        <strong>BP:</strong> ${entry.blood_pressure || 'N/A'},
+                                        <strong>Temp:</strong> ${entry.temperature || 'N/A'}°C,
+                                        <strong>Pulse:</strong> ${entry.pulse || 'N/A'},
+                                        <strong>RR:</strong> ${entry.respiratory_rate || 'N/A'}<br>
+                                        <strong>Weight:</strong> ${entry.weight || 'N/A'} kg,
+                                        <strong>Height:</strong> ${entry.height || 'N/A'} cm,
+                                        <strong>BMI:</strong> ${entry.bmi || 'N/A'}<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Recorded By:</strong> ${entry.recorded_by}
+                                    `;
+                                } else if (entry.type === 'lab_test') {
+                                    timelineHtml += `
+                                        <strong>Test:</strong> ${entry.test_name || 'N/A'} (ID: ${entry.test_request_id || 'N/A'})<br>
+                                        <strong>Result:</strong> ${entry.result_value || 'N/A'} (Status: ${entry.status || 'N/A'})<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Requested By:</strong> ${entry.requested_by || 'N/A'}<br>
+                                        <strong>Performed By:</strong> ${entry.performed_by || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'consultation') {
+                                    timelineHtml += `
+                                        <strong>Symptoms:</strong> ${entry.symptoms || 'N/A'}<br>
+                                        <strong>Diagnosis:</strong> ${entry.diagnosis_summary || 'N/A'}<br>
+                                        <strong>Advice:</strong> ${entry.advice || 'N/A'}<br>
+                                        <strong>Doctor:</strong> ${entry.doctor || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'nursing_note') {
+                                    timelineHtml += `
+                                        <strong>Note Type:</strong> ${entry.note_type || 'N/A'}<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Nurse:</strong> ${entry.nurse || 'N/A'}
+                                    `;
+                                }
+
+                                timelineHtml += `
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            // Add an end marker for the timeline
+                            timelineHtml += `
+                                <div>
+                                    <i class="far fa-clock bg-gray"></i>
+                                </div>
+                            `;
+                        } else {
+                            timelineHtml = '<p class="text-center text-muted">No timeline events available for this record.</p>';
+                        }
+                        $('#progressTimelineContent').html(timelineHtml);
+                    } else {
+                        $('#progressTimelineContent').html(`<p class="text-danger">Error loading timeline: ${response.error}</p>`);
+                    }
+                },
+                error: function (xhr) {
+                    const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
+                    $('#progressTimelineContent').html(`<p class="text-danger">Error loading timeline: ${errorMessage}</p>`);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -28,6 +28,7 @@ urlpatterns = [
     path('n/record_vitals', views.record_vitals, name='record_vitals'),
 
     path('nurse/activity-report/', views.nurse_activity_report, name='nurse_activity_report'),
+    path('nurse/ivf-progress/', views.nurse_view_ivf_progress, name='nurse_ivf_progress'),
 
     ########################### End Nurses URLS #################################
 
@@ -84,6 +85,7 @@ urlpatterns = [
     path('ajax/lab-log-detail/', views.lab_log_detail_ajax, name='lab_log_detail_ajax'),
     path('labtests/submit/<int:patient_id>/', views.submit_test_results, name='submit_test_results'),
     path('lab/activity-report/', views.lab_activity_report, name='lab_activity_report'),
+    path('lab/ivf-progress/', views.lab_view_ivf_progress, name='lab_ivf_progress'),
 
     ########################### End Lab URLS ####################################
 

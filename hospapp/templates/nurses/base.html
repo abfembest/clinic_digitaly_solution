@@ -98,6 +98,12 @@
                                 <p>Nursing Actions</p>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="{% url 'nurse_ivf_progress' %}" class="nav-link {% if request.resolver_match.url_name == 'nurse_ivf_progress' %}active{% endif %}">
+                                <i class="nav-icon fas fa-baby"></i>
+                                <p>IVF Records</p>
+                            </a>
+                        </li>
                         <li class="nav-header">REPORTS</li>
                         <li class="nav-item">
                             <a href="{% url 'nurse_activity_report' %}" class="nav-link">
@@ -192,6 +198,9 @@
             $('.toast').toast('show');
         });
     </script>
+
+    {% block extra_scripts %}
+    {% endblock %}
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {

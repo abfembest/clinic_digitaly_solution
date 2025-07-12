@@ -6,24 +6,39 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>{% block title %}HMS | Laboratory{% endblock %}</title>
-    <!-- Tell the browser to be responsive to screen width -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
-    <!-- Theme style -->
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link rel="stylesheet" href="{% static 'plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/icheck-bootstrap/icheck-bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/jqvmap/jqvmap.min.css' %}">
     <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
     <link href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
-    <!-- Google Font: Source Sans Pro -->
+    <link rel="stylesheet" href="{% static 'plugins/overlayScrollbars/css/OverlayScrollbars.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/daterangepicker/daterangepicker.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/summernote/summernote-bs4.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/datatables-bs4/css/dataTables.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/datatables-responsive/css/responsive.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/datatables-buttons/css/buttons.bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap-colorpicker/css/bootstrap-colorpicker.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap-slider/css/bootstrap-slider.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/ekko-lightbox/ekko-lightbox.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/fullcalendar/main.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/toastr/toastr.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/dropzone/min/dropzone.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/chart.js/Chart.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/codemirror/codemirror.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/codemirror/theme/monokai.css' %}">
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
 </head>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
-    <!-- Site wrapper -->
     <div class="wrapper">
-        <!-- Navbar -->
         <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-            <!-- Left navbar links -->
             <ul class="navbar-nav">
                 <li class="nav-item">
                     <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
@@ -33,7 +48,6 @@
                 </li>
             </ul>
 
-            <!-- Right navbar links -->
             <ul class="navbar-nav ml-auto">
                 <li class="nav-item">
                     <span class="nav-link text-muted">
@@ -48,20 +62,14 @@
                 </li>
             </ul>
         </nav>
-        <!-- /.navbar -->
-
-        <!-- Main Sidebar Container -->
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
-            <!-- Brand Logo -->
             <a href="{% url 'laboratory' %}" class="brand-link">
                 <img src="{% static 'dist/img/AdminLTELogo.png' %}" alt="HMS Logo" class="brand-image img-circle elevation-3"
                     style="opacity: .8">
                 <span class="brand-text font-weight-medium text-uppercase">Laboratory</span>
             </a>
 
-            <!-- Sidebar -->
             <div class="sidebar">
-                <!-- Sidebar user (optional) -->
                 <div class="user-panel mt-3 pb-3 mb-3 d-flex">
                     <div class="image">
                         {% if user.staff.photo %}
@@ -76,7 +84,6 @@
                     </div>
                 </div>
 
-                <!-- Sidebar Menu -->
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
                         data-accordion="false">
@@ -98,6 +105,12 @@
                                 <p>Test Logs</p>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="{% url 'lab_ivf_progress' %}" class="nav-link {% if request.resolver_match.url_name == 'nurse_ivf_progress' %}active{% endif %}">
+                                <i class="nav-icon fas fa-baby"></i>
+                                <p>IVF Records</p>
+                            </a>
+                        </li>
                         <li class="nav-header">REPORTS</li>
                         <li class="nav-item">
                             <a href="{% url 'lab_activity_report' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_activity_report' %}active{% endif %}">
@@ -114,19 +127,15 @@
                         </li>
                     </ul>
                 </nav>
-                <!-- /.sidebar-menu -->
-            </div>
-            <!-- /.sidebar -->
-        </aside>
+                </div>
+            </aside>
 
-        <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             {% block content %}
             
             {% endblock %}
         </div>
 
-        <!-- Toast notifications for Django messages -->
         <div aria-live="polite" aria-atomic="true" style="position: fixed; top: 1rem; right: 1rem; z-index: 1080;">
             <div id="toast-container">
                 {% if messages %}
@@ -153,21 +162,18 @@
             </div>
         </div>
 
-        <!-- Notification Bell Icon (initially hidden) -->
         <div id="notification-bell" style="position: fixed; top: 50%; right: 0; z-index: 1050; display: none;">
             <button class="btn btn-warning rounded-circle p-3 shadow" id="toggleNotifications">
                 <i class="fas fa-bell"></i>
             </button>
         </div>
 
-        <!-- Notification Panel -->
         <div id="notification-panel" class="card shadow-sm" style="position: fixed; top: 50%; right: 70px; transform: translateY(-50%); width: 300px; display: none; z-index: 1040;">
             <div class="card-header bg-primary text-white">
                 Notifications
             </div>
             <ul class="list-group list-group-flush" id="notificationList">
-                <!-- Dynamic items go here -->
-            </ul>
+                </ul>
         </div>
 
         <footer class="main-footer">
@@ -177,20 +183,167 @@
             <strong>Hospital Management System &copy; {% now "Y" %}.</strong> All rights reserved.
         </footer>
     </div>
-    <!-- ./wrapper -->
-
-    <!-- jQuery -->
     <script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
-    <!-- Bootstrap 4 -->
+    <script src="{% static 'plugins/jquery-ui/jquery-ui.min.js' %}"></script>
+    <script>
+      $.widget.bridge('uibutton', $.ui.button)
+    </script>
     <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <!-- AdminLTE App -->
-    <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
     <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+    <script src="{% static 'plugins/sparklines/sparkline.js' %}"></script>
+    <script src="{% static 'plugins/jqvmap/jquery.vmap.min.js' %}"></script>
+    <script src="{% static 'plugins/jqvmap/maps/jquery.vmap.usa.js' %}"></script>
+    <script src="{% static 'plugins/jquery-knob/jquery.knob.min.js' %}"></script>
+    <script src="{% static 'plugins/moment/moment.min.js' %}"></script>
+    <script src="{% static 'plugins/daterangepicker/daterangepicker.js' %}"></script>
+    <script src="{% static 'plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js' %}"></script>
+    <script src="{% static 'plugins/summernote/summernote-bs4.min.js' %}"></script>
+    <script src="{% static 'plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js' %}"></script>
+    <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
+    <script src="{% static 'dist/js/demo.js' %}"></script>
+    <script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-responsive/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-buttons/js/buttons.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'plugins/jszip/jszip.min.js' %}"></script>
+    <script src="{% static 'plugins/pdfmake/pdfmake.min.js' %}"></script>
+    <script src="{% static 'plugins/pdfmake/vfs_fonts.js' %}"></script>
+    <script src="{% static 'plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+    <script src="{% static 'plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
+    <script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-switch/js/bootstrap-switch.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-colorpicker/js/bootstrap-colorpicker.min.js' %}"></script>
+    <script src="{% static 'plugins/inputmask/jquery.inputmask.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap-slider/bootstrap-slider.min.js' %}"></script>
+    <script src="{% static 'plugins/ekko-lightbox/ekko-lightbox.min.js' %}"></script>
+    <script src="{% static 'plugins/filterizr/jquery.filterizr.min.js' %}"></script>
+    <script src="{% static 'plugins/fullcalendar/main.min.js' %}"></script>
+    <script src="{% static 'plugins/fullcalendar-daygrid/main.min.js' %}"></script>
+    <script src="{% static 'plugins/fullcalendar-timegrid/main.min.js' %}"></script>
+    <script src="{% static 'plugins/fullcalendar-interaction/main.min.js' %}"></script>
+    <script src="{% static 'plugins/fullcalendar-bootstrap/main.min.js' %}"></script>
+    <script src="{% static 'plugins/sweetalert2/sweetalert2.min.js' %}"></script>
+    <script src="{% static 'plugins/toastr/toastr.min.js' %}"></script>
+    <script src="{% static 'plugins/bs-custom-file-input/bs-custom-file-input.min.js' %}"></script>
+    <script src="{% static 'plugins/dropzone/min/dropzone.min.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/codemirror.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/mode/javascript/javascript.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/mode/xml/xml.js' %}"></script>
+    <script src="{% static 'plugins/codemirror/mode/htmlmixed/htmlmixed.js' %}"></script>
+
+    {% block extra_scripts %}
+    {% endblock %}
     
     <script>
         $(document).ready(function () {
             // Initialize toast notifications
             $('.toast').toast('show');
+
+            // Initialize bs-custom-file-input
+            bsCustomFileInput.init();
+
+            // Initialize Select2 Elements
+            $('.select2').select2();
+
+            //Initialize Select2 Elements with Bootstrap 4 theme
+            $('.select2bs4').select2({
+                theme: 'bootstrap4'
+            });
+
+            //Datemask dd/mm/yyyy
+            $('#datemask').inputmask('dd/mm/yyyy', { 'placeholder': 'dd/mm/yyyy' });
+            //Datemask2 mm/dd/yyyy
+            $('#datemask2').inputmask('mm/dd/yyyy', { 'placeholder': 'mm/dd/yyyy' });
+            //Money Euro
+            $('[data-mask]').inputmask();
+
+            //Date picker
+            $('#reservationdate').datetimepicker({
+                format: 'L'
+            });
+
+            //Date and time picker
+            $('#reservationdatetime').datetimepicker({ icons: { time: 'far fa-clock' } });
+
+            //Date range picker
+            $('#reservation').daterangepicker();
+            //Date range picker with time picker
+            $('#reservationtime').daterangepicker({
+                timePicker: true,
+                timePickerIncrement: 30,
+                locale: {
+                    format: 'MM/DD/YYYY hh:mm A'
+                }
+            });
+            //Daterange as a button
+            $('#daterange-btn').daterangepicker(
+                {
+                    ranges   : {
+                        'Today'       : [moment(), moment()],
+                        'Yesterday'   : [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                        'Last 7 Days' : [moment().subtract(6, 'days'), moment()],
+                        'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                        'This Month'  : [moment().startOf('month'), moment().endOf('month')],
+                        'Last Month'  : [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                    },
+                    startDate: moment().subtract(29, 'days'),
+                    endDate  : moment()
+                },
+                function (start, end) {
+                    $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+                }
+            );
+
+            // Timepicker
+            $('#timepicker').datetimepicker({
+                format: 'LT'
+            });
+
+            //Bootstrap Duallistbox
+            $('.duallistbox').bootstrapDualListbox();
+
+            //Colorpicker
+            $('.my-colorpicker1').colorpicker();
+            //color picker with addon
+            $('.my-colorpicker2').colorpicker();
+
+            $('.my-colorpicker2').on('colorpickerChange', function(event) {
+                $('.my-colorpicker2 .fa-square').css('color', event.color.toString());
+            });
+
+            $("input[data-bootstrap-switch]").each(function(){
+                $(this).bootstrapSwitch('state', $(this).prop('checked'));
+            });
+
+            // Summernote
+            $('#summernote').summernote();
+
+            // CodeMirror
+            $('.textarea').each(function() {
+                CodeMirror.fromTextArea(this, {
+                    mode: "htmlmixed",
+                    theme: "monokai"
+                });
+            });
+
+            // DataTables example (adjust as needed for your table IDs)
+            $("#example1").DataTable({
+                "responsive": true, "lengthChange": false, "autoWidth": false,
+                "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+            }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+            
+            $('#example2').DataTable({
+                "paging": true,
+                "lengthChange": false,
+                "searching": false,
+                "ordering": true,
+                "info": true,
+                "autoWidth": false,
+                "responsive": true,
+            });
         });
     </script>
 
