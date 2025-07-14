@@ -222,3 +222,326 @@
 }
 
 </style >
+
+<style >
+.dashboard-card {
+    border: none;
+    box-shadow: 0 0 20px 0 rgba(154, 161, 171, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px 0 rgba(154, 161, 171, 0.2);
+}
+
+.stat-card {
+    background: linear-gradient(135deg, var(--bg-color), var(--bg-color-light));
+    border: none;
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    height: 100px;
+}
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        transform: translate(25px, -25px);
+    }
+
+.stat-card-info {
+    --bg-color: #17a2b8;
+    --bg-color-light: #20b8ce;
+}
+
+.stat-card-danger {
+    --bg-color: #dc3545;
+    --bg-color-light: #e04454;
+}
+
+.stat-card-success {
+    --bg-color: #28a745;
+    --bg-color-light: #32b74a;
+}
+
+.stat-card-warning {
+    --bg-color: #ffc107;
+    --bg-color-light: #ffca2c;
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.floating-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2.5rem;
+    opacity: 0.3;
+}
+
+.welcome-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    height: 200px;
+}
+
+.time-card {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 15px;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    height: 95px;
+}
+
+.alert-card {
+    background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+    border-radius: 15px;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    height: 95px;
+}
+
+.action-btn {
+    border-radius: 12px;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    height: 80px;
+}
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+.table-modern {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(0,0,0,0.05);
+}
+
+.badge-modern {
+    padding: 6px 10px;
+    border-radius: 15px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.list-group-modern .list-group-item {
+    border: none;
+    padding: 12px 15px;
+    margin-bottom: 3px;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.compact-section {
+    padding: 15px !important;
+}
+
+.section-spacing {
+    margin-bottom: 1.5rem;
+}
+
+.minimal-padding {
+    padding: 10px 15px !important;
+}
+
+</style >
+<!-- Bootstrap 5 CSS NEW dashboard nurse -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" >
+<!-- Font Awesome Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" >
+
+<style >
+.nurse-dashboard {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    min-height: 100vh;
+}
+
+.nurse-navbar {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+    .nurse-navbar .navbar-brand {
+        color: white !important;
+        font-weight: 600;
+    }
+
+    .nurse-navbar .navbar-text {
+        color: white !important;
+    }
+
+    .nurse-navbar .btn-outline-light {
+        border-color: rgba(255,255,255,0.3);
+    }
+
+        .nurse-navbar .btn-outline-light:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+.nurse-welcome-section {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin: 20px 0;
+    padding: 25px;
+}
+
+.nurse-clock {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1976d2;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.nurse-dashboard-card {
+    background: white;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+    .nurse-dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+.nurse-card-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    color: #1976d2;
+}
+
+.nurse-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.nurse-card-btn {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+    .nurse-card-btn:hover {
+        background: linear-gradient(135deg, #45a049 0%, #4caf50 100%);
+        transform: scale(1.05);
+    }
+
+.nurse-patient-tags {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.nurse-badge-stable {
+    background: #4caf50;
+}
+
+.nurse-badge-critical {
+    background: #f44336;
+}
+
+.nurse-badge-moderate {
+    background: #ff9800;
+}
+
+.nurse-modal-header {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    color: white;
+    border-radius: 15px 15px 0 0;
+}
+
+.nurse-form-control {
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    padding: 12px;
+    transition: border-color 0.3s ease;
+}
+
+    .nurse-form-control:focus {
+        border-color: #1976d2;
+        box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
+    }
+
+.nurse-btn-primary {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 25px;
+    font-weight: 500;
+}
+
+.nurse-btn-secondary {
+    background: #6c757d;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 25px;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .nurse-dashboard-card {
+        margin-bottom: 20px;
+    }
+
+    .nurse-card-icon {
+        font-size: 2.5rem;
+    }
+
+    .nurse-card-title {
+        font-size: 1.1rem;
+    }
+
+    .nurse-clock {
+        font-size: 1.2rem;
+    }
+}
+
+</style >
