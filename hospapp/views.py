@@ -358,6 +358,7 @@ def admit_patient_nurse(request):
 @csrf_exempt  # Optional in development, but use CSRF tokens in production
 @login_required(login_url='home')
 def discharge_patient(request):
+    referer = request.META.get('HTTP_REFERER', '/')
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
         summary = request.POST.get('discharge_summary')
@@ -367,18 +368,18 @@ def discharge_patient(request):
         # Validate patient_id
         if not patient_id or not patient_id.strip():
             messages.error(request, "Please select a patient to discharge.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         try:
             patient = get_object_or_404(Patient, id=int(patient_id))
         except (ValueError, TypeError):
             messages.error(request, "Invalid patient selection.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         admission = Admission.objects.filter(patient=patient, status='Admitted').first()
         if not admission:
             messages.error(request, "No active admission found for this patient.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         # Compile discharge summary
         full_summary = f"Discharge Summary:\n{summary}"
@@ -400,9 +401,9 @@ def discharge_patient(request):
         admission.save()
 
         messages.success(request, f"{patient.full_name} has been discharged successfully.")
-        return redirect('nursing_actions')
+        return redirect(referer)
 
-    return redirect('nursing_actions')
+    return redirect(referer)
 
 
 @csrf_exempt
