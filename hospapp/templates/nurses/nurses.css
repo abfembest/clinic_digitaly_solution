@@ -1,4 +1,4 @@
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" >
+{% comment %} <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" > {% endcomment %}
 <style >
 /* Scoped styles for the vitals form */
 .vitals-form-container {
@@ -383,8 +383,6 @@
 </style >
 <!-- Bootstrap 5 CSS NEW dashboard nurse -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" >
-<!-- Font Awesome Icons -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" >
 
 <style >
 .nurse-dashboard {

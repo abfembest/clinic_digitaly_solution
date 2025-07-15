@@ -283,6 +283,8 @@ def nurses(request):
         # Utility
         'today': today,
         'current_time': timezone.now(),
+        'patients': Patient.objects.all(),
+        'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
     }
     
     return render(request, 'nurses/index.html', context)
@@ -302,6 +304,7 @@ def nursing_actions(request):
 @csrf_exempt
 @login_required(login_url='home')
 def admit_patient_nurse(request):
+    referer = request.META.get('HTTP_REFERER', '/')
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
         doctor_id = request.POST.get('doctor')
@@ -310,17 +313,17 @@ def admit_patient_nurse(request):
         # Validate input
         if not patient_id or not doctor_id or not admission_reason:
             messages.error(request, "All fields are required.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         try:
             patient = get_object_or_404(Patient, id=int(patient_id))
         except (ValueError, TypeError):
             messages.error(request, "Invalid patient selection.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         if Admission.objects.filter(patient=patient, status='Admitted').exists():
             messages.warning(request, f"{patient.full_name} is already admitted.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         # Prepare admission details
         admission_details = f"Reason for Admission: {admission_reason}"
@@ -329,7 +332,7 @@ def admit_patient_nurse(request):
             doctor_user = User.objects.get(id=int(doctor_id))
         except (User.DoesNotExist, ValueError, TypeError):
             messages.error(request, "Selected doctor not found.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         # Create admission
         Admission.objects.create(
@@ -347,10 +350,10 @@ def admit_patient_nurse(request):
         patient.status = 'stable'
         patient.save()
 
-        messages.success(request, f"{patient.full_name} admitted successfully.")
-        return redirect('nursing_actions')
+        messages.success(request, f"{patient.full_name} admitted successfully.")        
+        return redirect(referer)
 
-    return redirect('nursing_actions')
+    return redirect(referer)
 
 @csrf_exempt  # Optional in development, but use CSRF tokens in production
 @login_required(login_url='home')
@@ -470,18 +473,19 @@ def refer_patient(request):
 @csrf_exempt
 @login_required(login_url='home')
 def save_nursing_note(request):
+    referer = request.META.get('HTTP_REFERER', '/')
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
 
         if not patient_id or patient_id.strip() == '':
             messages.error(request, "Please select a patient to add nursing notes.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         try:
             patient = get_object_or_404(Patient, id=int(patient_id))
         except (ValueError, TypeError):
             messages.error(request, "Invalid patient selection.")
-            return redirect('nursing_actions')
+            return redirect(referer)
 
         NursingNote.objects.create(
             patient=patient,
@@ -493,9 +497,9 @@ def save_nursing_note(request):
         )
 
         messages.success(request, "Nursing note saved successfully.")
-        return redirect('nursing_actions')
+        return redirect(referer)
 
-    return redirect('nursing_actions')
+    return redirect(referer)
 
 @csrf_exempt
 @login_required(login_url='home')
@@ -603,7 +607,9 @@ def record_vitals(request):
             messages.success(request, "Vitals recorded successfully.")
         except Exception as e:
             messages.error(request, f"Error recording vitals: {str(e)}")
-    return redirect('vitals')
+
+    referer = request.META.get('HTTP_REFERER', '/')
+    return redirect(referer)
 
 @csrf_exempt
 @login_required(login_url='home')
@@ -1416,27 +1422,27 @@ def laboratory(request):
 
 @login_required(login_url='home')
 def lab_test_entry(request):
-    if request.method == 'POST':
-        test_id = request.POST.get('test_id')
-        result_value = request.POST.get('result_value')
-        notes = request.POST.get('notes', '')
+    # if request.method == 'POST':
+    #     test_id = request.POST.get('test_id')
+    #     result_value = request.POST.get('result_value')
+    #     notes = request.POST.get('notes', '')
 
-        try:
-            test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
-            test.result_value = result_value
-            test.notes = notes
-            test.status = 'completed'
-            test.testcompleted = True
-            test.date_performed = timezone.now()
-            test.performed_by = request.user
-            test.recorded_by = request.user
-            test.save()
+    #     try:
+    #         test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
+    #         test.result_value = result_value
+    #         test.notes = notes
+    #         test.status = 'completed'
+    #         test.testcompleted = True
+    #         test.date_performed = timezone.now()
+    #         test.performed_by = request.user
+    #         test.recorded_by = request.user
+    #         test.save()
 
-            messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
-        except LabTest.DoesNotExist:
-            messages.error(request, "Invalid test entry or test already completed.")
+    #         messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
+    #     except LabTest.DoesNotExist:
+    #         messages.error(request, "Invalid test entry or test already completed.")
 
-        return redirect('lab_test_entry')
+    #     return redirect('lab_test_entry')
 
     # Filter lab tests strictly by status='pending' and doctor_comments=0
     lab_tests = LabTest.objects.select_related('patient', 'category').filter(
