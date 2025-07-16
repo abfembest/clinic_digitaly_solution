@@ -1,203 +1,392 @@
-{% extends "hr/base.html" %}
+  {% extends "hr/base.html" %}
 
-{% block title %}HMS | Attendance & Shifts{% endblock %}
+  {% block title %}HMS | Attendance & Shifts{% endblock %}
 
-{% block content %}
+  {% block content %}
 
-<!-- Content Header (Page header) -->
-<div class="content-header">
-  <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1 class="m-0 text-dark">Attendance & Shifts</h1>
-      </div>
-    </div>
-  </div>
-</div>
-
-<section class="content">
-  <div class="container-fluid">
-    <div class="card card-outline card-success">
-      <div class="card-header">
-        <h3 class="card-title">Staff Attendance & Work Schedules</h3>
-      </div>
-      <div class="card-body">
-        <ul class="nav nav-pills mb-3">
-          <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#attendance">Attendance</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#shifts">Shifts</a>
-          </li>
-        </ul>
-
-        <div class="tab-content">
-          <!-- Attendance Tab -->
-          <div class="tab-pane fade show active" id="attendance">
-            <form method="post" class="mb-4">
-              {% csrf_token %}
-              <div class="form-row">
-                <div class="form-group col-md-6">
-                  <label for="attendance_staff_name">Staff Name</label>
-                  <select id="attendance_staff_name" class="form-control" name="staff_name" required>
-                    <option value="" disabled selected>Select staff</option>
-                    {% for staff in staff_users %}
-                      <option value="{{ staff.id }}"
-                        {% if request.POST.staff_name|stringformat:"s" == staff.id|stringformat:"s" %}selected{% endif %}>
-                        {{ staff.get_full_name }} ({{ staff.profile.role|title }})
-                      </option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="form-group col-md-3">
-                  <label for="attendance_status">Status</label>
-                  <select id="attendance_status" class="form-control" name="status">
-                    <option {% if request.POST.status == "Present" %}selected{% endif %}>Present</option>
-                    <option {% if request.POST.status == "Absent" %}selected{% endif %}>Absent</option>
-                    <option {% if request.POST.status == "On Leave" %}selected{% endif %}>On Leave</option>
-                  </select>
-                </div>
-              </div>
-              <button type="submit" name="record_attendance" class="btn btn-success">Record Attendance</button>
-            </form>
-
-            <!-- Date Filter Input -->
-            <div class="form-group col-md-3 mb-3">
-              <label for="filter_date">Filter by Date</label>
-              <input id="filter_date" type="date" class="form-control" />
-            </div>
-
-            <!-- Attendance Records Table -->
-            <table class="table table-bordered table-striped">
-              <thead>
-                <tr>
-                  <th>Staff Name</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="attendance_tbody">
-                {% if attendance_records %}
-                  {% for record in attendance_records %}
-                    <tr data-date="{{ record.date|date:'Y-m-d' }}">
-                      <td>{{ record.staff.get_full_name }} ({{ record.staff.profile.role|title }})</td>
-                      <td>{{ record.date|date:"Y-m-d" }}</td>
-                      <td>{{ record.status }}</td>
-                    </tr>
-                  {% endfor %}
-                {% else %}
-                  <tr>
-                    <td colspan="3" class="text-center">No attendance records found.</td>
-                  </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Shifts Tab -->
-          <div class="tab-pane fade" id="shifts">
-            <form method="post" class="mb-4">
-              {% csrf_token %}
-              <div class="form-row">
-                <div class="form-group col-md-6">
-                  <label for="shifts_staff_name">Staff Name</label>
-                  <select id="shifts_staff_name" class="form-control" name="staff_name" required>
-                    <option value="" disabled selected>Select staff</option>
-                    {% for staff in staff_users %}
-                      <option value="{{ staff.id }}"
-                        {% if request.POST.staff_name|stringformat:"s" == staff.id|stringformat:"s" %}selected{% endif %}>
-                        {{ staff.get_full_name }} ({{ staff.profile.role|title }})
-                      </option>
-                    {% endfor %}
-                  </select>
-                </div>
-
-                <div class="form-group col-md-3">
-                  <label for="shift_select">Shift</label>
-                  <select id="shift_select" class="form-control" name="shift">
-                    <option {% if request.POST.shift == "Morning" %}selected{% endif %}>Morning</option>
-                    <option {% if request.POST.shift == "Afternoon" %}selected{% endif %}>Afternoon</option>
-                    <option {% if request.POST.shift == "Night" %}selected{% endif %}>Night</option>
-                  </select>
-                </div>
-                <div class="form-group col-md-3">
-                  <label for="shift_date">Date</label>
-                  <input id="shift_date" type="date" class="form-control" name="date"
-                    value="{{ request.POST.date }}">
-                </div>
-              </div>
-              <button type="submit" name="assign_shift" class="btn btn-info">Assign Shift</button>
-            </form>
-
-            <!-- Date Filter Input for shifts -->
-            <div class="form-group col-md-3 mb-3">
-              <label for="filter_shift_date">Filter by Date</label>
-              <input id="filter_shift_date" type="date" class="form-control" />
-            </div>
-
-            <!-- Shift Records Table -->
-            <table class="table table-bordered table-striped">
-              <thead>
-                <tr>
-                  <th>Staff Name</th>
-                  <th>Date</th>
-                  <th>Shift</th>
-                </tr>
-              </thead>
-              <tbody id="shift_tbody">
-                {% if shift_records %}
-                  {% for shift in shift_records %}
-                    <tr data-date="{{ shift.date|date:'Y-m-d' }}">
-                      <td>{{ shift.staff.get_full_name }}</td>
-                      <td>{{ shift.date|date:"Y-m-d" }}</td>
-                      <td>{{ shift.shift.name }}</td>
-                    </tr>
-                  {% endfor %}
-                {% else %}
-                  <tr>
-                    <td colspan="3" class="text-center">No shift records found.</td>
-                  </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
+  <div class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0 text-dark">Attendance & Shifts</h1>
         </div>
       </div>
     </div>
   </div>
-</section>
 
-<!-- JS for filtering attendance and shifts table rows by date -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Attendance date filter
-    const filterDateInput = document.getElementById('filter_date');
-    const attendanceTbody = document.getElementById('attendance_tbody');
-    if (filterDateInput && attendanceTbody) {
-      filterDateInput.addEventListener('input', () => {
-        const filterDate = filterDateInput.value; // "YYYY-MM-DD"
-        const rows = attendanceTbody.querySelectorAll('tr[data-date]');
-        rows.forEach(row => {
-          const rowDate = row.getAttribute('data-date');
-          row.style.display = (!filterDate || rowDate === filterDate) ? '' : 'none';
-        });
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card card-outline card-primary mb-3">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fas fa-user-check"></i>
+            Staff Selection
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="global_staff_select">Select Staff Member</label>
+                <select id="global_staff_select" class="form-control select2bs4" style="width: 100%;">
+                  <option value="" disabled selected>Choose a staff member...</option>
+                  {% for staff in staff_users %}
+                    <option value="{{ staff.id }}" data-role="{{ staff.staff.role|title }}">
+                      {{ staff.get_full_name }} - {{ staff.staff.role|title }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <div class="d-block">
+                  <button type="button" id="clear_selection" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="selected_staff_info" class="alert alert-info" style="display: none;">
+            <i class="fas fa-info-circle"></i>
+            <strong>Selected Staff:</strong> <span id="selected_staff_name"></span>
+            <span class="badge badge-primary ml-2" id="selected_staff_role"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card card-outline card-info mb-3">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-clipboard-check"></i> Attendance Records</h3>
+            </div>
+            <div class="card-body">
+              <form method="post" action="{% url 'record_attendance' %}" class="mb-4">
+                {% csrf_token %}
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label for="attendance_status">
+                        <i class="fas fa-check-circle"></i>
+                        Status
+                      </label>
+                      <select id="attendance_status" class="form-control select2bs4" name="status" style="width: 100%;">
+                        <option value="Present" {% if request.POST.status == "Present" %}selected{% endif %}>
+                          Present
+                        </option>
+                        <option value="Absent" {% if request.POST.status == "Absent" %}selected{% endif %}>
+                          Absent
+                        </option>
+                        <option value="On Leave" {% if request.POST.status == "On Leave" %}selected{% endif %}>
+                          On Leave
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label for="attendance_date">
+                        <i class="fas fa-calendar"></i>
+                        Date
+                      </label>
+                      <input id="attendance_date" type="date" class="form-control" name="date"
+                        value="{{ request.POST.date|default:'' }}">
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="form-group">
+                      <button type="submit" name="record_attendance" class="btn btn-success btn-block" id="record_attendance_btn">
+                        <i class="fas fa-save"></i>
+                        Record Attendance
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <input type="hidden" name="staff_name" id="attendance_staff_id">
+              </form>
+
+              <div class="table-responsive">
+                <table id="attendance_table" class="table table-bordered table-striped table-hover">
+                  <thead class="thead-dark">
+                    <tr>
+                      <th><i class="fas fa-user"></i> Staff Name</th>
+                      <th><i class="fas fa-calendar"></i> Date</th>
+                      <th><i class="fas fa-check-circle"></i> Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if attendance_records %}
+                      {% for record in attendance_records %}
+                        <tr>
+                          <td>
+                            <strong>{{ record.staff.get_full_name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ record.staff.staff.role|title }}</small>
+                          </td>
+                          <td>{{ record.date|date:"Y-m-d" }}</td>
+                          <td>
+                            {% if record.status == "Present" %}
+                              <span class="badge badge-success">{{ record.status }}</span>
+                            {% elif record.status == "Absent" %}
+                              <span class="badge badge-danger">{{ record.status }}</span>
+                            {% else %}
+                              <span class="badge badge-warning">{{ record.status }}</span>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="3" class="text-center text-muted">
+                          <i class="fas fa-info-circle"></i>
+                          No attendance records found.
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card card-outline card-warning mb-3">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-clock"></i> Shift Assignments</h3>
+            </div>
+            <div class="card-body">
+              <form method="post" action="{% url 'assign_shift' %}" class="mb-4">
+                {% csrf_token %}
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label for="shift_select">
+                        <i class="fas fa-clock"></i>
+                        Shift
+                      </label>
+                      <select id="shift_select" class="form-control select2bs4" name="shift" style="width: 100%;">
+                        <option value="" disabled selected>Select a shift...</option>
+                        {% for shift in shifts %}
+                          <option value="{{ shift.id }}" {% if request.POST.shift == shift.id|stringformat:"s" %}selected{% endif %}>
+                            {{ shift.name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group">
+                      <label for="shift_date">
+                        <i class="fas fa-calendar"></i>
+                        Date
+                      </label>
+                      <input id="shift_date" type="date" class="form-control" name="date"
+                        value="{{ request.POST.date|default:'' }}">
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="form-group">
+                      <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Shift Times:</strong>
+                        <ul class="mb-0 mt-2">
+                          <li><strong>Morning:</strong> 08:00 - 16:00</li>
+                          <li><strong>Afternoon:</strong> 16:00 - 00:00</li>
+                          <li><strong>Night:</strong> 00:00 - 08:00</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <button type="submit" name="assign_shift" class="btn btn-info btn-block" id="assign_shift_btn">
+                      <i class="fas fa-calendar-plus"></i>
+                      Assign Shift
+                    </button>
+                  </div>
+                </div>
+                <input type="hidden" name="staff_name" id="shift_staff_id">
+              </form>
+
+              <div class="table-responsive">
+                <table id="shift_table" class="table table-bordered table-striped table-hover">
+                  <thead class="thead-dark">
+                    <tr>
+                      <th><i class="fas fa-user"></i> Staff Name</th>
+                      <th><i class="fas fa-calendar"></i> Date</th>
+                      <th><i class="fas fa-clock"></i> Shift</th>
+                      <th><i class="fas fa-hourglass-start"></i> Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if shift_records %}
+                      {% for shift in shift_records %}
+                        <tr>
+                          <td>
+                            <strong>{{ shift.staff.get_full_name }}</strong>
+                            <br>
+                            <small class="text-muted">{{ shift.staff.staff.role|title }}</small>
+                          </td>
+                          <td>{{ shift.date|date:"Y-m-d" }}</td>
+                          <td>
+                            {% if shift.shift.name == "Morning" %}
+                              <span class="badge badge-info">{{ shift.shift.name }}</span>
+                            {% elif shift.shift.name == "Afternoon" %}
+                              <span class="badge badge-warning">{{ shift.shift.name }}</span>
+                            {% else %}
+                              <span class="badge badge-dark">{{ shift.shift.name }}</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            {% if shift.shift.name == "Morning" %}
+                              <small class="text-muted">08:00 - 16:00</small>
+                            {% elif shift.shift.name == "Afternoon" %}
+                              <small class="text-muted">16:00 - 00:00</small>
+                            {% elif shift.shift.name == "Night" %}
+                              <small class="text-muted">00:00 - 08:00</small>
+                            {% else %}
+                              <small class="text-muted">Not specified</small>
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="4" class="text-center text-muted">
+                          <i class="fas fa-info-circle"></i>
+                          No shift records found.
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Select2 for staff selection
+      $('#global_staff_select').select2({
+        theme: 'bootstrap4',
+        placeholder: 'Search and select a staff member...',
+        allowClear: true,
+        width: '100%',
+        templateResult: function(option) {
+          if (!option.id) return option.text;
+
+          var role = $(option.element).data('role');
+          var $result = $(
+            '<div class="d-flex justify-content-between align-items-center">' +
+              '<div>' + option.text + '</div>' +
+              '<div><span class="badge badge-secondary">' + role + '</span></div>' +
+            '</div>'
+          );
+          return $result;
+        },
+        templateSelection: function(option) {
+          if (!option.id) return option.text;
+          return option.text;
+        }
       });
-    }
 
-    // Shift date filter
-    const filterShiftDateInput = document.getElementById('filter_shift_date');
-    const shiftTbody = document.getElementById('shift_tbody');
-    if (filterShiftDateInput && shiftTbody) {
-      filterShiftDateInput.addEventListener('input', () => {
-        const filterDate = filterShiftDateInput.value; // "YYYY-MM-DD"
-        const rows = shiftTbody.querySelectorAll('tr[data-date]');
-        rows.forEach(row => {
-          const rowDate = row.getAttribute('data-date');
-          row.style.display = (!filterDate || rowDate === filterDate) ? '' : 'none';
-        });
+      // Initialize Select2 for Attendance Status
+      $('#attendance_status').select2({
+        theme: 'bootstrap4',
+        minimumResultsForSearch: Infinity,
+        width: '100%'
       });
-    }
-  });
-</script>
 
-{% endblock %}
+      // Initialize Select2 for Shift Selection
+      $('#shift_select').select2({
+        theme: 'bootstrap4',
+        minimumResultsForSearch: Infinity,
+        width: '100%',
+        placeholder: 'Select a shift...'
+      });
+
+      // Initialize DataTables for Attendance Records
+      $('#attendance_table').DataTable({
+        "paging": true,
+        "lengthChange": true,
+        "searching": true,
+        "ordering": true,
+        "info": true,
+        "autoWidth": false,
+        "responsive": true,
+        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"],
+        "order": [[1, "desc"]]
+      }).buttons().container().appendTo('#attendance_table_wrapper .col-md-6:eq(0)');
+
+      // Initialize DataTables for Shift Records
+      $('#shift_table').DataTable({
+        "paging": true,
+        "lengthChange": true,
+        "searching": true,
+        "ordering": true,
+        "info": true,
+        "autoWidth": false,
+        "responsive": true,
+        "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"],
+        "order": [[1, "desc"]]
+      }).buttons().container().appendTo('#shift_table_wrapper .col-md-6:eq(0)');
+
+      // Global staff selection handler
+      $('#global_staff_select').on('change', function() {
+        var selectedValue = $(this).val();
+        var selectedText = $(this).find('option:selected').text();
+        var selectedRole = $(this).find('option:selected').data('role');
+
+        if (selectedValue) {
+          // Update hidden inputs
+          $('#attendance_staff_id').val(selectedValue);
+          $('#shift_staff_id').val(selectedValue);
+
+          // Show selected staff info
+          $('#selected_staff_name').text(selectedText);
+          $('#selected_staff_role').text(selectedRole);
+          $('#selected_staff_info').show();
+
+          // Enable form buttons
+          $('#record_attendance_btn').prop('disabled', false);
+          $('#assign_shift_btn').prop('disabled', false);
+        } else {
+          // If nothing is selected, disable buttons and clear hidden inputs
+          $('#attendance_staff_id').val('');
+          $('#shift_staff_id').val('');
+          $('#selected_staff_info').hide();
+          $('#record_attendance_btn').prop('disabled', true);
+          $('#assign_shift_btn').prop('disabled', true);
+        }
+      });
+
+      // Clear selection button
+      $('#clear_selection').on('click', function() {
+        $('#global_staff_select').val(null).trigger('change');
+      });
+
+      // Set default date to today
+      var today = new Date().toISOString().split('T')[0];
+      $('#attendance_date').val(today);
+      $('#shift_date').val(today);
+
+      // Initially disable buttons until staff is selected
+      $('#record_attendance_btn').prop('disabled', true);
+      $('#assign_shift_btn').prop('disabled', true);
+    });
+  </script>
+  {% endblock %}

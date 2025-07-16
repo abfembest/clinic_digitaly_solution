@@ -2187,7 +2187,11 @@ def parse_date_to_datetime(date_str_or_obj):
         return timezone.now()
 
 @login_required(login_url='home')
-def staff_attendance(request):
+def staff_attendance_list(request):
+    """
+    Displays the attendance and shift records.
+    Handles the initial GET request for the page.
+    """
     today = timezone.localdate()
 
     try:
@@ -2198,54 +2202,6 @@ def staff_attendance(request):
 
     staff_users = User.objects.filter(staff__isnull=False).order_by('first_name', 'last_name')
     shifts = Shift.objects.all().order_by('name')
-
-    if request.method == 'POST':
-        if 'record_attendance' in request.POST:
-            staff_id = request.POST.get('staff_name')
-            date_input = request.POST.get('date') or today
-            date_obj = parse_date_to_datetime(date_input)
-            status = request.POST.get('status')
-
-            try:
-                staff_user = staff_users.get(id=staff_id)
-            except User.DoesNotExist:
-                messages.error(request, "Selected staff not found.")
-                return redirect('staff_attendance_shift')
-
-            Attendance.objects.update_or_create(
-                staff=staff_user,
-                date=date_obj,
-                defaults={'status': status}
-            )
-            messages.success(request, "Attendance recorded successfully.")
-            return redirect('staff_attendance_shift')
-
-        elif 'assign_shift' in request.POST:
-            staff_id = request.POST.get('staff_name')
-            shift_name = request.POST.get('shift')
-            date_input = request.POST.get('date') or today
-            date_obj = parse_date_to_datetime(date_input)
-
-            try:
-                staff_user = staff_users.get(id=staff_id)
-            except User.DoesNotExist:
-                messages.error(request, "Selected staff not found.")
-                return redirect('staff_attendance_shift')
-
-            try:
-                shift = shifts.get(name=shift_name)
-                print(shift)
-            except Shift.DoesNotExist:
-                messages.error(request, f"Shift '{shift_name}' not found.")
-                return redirect('staff_attendance_shift')
-
-            ShiftAssignment.objects.update_or_create(
-                staff=staff_user,
-                date=date_obj.date(),
-                defaults={'shift': shift}
-            )
-            messages.success(request, "Shift assigned successfully.")
-            return redirect('staff_attendance_shift')
 
     attendance_records = Attendance.objects.select_related('staff').order_by('-date')
     shift_records = ShiftAssignment.objects.select_related('staff', 'shift').order_by('-date')
@@ -2258,6 +2214,77 @@ def staff_attendance(request):
         'shifts': shifts,
         'today': today,
     })
+
+
+@login_required(login_url='home')
+def record_attendance_view(request):
+    """
+    Handles the POST request for recording staff attendance.
+    This view should only be accessible via POST requests from the form.
+    """
+    if request.method == 'POST':
+        today = timezone.localdate() # Use localdate for consistency
+        staff_id = request.POST.get('staff_name')
+        date_input = request.POST.get('date') or today
+        status = request.POST.get('status')
+
+        try:
+            date_obj = parse_date_to_datetime(date_input)
+            staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
+        except User.DoesNotExist:
+            messages.error(request, "Selected staff not found.")
+            return redirect('staff_attendance_shift')
+        except ValueError as e:
+            messages.error(request, f"Invalid date format: {e}")
+            return redirect('staff_attendance_shift')
+
+        Attendance.objects.update_or_create(
+            staff=staff_user,
+            date=date_obj,
+            defaults={'status': status}
+        )
+        messages.success(request, "Attendance recorded successfully.")
+        return redirect('staff_attendance_shift')
+    else:
+        # If someone tries to access this URL via GET, redirect them to the main page
+        return redirect('staff_attendance_shift')
+
+
+@login_required(login_url='home')
+def assign_shift_view(request):
+    """
+    Handles the POST request for assigning shifts to staff.
+    This view should only be accessible via POST requests from the form.
+    """
+    if request.method == 'POST':
+        today = timezone.localdate()
+        staff_id = request.POST.get('staff_name')
+        shift_id = request.POST.get('shift')  # Change this to shift_id
+        date_input = request.POST.get('date') or today
+
+        try:
+            date_obj = parse_date_to_datetime(date_input)
+            staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
+            shift = Shift.objects.get(id=shift_id)  # Change this to id=shift_id
+        except User.DoesNotExist:
+            messages.error(request, "Selected staff not found.")
+            return redirect('staff_attendance_shift')
+        except Shift.DoesNotExist:
+            messages.error(request, f"Shift with ID '{shift_id}' not found.") # Updated error message
+            return redirect('staff_attendance_shift')
+        except ValueError as e:
+            messages.error(request, f"Invalid date format: {e}")
+            return redirect('staff_attendance_shift')
+
+        ShiftAssignment.objects.update_or_create(
+            staff=staff_user,
+            date=date_obj,
+            defaults={'shift': shift}
+        )
+        messages.success(request, "Shift assigned successfully.")
+        return redirect('staff_attendance_shift')
+    else:
+        return redirect('staff_attendance_shift')
 
 @login_required(login_url='home')
 def staff_transitions(request):
