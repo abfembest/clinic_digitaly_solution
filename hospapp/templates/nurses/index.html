@@ -12,17 +12,17 @@
     <div class="container">
         <a class="navbar-brand" href="#">
             <i class="fas fa-hospital"></i>
-            MediCare Hospital
+            Ayomide Specialist Hospital
         </a>
         <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
             <span class="navbar-text me-3">
                 <i class="fas fa-user-nurse"></i>
-                Welcome, Nurse Sarah Johnson
+                Welcome, Nurse {{request.user.first_name}} {{request.user.last_name}}
             </span>
-            <button class="btn btn-outline-light btn-sm">
+            <a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">
                 <i class="fas fa-sign-out-alt"></i>
                 Logout
-            </button>
+            </a>
         </div>
     </div>
 </nav>
@@ -33,7 +33,7 @@
     <div class="nurse-welcome-section">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h2 class="mb-2">Good Morning, Nurse Sarah!</h2>
+                <h2 class="mb-2">Good Morning, Nurse {{request.user.first_name}} {{request.user.last_name}}</h2>
                 <p class="text-muted mb-0">Ready to provide excellent patient care today. Stay organized and efficient.</p>
             </div>
             <div class="col-md-4">
@@ -85,28 +85,26 @@
             </div>
         </div>
 
-        <!-- Assign Ward & Bed -->
         <div class="col-lg-4 col-md-6">
             <div class="card nurse-dashboard-card">
                 <div class="card-body text-center">
-                    <i class="fas fa-bed nurse-card-icon"></i>
-                    <h5 class="nurse-card-title">Assign Ward & Bed</h5>
-                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#assignModal">
-                        <i class="fas fa-bed"></i> Assign Bed
-                    </button>
+                    <i class="fas fa-list-ul nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Activities</h5>
+                    <a href="{% url 'nurse_activity_report' %}" class="btn btn-success nurse-card-btn">
+                        <i class="fas fa-clipboard-list me-2"></i> My Activities
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Prep for Consultation -->
         <div class="col-lg-4 col-md-6">
             <div class="card nurse-dashboard-card">
                 <div class="card-body text-center">
-                    <i class="fas fa-stethoscope nurse-card-icon"></i>
-                    <h5 class="nurse-card-title">Prep for Consultation</h5>
-                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#prepModal">
-                        <i class="fas fa-clipboard-check"></i> Prep Patient
-                    </button>
+                    <i class="fas fa-baby nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">IVF Record</h5>
+                    <a href="{% url 'nurse_ivf_progress' %}" class="btn btn-success nurse-card-btn">
+                        <i class="fas fa-notes-medical"></i> IVF Records
+                    </a>
                 </div>
             </div>
         </div>
@@ -124,11 +122,10 @@
             </div>
         </div>
 
-        <!-- Monitor Patient Status -->
         <div class="col-lg-4 col-md-6">
             <div class="card nurse-dashboard-card">
                 <div class="card-body text-center">
-                    <i class="fas fa-heart-pulse nurse-card-icon"></i>
+                    <i class="fas fa-chart-line nurse-card-icon"></i>
                     <h5 class="nurse-card-title">Monitor Patient Status</h5>
                     <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#monitorModal">
                         <i class="fas fa-eye"></i> Monitor
@@ -138,16 +135,16 @@
         </div>
     </div>
 
-    <!-- Patient Status Tags -->
-    <div class="nurse-patient-tags mt-4">
+        <div class="nurse-patient-tags mt-4">
         <h5 class="mb-3">Current Patient Status Overview</h5>
         <div class="d-flex flex-wrap gap-2">
-            <span class="badge nurse-badge-stable fs-6">Room 101 - Stable</span>
-            <span class="badge nurse-badge-critical fs-6">Room 205 - Critical</span>
-            <span class="badge nurse-badge-moderate fs-6">Room 308 - Moderate</span>
-            <span class="badge nurse-badge-stable fs-6">Room 412 - Stable</span>
-            <span class="badge nurse-badge-moderate fs-6">Room 507 - Moderate</span>
-            <span class="badge nurse-badge-stable fs-6">Room 601 - Stable</span>
+            {% for patient in active_patients_details %}
+            <span class="badge nurse-badge-{{ patient.status|lower }} fs-6">
+                {{ patient.full_name }} - {{ patient.status|capfirst }}
+            </span>
+            {% empty %}
+            <p>No active patients to display status for.</p>
+            {% endfor %}
         </div>
     </div>
 </div>
@@ -481,7 +478,6 @@
     </div>
 </div>
 
-<!-- Monitor Modal -->
 <div class="modal fade" id="monitorModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -491,24 +487,27 @@
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-3">
+                    {% for patient in active_patients_details %}
+                    <div class="col-md-6 mb-3"> {# Added mb-3 for spacing between cards #}
+                        <div class="card">
                             <div class="card-body">
-                                <h6 class="card-title">Room 101 - John Doe</h6>
-                                <span class="badge nurse-badge-stable">Stable</span>
-                                <p class="mt-2 mb-0">Last vitals: 2 hours ago</p>
+                                <h6 class="card-title">{{ patient.full_name }}</h6>
+                                <span class="badge nurse-badge-{{ patient.status|lower }}">{{ patient.status|capfirst }}</span>
+                                <p class="mt-2 mb-0">
+                                    {% if patient.last_vitals_recorded_at %}
+                                        Last vitals: {{ patient.last_vitals_recorded_at|timesince }} ago
+                                    {% else %}
+                                        No vitals recorded yet.
+                                    {% endif %}
+                                </p>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h6 class="card-title">Room 205 - Jane Smith</h6>
-                                <span class="badge nurse-badge-critical">Critical</span>
-                                <p class="mt-2 mb-0">Last vitals: 30 minutes ago</p>
-                            </div>
-                        </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <p class="text-center">No active patients to monitor.</p>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
             <div class="modal-footer">
@@ -521,7 +520,7 @@
 
 
 
-<!-- Top Row: Stats + Welcome + Time/Alerts -->
+{% comment %} <!-- Top Row: Stats + Welcome + Time/Alerts -->
 <div class="row section-spacing">
     <!-- Stats Cards -->
     <div class="col-lg-6 col-xl-5">
@@ -884,7 +883,7 @@
             {% endif %}
 
 </div>
-</section>
+</section> {% endcomment %}
 
 <script>
     function updateClock() {

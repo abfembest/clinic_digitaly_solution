@@ -142,6 +142,8 @@ def logout_view(request):
 
 
 ''' ############################################################################################################################ Nurses View ############################################################################################################################ '''
+from django.db.models import Q, Max # Import Max for aggregation
+from django.db.models.functions import Coalesce
 
 @login_required(login_url='home')
 def nurses(request):
@@ -248,6 +250,12 @@ def nurses(request):
         staff=user,
         date__date=today
     ).first()
+
+    # ⭐ NEW: Get all active patients with their latest vital signs for status monitoring
+    # This query annotates each active patient with the timestamp of their most recent vital sign.
+    active_patients_details = Patient.objects.filter(is_inpatient=True).annotate(
+        last_vitals_recorded_at=Coalesce(Max('vitals__recorded_at'), None)
+    ).order_by('full_name')
     
     context = {
         # Profile & Authentication
@@ -283,8 +291,11 @@ def nurses(request):
         # Utility
         'today': today,
         'current_time': timezone.now(),
-        'patients': Patient.objects.all(),
+        'patients': Patient.objects.all(), # Keep for generic patient lists in modals
         'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
+
+        # ⭐ NEW: Data for patient status monitoring (excluding rooms)
+        'active_patients_details': active_patients_details,
     }
     
     return render(request, 'nurses/index.html', context)
