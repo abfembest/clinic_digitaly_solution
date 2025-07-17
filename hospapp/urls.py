@@ -117,7 +117,7 @@ urlpatterns = [
     ########################### HR URLS ####################################
 
     path('hr/home', views.hr, name='hr'),
-    path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
+    # path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
     path('hr/staff-profiles', views.staff_profiles, name='staff_profiles'),
     path('staff/<int:staff_id>/edit/', views.edit_staff_profile, name='edit_staff_profile'),
     path('staff/<int:staff_id>/change-password/', views.change_staff_password, name='change_staff_password'),
@@ -126,7 +126,7 @@ urlpatterns = [
     path('shift/assign/', views.assign_shift_view, name='assign_shift'),
     path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
     path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),
-    path('my-activity-report/', views.hr_act_report, name='hr_act_report'),
+    path('report', views.hr_act_report, name='hr_report'),
     path('activity-details/<str:activity_type>/<int:id>/', views.get_hr_activity_detail, name='get_hr_activity_detail'),
 
     ########################### End HR URLS ####################################

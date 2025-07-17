@@ -95,15 +95,15 @@
                                 <p>Onboarding & Exit</p>
                             </a>
                         </li>
-                        <li class="nav-item">
+                        {% comment %} <li class="nav-item">
                             <a href="{% url 'staff_certifications' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_certifications' %}active{% endif %}">
                                 <i class="nav-icon fas fa-id-badge"></i>
                                 <p>Certifications</p>
                             </a>
-                        </li>
+                        </li> {% endcomment %}
                         <li class="nav-header">REPORTS</li>
                         <li class="nav-item">
-                            <a href="{% url 'hr_act_report' %}" class="nav-link {% if request.resolver_match.url_name == 'lab_activity_report' %}active{% endif %}">
+                            <a href="{% url 'hr_report' %}" class="nav-link {% if request.resolver_match.url_name == 'hr_report' %}active{% endif %}">
                                 <i class="nav-icon fas fa-chart-line"></i>
                                 <p>My Activities</p>
                             </a>

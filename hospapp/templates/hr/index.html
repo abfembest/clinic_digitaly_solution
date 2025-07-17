@@ -3,7 +3,9 @@
 {% block title %}HMS | HR Dashboard{% endblock %}
 
 {% block content %}
-<!-- Content Header -->
+
+{%include "nurses/nurses.css"%}
+
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -22,25 +24,378 @@
     </div>
 </div>
 
-<!-- Main content -->
+<div class="content">
+<div class="container-fluid my-4">
+    <div class="nurse-welcome-section">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">Good Morning, HR {{request.user.first_name}} {{request.user.last_name}}</h2>
+                <p class="text-muted mb-0">Ready to provide excellent patient care today. Stay organized and efficient.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="nurse-clock" id="nurseClock">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-users nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Staff Profiles</h5>
+                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#staffProfilesModal">
+                        <i class="fas fa-eye"></i> View Staff
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-exchange-alt nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Staff Transitions</h5>
+                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#transitionsModal">
+                        <i class="fas fa-arrows-alt-h"></i> Manage Transitions
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-clipboard nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Assign Staff Shift</h5>
+                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#shiftAssignmentModal">
+                        <i class="fas fa-clock"></i> Assign Shift
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-list-ul nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Activities</h5>
+                    <a href="{% url 'hr_report' %}" class="btn btn-success nurse-card-btn">
+                        <i class="fas fa-clipboard-list me-2"></i> My Activities
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-door-open nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">View Attendance</h5>
+                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#attendanceRecordsModal">
+                        <i class="fas fa-clipboard-list"></i> View Attendance
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="staffProfilesModal" tabindex="-1" aria-labelledby="staffProfilesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="staffProfilesModalLabel">
+                    <i class="fas fa-users mr-2"></i>Staff Profiles
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;"> {# Added max-height and overflow-y #}
+                <div class="row p-3 bg-light border-bottom">
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" placeholder="Search staff..." id="staffSearch">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control form-control-sm" id="roleFilter">
+                            <option value="">All Roles</option>
+                            <option value="receptionist">Receptionist</option>
+                            <option value="nurse">Nurse</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="lab">Lab Technician</option>
+                            <option value="admin">Administrator</option>
+                            <option value="pharmacy">Pharmacy</option>
+                            <option value="hr">HR</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control form-control-sm" id="deptFilter">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept.name }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-sm btn-outline-secondary btn-block" id="clearFilters">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="staffTable">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">#</th>
+                                <th><i class="fas fa-user mr-1"></i>Name</th>
+                                <th><i class="fas fa-id-badge mr-1"></i>Role</th>
+                                <th><i class="fas fa-building mr-1"></i>Department</th>
+                                <th><i class="fas fa-phone mr-1"></i>Phone</th>
+                                <th><i class="fas fa-envelope mr-1"></i>Email</th>
+                                <th class="text-center"><i class="fas fa-venus-mars mr-1"></i>Gender</th>
+                                <th><i class="fas fa-calendar mr-1"></i>Date Joined</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for staff in staff_list %}
+                            <tr data-staff-id="{{ staff.id }}" class="staff-row">
+                                <td class="text-center font-weight-bold text-muted">{{ forloop.counter }}</td>
+                                <td class="staff-name">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-initial rounded-circle bg-primary text-white mr-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 14px;">
+                                            {{ staff.user.first_name|first }}{{ staff.user.last_name|first }}
+                                        </div>
+                                        <div>
+                                            <strong>{{ staff.user.first_name }} {{ staff.user.last_name }}</strong>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="staff-role">
+                                    <span class="badge badge-pill
+                                        {% if staff.role == 'doctor' %}badge-success
+                                        {% elif staff.role == 'nurse' %}badge-info
+                                        {% elif staff.role == 'receptionist' %}badge-warning
+                                        {% elif staff.role == 'admin' %}badge-danger
+                                        {% elif staff.role == 'lab' %}badge-primary
+                                        {% elif staff.role == 'pharmacy' %}badge-secondary
+                                        {% elif staff.role == 'hr' %}badge-dark
+                                        {% else %}badge-light{% endif %}">
+                                        {{ staff.get_role_display }}
+                                    </span>
+                                </td>
+                                <td class="staff-department">
+                                    {% if staff.department %}
+                                        <i class="fas fa-building text-muted mr-1"></i>{{ staff.department.name }}
+                                    {% else %}
+                                        <span class="text-muted"><i class="fas fa-minus"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td class="staff-phone">
+                                    {% if staff.phone_number %}
+                                        <i class="fas fa-phone text-muted mr-1"></i>{{ staff.phone_number }}
+                                    {% else %}
+                                        <span class="text-muted"><i class="fas fa-minus"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td class="staff-email">
+                                    {% if staff.user.email %}
+                                        <i class="fas fa-envelope text-muted mr-1"></i>{{ staff.user.email }}
+                                    {% else %}
+                                        <span class="text-muted"><i class="fas fa-minus"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <i class="fas {% if staff.gender == 'M' %}fa-mars text-primary{% else %}fa-venus text-pink{% endif %} mr-1"></i>
+                                    {{ staff.get_gender_display }}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar mr-1"></i>{{ staff.date_joined|date:"M d, Y" }}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-end">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="transitionsModal" tabindex="-1" aria-labelledby="transitionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header nurse-modal-header">
+                <h5 class="modal-title" id="transitionsModalLabel">Staff Onboarding / Offboarding</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{% url 'staff_transitions' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label"><i class="fas fa-user me-2"></i>Full Name</label>
+                        <input type="text" name="full_name" id="full_name" list="staff_names" class="form-control nurse-form-control"
+                          placeholder="Start typing staff name..." autocomplete="off" required>
+                        <datalist id="staff_names">
+                            {% for staff in staff_list %}
+                                <option value="{{ staff.user.get_full_name|default:staff.user.username }}"></option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="transition_type" class="form-label"><i class="fas fa-exchange-alt me-2"></i>Transition Type</label>
+                        <select name="type" id="transition_type" class="form-control nurse-form-control" required>
+                            <option value="" disabled selected>Select type</option>
+                            <option value="onboarding">Onboarding</option>
+                            <option value="offboarding">Offboarding</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="transition_date" class="form-label"><i class="fas fa-calendar-alt me-2"></i>Date</label>
+                        <input type="date" name="date" id="transition_date" class="form-control nurse-form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label"><i class="fas fa-sticky-note me-2"></i>Notes (optional)</label>
+                        <textarea class="form-control nurse-form-control" name="notes" id="notes" rows="3"
+                          placeholder="Additional notes" style="resize: vertical;"></textarea>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn nurse-btn-primary"><i class="fas fa-save me-2"></i> Record Transition</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="shiftAssignmentModal" tabindex="-1" aria-labelledby="shiftAssignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header nurse-modal-header">
+                <h5 class="modal-title" id="shiftAssignmentModalLabel">Assign Staff Shift</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'assign_shift' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="shift_assign_staff_select" class="form-label">Select Staff Member</label>
+                        <select id="shift_assign_staff_select" name="staff_id" class="form-control select2bs4" style="width: 100%;" required>
+                            <option value="" disabled selected>Choose a staff member...</option>
+                            {% for staff in staff_list %}
+                                <option value="{{ staff.id }}">{{ staff.user.get_full_name }} - {{ staff.role|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="shift_date" class="form-label">Date</label>
+                        <input type="date" name="date" id="shift_date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="shift_type" class="form-label">Shift Type</label>
+                        <select name="shift_type" id="shift_type" class="form-control" required>
+                            <option value="morning">Morning</option>
+                            <option value="afternoon">Afternoon</option>
+                            <option value="night">Night</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="shift_notes" class="form-label">Notes (optional)</label>
+                        <textarea name="notes" id="shift_notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn nurse-btn-primary"><i class="fas fa-save me-2"></i> Assign Shift</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="attendanceRecordsModal" tabindex="-1" aria-labelledby="attendanceRecordsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header nurse-modal-header">
+                <h5 class="modal-title" id="attendanceRecordsModalLabel">Recent Attendance Records</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance_records %}
+                            <tr>
+                                <td>{{ record.staff.user.get_full_name }}</td>
+                                <td>{{ record.date|date:"Y-m-d" }}</td>
+                                <td>
+                                    {% if record.status == 'present' %}
+                                    <span class="badge badge-success">Present</span>
+                                    {% elif record.status == 'absent' %}
+                                    <span class="badge badge-danger">Absent</span>
+                                    {% elif record.status == 'on_leave' %}
+                                    <span class="badge badge-warning">On Leave</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.time_in|default:"-" }}</td>
+                                <td>{{ record.time_out|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No attendance records found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</section>
+
 <section class="content">
     <div class="container-fluid">
-        
-        <!-- Alert Section for Important HR Notifications -->
         <div class="row mb-3">
             <div class="col-12">
                 <div class="alert alert-info alert-dismissible">
                     <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
                     <h5><i class="icon fas fa-info"></i> HR Notice</h5>
-                    {{ pending_tasks_count }} pending approvals require your attention. 
-                    {{ expiring_certs_count }} certifications expire within 30 days.
+                    {{ pending_tasks_count }} pending approvals require your attention. {{ expiring_certs_count }} certifications expire within 30 days.
                 </div>
             </div>
         </div>
-
-        <!-- Key Metrics Row -->
         <div class="row">
-            <!-- Total Staff -->
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-primary">
                     <div class="inner">
@@ -55,8 +410,6 @@
                     </a>
                 </div>
             </div>
-
-            <!-- Present Today -->
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-success">
                     <div class="inner">
@@ -71,8 +424,6 @@
                     </a>
                 </div>
             </div>
-
-            <!-- On Leave -->
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-warning">
                     <div class="inner">
@@ -87,8 +438,6 @@
                     </a>
                 </div>
             </div>
-
-            <!-- New Hires (This Month) -->
             <div class="col-lg-3 col-6">
                 <div class="small-box bg-info">
                     <div class="inner">
@@ -104,400 +453,290 @@
                 </div>
             </div>
         </div>
-
-        <!-- Secondary Metrics Row -->
         <div class="row">
-            <!-- Departments -->
             <div class="col-lg-3 col-6">
                 <div class="info-box">
                     <span class="info-box-icon bg-gradient-primary">
                         <i class="fas fa-sitemap"></i>
                     </span>
                     <div class="info-box-content">
-                        <span class="info-box-text">Active Departments</span>
+                        <span class="info-box-text">Departments</span>
                         <span class="info-box-number">{{ total_departments }}</span>
                     </div>
                 </div>
             </div>
-
-            <!-- Absent Today -->
-            <div class="col-lg-3 col-6">
-                <div class="info-box">
-                    <span class="info-box-icon bg-gradient-danger">
-                        <i class="fas fa-user-times"></i>
-                    </span>
-                    <div class="info-box-content">
-                        <span class="info-box-text">Absent Today</span>
-                        <span class="info-box-number">{{ absent_today }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Offboarding -->
-            <div class="col-lg-3 col-6">
-                <div class="info-box">
-                    <span class="info-box-icon bg-gradient-warning">
-                        <i class="fas fa-user-minus"></i>
-                    </span>
-                    <div class="info-box-content">
-                        <span class="info-box-text">Offboarded (Month)</span>
-                        <span class="info-box-number">{{ offboarded_month }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Shift Assignments Today -->
             <div class="col-lg-3 col-6">
                 <div class="info-box">
                     <span class="info-box-icon bg-gradient-success">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-user-tie"></i>
                     </span>
                     <div class="info-box-content">
-                        <span class="info-box-text">Shift Assignments Today</span>
-                        <span class="info-box-number">{{ shift_assignments_today }}</span>
+                        <span class="info-box-text">Active Contracts</span>
+                        <span class="info-box-number">{{ active_contracts }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="info-box">
+                    <span class="info-box-icon bg-gradient-warning">
+                        <i class="fas fa-certificate"></i>
+                    </span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Expiring Certs (30 days)</span>
+                        <span class="info-box-number">{{ expiring_certs_count }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="info-box">
+                    <span class="info-box-icon bg-gradient-info">
+                        <i class="fas fa-file-invoice"></i>
+                    </span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Pending Approvals</span>
+                        <span class="info-box-number">{{ pending_tasks_count }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Dashboard Content -->
         <div class="row">
-            <!-- Left Column - Charts and Analytics -->
-            <div class="col-md-8">
-                
-                <!-- Department Distribution Chart -->
-                <div class="card card-primary">
+            <div class="col-md-6">
+                <div class="card card-info">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-chart-pie mr-1"></i>
-                            Staff Distribution by Department
-                        </h3>
+                        <h3 class="card-title">Gender Distribution</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="chart-responsive">
-                                    <canvas id="departmentChart" height="150"></canvas>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <ul class="chart-legend clearfix">
-                                    {% for dept in department_stats %}
-                                    <li>
-                                        <i class="far fa-circle" style="color: {{ dept.color }}"></i> {{ dept.name }}
-                                        <span class="badge badge-light float-right">{{ dept.count }}</span>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Attendance Trends -->
-                <div class="card card-success">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-chart-line mr-1"></i>
-                            Weekly Attendance Trends
-                        </h3>
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
+                            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                <i class="fas fa-times"></i>
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="chart">
-                            <canvas id="attendanceChart" height="180" style="height: 180px;"></canvas>
+                            <canvas id="genderChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
-
-                <!-- Recent HR Activities -->
-                <div class="card">
-                    <div class="card-header border-transparent">
-                        <h3 class="card-title">
-                            <i class="fas fa-history mr-1"></i>
-                            Recent HR Activities
-                        </h3>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-success">
+                    <div class="card-header">
+                        <h3 class="card-title">Staff by Department</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table m-0">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Activity</th>
-                                        <th>Staff Member</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for transition in recent_transitions %}
-                                    <tr>
-                                        <td>{{ transition.date|date:"M d, Y" }}</td>
-                                        <td>
-                                            <i class="fas fa-{% if transition.transition_type == 'onboarding' %}user-plus text-success{% else %}user-minus text-danger{% endif %} mr-1"></i>
-                                            {{ transition.get_transition_type_display }}
-                                        </td>
-                                        <td>{{ transition.full_name }}</td>
-                                        <td>
-                                            <span class="badge badge-{% if transition.transition_type == 'onboarding' %}success{% else %}warning{% endif %}">
-                                                {{ transition.transition_type|title }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted">No recent activities</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-footer clearfix">
-                        <a href="{% url 'staff_transitions' %}" class="btn btn-sm btn-info float-left">View All Transitions</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column - Quick Actions and Info -->
-            <div class="col-md-4">
-                
-                <!-- Quick Actions -->
-                <div class="card card-light">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-bolt mr-1"></i>
-                            Quick Actions
-                        </h3>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <a href="{% url 'staff_profiles' %}" class="btn btn-app bg-primary btn-sm w-100">
-                                    <i class="fas fa-user-tie"></i>
-                                    Staff Profiles
-                                </a>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <a href="{% url 'staff_attendance_shift' %}" class="btn btn-app bg-success btn-sm w-100">
-                                    <i class="fas fa-clock"></i>
-                                    Attendance
-                                </a>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <a href="{% url 'staff_transitions' %}" class="btn btn-app bg-info btn-sm w-100">
-                                    <i class="fas fa-exchange-alt"></i>
-                                    Transitions
-                                </a>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <a href="{% url 'staff_certifications' %}" class="btn btn-app bg-warning btn-sm w-100">
-                                    <i class="fas fa-certificate"></i>
-                                    Certifications
-                                </a>
-                            </div>
+                        <div class="chart">
+                            <canvas id="departmentChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Today's Attendance Summary -->
-                <div class="card card-info">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-calendar-day mr-1"></i>
-                            Today's Attendance Summary
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="progress-group">
-                            Present
-                            <span class="float-right"><b>{{ present_today }}</b>/{{ total_staff }}</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-success" style="width: {{ attendance_percentage }}%"></div>
-                            </div>
-                        </div>
-                        <div class="progress-group">
-                            On Leave
-                            <span class="float-right"><b>{{ on_leave_today }}</b>/{{ total_staff }}</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-warning" style="width: {{ leave_percentage }}%"></div>
-                            </div>
-                        </div>
-                        <div class="progress-group">
-                            Absent
-                            <span class="float-right"><b>{{ absent_today }}</b>/{{ total_staff }}</span>
-                            <div class="progress progress-sm">
-                                <div class="progress-bar bg-danger" style="width: {{ absent_percentage }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Shift Distribution -->
-                <div class="card card-secondary">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-business-time mr-1"></i>
-                            Today's Shift Distribution
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <ul class="list-group list-group-flush">
-                            {% for shift in shift_distribution %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-{% if shift.name == 'Morning' %}sun text-warning{% elif shift.name == 'Afternoon' %}cloud-sun text-info{% else %}moon text-dark{% endif %} mr-2"></i>
-                                    {{ shift.name }} Shift
-                                </div>
-                                <span class="badge badge-primary badge-pill">{{ shift.count }}</span>
-                            </li>
-                            {% empty %}
-                            <li class="list-group-item text-center text-muted">No shift assignments for today</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Role Distribution -->
-                <div class="card card-dark">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-user-tag mr-1"></i>
-                            Staff by Role
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <ul class="list-group list-group-flush">
-                            {% for role in role_distribution %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-{% if role.role == 'doctor' %}user-md text-primary{% elif role.role == 'nurse' %}user-nurse text-success{% elif role.role == 'admin' %}user-shield text-warning{% else %}user text-info{% endif %} mr-2"></i>
-                                    {{ role.role_display }}
-                                </div>
-                                <span class="badge badge-secondary badge-pill">{{ role.count }}</span>
-                            </li>
-                            {% empty %}
-                            <li class="list-group-item text-center text-muted">No staff data available</li>
-                            {% endfor %}
-                        </ul>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Emergency Alerts Section -->
-        {% if emergency_alerts %}
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="card card-danger">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card card-primary">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            Emergency Alerts
-                        </h3>
+                        <h3 class="card-title">Attendance Trends</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" data-card-widget="remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        {% for alert in emergency_alerts %}
-                        <div class="alert alert-danger alert-dismissible">
-                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-                            <h5><i class="icon fas fa-ban"></i> Alert!</h5>
-                            {{ alert.message }}
-                            <small class="d-block mt-1">
-                                <i class="fas fa-clock mr-1"></i>{{ alert.timestamp|timesince }} ago
-                                {% if alert.triggered_by %}
-                                | Triggered by: {{ alert.triggered_by.get_full_name }}
-                                {% endif %}
-                            </small>
+                        <div class="chart">
+                            <canvas id="attendanceChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
 </section>
 
-<!-- Chart Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Department Distribution Chart
-    var departmentCtx = document.getElementById('departmentChart').getContext('2d');
-    var departmentChart = new Chart(departmentCtx, {
-        type: 'doughnut',
-        data: {
-            labels: [{% for dept in department_stats %}'{{ dept.name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                data: [{% for dept in department_stats %}{{ dept.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                backgroundColor: [{% for dept in department_stats %}'{{ dept.color }}'{% if not forloop.last %},{% endif %}{% endfor %}]
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            responsive: true,
-            legend: {
-                display: false
-            }
-        }
-    });
+    // Clock functionality
+    function updateClock() {
+        const now = new Date();
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        };
+        document.getElementById('nurseClock').textContent = now.toLocaleTimeString('en-US', options);
+    }
+    setInterval(updateClock, 1000);
+    updateClock(); // Initial call
 
-    // Attendance Trends Chart
-    var attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
-    var attendanceChart = new Chart(attendanceCtx, {
-        type: 'line',
-        data: {
-            labels: {{ attendance_labels|safe }},
-            datasets: [
-                {
-                    label: 'Present',
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    data: {{ attendance_present_data|safe }},
-                    fill: true
-                },
-                {
-                    label: 'Absent',
-                    borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    data: {{ attendance_absent_data|safe }},
-                    fill: true
-                },
-                {
-                    label: 'On Leave',
-                    borderColor: '#ffc107',
-                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                    data: {{ attendance_leave_data|safe }},
-                    fill: true
+    $(function () {
+        // Staff Search and Filter (for the modal)
+        $('#staffSearch').on('keyup', function() {
+            filterStaffTable();
+        });
+
+        $('#roleFilter, #deptFilter').on('change', function() {
+            filterStaffTable();
+        });
+
+        $('#clearFilters').on('click', function() {
+            $('#staffSearch').val('');
+            $('#roleFilter').val('');
+            $('#deptFilter').val('');
+            filterStaffTable();
+        });
+
+        function filterStaffTable() {
+            var searchText = $('#staffSearch').val().toLowerCase();
+            var roleFilter = $('#roleFilter').val().toLowerCase();
+            var deptFilter = $('#deptFilter').val().toLowerCase();
+
+            $('#staffTable tbody tr').each(function() {
+                var staffName = $(this).find('.staff-name strong').text().toLowerCase();
+                var staffRole = $(this).find('.staff-role .badge').text().toLowerCase();
+                var staffDepartment = $(this).find('.staff-department').text().toLowerCase();
+
+                var showRow = true;
+
+                if (searchText && staffName.indexOf(searchText) === -1) {
+                    showRow = false;
                 }
-            ]
-        },
-        options: {
-            maintainAspectRatio: false,
-            responsive: true,
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true
-                    }
-                }]
-            }
+                if (roleFilter && staffRole.indexOf(roleFilter) === -1) {
+                    showRow = false;
+                }
+                if (deptFilter && staffDepartment.indexOf(deptFilter) === -1) {
+                    showRow = false;
+                }
+
+                $(this).toggle(showRow);
+            });
         }
+
+        // Chart.js Data (example data - replace with actual dynamic data from your backend)
+        var genderCtx = document.getElementById('genderChart').getContext('2d');
+        var genderChart = new Chart(genderCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ gender_labels|safe }},
+                datasets: [{
+                    data: {{ gender_data|safe }},
+                    backgroundColor: ['#007bff', '#ff69b4'], // Blue for Male, Pink for Female
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.label + ': ' + tooltipItem.raw + ' staff';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Department Distribution Chart
+        var departmentCtx = document.getElementById('departmentChart').getContext('2d');
+        var departmentChart = new Chart(departmentCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ department_labels|safe }},
+                datasets: [{
+                    label: 'Number of Staff',
+                    backgroundColor: '#28a745', // Green
+                    data: {{ department_data|safe }}
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Attendance Trends Chart
+        var attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+        var attendanceChart = new Chart(attendanceCtx, {
+            type: 'line',
+            data: {
+                labels: {{ attendance_labels|safe }},
+                datasets: [
+                    {
+                        label: 'Present',
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        data: {{ attendance_present_data|safe }},
+                        fill: true
+                    },
+                    {
+                        label: 'Absent',
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        data: {{ attendance_absent_data|safe }},
+                        fill: true
+                    },
+                    {
+                        label: 'On Leave',
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        data: {{ attendance_leave_data|safe }},
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                responsive: true,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                }
+            }
+        });
     });
-});
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
 {% endblock %}

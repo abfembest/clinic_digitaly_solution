@@ -1973,12 +1973,31 @@ def hr(request):
     # Get current date info
     today = timezone.now().date()
     current_month_start = today.replace(day=1)
-    week_ago = today - timedelta(days=7)
     
     # === BASIC STAFF METRICS ===
     total_staff = Staff.objects.count()
     total_departments = Department.objects.count()
     
+    # Fetch all staff for the Staff Profiles modal and Staff Transitions datalist
+    staff_list = Staff.objects.select_related('user', 'department').all()
+    # Fetch all departments for the Staff Profiles modal filters and selection
+    departments = Department.objects.all()
+
+    # Fetch all patients for relevant modals (e.g., Consultation Notes, Discharge)
+    patients = Patient.objects.all()
+    
+    # Corrected: Fetch doctors as Staff members with the 'doctor' role
+    doctors = Staff.objects.filter(role='doctor').select_related('user').all()
+
+    # Get active patients details for monitoring (example structure, adjust based on your Patient model)
+    active_patients_details = []
+    for patient in patients:
+        active_patients_details.append({
+            'full_name': patient.full_name, # or patient.user.get_full_name() if Patient links to User
+            'status': 'Active', # Replace with actual patient status if available in your model
+            'last_vitals_recorded_at': None # Replace with actual field if available
+        })
+
     # === TODAY'S ATTENDANCE DATA ===
     today_attendance = Attendance.objects.filter(date__date=today)
     present_today = today_attendance.filter(status='Present').count()
@@ -2015,13 +2034,16 @@ def hr(request):
     ).values('name', 'count')
     
     # === DEPARTMENT STATISTICS ===
-    department_stats = []
-    colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6c757d']
-    
+    # For Department Chart
     dept_data = Department.objects.annotate(
         staff_count=Count('staff')
     ).values('name', 'staff_count')
     
+    department_labels = [dept['name'] for dept in dept_data]
+    department_data = [dept['staff_count'] for dept in dept_data]
+    
+    department_stats = [] # Kept for potential existing usage in template not covered by chart
+    colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6c757d']
     for idx, dept in enumerate(dept_data):
         department_stats.append({
             'name': dept['name'],
@@ -2029,18 +2051,21 @@ def hr(request):
             'color': colors[idx % len(colors)]
         })
     
-    # === ROLE DISTRIBUTION ===
+    # === ROLE DISTRIBUTION (Gender Distribution) ===
+    # For Gender Distribution Chart
+    gender_distribution = Staff.objects.values('gender').annotate(count=Count('id'))
+    gender_labels = ['Male' if item['gender'] == 'M' else 'Female' for item in gender_distribution]
+    gender_data = [item['count'] for item in gender_distribution]
+
+    # For overall role distribution (if needed elsewhere in dashboard)
     role_distribution = Staff.objects.values('role').annotate(
         count=Count('id')
     ).order_by('-count')
-
-    # Add display name manually
     role_display_map = dict(Staff.ROLE_CHOICES)
-    for role in role_distribution:
-        role['role_display'] = role_display_map.get(role['role'], role['role'])
+    for role_item in role_distribution: # Renamed loop variable to avoid conflict with 'role' in outer scope
+        role_item['role_display'] = role_display_map.get(role_item['role'], role_item['role'])
     
     # === WEEKLY ATTENDANCE TRENDS ===
-    # Get last 7 days of attendance data
     attendance_labels = []
     attendance_present_data = []
     attendance_absent_data = []
@@ -2065,11 +2090,9 @@ def hr(request):
     ).order_by('-timestamp')[:5]
     
     # === PENDING TASKS & NOTIFICATIONS ===
-    # Calculate some HR-specific metrics for alerts
-    pending_tasks_count = 0  # You can implement this based on your workflow
-    expiring_certs_count = 0  # You can implement certification expiry logic
-    
-    # If you have a certification model, uncomment and modify:
+    pending_tasks_count = 0  # Placeholder, implement actual logic
+    expiring_certs_count = 0 # Placeholder, implement actual logic
+    # Example:
     # from datetime import timedelta
     # thirty_days_from_now = today + timedelta(days=30)
     # expiring_certs_count = StaffCertification.objects.filter(
@@ -2093,6 +2116,13 @@ def hr(request):
         'absent_percentage': round(absent_percentage, 1),
         'leave_percentage': round(leave_percentage, 1),
         
+        # Data for Modals
+        'staff_list': staff_list,
+        'departments': departments, # All departments for filters and selection
+        'patients': patients,
+        'doctors': doctors, # Now correctly fetches Staff with role='doctor'
+        'active_patients_details': active_patients_details, # For monitor modal example
+
         # Complex data structures
         'department_stats': department_stats,
         'role_distribution': role_distribution,
@@ -2105,6 +2135,10 @@ def hr(request):
         'attendance_present_data': json.dumps(attendance_present_data),
         'attendance_absent_data': json.dumps(attendance_absent_data),
         'attendance_leave_data': json.dumps(attendance_leave_data),
+        'gender_labels': json.dumps(gender_labels),
+        'gender_data': json.dumps(gender_data),
+        'department_labels': json.dumps(department_labels),
+        'department_data': json.dumps(department_data),
         
         # Notification counters
         'pending_tasks_count': pending_tasks_count,
@@ -2319,6 +2353,7 @@ def staff_transitions(request):
 def staff_certifications(request):
     return render(request, 'hr/certifications.html')
 
+@login_required(login_url='home')
 def hr_act_report(request):
     """
     Comprehensive HR report view showing all HR-related activities
@@ -2334,7 +2369,7 @@ def hr_act_report(request):
             'error_message': 'Access denied. You must be HR staff to view this report.',
             'is_hr': False
         }
-        return render(request, 'hr_report.html', context)
+        return render(request, 'hr/reports.html', context)
     
     # Date range for filtering (default to current month)
     today = timezone.now().date()
