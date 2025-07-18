@@ -14,57 +14,59 @@ urlpatterns = [
     path('n/home', views.nurses, name='nurse'),
     path('n/vitals', views.vitals, name='vitals'),
     path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
+    path('nurse/activity-report/', views.nurse_activity_report, name='nurse_activity_report'),
+    path('nurse/ivf-progress/', views.nurse_view_ivf_progress, name='nurse_ivf_progress'),
 
+    path('n/record_vitals', views.record_vitals, name='record_vitals'),
     path('n/admit_patient_nurse', views.admit_patient_nurse, name='admit_patient_nurse'),
     path('n/discharge_patient', views.discharge_patient, name='discharge_patient'),
     path('n/update_patient_status', views.update_patient_status, name='update_patient_status'),
     path('n/refer_patient', views.refer_patient, name='refer_patient'),
-
     path('n/save_nursing_note', views.save_nursing_note, name='nursing_note'),
     path('n/handover_log', views.handover_log, name='handover_log'),
-
     path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
-
-    path('n/record_vitals', views.record_vitals, name='record_vitals'),
-
-    path('nurse/activity-report/', views.nurse_activity_report, name='nurse_activity_report'),
-    path('nurse/ivf-progress/', views.nurse_view_ivf_progress, name='nurse_ivf_progress'),
 
     ########################### End Nurses URLS #################################
 
     ########################### Doctors URLS ####################################
 
     path('d/home', views.doctors, name='doctors'),
-    path('d/home', views.chart_view, name='chart_view'),
     path('d/consultations', views.doctor_consultation, name='doctor_consultation'),
+    path('d/medical-records/', views.access_medical_records, name='access_medical_records'),
+    path('d/requesttest/', views.requesttest, name='requesttest'),
+    path('d/recomended_tests', views.recomended_tests, name='recomended_tests'),
+    path('d/ivf/start/', views.start_ivf, name='start_ivf'),
+    path('d/report', views.doctor_report, name='doctor_report'),
+    path('d/test_results/<int:patient_id>/', views.test_results, name='test_results'),
+
     path('d/chart', views.admissions_data, name='admissions_data'),
+    path('notifications/data/', views.notification_data, name='notification_data'),
+
     path('save-consultations', views.save_consultation, name='save_consultation'),
     path('patient-history/<int:patient_id>/', views.patient_history_ajax, name='patient_history_ajax'),
     path('add-prescription/', views.add_prescription, name='add_prescription'),
-    # path('request-tests/', views.request_tests, name='request_tests'),
     path('save-care-plan/', views.save_care_plan, name='save_care_plan'),
-    path('d/medical-records/', views.access_medical_records, name='access_medical_records'),
     path('patient/<int:patient_id>/overview/', views.get_patient_overview, name='patient_overview'),
     path('patient/<int:patient_id>/monitor/', views.get_patient_monitor, name='patient_monitor'),
-    # path('d/monitoring/', views.monitoring, name='monitoring'),
-    path('requesttest/', views.requesttest, name='requesttest'),
     path('submit-selection/', views.submit_test_selection, name='submit_selection'),
-    path('notifications/data/', views.notification_data, name='notification_data'),
-    path('d/testresults/', views.waitinglist, name='testresults'),
-    path('d/recomended_tests', views.recomended_tests, name='recomended_tests'),
-    path('d/test_results/<int:patient_id>/', views.test_results, name='test_results'),
     path('d/doc_test_comment/<int:patient_id>/', views.doc_test_comment, name='doc_test_comment'),
-    path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
     path('fetch-activity/', views.fetch_patient_activity, name='fetch_patient_activity'),
-    path('d/report', views.doctor_report, name='doctor_report'),
-    path('ivf/start/', views.start_ivf, name='start_ivf'),
+
     path('ivf/update_status/', views.update_ivf_status, name='update_ivf_status'),
     path('ivf/progress/<int:record_id>/', views.get_ivf_progress, name='get_ivf_progress'),
     path('ivf/add_progress_comment/', views.add_ivf_progress_comment, name='add_ivf_progress_comment'),
+
+    ########################### End Doctors URLS #################################
+    
+    # path('d/monitoring/', views.monitoring, name='monitoring'),
+    # path('d/home', views.chart_view, name='chart_view'),
+    # path('request-tests/', views.request_tests, name='request_tests'),
+    # path('d/testresults/', views.waitinglist, name='testresults'),
+
+    # path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
     
     
 
-    ########################### End Doctors URLS #################################
 
     #path('doctors/individual', views.individual_record, name='individual_record'),
     #path('doctors/all', views.all_record, name='all_record'),
@@ -117,7 +119,6 @@ urlpatterns = [
     ########################### HR URLS ####################################
 
     path('hr/home', views.hr, name='hr'),
-    # path('hr/staff_profile/', views.staff_profiles, name='staff_profiles'),
     path('hr/staff-profiles', views.staff_profiles, name='staff_profiles'),
     path('staff/<int:staff_id>/edit/', views.edit_staff_profile, name='edit_staff_profile'),
     path('staff/<int:staff_id>/change-password/', views.change_staff_password, name='change_staff_password'),

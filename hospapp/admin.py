@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Admission, Appointment, CarePlan, Consultation, Department,
     EmergencyAlert, HandoverLog, LabResultFile, LabTest, NursingNote, Patient, Prescription, Staff,
-    Referral, Shift, Attendance, ShiftAssignment, Vitals, TestCategory,
+    Referral, Attendance, ShiftAssignment, Vitals, TestCategory,
     TestSubcategory, StaffTransition, Payment, PatientBill, ServiceType, ExpenseCategory, Expense, Budget, PaymentUpload, DoctorComments, IVFPackage, TreatmentLocation, IVFRecord, IVFProgressUpdate
 )
 
@@ -23,7 +23,6 @@ admin.site.register(Patient)
 admin.site.register(Prescription)
 admin.site.register(Staff)
 admin.site.register(Referral)
-admin.site.register(Shift)
 admin.site.register(ShiftAssignment)
 admin.site.register(Attendance)
 admin.site.register(Vitals)

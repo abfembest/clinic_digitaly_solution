@@ -2,7 +2,7 @@ from multiprocessing import context
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, Shift, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem,IVFPackage, TreatmentLocation, IVFRecord, IVFProgressUpdate
+from .models import Patient, Staff, Admission, Vitals, NursingNote, Consultation, Prescription, CarePlan, LabTest, LabResultFile, Department, TestCategory, ShiftAssignment, Attendance, StaffTransition, TestSubcategory, Payment, PatientBill, Budget, Expense, HandoverLog, ExpenseCategory, EmergencyAlert, Patient, Appointment, Referral, BillItem,IVFPackage, TreatmentLocation, IVFRecord, IVFProgressUpdate
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
@@ -15,6 +15,8 @@ from django.db.models import Q
 from django.views.decorators.http import require_GET
 from django.shortcuts import get_object_or_404, render
 import json
+from django.db.models import Q, Max # Import Max for aggregation
+from django.db.models.functions import Coalesce
 from datetime import datetime, date
 from django.db.models import Sum, F
 from django.utils.timezone import localdate, now
@@ -142,8 +144,6 @@ def logout_view(request):
 
 
 ''' ############################################################################################################################ Nurses View ############################################################################################################################ '''
-from django.db.models import Q, Max # Import Max for aggregation
-from django.db.models.functions import Coalesce
 
 @login_required(login_url='home')
 def nurses(request):
@@ -300,6 +300,13 @@ def nurses(request):
     
     return render(request, 'nurses/index.html', context)
 
+@login_required(login_url='home')                          
+def vitals(request):
+    context = {
+        'patients': Patient.objects.all(),
+    }
+    return render(request, 'nurses/vital_signs.html', context)
+
 @login_required(login_url='home')
 def nursing_actions(request):
     context = {
@@ -311,6 +318,93 @@ def nursing_actions(request):
     }
     return render(request, 'nurses/nursing_actions.html', context)
 
+@csrf_exempt
+@login_required(login_url='home')
+def nurse_activity_report(request):
+    nurse_user = request.user
+    
+    today = timezone.localdate()
+
+    total_vitals_recorded = Vitals.objects.filter(recorded_by=nurse_user).count()
+    vitals_today = Vitals.objects.filter(recorded_by=nurse_user, recorded_at__date=today).count()
+
+    nursing_notes_added = NursingNote.objects.filter(nurse=nurse_user).count()
+    nursing_notes_today = NursingNote.objects.filter(nurse=nurse_user, created_at__date=today).count()
+
+    admissions_processed = Admission.objects.filter(admitted_by=nurse_user).count()
+    admissions_today = Admission.objects.filter(admitted_by=nurse_user, admission_date=today).count()
+
+    discharges_processed = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').count()
+    discharges_today = Admission.objects.filter(discharged_by=nurse_user, status='Discharged', discharge_date=today).count()
+
+    referrals_made = Referral.objects.filter(referred_by=nurse_user).count()
+    referrals_today = Referral.objects.filter(referred_by=nurse_user, created_at__date=today).count()
+
+    handovers_logged = HandoverLog.objects.filter(author=nurse_user).count()
+    handovers_today = HandoverLog.objects.filter(author=nurse_user, timestamp__date=today).count()
+    
+    recent_vitals = Vitals.objects.filter(recorded_by=nurse_user).order_by('-recorded_at')[:5]
+    recent_nursing_notes = NursingNote.objects.filter(nurse=nurse_user).order_by('-created_at')[:5]
+    recent_admissions = Admission.objects.filter(admitted_by=nurse_user).order_by('-admission_date')[:5]
+    recent_discharges = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').order_by('-discharge_date')[:5]
+    recent_referrals = Referral.objects.filter(referred_by=nurse_user).order_by('-created_at')[:5]
+    recent_handovers = HandoverLog.objects.filter(author=nurse_user).order_by('-timestamp')[:5]
+
+    context = {
+        'total_vitals_recorded': total_vitals_recorded,
+        'vitals_today': vitals_today,
+        'nursing_notes_added': nursing_notes_added,
+        'nursing_notes_today': nursing_notes_today,
+        'admissions_processed': admissions_processed,
+        'admissions_today': admissions_today,
+        'discharges_processed': discharges_processed,
+        'discharges_today': discharges_today,
+        'referrals_made': referrals_made,
+        'referrals_today': referrals_today,
+        'handovers_logged': handovers_logged,
+        'handovers_today': handovers_today,
+        'recent_vitals': recent_vitals,
+        'recent_nursing_notes': recent_nursing_notes,
+        'recent_admissions': recent_admissions,
+        'recent_discharges': recent_discharges,
+        'recent_referrals': recent_referrals,
+        'recent_handovers': recent_handovers,
+    }
+    return render(request, 'nurses/reports.html', context)
+
+@login_required
+@require_http_methods(["GET"])
+def nurse_view_ivf_progress(request):
+    
+    context = {
+        'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
+    }
+    return render(request, 'nurses/ivf_progress.html', context)
+
+###### Form Actions ######
+@csrf_exempt
+def record_vitals(request):
+    if request.method == 'POST':
+        try:
+            Vitals.objects.create(
+                patient_id=request.POST.get('patient_id'),
+                recorded_at=timezone.now(),
+                temperature=request.POST.get('temperature') or None,
+                blood_pressure=request.POST.get('blood_pressure'),
+                pulse=request.POST.get('pulse') or None,
+                respiratory_rate=request.POST.get('respiratory_rate') or None,
+                weight=request.POST.get('weight') or None,
+                height=request.POST.get('height') or None,
+                bmi=request.POST.get('bmi') or None,
+                notes=request.POST.get('notes'),
+                recorded_by=request.user
+            )
+            messages.success(request, "Vitals recorded successfully.")
+        except Exception as e:
+            messages.error(request, f"Error recording vitals: {str(e)}")
+
+    referer = request.META.get('HTTP_REFERER', '/')
+    return redirect(referer)
 
 @csrf_exempt
 @login_required(login_url='home')
@@ -592,103 +686,10 @@ def get_patient_details(request, patient_id):
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
 
-@login_required(login_url='home')                          
-def vitals(request):
-    context = {
-        'patients': Patient.objects.all(),
-    }
-    return render(request, 'nurses/vital_signs.html', context)
-
-@csrf_exempt
-def record_vitals(request):
-    if request.method == 'POST':
-        try:
-            Vitals.objects.create(
-                patient_id=request.POST.get('patient_id'),
-                recorded_at=timezone.now(),
-                temperature=request.POST.get('temperature') or None,
-                blood_pressure=request.POST.get('blood_pressure'),
-                pulse=request.POST.get('pulse') or None,
-                respiratory_rate=request.POST.get('respiratory_rate') or None,
-                weight=request.POST.get('weight') or None,
-                height=request.POST.get('height') or None,
-                bmi=request.POST.get('bmi') or None,
-                notes=request.POST.get('notes'),
-                recorded_by=request.user
-            )
-            messages.success(request, "Vitals recorded successfully.")
-        except Exception as e:
-            messages.error(request, f"Error recording vitals: {str(e)}")
-
-    referer = request.META.get('HTTP_REFERER', '/')
-    return redirect(referer)
-
-@csrf_exempt
-@login_required(login_url='home')
-def nurse_activity_report(request):
-    nurse_user = request.user
-    
-    today = timezone.localdate()
-
-    total_vitals_recorded = Vitals.objects.filter(recorded_by=nurse_user).count()
-    vitals_today = Vitals.objects.filter(recorded_by=nurse_user, recorded_at__date=today).count()
-
-    nursing_notes_added = NursingNote.objects.filter(nurse=nurse_user).count()
-    nursing_notes_today = NursingNote.objects.filter(nurse=nurse_user, created_at__date=today).count()
-
-    admissions_processed = Admission.objects.filter(admitted_by=nurse_user).count()
-    admissions_today = Admission.objects.filter(admitted_by=nurse_user, admission_date=today).count()
-
-    discharges_processed = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').count()
-    discharges_today = Admission.objects.filter(discharged_by=nurse_user, status='Discharged', discharge_date=today).count()
-
-    referrals_made = Referral.objects.filter(referred_by=nurse_user).count()
-    referrals_today = Referral.objects.filter(referred_by=nurse_user, created_at__date=today).count()
-
-    handovers_logged = HandoverLog.objects.filter(author=nurse_user).count()
-    handovers_today = HandoverLog.objects.filter(author=nurse_user, timestamp__date=today).count()
-    
-    recent_vitals = Vitals.objects.filter(recorded_by=nurse_user).order_by('-recorded_at')[:5]
-    recent_nursing_notes = NursingNote.objects.filter(nurse=nurse_user).order_by('-created_at')[:5]
-    recent_admissions = Admission.objects.filter(admitted_by=nurse_user).order_by('-admission_date')[:5]
-    recent_discharges = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').order_by('-discharge_date')[:5]
-    recent_referrals = Referral.objects.filter(referred_by=nurse_user).order_by('-created_at')[:5]
-    recent_handovers = HandoverLog.objects.filter(author=nurse_user).order_by('-timestamp')[:5]
-
-    context = {
-        'total_vitals_recorded': total_vitals_recorded,
-        'vitals_today': vitals_today,
-        'nursing_notes_added': nursing_notes_added,
-        'nursing_notes_today': nursing_notes_today,
-        'admissions_processed': admissions_processed,
-        'admissions_today': admissions_today,
-        'discharges_processed': discharges_processed,
-        'discharges_today': discharges_today,
-        'referrals_made': referrals_made,
-        'referrals_today': referrals_today,
-        'handovers_logged': handovers_logged,
-        'handovers_today': handovers_today,
-        'recent_vitals': recent_vitals,
-        'recent_nursing_notes': recent_nursing_notes,
-        'recent_admissions': recent_admissions,
-        'recent_discharges': recent_discharges,
-        'recent_referrals': recent_referrals,
-        'recent_handovers': recent_handovers,
-    }
-    return render(request, 'nurses/reports.html', context)
-
-@login_required
-@require_http_methods(["GET"])
-def nurse_view_ivf_progress(request):
-    
-    context = {
-        'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
-    }
-    return render(request, 'nurses/ivf_progress.html', context)
-
 ''' ############################################################################################################################ End Nurses View ############################################################################################################################ '''
 
 ''' ############################################################################################################################ Doctors View ############################################################################################################################ '''
+
 @login_required(login_url='home')
 def doctors(request):
     return render(request, 'doctors/index.html')
@@ -701,7 +702,369 @@ def doctor_consultation(request):
     }
     return render(request, 'doctors/consultation.html', context)
 
+@login_required(login_url='home')
+def access_medical_records(request):
+    view_type = request.GET.get('view')
+    patients = Patient.objects.all()
+    
+    if view_type == 'individual':
+        return render(request, 'doctors/individual_records.html', {'patients': patients})
+    elif view_type == 'all':
+        return render(request, 'doctors/all_records.html', {'patients': patients})
+    
+    # Default page with the two options
+    return render(request, 'doctors/access_medical_records.html', {'patients': patients})
 
+@login_required(login_url='home')
+def requesttest(request):
+    categories = TestCategory.objects.prefetch_related('subcategories').all()
+    patients = Patient.objects.all()
+    return render(request, 'doctors/requesttest.html', {
+        'categories': categories,
+        'patients': patients
+    })
+
+def recomended_tests(request):
+    if request.method == 'POST':
+        test_id = request.POST.get('test_id')
+        result_value = request.POST.get('result_value')
+        notes = request.POST.get('notes', '')
+
+        try:
+            test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
+            test.result_value = result_value
+            test.notes = notes
+            test.status = 'completed'
+            test.testcompleted = True
+            test.date_performed = timezone.now()
+            test.performed_by = request.user
+            test.save()
+
+            messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
+        except LabTest.DoesNotExist:
+            messages.error(request, "Invalid test entry or test already completed.")
+
+        return redirect('lab_test_entry')
+
+    # Fetch all lab tests
+    lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
+    total_patients = Patient.objects.count()
+
+    # Group tests by status (corrected 'pending' typo)
+    tests_by_status = {
+        'pending': lab_tests.filter(status='pending'),
+        'completed': lab_tests.filter(status='completed', doctor_comments=0),
+        'in_progress': lab_tests.filter(status='in_progress')
+    }
+
+    # Build test data list
+    tests_data = []
+    for test in lab_tests:
+        tests_data.append({
+            'test': test,
+            'patient': test.patient,
+            'category': test.category,
+            'status': test.status,
+            'requested_at': test.requested_at,
+            'date_performed': test.date_performed,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'System',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+            'doctor_comments': test.doctor_comments
+        })
+
+    # Build patient map only where status is 'completed' and doctor_comments == 0
+    patient_map = {}
+    for data in tests_data:
+        if data['status'] != 'completed' or (data['doctor_comments'] or 0) != 0:
+            continue
+
+        patient_id = data['patient'].id
+        if patient_id not in patient_map:
+            patient_map[patient_id] = {
+                'patient': data['patient'],
+                'tests': [],
+                'categories': set(),
+                'requested_by': data['requested_by']
+            }
+
+        patient_map[patient_id]['tests'].append(data['test'])
+        if data['category']:
+            patient_map[patient_id]['categories'].add(data['category'].name)
+
+    # Statistics
+    today = timezone.now().date()
+    stats = {
+        'total_patients':total_patients,
+        'total_tests': lab_tests.count(),
+        'total_pending_tests': tests_by_status['pending'].count(),
+        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
+        'total_in_progress': tests_by_status['in_progress'].count(),
+        'total_categories': TestCategory.objects.count(),
+        'unique_patients': Patient.objects.filter(lab_tests__isnull=False).distinct().count(),
+    }
+
+    context = {
+        "total_patients": total_patients,
+        'tests_data': tests_data,
+        'test_categories': TestCategory.objects.all(),
+        'unique_patients_with_tests': patient_map.values(),  # Only with status='completed' and doctor_comments==0
+        'stats': stats,
+        'debug_info': {
+            'total_tests_fetched': len(tests_data),
+            'test_categories_count': TestCategory.objects.count(),
+            'pending_tests_count': tests_by_status['pending'].count(),
+            'methods_used': [
+                'LabTest.objects.select_related(patient, category)',
+                'Status == completed and doctor_comments == 0'
+            ]
+        } if request.user.is_superuser else None
+    }
+
+    return render(request, 'doctors/recomended_test.html', context)
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def start_ivf(request):
+    if request.method == 'GET':
+        context = {
+            'patients': Patient.objects.only('id', 'full_name', 'patient_id'),
+            'packages': IVFPackage.objects.only('id', 'name'),
+            'locations': TreatmentLocation.objects.only('id', 'name'),
+            'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
+            'ivf_progress_statuses': IVFProgressUpdate.STATUS_CHOICES
+        }
+        return render(request, 'doctors/start_ivf.html', context)
+
+    try:
+        data = json.loads(request.body)
+        patient_id = data.get('patient_name')
+        ivf_package_id = data.get('ivf_package')
+        treatment_location_id = data.get('treatment_location')
+        doctor_name = data.get('doctor_name')
+        doctor_comments = data.get('doctor_comments', '')
+
+        # Create IVF record with 'in_progress' status immediately
+        ivf_record = IVFRecord.objects.create(
+            patient_id=patient_id,
+            ivf_package_id=ivf_package_id,
+            treatment_location_id=treatment_location_id,
+            doctor_name=doctor_name,
+            doctor_comments=doctor_comments,
+            status='in_progress'  # Set status to in_progress directly
+        )
+
+        # Record the initial status update in the progress timeline
+        IVFProgressUpdate.objects.create(
+            ivf_record=ivf_record,
+            status='in_progress',
+            comments='IVF cycle initiated and started.',
+            updated_by=request.user
+        )
+
+        return JsonResponse({'success': True, 'message': 'IVF treatment form submitted and cycle started successfully!'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+def doctor_report(request):
+    """
+    Generate comprehensive report for logged-in doctor showing all their activities
+    """
+    user = request.user
+    
+    # Verify user is a doctor
+    try:
+        staff = Staff.objects.get(user=user)
+        if staff.role != 'doctor':
+            # Handle non-doctor users appropriately
+            return render(request, 'error.html', {
+                'message': 'Access denied. This report is only available for doctors.'
+            })
+    except Staff.DoesNotExist:
+        return render(request, 'error.html', {
+            'message': 'Staff profile not found.'
+        })
+    
+    # Get date range for filtering (default: last 30 days)
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    # Allow custom date range from request parameters
+    if request.GET.get('start_date'):
+        start_date = datetime.strptime(request.GET.get('start_date'), '%Y-%m-%d').date()
+    if request.GET.get('end_date'):
+        end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
+    
+    # 1. Consultations conducted by the doctor
+    consultations = Consultation.objects.filter(
+        doctor=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient', 'admission').order_by('-created_at')
+    
+    # 2. Prescriptions written by the doctor
+    prescriptions = Prescription.objects.filter(
+        prescribed_by=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient').order_by('-created_at')
+    
+    # 3. Admissions where doctor is assigned
+    admissions_assigned = Admission.objects.filter(
+        doctor_assigned=user,
+        admission_date__range=[start_date, end_date]
+    ).select_related('patient', 'admitted_by').order_by('-admission_date')
+    
+    # 4. Admissions conducted by the doctor
+    admissions_conducted = Admission.objects.filter(
+        admitted_by=user,
+        admission_date__range=[start_date, end_date]
+    ).select_related('patient', 'doctor_assigned').order_by('-admission_date')
+    
+    # 5. Discharges conducted by the doctor
+    discharges = Admission.objects.filter(
+        discharged_by=user,
+        discharge_date__range=[start_date, end_date]
+    ).select_related('patient', 'doctor_assigned').order_by('-discharge_date')
+    
+    # 6. Care plans created by the doctor
+    care_plans = CarePlan.objects.filter(
+        created_by=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient').order_by('-created_at')
+    
+    # 7. Referrals made by the doctor
+    referrals = Referral.objects.filter(
+        referred_by=user,
+        created_at__date__range=[start_date, end_date]
+    ).select_related('patient', 'department').order_by('-created_at')
+    
+    # 8. Lab tests requested by the doctor
+    lab_tests = LabTest.objects.filter(
+        requested_by=user,
+        requested_at__date__range=[start_date, end_date]
+    ).select_related('patient', 'category').order_by('-requested_at')
+    
+    # 9. Vitals recorded by the doctor
+    vitals_recorded = Vitals.objects.filter(
+        recorded_by=user,
+        recorded_at__date__range=[start_date, end_date]
+    ).select_related('patient').order_by('-recorded_at')
+    
+    # 10. Patients registered by the doctor
+    patients_registered = Patient.objects.filter(
+        registered_by=user,
+        date_registered__date__range=[start_date, end_date]
+    ).order_by('-date_registered')
+    
+    # 11. Appointments scheduled by the doctor
+    appointments_scheduled = Appointment.objects.filter(
+        scheduled_by=user,
+        scheduled_time__date__range=[start_date, end_date]
+    ).select_related('patient', 'department').order_by('-scheduled_time')
+    
+    # 12. Doctor comments made
+    doctor_comments = DoctorComments.objects.filter(
+        doctor=user,
+        date__date__range=[start_date, end_date]
+    ).order_by('-date')
+    
+    # 13. Get patients currently under doctor's care (active admissions)
+    current_patients = Patient.objects.filter(
+        admission__doctor_assigned=user,
+        admission__status='Admitted'
+    ).distinct()
+    
+    # Calculate summary statistics
+    summary_stats = {
+        'total_consultations': consultations.count(),
+        'total_prescriptions': prescriptions.count(),
+        'total_admissions_assigned': admissions_assigned.count(),
+        'total_admissions_conducted': admissions_conducted.count(),
+        'total_discharges': discharges.count(),
+        'total_care_plans': care_plans.count(),
+        'total_referrals': referrals.count(),
+        'total_lab_tests': lab_tests.count(),
+        'total_vitals': vitals_recorded.count(),
+        'total_patients_registered': patients_registered.count(),
+        'total_appointments_scheduled': appointments_scheduled.count(),
+        'total_comments': doctor_comments.count(),
+        'current_active_patients': current_patients.count(),
+    }
+    
+    # Get patient statistics by status for patients the doctor has seen
+    patient_consultations = consultations.values_list('patient_id', flat=True)
+    patient_status_stats = Patient.objects.filter(
+        id__in=patient_consultations
+    ).values('status').annotate(count=Count('status'))
+    
+    # Recent activities (last 7 days) for quick overview
+    recent_date = end_date - timedelta(days=7)
+    recent_activities = {
+        'consultations': consultations.filter(created_at__date__gte=recent_date).count(),
+        'prescriptions': prescriptions.filter(created_at__date__gte=recent_date).count(),
+        'admissions': admissions_conducted.filter(admission_date__gte=recent_date).count(),
+        'referrals': referrals.filter(created_at__date__gte=recent_date).count(),
+    }
+    
+    context = {
+        'doctor': staff,
+        'start_date': start_date,
+        'end_date': end_date,
+        'consultations': consultations[:20],  # Limit for performance
+        'prescriptions': prescriptions[:20],
+        'admissions_assigned': admissions_assigned[:20],
+        'admissions_conducted': admissions_conducted[:20],
+        'discharges': discharges[:20],
+        'care_plans': care_plans[:20],
+        'referrals': referrals[:20],
+        'lab_tests': lab_tests[:20],
+        'vitals_recorded': vitals_recorded[:20],
+        'patients_registered': patients_registered[:20],
+        'appointments_scheduled': appointments_scheduled[:20],
+        'doctor_comments': doctor_comments,
+        'current_patients': current_patients,
+        'summary_stats': summary_stats,
+        'patient_status_stats': patient_status_stats,
+        'recent_activities': recent_activities,
+    }
+    
+    return render(request, 'doctors/reports.html', context)
+
+def test_results(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+    
+    pending_tests = LabTest.objects.filter(
+        patient=patient,
+        status='completed'
+    ).filter(
+        Q(doctor_comments=0) | Q(doctor_comments__isnull=True)
+    ).select_related('category', 'patient')
+    
+    for i in pending_tests:
+        print(i)
+    
+    grouped_tests = defaultdict(list)
+    for test in pending_tests:
+        grouped_tests[test.category.name].append(test)
+    
+    # Fetch uploaded lab result files for this patient
+    # Get unique file IDs from tests that have associated files
+    file_ids = pending_tests.filter(
+        labresulttestid__isnull=False
+    ).values_list('labresulttestid', flat=True).distinct()
+    
+    # Fetch the actual LabResultFile objects
+    uploaded_files = LabResultFile.objects.filter(
+        id__in=file_ids,
+        patient=patient
+    ).order_by('-uploaded_at')
+    
+    return render(request, 'doctors/testresults.html', {
+        'pending_tests': dict(grouped_tests),
+        'patient': patient,
+        'uploaded_files': uploaded_files,
+        'selected_patient': patient  # Adding this for template compatibility
+    })
+
+###### Form Actions ######
 @login_required(login_url='home')
 @csrf_exempt
 def save_consultation(request):
@@ -924,19 +1287,6 @@ def save_care_plan(request):
     return redirect('doctor_consultation')
 
 @login_required(login_url='home')
-def access_medical_records(request):
-    view_type = request.GET.get('view')
-    patients = Patient.objects.all()
-    
-    if view_type == 'individual':
-        return render(request, 'doctors/individual_records.html', {'patients': patients})
-    elif view_type == 'all':
-        return render(request, 'doctors/all_records.html', {'patients': patients})
-    
-    # Default page with the two options
-    return render(request, 'doctors/access_medical_records.html', {'patients': patients})
-
-@login_required(login_url='home')
 @require_GET
 def get_patient_overview(request, patient_id):
     try:
@@ -1060,9 +1410,759 @@ def get_patient_monitor(request, patient_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
     
+def submit_test_selection(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            patient_id = data.get('patient_id')
+            selections = data.get('selections', [])
+            
+            if not patient_id or not selections:
+                return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
+            
+            patient = Patient.objects.get(id=int(patient_id))
+            
+            # Generate a single UUID for this test request
+            test_request_uuid = uuid4()
+            
+            created_tests = []
+            for item in selections:
+                category = item.get('category')
+                tests = item.get('tests', [])
+                
+                try:
+                    category_obj = TestCategory.objects.get(name=category)
+                except TestCategory.DoesNotExist:
+                    continue
+                
+                for test in tests:
+                    lab_test = LabTest.objects.create(
+                        patient=patient,
+                        category=category_obj,
+                        test_name=test,
+                        test_request_id=test_request_uuid,  # Same UUID for all tests in this request
+                        requested_by=request.user,
+                        doctor_name=request.user.get_full_name() or request.user.username
+                    )
+                    created_tests.append(lab_test.id)
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Selections saved.',
+                'test_request_id': str(test_request_uuid),
+                'created_tests': created_tests
+            })
+            
+        except Patient.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Patient not found'})
+        except DatabaseError as e:
+            return JsonResponse({'status': 'error', 'message': f'Database error: {str(e)}'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'An error occurred: {str(e)}'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+def doc_test_comment(request, patient_id):
+    if request.method == 'POST':
+        comment_text = request.POST.get('doctor_comment', '')
+        ids = request.POST.getlist('ids')
+
+        if not ids or not comment_text:
+            messages.error(request, "You must select tests and enter a comment.")
+            return redirect('recomended_tests')
+
+        # Create a new DoctorComments record
+        comment_record = DoctorComments.objects.create(
+            comments=comment_text,
+            date=timezone.now(),
+            doctor=request.user,  # or request.user.get_full_name() if applicable
+            labtech_name="LabTech Placeholder"  # Replace with actual logic if needed
+        )
+        # Update each LabTest with the new doctor_comments ID
+        LabTest.objects.filter(id__in=ids).update(doctor_comments=comment_record.id)
+
+        messages.success(request, "Doctor's comment added and tests updated successfully.")
+        return redirect('recomended_tests')
+
+    # If GET request (optional, show test details or redirect)
+    return redirect('recomended_tests')
+
+def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_datetime_field=True):
+    """
+    Applies date range filtering to a queryset based on a specified date/datetime field.
+
+    Args:
+        queryset: The Django queryset to filter.
+        date_from_str (str): The start date string in YYYY-MM-DD format (can be None).
+        date_to_str (str): The end date string in YYYY-MM-DD format (can be None).
+        date_field_name (str): The name of the date/datetime field on the model to filter by.
+        is_datetime_field (bool): Whether the field is a DateTimeField (True) or DateField (False).
+    """
+    parsed_date_from = None
+    parsed_date_to = None
+
+    if date_from_str:
+        try:
+            parsed_date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError(f"Invalid start date format '{date_from_str}'. Use YYYY-MM-DD.")
+    
+    if date_to_str:
+        try:
+            parsed_date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError(f"Invalid end date format '{date_to_str}'. Use YYYY-MM-DD.")
+
+    if parsed_date_from:
+        if is_datetime_field:
+            # Use __date for DateTimeField to filter by the date part only
+            queryset = queryset.filter(**{f"{date_field_name}__date__gte": parsed_date_from})
+        else:
+            # Direct comparison for DateField
+            queryset = queryset.filter(**{f"{date_field_name}__gte": parsed_date_from})
+    
+    if parsed_date_to:
+        if is_datetime_field:
+            # Use __date for DateTimeField to filter by the date part only
+            queryset = queryset.filter(**{f"{date_field_name}__date__lte": parsed_date_to})
+        else:
+            # Direct comparison for DateField
+            queryset = queryset.filter(**{f"{date_field_name}__lte": parsed_date_to})
+
+    return queryset
 
 
-    #notification icon 
+def fetch_patient_activity(request):
+    """
+    Comprehensive AJAX view to fetch all patient medical records and activity
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Only GET method allowed'}, status=405)
+
+    patient_id = request.GET.get('patient_id')
+    date_from_param = request.GET.get('date_from')
+    date_to_param = request.GET.get('date_to')
+
+    if not patient_id:
+        return JsonResponse({'error': 'Patient ID is required'}, status=400)
+
+    try:
+        # Get patient with error handling
+        patient = get_object_or_404(Patient, id=patient_id)
+
+        # If date_to is not provided, set it to today's date as a string
+        if not date_to_param:
+            date_to_param = date.today().strftime('%Y-%m-%d')
+
+        # === FETCH ALL PATIENT DATA ===
+
+        # 1. BASIC PATIENT INFO
+        # Calculate age properly
+        today = date.today()
+        age = today.year - patient.date_of_birth.year - ((today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day))
+
+        # Handle patient photo
+        photo_url = ''
+        if patient.photo and hasattr(patient.photo, 'url'):
+            try:
+                # Check if file exists
+                if default_storage.exists(patient.photo.name):
+                    photo_url = patient.photo.url
+            except Exception as e:
+                logger.warning(f"Error accessing patient photo for patient {patient.id}: {e}")
+                pass
+
+        patient_data = {
+            'id': patient.id,
+            'full_name': patient.full_name,
+            'gender': patient.gender,
+            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
+            'age': age,
+            'blood_group': patient.blood_group,
+            'phone': patient.phone,
+            'email': patient.email or '',
+            'address': patient.address,
+            'marital_status': patient.marital_status,
+            'nationality': patient.nationality,
+            'state_of_origin': patient.state_of_origin or '',
+            'id_type': patient.id_type or '',
+            'id_number': patient.id_number or '',
+            'status': patient.status,
+            'is_inpatient': patient.is_inpatient,
+            'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+            'photo_url': photo_url,
+
+            # Next of Kin Info
+            'next_of_kin_name': patient.next_of_kin_name,
+            'next_of_kin_phone': patient.next_of_kin_phone,
+            'next_of_kin_relationship': patient.next_of_kin_relationship or '',
+            'next_of_kin_email': patient.next_of_kin_email or '',
+            'next_of_kin_address': patient.next_of_kin_address or '',
+
+            # Current Medical Status
+            'diagnosis': patient.diagnosis or '',
+            'medication': patient.medication or '',
+            'notes': patient.notes or '',
+            'referred_by': patient.referred_by or '',
+        }
+
+        # 2. CONSULTATIONS
+        consultations_qs = apply_date_filter(
+            patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
+            'created_at',
+            is_datetime_field=True
+        )
+        consultations = []
+        for consultation in consultations_qs:
+            consultations.append({
+                'id': consultation.id,
+                'date': consultation.created_at.strftime('%Y-%m-%d %H:%M'),
+                'doctor': consultation.doctor.get_full_name() if consultation.doctor else 'Unknown',
+                'symptoms': consultation.symptoms,
+                'diagnosis_summary': consultation.diagnosis_summary,
+                'advice': consultation.advice,
+                'admission_id': consultation.admission.id if consultation.admission else None,
+            })
+
+        # 3. PRESCRIPTIONS
+        prescriptions_qs = apply_date_filter(
+            patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
+            'created_at',
+            is_datetime_field=True
+        )
+        prescriptions = []
+        for prescription in prescriptions_qs:
+            prescriptions.append({
+                'id': prescription.id,
+                'medication': prescription.medication,
+                'instructions': prescription.instructions,
+                'start_date': prescription.start_date.strftime('%Y-%m-%d'),
+                'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'Unknown',
+                'created_at': prescription.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+
+        # 4. VITALS
+        vitals_qs = apply_date_filter(
+            Vitals.objects.filter(patient=patient).select_related('recorded_by').order_by('-recorded_at'),
+            date_from_param,
+            date_to_param,
+            'recorded_at',
+            is_datetime_field=True
+        )
+        vitals = []
+        for vital in vitals_qs:
+            vitals.append({
+                'id': vital.id,
+                'recorded_at': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
+                'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'Unknown',
+                'temperature': vital.temperature,
+                'blood_pressure': vital.blood_pressure,
+                'pulse': vital.pulse,
+                'respiratory_rate': vital.respiratory_rate,
+                'weight': vital.weight,
+                'height': vital.height,
+                'bmi': vital.bmi,
+                'notes': vital.notes or '',
+            })
+
+        # 5. LAB TESTS & RESULTS (Grouped by test_request_id UUID)
+        lab_tests_qs = apply_date_filter(
+            patient.lab_tests.select_related('category', 'performed_by', 'requested_by', 'recorded_by').order_by('-requested_at'),
+            date_from_param,
+            date_to_param,
+            'requested_at',
+            is_datetime_field=True
+        )
+
+        # Group tests by the UUID (test_request_id)
+        grouped_lab_tests = defaultdict(list)
+        for test in lab_tests_qs:
+            grouped_lab_tests[test.test_request_id].append(test)
+
+        lab_test_groups = []
+        for request_id, tests_in_group in grouped_lab_tests.items():
+            first_test = tests_in_group[0]
+
+            # Fetch Doctor Comment - CORRECTED
+            doctor_comment_data = None
+            if first_test.doctor_comments:
+                try:
+                    comment = DoctorComments.objects.select_related('doctor').get(id=first_test.doctor_comments)
+                    doctor_comment_data = {
+                        "id": comment.id,
+                        "comment": comment.comments,
+                        "doctor_name": comment.doctor.get_full_name() if comment.doctor else 'Unknown',  # FIXED
+                        "labtech_name": comment.labtech_name,
+                        "date": comment.date.strftime('%Y-%m-%d %H:%M')
+                    }
+                except DoctorComments.DoesNotExist:
+                    doctor_comment_data = None
+
+            # Fetch Lab Result File - CORRECTED
+            lab_file_data = None
+            if first_test.labresulttestid:
+                try:
+                    lab_file = LabResultFile.objects.select_related('uploaded_by').get(id=first_test.labresulttestid)
+                    file_url = ''
+                    file_name = ''
+                    if lab_file.result_file and hasattr(lab_file.result_file, 'url'):
+                        try:
+                            if default_storage.exists(lab_file.result_file.name):
+                                file_url = lab_file.result_file.url
+                                file_name = lab_file.result_file.name.split('/')[-1]
+                        except Exception as e:
+                            logger.warning(f"Error accessing lab result file {lab_file.id}: {e}")
+                            pass
+                    
+                    lab_file_data = {
+                        "id": lab_file.id,
+                        "file_url": file_url,
+                        "file_name": file_name,
+                        "uploaded_at": lab_file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+                        "uploaded_by": lab_file.uploaded_by.get_full_name() if lab_file.uploaded_by else 'Unknown'
+                    }
+                except LabResultFile.DoesNotExist:
+                    lab_file_data = None
+
+            # Prepare individual tests data
+            tests_data = []
+            for test in tests_in_group:
+                tests_data.append({
+                    'id': test.id,
+                    'test_name': test.test_name,
+                    'category': test.category.name if test.category else '',
+                    'status': test.get_status_display(),
+                    'status_code': test.status,
+                    'result_value': test.result_value or '',
+                    'normal_range': test.normal_range or '',
+                    'notes': test.notes or '',
+                    'instructions': test.instructions or '',
+                    'doctor_name': test.doctor_name or '',
+                    'performed_by': test.performed_by.get_full_name() if test.performed_by else '',
+                    'requested_by': test.requested_by.get_full_name() if test.requested_by else '',
+                    'recorded_by': test.recorded_by.get_full_name() if test.recorded_by else '',
+                    'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else '',
+                    'submitted_on': test.submitted_on.strftime('%Y-%m-%d'),
+                    'testcompleted': test.testcompleted,
+                })
+
+            tests_data.sort(key=lambda x: x['test_name'])
+
+            group_statuses = [test.status for test in tests_in_group]
+            if all(status == 'completed' for status in group_statuses):
+                group_status = 'completed'
+            elif any(status == 'in_progress' for status in group_statuses):
+                group_status = 'in_progress'
+            elif any(status == 'cancelled' for status in group_statuses):
+                group_status = 'mixed'
+            else:
+                group_status = 'pending'
+
+            lab_test_groups.append({
+                "request_id": str(request_id),
+                "requested_at": first_test.requested_at.strftime('%Y-%m-%d %H:%M'),
+                "submitted_on": first_test.submitted_on.strftime('%Y-%m-%d'),
+                "doctor_name": first_test.doctor_name or '',
+                "requested_by": first_test.requested_by.get_full_name() if first_test.requested_by else '',
+                "group_status": group_status,
+                "tests_count": len(tests_in_group),
+                "completed_tests": len([t for t in tests_in_group if t.status == 'completed']),
+                "pending_tests": len([t for t in tests_in_group if t.status == 'pending']),
+                "doctor_comment": doctor_comment_data,
+                "result_file": lab_file_data,
+                "tests": tests_data
+            })
+
+        lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True)
+
+        # 6. NURSING NOTES - CORRECTED
+        nursing_notes_qs = apply_date_filter(
+            patient.nursing_notes.select_related('nurse').order_by('-note_datetime'),
+            date_from_param,
+            date_to_param,
+            'note_datetime',
+            is_datetime_field=True
+        )
+        nursing_notes = []
+        for note in nursing_notes_qs:
+            nursing_notes.append({
+                'id': note.id,
+                'note_datetime': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
+                'nurse': note.nurse.get_full_name() if note.nurse else 'Unknown',  # FIXED
+                'note_type': note.get_note_type_display(),
+                'note_type_code': note.note_type,
+                'notes': note.notes,
+                'patient_status': note.patient_status or '',
+                'follow_up': note.follow_up or '',
+                'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+
+        # 7. ADMISSIONS - CORRECTED
+        admissions_qs = apply_date_filter(
+            Admission.objects.filter(patient=patient).select_related('admitted_by', 'discharged_by', 'doctor_assigned').order_by('-admission_date'),
+            date_from_param,
+            date_to_param,
+            'admission_date',
+            is_datetime_field=False  # admission_date is DateField
+        )
+        admissions = []
+        for admission in admissions_qs:
+            admissions.append({
+                'id': admission.id,
+                'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
+                'admitted_on': admission.admitted_on.strftime('%Y-%m-%d'),
+                'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'Unknown',  # FIXED
+                'doctor_assigned': admission.doctor_assigned.get_full_name() if admission.doctor_assigned else 'Unknown',  # FIXED
+                'status': admission.status,
+                'admission_reason': admission.admission_reason or '',  # ADDED
+                'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else '',
+                'discharged_by': admission.discharged_by.get_full_name() if admission.discharged_by else '',  # FIXED
+                'discharge_notes': admission.discharge_notes or '',
+                'time': admission.time.strftime('%H:%M') if admission.time else '',
+            })
+
+        # 8. CARE PLANS
+        care_plans_qs = apply_date_filter(
+            CarePlan.objects.filter(patient=patient).select_related('created_by').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
+            'created_at',
+            is_datetime_field=True
+        )
+        care_plans = []
+        for plan in care_plans_qs:
+            care_plans.append({
+                'id': plan.id,
+                'created_at': plan.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': plan.created_by.get_full_name() if plan.created_by else 'Unknown',
+                'clinical_findings': plan.clinical_findings,
+                'plan_of_care': plan.plan_of_care,
+            })
+
+        # 9. REFERRALS - CORRECTED
+        referrals = []
+        referrals_qs = Referral.objects.filter(patient=patient).select_related('department', 'referred_by').order_by('-created_at')
+        for referral in referrals_qs:
+            referrals.append({
+                'id': referral.id,
+                'department': referral.department.name,
+                'notes': referral.notes,
+                'priority': referral.priority or '',  # ADDED
+                'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'Unknown',  # ADDED
+                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),  # ADDED
+            })
+
+        # 10. APPOINTMENTS - CORRECTED
+        appointments_qs = apply_date_filter(
+            Appointment.objects.filter(patient=patient).select_related('department', 'scheduled_by').order_by('-scheduled_time'),
+            date_from_param,
+            date_to_param,
+            'scheduled_time',
+            is_datetime_field=True
+        )
+        appointments = []
+        for appointment in appointments_qs:
+            appointments.append({
+                'id': appointment.id,
+                'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
+                'department': appointment.department.name,
+                'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'Unknown',  # ADDED
+            })
+
+        # 11. BILLS
+        bills_qs = apply_date_filter(
+            patient.bills.select_related('created_by').prefetch_related('items__service_type').order_by('-created_at'),
+            date_from_param,
+            date_to_param,
+            'created_at',
+            is_datetime_field=True
+        )
+        bills = []
+        for bill in bills_qs:
+            bill_items = []
+            for item in bill.items.all():
+                bill_items.append({
+                    'description': item.description,
+                    'service_type': item.service_type.name,
+                    'quantity': item.quantity,
+                    'unit_price': float(item.unit_price),
+                    'total_price': float(item.total_price),
+                })
+
+            bills.append({
+                'id': bill.id,
+                'bill_number': bill.bill_number,
+                'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': bill.created_by.get_full_name() if bill.created_by else 'Unknown',  # ADDED
+                'total_amount': float(bill.total_amount),
+                'discount_amount': float(bill.discount_amount),
+                'final_amount': float(bill.final_amount),
+                'amount_paid': float(bill.amount_paid()),
+                'outstanding_amount': float(bill.outstanding_amount()),
+                'status': bill.get_status_display(),
+                'status_code': bill.status,
+                'items': bill_items,
+                'notes': bill.notes or '',
+            })
+
+        # 12. PAYMENTS
+        payments_qs = apply_date_filter(
+            patient.payments.select_related('processed_by', 'bill').order_by('-payment_date'),
+            date_from_param,
+            date_to_param,
+            'payment_date',
+            is_datetime_field=True
+        )
+        payments = []
+        for payment in payments_qs:
+            payments.append({
+                'id': payment.id,
+                'amount': float(payment.amount),
+                'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
+                'payment_method': payment.get_payment_method_display(),
+                'payment_method_code': payment.payment_method,
+                'payment_reference': payment.payment_reference or '',
+                'status': payment.get_status_display(),
+                'status_code': payment.status,
+                'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'Unknown',
+                'bill_number': payment.bill.bill_number if payment.bill else '',
+                'notes': payment.notes or '',
+            })
+
+        # 13. HANDOVER LOGS - CORRECTED
+        handover_logs_qs = apply_date_filter(
+            HandoverLog.objects.filter(patient=patient).select_related('author', 'recipient').order_by('-timestamp'),
+            date_from_param,
+            date_to_param,
+            'timestamp',
+            is_datetime_field=True
+        )
+        handover_logs = []
+        for log in handover_logs_qs:
+            handover_logs.append({
+                'id': log.id,
+                'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M'),
+                'author': log.author.get_full_name() if log.author else 'Unknown',
+                'recipient': log.recipient.get_full_name() if log.recipient else 'Unknown',  # ADDED
+                'notes': log.notes,
+            })
+
+        # Calculate summary statistics
+        total_lab_test_groups = len(lab_test_groups)
+        total_individual_lab_tests = sum(len(group['tests']) for group in lab_test_groups)
+        pending_lab_test_groups = len([g for g in lab_test_groups if g['group_status'] in ['pending', 'in_progress']])
+        completed_lab_test_groups = len([g for g in lab_test_groups if g['group_status'] == 'completed'])
+
+        # Compile comprehensive response
+        response_data = {
+            'success': True,
+            'patient_info': patient_data,
+            'consultations': consultations,
+            'prescriptions': prescriptions,
+            'vitals': vitals,
+            'lab_test_groups': lab_test_groups,
+            'nursing_notes': nursing_notes,
+            'admissions': admissions,
+            'care_plans': care_plans,
+            'referrals': referrals,
+            'appointments': appointments,
+            'bills': bills,
+            'payments': payments,
+            'handover_logs': handover_logs,
+
+            # Summary counts
+            'summary': {
+                'total_consultations': len(consultations),
+                'total_prescriptions': len(prescriptions),
+                'total_vitals': len(vitals),
+                'total_lab_test_groups': total_lab_test_groups,
+                'total_individual_lab_tests': total_individual_lab_tests,
+                'pending_lab_test_groups': pending_lab_test_groups,
+                'completed_lab_test_groups': completed_lab_test_groups,
+                'total_nursing_notes': len(nursing_notes),
+                'total_admissions': len(admissions),
+                'current_admission': any(a['status'] == 'Admitted' for a in admissions),
+                'total_bills': len(bills),
+                'outstanding_bills': len([b for b in bills if b['outstanding_amount'] > 0]),
+                'total_payments': len(payments),
+                'total_referrals': len(referrals),
+                'total_appointments': len(appointments),
+                'total_care_plans': len(care_plans),
+                'total_handover_logs': len(handover_logs),
+            }
+        }
+
+        return JsonResponse(response_data)
+
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Patient not found'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'error': f'Date format error: {str(e)}'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in fetch_patient_activity: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+@login_required
+@require_http_methods(["POST"])
+def update_ivf_status(request):
+    try:
+        data = json.loads(request.body)
+        record_id = data.get('record_id')
+        new_status = data.get('new_status')
+        comments = data.get('comments', '')
+
+        if not record_id or not new_status:
+            return JsonResponse({'error': 'Missing record_id or new_status'}, status=400)
+
+        ivf_record = get_object_or_404(IVFRecord, id=record_id)
+
+        allowed_statuses = [choice[0] for choice in IVFProgressUpdate.STATUS_CHOICES]
+        
+        if new_status not in allowed_statuses:
+            return JsonResponse({'error': f'Invalid status: {new_status}'}, status=400)
+
+        ivf_record.status = new_status
+        ivf_record.save()
+
+        IVFProgressUpdate.objects.create(
+            ivf_record=ivf_record,
+            status=new_status,
+            comments=comments,
+            updated_by=request.user
+        )
+
+        return JsonResponse({'success': True, 'message': f'IVF Record {record_id} status updated to {new_status}'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+@require_http_methods(["GET"])
+def get_ivf_progress(request, record_id):
+    ivf_record = get_object_or_404(IVFRecord, id=record_id)
+    patient = ivf_record.patient
+    
+    timeline_entries = []
+
+    # 1. Add IVFProgressUpdate entries
+    progress_updates = IVFProgressUpdate.objects.filter(ivf_record=ivf_record).order_by('timestamp')
+    for update in progress_updates:
+        timeline_entries.append({
+            'type': 'status_update', 
+            'status': update.get_status_display(),
+            'comments': update.comments,
+            'updated_by': update.updated_by.get_full_name() if update.updated_by else 'N/A',
+            'timestamp': update.timestamp,
+        })
+
+    # 2. Add Vitals entries for the patient, around the IVF record creation time
+    # This retrieves all vitals for the patient, not just the first one.
+    vital = Vitals.objects.filter(patient=patient).order_by('-recorded_at').first()
+    if vital:
+        timeline_entries.append({
+        'type': 'vitals',
+        'blood_pressure': vital.blood_pressure,
+        'temperature': vital.temperature,
+        'pulse': vital.pulse,
+        'respiratory_rate': vital.respiratory_rate,
+        'weight': vital.weight,
+        'height': vital.height,
+        'bmi': vital.bmi,
+        'notes': vital.notes,
+        'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
+        'timestamp': vital.recorded_at,
+    })
+    
+
+
+    # 3. Add LabTest entries for the patient, around the IVF record creation time
+    lab_tests = LabTest.objects.filter(patient=patient).order_by('requested_at')
+    for test in lab_tests:
+        timeline_entries.append({
+            'type': 'lab_test', 
+            'test_name': test.test_name,
+            'status': test.get_status_display(),
+            'result_value': test.result_value,
+            'notes': test.notes,
+            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
+            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+            'timestamp': test.requested_at,
+            'test_request_id': test.test_request_id,
+        })
+
+    # 4. Add Consultation entries for the patient
+    consultations = Consultation.objects.filter(patient=patient).order_by('created_at')
+    for consultation in consultations:
+        timeline_entries.append({
+            'type': 'consultation', 
+            'symptoms': consultation.symptoms,
+            'diagnosis_summary': consultation.diagnosis_summary,
+            'advice': consultation.advice,
+            'doctor': consultation.doctor.get_full_name() if consultation.doctor else 'N/A',
+            'timestamp': consultation.created_at,
+        })
+
+    # 5. Add NursingNote entries for the patient
+    nursing_notes = NursingNote.objects.filter(patient=patient).order_by('note_datetime')
+    for note in nursing_notes:
+        timeline_entries.append({
+            'type': 'nursing_note', 
+            'note_type': note.get_note_type_display(),
+            'notes': note.notes,
+            'nurse': note.nurse.get_full_name() if note.nurse else 'N/A',
+            'timestamp': note.note_datetime,
+        })
+
+    # Sort all entries by timestamp
+    timeline_entries.sort(key=lambda x: x['timestamp'])
+
+    # Format timestamps for JSON response
+    formatted_timeline_entries = []
+    for entry in timeline_entries:
+        entry['timestamp'] = entry['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+        formatted_timeline_entries.append(entry)
+
+    current_record_details = {
+        'patient_name': ivf_record.patient.full_name,
+        'ivf_package': ivf_record.ivf_package.name if ivf_record.ivf_package else 'N/A',
+        'current_status': ivf_record.get_status_display(),
+        'doctor_name': ivf_record.doctor_name,
+        'created_on': ivf_record.created_on.strftime('%Y-%m-%d %H:%M:%S'),
+        'id': ivf_record.id,
+    }
+
+    return JsonResponse({'success': True, 'record_details': current_record_details, 'timeline': formatted_timeline_entries})
+
+@login_required
+@require_http_methods(["POST"])
+def add_ivf_progress_comment(request):
+    try:
+        data = json.loads(request.body)
+        record_id = data.get('record_id')
+        comments = data.get('comments', '')
+
+        if not record_id or not comments:
+            return JsonResponse({'error': 'Missing record_id or comments'}, status=400)
+
+        ivf_record = get_object_or_404(IVFRecord, id=record_id)
+
+        IVFProgressUpdate.objects.create(
+            ivf_record=ivf_record,
+            status=ivf_record.status,  # Use the current status of the record for the comment
+            comments=comments,
+            updated_by=request.user
+        )
+
+        return JsonResponse({'success': True, 'message': 'Comment added to IVF progress successfully!'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    
+''' ############################################################################################################################ End Doctors View ############################################################################################################################ '''
+
+#notification icon 
 
 
 def notification_data(request):
@@ -1120,187 +2220,22 @@ def notification_data(request):
         ]
     })"""
 
-@login_required(login_url='home')
-def monitoring(request):
-    patient_id = request.GET.get("patient_id")
-    patient = Patient.objects.filter(id=patient_id).first() if patient_id else None
+# @login_required(login_url='home')
+# def monitoring(request):
+#     patient_id = request.GET.get("patient_id")
+#     patient = Patient.objects.filter(id=patient_id).first() if patient_id else None
 
-    context = {
-        "all_patients": Patient.objects.all(),
-        "patient": patient,
-        "consultations": patient.consultations.all() if patient else [],
-        "prescriptions": patient.prescriptions.all() if patient else [],
-        "vitals": patient.vitals_set.all() if patient else [],
-        "notes": patient.nursing_notes.all() if patient else [],
-        "careplans": patient.careplan_set.all() if patient else [],
-        "admissions": patient.admission_set.all() if patient else [],
-    }
-    return render(request, "doctors/treatment_monitoring.html", context)
-
-def doctor_report(request):
-    """
-    Generate comprehensive report for logged-in doctor showing all their activities
-    """
-    user = request.user
-    
-    # Verify user is a doctor
-    try:
-        staff = Staff.objects.get(user=user)
-        if staff.role != 'doctor':
-            # Handle non-doctor users appropriately
-            return render(request, 'error.html', {
-                'message': 'Access denied. This report is only available for doctors.'
-            })
-    except Staff.DoesNotExist:
-        return render(request, 'error.html', {
-            'message': 'Staff profile not found.'
-        })
-    
-    # Get date range for filtering (default: last 30 days)
-    end_date = timezone.now().date()
-    start_date = end_date - timedelta(days=30)
-    
-    # Allow custom date range from request parameters
-    if request.GET.get('start_date'):
-        start_date = datetime.strptime(request.GET.get('start_date'), '%Y-%m-%d').date()
-    if request.GET.get('end_date'):
-        end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
-    
-    # 1. Consultations conducted by the doctor
-    consultations = Consultation.objects.filter(
-        doctor=user,
-        created_at__date__range=[start_date, end_date]
-    ).select_related('patient', 'admission').order_by('-created_at')
-    
-    # 2. Prescriptions written by the doctor
-    prescriptions = Prescription.objects.filter(
-        prescribed_by=user,
-        created_at__date__range=[start_date, end_date]
-    ).select_related('patient').order_by('-created_at')
-    
-    # 3. Admissions where doctor is assigned
-    admissions_assigned = Admission.objects.filter(
-        doctor_assigned=user,
-        admission_date__range=[start_date, end_date]
-    ).select_related('patient', 'admitted_by').order_by('-admission_date')
-    
-    # 4. Admissions conducted by the doctor
-    admissions_conducted = Admission.objects.filter(
-        admitted_by=user,
-        admission_date__range=[start_date, end_date]
-    ).select_related('patient', 'doctor_assigned').order_by('-admission_date')
-    
-    # 5. Discharges conducted by the doctor
-    discharges = Admission.objects.filter(
-        discharged_by=user,
-        discharge_date__range=[start_date, end_date]
-    ).select_related('patient', 'doctor_assigned').order_by('-discharge_date')
-    
-    # 6. Care plans created by the doctor
-    care_plans = CarePlan.objects.filter(
-        created_by=user,
-        created_at__date__range=[start_date, end_date]
-    ).select_related('patient').order_by('-created_at')
-    
-    # 7. Referrals made by the doctor
-    referrals = Referral.objects.filter(
-        referred_by=user,
-        created_at__date__range=[start_date, end_date]
-    ).select_related('patient', 'department').order_by('-created_at')
-    
-    # 8. Lab tests requested by the doctor
-    lab_tests = LabTest.objects.filter(
-        requested_by=user,
-        requested_at__date__range=[start_date, end_date]
-    ).select_related('patient', 'category').order_by('-requested_at')
-    
-    # 9. Vitals recorded by the doctor
-    vitals_recorded = Vitals.objects.filter(
-        recorded_by=user,
-        recorded_at__date__range=[start_date, end_date]
-    ).select_related('patient').order_by('-recorded_at')
-    
-    # 10. Patients registered by the doctor
-    patients_registered = Patient.objects.filter(
-        registered_by=user,
-        date_registered__date__range=[start_date, end_date]
-    ).order_by('-date_registered')
-    
-    # 11. Appointments scheduled by the doctor
-    appointments_scheduled = Appointment.objects.filter(
-        scheduled_by=user,
-        scheduled_time__date__range=[start_date, end_date]
-    ).select_related('patient', 'department').order_by('-scheduled_time')
-    
-    # 12. Doctor comments made
-    doctor_comments = DoctorComments.objects.filter(
-        doctor=user,
-        date__date__range=[start_date, end_date]
-    ).order_by('-date')
-    
-    # 13. Get patients currently under doctor's care (active admissions)
-    current_patients = Patient.objects.filter(
-        admission__doctor_assigned=user,
-        admission__status='Admitted'
-    ).distinct()
-    
-    # Calculate summary statistics
-    summary_stats = {
-        'total_consultations': consultations.count(),
-        'total_prescriptions': prescriptions.count(),
-        'total_admissions_assigned': admissions_assigned.count(),
-        'total_admissions_conducted': admissions_conducted.count(),
-        'total_discharges': discharges.count(),
-        'total_care_plans': care_plans.count(),
-        'total_referrals': referrals.count(),
-        'total_lab_tests': lab_tests.count(),
-        'total_vitals': vitals_recorded.count(),
-        'total_patients_registered': patients_registered.count(),
-        'total_appointments_scheduled': appointments_scheduled.count(),
-        'total_comments': doctor_comments.count(),
-        'current_active_patients': current_patients.count(),
-    }
-    
-    # Get patient statistics by status for patients the doctor has seen
-    patient_consultations = consultations.values_list('patient_id', flat=True)
-    patient_status_stats = Patient.objects.filter(
-        id__in=patient_consultations
-    ).values('status').annotate(count=Count('status'))
-    
-    # Recent activities (last 7 days) for quick overview
-    recent_date = end_date - timedelta(days=7)
-    recent_activities = {
-        'consultations': consultations.filter(created_at__date__gte=recent_date).count(),
-        'prescriptions': prescriptions.filter(created_at__date__gte=recent_date).count(),
-        'admissions': admissions_conducted.filter(admission_date__gte=recent_date).count(),
-        'referrals': referrals.filter(created_at__date__gte=recent_date).count(),
-    }
-    
-    context = {
-        'doctor': staff,
-        'start_date': start_date,
-        'end_date': end_date,
-        'consultations': consultations[:20],  # Limit for performance
-        'prescriptions': prescriptions[:20],
-        'admissions_assigned': admissions_assigned[:20],
-        'admissions_conducted': admissions_conducted[:20],
-        'discharges': discharges[:20],
-        'care_plans': care_plans[:20],
-        'referrals': referrals[:20],
-        'lab_tests': lab_tests[:20],
-        'vitals_recorded': vitals_recorded[:20],
-        'patients_registered': patients_registered[:20],
-        'appointments_scheduled': appointments_scheduled[:20],
-        'doctor_comments': doctor_comments,
-        'current_patients': current_patients,
-        'summary_stats': summary_stats,
-        'patient_status_stats': patient_status_stats,
-        'recent_activities': recent_activities,
-    }
-    
-    return render(request, 'doctors/reports.html', context)
-
-''' ############################################################################################################################ End Doctors View ############################################################################################################################ '''
+#     context = {
+#         "all_patients": Patient.objects.all(),
+#         "patient": patient,
+#         "consultations": patient.consultations.all() if patient else [],
+#         "prescriptions": patient.prescriptions.all() if patient else [],
+#         "vitals": patient.vitals_set.all() if patient else [],
+#         "notes": patient.nursing_notes.all() if patient else [],
+#         "careplans": patient.careplan_set.all() if patient else [],
+#         "admissions": patient.admission_set.all() if patient else [],
+#     }
+#     return render(request, "doctors/treatment_monitoring.html", context)
 
 @login_required(login_url='home')                          
 def ae(request):     
@@ -2029,9 +2964,9 @@ def hr(request):
     shift_assignments_today = ShiftAssignment.objects.filter(date=today).count()
     
     # Get shift distribution for today
-    shift_distribution = Shift.objects.annotate(
+    shift_distribution = ShiftAssignment.objects.annotate(
         count=Count('shiftassignment__id', filter=Q(shiftassignment__date=today))
-    ).values('name', 'count')
+    ).values('shift', 'count')
     
     # === DEPARTMENT STATISTICS ===
     # For Department Chart
@@ -2235,7 +3170,7 @@ def staff_attendance_list(request):
         return redirect('home')
 
     staff_users = User.objects.filter(staff__isnull=False).order_by('first_name', 'last_name')
-    shifts = Shift.objects.all().order_by('name')
+    shifts = ShiftAssignment.objects.all().order_by('shift')
 
     attendance_records = Attendance.objects.select_related('staff').order_by('-date')
     shift_records = ShiftAssignment.objects.select_related('staff', 'shift').order_by('-date')
@@ -2299,11 +3234,11 @@ def assign_shift_view(request):
         try:
             date_obj = parse_date_to_datetime(date_input)
             staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
-            shift = Shift.objects.get(id=shift_id)  # Change this to id=shift_id
+            shift = ShiftAssignment.objects.get(id=shift_id)  # Change this to id=shift_id
         except User.DoesNotExist:
             messages.error(request, "Selected staff not found.")
             return redirect('staff_attendance_shift')
-        except Shift.DoesNotExist:
+        except ShiftAssignment.DoesNotExist:
             messages.error(request, f"Shift with ID '{shift_id}' not found.") # Updated error message
             return redirect('staff_attendance_shift')
         except ValueError as e:
@@ -2447,7 +3382,7 @@ def hr_act_report(request):
     # =====================================================
     
     # All shifts
-    all_shifts = Shift.objects.all()
+    all_shifts = ShiftAssignment.objects.all()
     
     # Shift assignments for the date range
     shift_assignments = ShiftAssignment.objects.filter(
@@ -6537,13 +7472,7 @@ def chart_view(request):
                'data': [12, 19, 20, 5, 7]}    
     return render(request, 'doctors/chart.html', context)   
 
-def requesttest(request):
-    categories = TestCategory.objects.prefetch_related('subcategories').all()
-    patients = Patient.objects.all()
-    return render(request, 'doctors/requesttest.html', {
-        'categories': categories,
-        'patients': patients
-    })
+
 
 def medical_test_selection(request):
     categories = TestCategory.objects.prefetch_related('subcategories').all()
@@ -6571,58 +7500,6 @@ def medical_test_selection(request):
 #         except DatabaseError as e:
 #             print("Database error:", str(e))  # Generic DB errors
 #     return JsonResponse({'status': 'error', 'message': 'Database error: ' + str(e)})
-
-def submit_test_selection(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            patient_id = data.get('patient_id')
-            selections = data.get('selections', [])
-            
-            if not patient_id or not selections:
-                return JsonResponse({'status': 'error', 'message': 'Missing patient or selection data'})
-            
-            patient = Patient.objects.get(id=int(patient_id))
-            
-            # Generate a single UUID for this test request
-            test_request_uuid = uuid4()
-            
-            created_tests = []
-            for item in selections:
-                category = item.get('category')
-                tests = item.get('tests', [])
-                
-                try:
-                    category_obj = TestCategory.objects.get(name=category)
-                except TestCategory.DoesNotExist:
-                    continue
-                
-                for test in tests:
-                    lab_test = LabTest.objects.create(
-                        patient=patient,
-                        category=category_obj,
-                        test_name=test,
-                        test_request_id=test_request_uuid,  # Same UUID for all tests in this request
-                        requested_by=request.user,
-                        doctor_name=request.user.get_full_name() or request.user.username
-                    )
-                    created_tests.append(lab_test.id)
-            
-            return JsonResponse({
-                'status': 'success', 
-                'message': 'Selections saved.',
-                'test_request_id': str(test_request_uuid),
-                'created_tests': created_tests
-            })
-            
-        except Patient.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Patient not found'})
-        except DatabaseError as e:
-            return JsonResponse({'status': 'error', 'message': f'Database error: {str(e)}'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'An error occurred: {str(e)}'})
-    
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 #graph 2
 
@@ -6742,42 +7619,6 @@ def waitinglist(request):
 
 ##### Doctor test result view
 
-def test_results(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
-    
-    pending_tests = LabTest.objects.filter(
-        patient=patient,
-        status='completed'
-    ).filter(
-        Q(doctor_comments=0) | Q(doctor_comments__isnull=True)
-    ).select_related('category', 'patient')
-    
-    for i in pending_tests:
-        print(i)
-    
-    grouped_tests = defaultdict(list)
-    for test in pending_tests:
-        grouped_tests[test.category.name].append(test)
-    
-    # Fetch uploaded lab result files for this patient
-    # Get unique file IDs from tests that have associated files
-    file_ids = pending_tests.filter(
-        labresulttestid__isnull=False
-    ).values_list('labresulttestid', flat=True).distinct()
-    
-    # Fetch the actual LabResultFile objects
-    uploaded_files = LabResultFile.objects.filter(
-        id__in=file_ids,
-        patient=patient
-    ).order_by('-uploaded_at')
-    
-    return render(request, 'doctors/testresults.html', {
-        'pending_tests': dict(grouped_tests),
-        'patient': patient,
-        'uploaded_files': uploaded_files,
-        'selected_patient': patient  # Adding this for template compatibility
-    })
-
 #Test details and completion by lab
 
 def test_details(request, patient_id):
@@ -6895,103 +7736,7 @@ from django.contrib import messages
 
 
 
-def recomended_tests(request):
-    if request.method == 'POST':
-        test_id = request.POST.get('test_id')
-        result_value = request.POST.get('result_value')
-        notes = request.POST.get('notes', '')
 
-        try:
-            test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
-            test.result_value = result_value
-            test.notes = notes
-            test.status = 'completed'
-            test.testcompleted = True
-            test.date_performed = timezone.now()
-            test.performed_by = request.user
-            test.save()
-
-            messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
-        except LabTest.DoesNotExist:
-            messages.error(request, "Invalid test entry or test already completed.")
-
-        return redirect('lab_test_entry')
-
-    # Fetch all lab tests
-    lab_tests = LabTest.objects.select_related('patient', 'category').order_by('-requested_at')
-    total_patients = Patient.objects.count()
-
-    # Group tests by status (corrected 'pending' typo)
-    tests_by_status = {
-        'pending': lab_tests.filter(status='pending'),
-        'completed': lab_tests.filter(status='completed', doctor_comments=0),
-        'in_progress': lab_tests.filter(status='in_progress')
-    }
-
-    # Build test data list
-    tests_data = []
-    for test in lab_tests:
-        tests_data.append({
-            'test': test,
-            'patient': test.patient,
-            'category': test.category,
-            'status': test.status,
-            'requested_at': test.requested_at,
-            'date_performed': test.date_performed,
-            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'System',
-            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
-            'doctor_comments': test.doctor_comments
-        })
-
-    # Build patient map only where status is 'completed' and doctor_comments == 0
-    patient_map = {}
-    for data in tests_data:
-        if data['status'] != 'completed' or (data['doctor_comments'] or 0) != 0:
-            continue
-
-        patient_id = data['patient'].id
-        if patient_id not in patient_map:
-            patient_map[patient_id] = {
-                'patient': data['patient'],
-                'tests': [],
-                'categories': set(),
-                'requested_by': data['requested_by']
-            }
-
-        patient_map[patient_id]['tests'].append(data['test'])
-        if data['category']:
-            patient_map[patient_id]['categories'].add(data['category'].name)
-
-    # Statistics
-    today = timezone.now().date()
-    stats = {
-        'total_patients':total_patients,
-        'total_tests': lab_tests.count(),
-        'total_pending_tests': tests_by_status['pending'].count(),
-        'total_completed_today': LabTest.objects.filter(status='completed', date_performed__date=today).count(),
-        'total_in_progress': tests_by_status['in_progress'].count(),
-        'total_categories': TestCategory.objects.count(),
-        'unique_patients': Patient.objects.filter(lab_tests__isnull=False).distinct().count(),
-    }
-
-    context = {
-        "total_patients": total_patients,
-        'tests_data': tests_data,
-        'test_categories': TestCategory.objects.all(),
-        'unique_patients_with_tests': patient_map.values(),  # Only with status='completed' and doctor_comments==0
-        'stats': stats,
-        'debug_info': {
-            'total_tests_fetched': len(tests_data),
-            'test_categories_count': TestCategory.objects.count(),
-            'pending_tests_count': tests_by_status['pending'].count(),
-            'methods_used': [
-                'LabTest.objects.select_related(patient, category)',
-                'Status == completed and doctor_comments == 0'
-            ]
-        } if request.user.is_superuser else None
-    }
-
-    return render(request, 'doctors/recomended_test.html', context)
 
 
 def bk2recomended_tests(request):
@@ -7246,524 +7991,7 @@ import csv
 from reportlab.pdfgen import canvas
 import io
 
-def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_datetime_field=True):
-    """
-    Applies date range filtering to a queryset based on a specified date/datetime field.
 
-    Args:
-        queryset: The Django queryset to filter.
-        date_from_str (str): The start date string in YYYY-MM-DD format (can be None).
-        date_to_str (str): The end date string in YYYY-MM-DD format (can be None).
-        date_field_name (str): The name of the date/datetime field on the model to filter by.
-        is_datetime_field (bool): Whether the field is a DateTimeField (True) or DateField (False).
-    """
-    parsed_date_from = None
-    parsed_date_to = None
-
-    if date_from_str:
-        try:
-            parsed_date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
-        except ValueError:
-            raise ValueError(f"Invalid start date format '{date_from_str}'. Use YYYY-MM-DD.")
-    
-    if date_to_str:
-        try:
-            parsed_date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
-        except ValueError:
-            raise ValueError(f"Invalid end date format '{date_to_str}'. Use YYYY-MM-DD.")
-
-    if parsed_date_from:
-        if is_datetime_field:
-            # Use __date for DateTimeField to filter by the date part only
-            queryset = queryset.filter(**{f"{date_field_name}__date__gte": parsed_date_from})
-        else:
-            # Direct comparison for DateField
-            queryset = queryset.filter(**{f"{date_field_name}__gte": parsed_date_from})
-    
-    if parsed_date_to:
-        if is_datetime_field:
-            # Use __date for DateTimeField to filter by the date part only
-            queryset = queryset.filter(**{f"{date_field_name}__date__lte": parsed_date_to})
-        else:
-            # Direct comparison for DateField
-            queryset = queryset.filter(**{f"{date_field_name}__lte": parsed_date_to})
-
-    return queryset
-
-
-def fetch_patient_activity(request):
-    """
-    Comprehensive AJAX view to fetch all patient medical records and activity
-    """
-    if request.method != 'GET':
-        return JsonResponse({'error': 'Only GET method allowed'}, status=405)
-
-    patient_id = request.GET.get('patient_id')
-    date_from_param = request.GET.get('date_from')
-    date_to_param = request.GET.get('date_to')
-
-    if not patient_id:
-        return JsonResponse({'error': 'Patient ID is required'}, status=400)
-
-    try:
-        # Get patient with error handling
-        patient = get_object_or_404(Patient, id=patient_id)
-
-        # If date_to is not provided, set it to today's date as a string
-        if not date_to_param:
-            date_to_param = date.today().strftime('%Y-%m-%d')
-
-        # === FETCH ALL PATIENT DATA ===
-
-        # 1. BASIC PATIENT INFO
-        # Calculate age properly
-        today = date.today()
-        age = today.year - patient.date_of_birth.year - ((today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day))
-
-        # Handle patient photo
-        photo_url = ''
-        if patient.photo and hasattr(patient.photo, 'url'):
-            try:
-                # Check if file exists
-                if default_storage.exists(patient.photo.name):
-                    photo_url = patient.photo.url
-            except Exception as e:
-                logger.warning(f"Error accessing patient photo for patient {patient.id}: {e}")
-                pass
-
-        patient_data = {
-            'id': patient.id,
-            'full_name': patient.full_name,
-            'gender': patient.gender,
-            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
-            'age': age,
-            'blood_group': patient.blood_group,
-            'phone': patient.phone,
-            'email': patient.email or '',
-            'address': patient.address,
-            'marital_status': patient.marital_status,
-            'nationality': patient.nationality,
-            'state_of_origin': patient.state_of_origin or '',
-            'id_type': patient.id_type or '',
-            'id_number': patient.id_number or '',
-            'status': patient.status,
-            'is_inpatient': patient.is_inpatient,
-            'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
-            'photo_url': photo_url,
-
-            # Next of Kin Info
-            'next_of_kin_name': patient.next_of_kin_name,
-            'next_of_kin_phone': patient.next_of_kin_phone,
-            'next_of_kin_relationship': patient.next_of_kin_relationship or '',
-            'next_of_kin_email': patient.next_of_kin_email or '',
-            'next_of_kin_address': patient.next_of_kin_address or '',
-
-            # Current Medical Status
-            'diagnosis': patient.diagnosis or '',
-            'medication': patient.medication or '',
-            'notes': patient.notes or '',
-            'referred_by': patient.referred_by or '',
-        }
-
-        # 2. CONSULTATIONS
-        consultations_qs = apply_date_filter(
-            patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
-            date_from_param,
-            date_to_param,
-            'created_at',
-            is_datetime_field=True
-        )
-        consultations = []
-        for consultation in consultations_qs:
-            consultations.append({
-                'id': consultation.id,
-                'date': consultation.created_at.strftime('%Y-%m-%d %H:%M'),
-                'doctor': consultation.doctor.get_full_name() if consultation.doctor else 'Unknown',
-                'symptoms': consultation.symptoms,
-                'diagnosis_summary': consultation.diagnosis_summary,
-                'advice': consultation.advice,
-                'admission_id': consultation.admission.id if consultation.admission else None,
-            })
-
-        # 3. PRESCRIPTIONS
-        prescriptions_qs = apply_date_filter(
-            patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
-            date_from_param,
-            date_to_param,
-            'created_at',
-            is_datetime_field=True
-        )
-        prescriptions = []
-        for prescription in prescriptions_qs:
-            prescriptions.append({
-                'id': prescription.id,
-                'medication': prescription.medication,
-                'instructions': prescription.instructions,
-                'start_date': prescription.start_date.strftime('%Y-%m-%d'),
-                'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'Unknown',
-                'created_at': prescription.created_at.strftime('%Y-%m-%d %H:%M'),
-            })
-
-        # 4. VITALS
-        vitals_qs = apply_date_filter(
-            Vitals.objects.filter(patient=patient).select_related('recorded_by').order_by('-recorded_at'),
-            date_from_param,
-            date_to_param,
-            'recorded_at',
-            is_datetime_field=True
-        )
-        vitals = []
-        for vital in vitals_qs:
-            vitals.append({
-                'id': vital.id,
-                'recorded_at': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
-                'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'Unknown',
-                'temperature': vital.temperature,
-                'blood_pressure': vital.blood_pressure,
-                'pulse': vital.pulse,
-                'respiratory_rate': vital.respiratory_rate,
-                'weight': vital.weight,
-                'height': vital.height,
-                'bmi': vital.bmi,
-                'notes': vital.notes or '',
-            })
-
-        # 5. LAB TESTS & RESULTS (Grouped by test_request_id UUID)
-        lab_tests_qs = apply_date_filter(
-            patient.lab_tests.select_related('category', 'performed_by', 'requested_by', 'recorded_by').order_by('-requested_at'),
-            date_from_param,
-            date_to_param,
-            'requested_at',
-            is_datetime_field=True
-        )
-
-        # Group tests by the UUID (test_request_id)
-        grouped_lab_tests = defaultdict(list)
-        for test in lab_tests_qs:
-            grouped_lab_tests[test.test_request_id].append(test)
-
-        lab_test_groups = []
-        for request_id, tests_in_group in grouped_lab_tests.items():
-            first_test = tests_in_group[0]
-
-            # Fetch Doctor Comment - CORRECTED
-            doctor_comment_data = None
-            if first_test.doctor_comments:
-                try:
-                    comment = DoctorComments.objects.select_related('doctor').get(id=first_test.doctor_comments)
-                    doctor_comment_data = {
-                        "id": comment.id,
-                        "comment": comment.comments,
-                        "doctor_name": comment.doctor.get_full_name() if comment.doctor else 'Unknown',  # FIXED
-                        "labtech_name": comment.labtech_name,
-                        "date": comment.date.strftime('%Y-%m-%d %H:%M')
-                    }
-                except DoctorComments.DoesNotExist:
-                    doctor_comment_data = None
-
-            # Fetch Lab Result File - CORRECTED
-            lab_file_data = None
-            if first_test.labresulttestid:
-                try:
-                    lab_file = LabResultFile.objects.select_related('uploaded_by').get(id=first_test.labresulttestid)
-                    file_url = ''
-                    file_name = ''
-                    if lab_file.result_file and hasattr(lab_file.result_file, 'url'):
-                        try:
-                            if default_storage.exists(lab_file.result_file.name):
-                                file_url = lab_file.result_file.url
-                                file_name = lab_file.result_file.name.split('/')[-1]
-                        except Exception as e:
-                            logger.warning(f"Error accessing lab result file {lab_file.id}: {e}")
-                            pass
-                    
-                    lab_file_data = {
-                        "id": lab_file.id,
-                        "file_url": file_url,
-                        "file_name": file_name,
-                        "uploaded_at": lab_file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
-                        "uploaded_by": lab_file.uploaded_by.get_full_name() if lab_file.uploaded_by else 'Unknown'
-                    }
-                except LabResultFile.DoesNotExist:
-                    lab_file_data = None
-
-            # Prepare individual tests data
-            tests_data = []
-            for test in tests_in_group:
-                tests_data.append({
-                    'id': test.id,
-                    'test_name': test.test_name,
-                    'category': test.category.name if test.category else '',
-                    'status': test.get_status_display(),
-                    'status_code': test.status,
-                    'result_value': test.result_value or '',
-                    'normal_range': test.normal_range or '',
-                    'notes': test.notes or '',
-                    'instructions': test.instructions or '',
-                    'doctor_name': test.doctor_name or '',
-                    'performed_by': test.performed_by.get_full_name() if test.performed_by else '',
-                    'requested_by': test.requested_by.get_full_name() if test.requested_by else '',
-                    'recorded_by': test.recorded_by.get_full_name() if test.recorded_by else '',
-                    'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else '',
-                    'submitted_on': test.submitted_on.strftime('%Y-%m-%d'),
-                    'testcompleted': test.testcompleted,
-                })
-
-            tests_data.sort(key=lambda x: x['test_name'])
-
-            group_statuses = [test.status for test in tests_in_group]
-            if all(status == 'completed' for status in group_statuses):
-                group_status = 'completed'
-            elif any(status == 'in_progress' for status in group_statuses):
-                group_status = 'in_progress'
-            elif any(status == 'cancelled' for status in group_statuses):
-                group_status = 'mixed'
-            else:
-                group_status = 'pending'
-
-            lab_test_groups.append({
-                "request_id": str(request_id),
-                "requested_at": first_test.requested_at.strftime('%Y-%m-%d %H:%M'),
-                "submitted_on": first_test.submitted_on.strftime('%Y-%m-%d'),
-                "doctor_name": first_test.doctor_name or '',
-                "requested_by": first_test.requested_by.get_full_name() if first_test.requested_by else '',
-                "group_status": group_status,
-                "tests_count": len(tests_in_group),
-                "completed_tests": len([t for t in tests_in_group if t.status == 'completed']),
-                "pending_tests": len([t for t in tests_in_group if t.status == 'pending']),
-                "doctor_comment": doctor_comment_data,
-                "result_file": lab_file_data,
-                "tests": tests_data
-            })
-
-        lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True)
-
-        # 6. NURSING NOTES - CORRECTED
-        nursing_notes_qs = apply_date_filter(
-            patient.nursing_notes.select_related('nurse').order_by('-note_datetime'),
-            date_from_param,
-            date_to_param,
-            'note_datetime',
-            is_datetime_field=True
-        )
-        nursing_notes = []
-        for note in nursing_notes_qs:
-            nursing_notes.append({
-                'id': note.id,
-                'note_datetime': note.note_datetime.strftime('%Y-%m-%d %H:%M'),
-                'nurse': note.nurse.get_full_name() if note.nurse else 'Unknown',  # FIXED
-                'note_type': note.get_note_type_display(),
-                'note_type_code': note.note_type,
-                'notes': note.notes,
-                'patient_status': note.patient_status or '',
-                'follow_up': note.follow_up or '',
-                'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
-            })
-
-        # 7. ADMISSIONS - CORRECTED
-        admissions_qs = apply_date_filter(
-            Admission.objects.filter(patient=patient).select_related('admitted_by', 'discharged_by', 'doctor_assigned').order_by('-admission_date'),
-            date_from_param,
-            date_to_param,
-            'admission_date',
-            is_datetime_field=False  # admission_date is DateField
-        )
-        admissions = []
-        for admission in admissions_qs:
-            admissions.append({
-                'id': admission.id,
-                'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
-                'admitted_on': admission.admitted_on.strftime('%Y-%m-%d'),
-                'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'Unknown',  # FIXED
-                'doctor_assigned': admission.doctor_assigned.get_full_name() if admission.doctor_assigned else 'Unknown',  # FIXED
-                'status': admission.status,
-                'admission_reason': admission.admission_reason or '',  # ADDED
-                'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else '',
-                'discharged_by': admission.discharged_by.get_full_name() if admission.discharged_by else '',  # FIXED
-                'discharge_notes': admission.discharge_notes or '',
-                'time': admission.time.strftime('%H:%M') if admission.time else '',
-            })
-
-        # 8. CARE PLANS
-        care_plans_qs = apply_date_filter(
-            CarePlan.objects.filter(patient=patient).select_related('created_by').order_by('-created_at'),
-            date_from_param,
-            date_to_param,
-            'created_at',
-            is_datetime_field=True
-        )
-        care_plans = []
-        for plan in care_plans_qs:
-            care_plans.append({
-                'id': plan.id,
-                'created_at': plan.created_at.strftime('%Y-%m-%d %H:%M'),
-                'created_by': plan.created_by.get_full_name() if plan.created_by else 'Unknown',
-                'clinical_findings': plan.clinical_findings,
-                'plan_of_care': plan.plan_of_care,
-            })
-
-        # 9. REFERRALS - CORRECTED
-        referrals = []
-        referrals_qs = Referral.objects.filter(patient=patient).select_related('department', 'referred_by').order_by('-created_at')
-        for referral in referrals_qs:
-            referrals.append({
-                'id': referral.id,
-                'department': referral.department.name,
-                'notes': referral.notes,
-                'priority': referral.priority or '',  # ADDED
-                'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'Unknown',  # ADDED
-                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),  # ADDED
-            })
-
-        # 10. APPOINTMENTS - CORRECTED
-        appointments_qs = apply_date_filter(
-            Appointment.objects.filter(patient=patient).select_related('department', 'scheduled_by').order_by('-scheduled_time'),
-            date_from_param,
-            date_to_param,
-            'scheduled_time',
-            is_datetime_field=True
-        )
-        appointments = []
-        for appointment in appointments_qs:
-            appointments.append({
-                'id': appointment.id,
-                'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
-                'department': appointment.department.name,
-                'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'Unknown',  # ADDED
-            })
-
-        # 11. BILLS
-        bills_qs = apply_date_filter(
-            patient.bills.select_related('created_by').prefetch_related('items__service_type').order_by('-created_at'),
-            date_from_param,
-            date_to_param,
-            'created_at',
-            is_datetime_field=True
-        )
-        bills = []
-        for bill in bills_qs:
-            bill_items = []
-            for item in bill.items.all():
-                bill_items.append({
-                    'description': item.description,
-                    'service_type': item.service_type.name,
-                    'quantity': item.quantity,
-                    'unit_price': float(item.unit_price),
-                    'total_price': float(item.total_price),
-                })
-
-            bills.append({
-                'id': bill.id,
-                'bill_number': bill.bill_number,
-                'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
-                'created_by': bill.created_by.get_full_name() if bill.created_by else 'Unknown',  # ADDED
-                'total_amount': float(bill.total_amount),
-                'discount_amount': float(bill.discount_amount),
-                'final_amount': float(bill.final_amount),
-                'amount_paid': float(bill.amount_paid()),
-                'outstanding_amount': float(bill.outstanding_amount()),
-                'status': bill.get_status_display(),
-                'status_code': bill.status,
-                'items': bill_items,
-                'notes': bill.notes or '',
-            })
-
-        # 12. PAYMENTS
-        payments_qs = apply_date_filter(
-            patient.payments.select_related('processed_by', 'bill').order_by('-payment_date'),
-            date_from_param,
-            date_to_param,
-            'payment_date',
-            is_datetime_field=True
-        )
-        payments = []
-        for payment in payments_qs:
-            payments.append({
-                'id': payment.id,
-                'amount': float(payment.amount),
-                'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
-                'payment_method': payment.get_payment_method_display(),
-                'payment_method_code': payment.payment_method,
-                'payment_reference': payment.payment_reference or '',
-                'status': payment.get_status_display(),
-                'status_code': payment.status,
-                'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'Unknown',
-                'bill_number': payment.bill.bill_number if payment.bill else '',
-                'notes': payment.notes or '',
-            })
-
-        # 13. HANDOVER LOGS - CORRECTED
-        handover_logs_qs = apply_date_filter(
-            HandoverLog.objects.filter(patient=patient).select_related('author', 'recipient').order_by('-timestamp'),
-            date_from_param,
-            date_to_param,
-            'timestamp',
-            is_datetime_field=True
-        )
-        handover_logs = []
-        for log in handover_logs_qs:
-            handover_logs.append({
-                'id': log.id,
-                'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M'),
-                'author': log.author.get_full_name() if log.author else 'Unknown',
-                'recipient': log.recipient.get_full_name() if log.recipient else 'Unknown',  # ADDED
-                'notes': log.notes,
-            })
-
-        # Calculate summary statistics
-        total_lab_test_groups = len(lab_test_groups)
-        total_individual_lab_tests = sum(len(group['tests']) for group in lab_test_groups)
-        pending_lab_test_groups = len([g for g in lab_test_groups if g['group_status'] in ['pending', 'in_progress']])
-        completed_lab_test_groups = len([g for g in lab_test_groups if g['group_status'] == 'completed'])
-
-        # Compile comprehensive response
-        response_data = {
-            'success': True,
-            'patient_info': patient_data,
-            'consultations': consultations,
-            'prescriptions': prescriptions,
-            'vitals': vitals,
-            'lab_test_groups': lab_test_groups,
-            'nursing_notes': nursing_notes,
-            'admissions': admissions,
-            'care_plans': care_plans,
-            'referrals': referrals,
-            'appointments': appointments,
-            'bills': bills,
-            'payments': payments,
-            'handover_logs': handover_logs,
-
-            # Summary counts
-            'summary': {
-                'total_consultations': len(consultations),
-                'total_prescriptions': len(prescriptions),
-                'total_vitals': len(vitals),
-                'total_lab_test_groups': total_lab_test_groups,
-                'total_individual_lab_tests': total_individual_lab_tests,
-                'pending_lab_test_groups': pending_lab_test_groups,
-                'completed_lab_test_groups': completed_lab_test_groups,
-                'total_nursing_notes': len(nursing_notes),
-                'total_admissions': len(admissions),
-                'current_admission': any(a['status'] == 'Admitted' for a in admissions),
-                'total_bills': len(bills),
-                'outstanding_bills': len([b for b in bills if b['outstanding_amount'] > 0]),
-                'total_payments': len(payments),
-                'total_referrals': len(referrals),
-                'total_appointments': len(appointments),
-                'total_care_plans': len(care_plans),
-                'total_handover_logs': len(handover_logs),
-            }
-        }
-
-        return JsonResponse(response_data)
-
-    except Patient.DoesNotExist:
-        return JsonResponse({'error': 'Patient not found'}, status=404)
-    except ValueError as e:
-        return JsonResponse({'error': f'Date format error: {str(e)}'}, status=400)
-    except Exception as e:
-        logger.error(f"Error in fetch_patient_activity: {str(e)}", exc_info=True)
-        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 def export_to_csv(lab_tests, doctor_comments, vitals, payments):
     response = HttpResponse(content_type='text/csv')
@@ -7841,205 +8069,3 @@ def filter_activities(request):
             return export_to_pdf(patient, labtests, comments, vitals, payments)
 
     return render(request, 'doctors/filtered_records.html', context)
-
-
-
-#IVF ROUTE
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def start_ivf(request):
-    if request.method == 'GET':
-        context = {
-            'patients': Patient.objects.only('id', 'full_name', 'patient_id'),
-            'packages': IVFPackage.objects.only('id', 'name'),
-            'locations': TreatmentLocation.objects.only('id', 'name'),
-            'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
-            'ivf_progress_statuses': IVFProgressUpdate.STATUS_CHOICES
-        }
-        return render(request, 'doctors/start_ivf.html', context)
-
-    try:
-        data = json.loads(request.body)
-        patient_id = data.get('patient_name')
-        ivf_package_id = data.get('ivf_package')
-        treatment_location_id = data.get('treatment_location')
-        doctor_name = data.get('doctor_name')
-        doctor_comments = data.get('doctor_comments', '')
-
-        # Create IVF record with 'in_progress' status immediately
-        ivf_record = IVFRecord.objects.create(
-            patient_id=patient_id,
-            ivf_package_id=ivf_package_id,
-            treatment_location_id=treatment_location_id,
-            doctor_name=doctor_name,
-            doctor_comments=doctor_comments,
-            status='in_progress'  # Set status to in_progress directly
-        )
-
-        # Record the initial status update in the progress timeline
-        IVFProgressUpdate.objects.create(
-            ivf_record=ivf_record,
-            status='in_progress',
-            comments='IVF cycle initiated and started.',
-            updated_by=request.user
-        )
-
-        return JsonResponse({'success': True, 'message': 'IVF treatment form submitted and cycle started successfully!'})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-
-@login_required
-@require_http_methods(["POST"])
-def update_ivf_status(request):
-    try:
-        data = json.loads(request.body)
-        record_id = data.get('record_id')
-        new_status = data.get('new_status')
-        comments = data.get('comments', '')
-
-        if not record_id or not new_status:
-            return JsonResponse({'error': 'Missing record_id or new_status'}, status=400)
-
-        ivf_record = get_object_or_404(IVFRecord, id=record_id)
-
-        allowed_statuses = [choice[0] for choice in IVFProgressUpdate.STATUS_CHOICES]
-        
-        if new_status not in allowed_statuses:
-            return JsonResponse({'error': f'Invalid status: {new_status}'}, status=400)
-
-        ivf_record.status = new_status
-        ivf_record.save()
-
-        IVFProgressUpdate.objects.create(
-            ivf_record=ivf_record,
-            status=new_status,
-            comments=comments,
-            updated_by=request.user
-        )
-
-        return JsonResponse({'success': True, 'message': f'IVF Record {record_id} status updated to {new_status}'})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-@login_required
-@require_http_methods(["GET"])
-def get_ivf_progress(request, record_id):
-    ivf_record = get_object_or_404(IVFRecord, id=record_id)
-    patient = ivf_record.patient
-    
-    timeline_entries = []
-
-    # 1. Add IVFProgressUpdate entries
-    progress_updates = IVFProgressUpdate.objects.filter(ivf_record=ivf_record).order_by('timestamp')
-    for update in progress_updates:
-        timeline_entries.append({
-            'type': 'status_update', 
-            'status': update.get_status_display(),
-            'comments': update.comments,
-            'updated_by': update.updated_by.get_full_name() if update.updated_by else 'N/A',
-            'timestamp': update.timestamp,
-        })
-
-    # 2. Add Vitals entries for the patient, around the IVF record creation time
-    # This retrieves all vitals for the patient, not just the first one.
-    vital = Vitals.objects.filter(patient=patient).order_by('-recorded_at').first()
-    if vital:
-        timeline_entries.append({
-        'type': 'vitals',
-        'blood_pressure': vital.blood_pressure,
-        'temperature': vital.temperature,
-        'pulse': vital.pulse,
-        'respiratory_rate': vital.respiratory_rate,
-        'weight': vital.weight,
-        'height': vital.height,
-        'bmi': vital.bmi,
-        'notes': vital.notes,
-        'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
-        'timestamp': vital.recorded_at,
-    })
-    
-
-
-    # 3. Add LabTest entries for the patient, around the IVF record creation time
-    lab_tests = LabTest.objects.filter(patient=patient).order_by('requested_at')
-    for test in lab_tests:
-        timeline_entries.append({
-            'type': 'lab_test', 
-            'test_name': test.test_name,
-            'status': test.get_status_display(),
-            'result_value': test.result_value,
-            'notes': test.notes,
-            'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
-            'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
-            'timestamp': test.requested_at,
-            'test_request_id': test.test_request_id,
-        })
-
-    # 4. Add Consultation entries for the patient
-    consultations = Consultation.objects.filter(patient=patient).order_by('created_at')
-    for consultation in consultations:
-        timeline_entries.append({
-            'type': 'consultation', 
-            'symptoms': consultation.symptoms,
-            'diagnosis_summary': consultation.diagnosis_summary,
-            'advice': consultation.advice,
-            'doctor': consultation.doctor.get_full_name() if consultation.doctor else 'N/A',
-            'timestamp': consultation.created_at,
-        })
-
-    # 5. Add NursingNote entries for the patient
-    nursing_notes = NursingNote.objects.filter(patient=patient).order_by('note_datetime')
-    for note in nursing_notes:
-        timeline_entries.append({
-            'type': 'nursing_note', 
-            'note_type': note.get_note_type_display(),
-            'notes': note.notes,
-            'nurse': note.nurse.get_full_name() if note.nurse else 'N/A',
-            'timestamp': note.note_datetime,
-        })
-
-    # Sort all entries by timestamp
-    timeline_entries.sort(key=lambda x: x['timestamp'])
-
-    # Format timestamps for JSON response
-    formatted_timeline_entries = []
-    for entry in timeline_entries:
-        entry['timestamp'] = entry['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-        formatted_timeline_entries.append(entry)
-
-    current_record_details = {
-        'patient_name': ivf_record.patient.full_name,
-        'ivf_package': ivf_record.ivf_package.name if ivf_record.ivf_package else 'N/A',
-        'current_status': ivf_record.get_status_display(),
-        'doctor_name': ivf_record.doctor_name,
-        'created_on': ivf_record.created_on.strftime('%Y-%m-%d %H:%M:%S'),
-        'id': ivf_record.id,
-    }
-
-    return JsonResponse({'success': True, 'record_details': current_record_details, 'timeline': formatted_timeline_entries})
-
-@login_required
-@require_http_methods(["POST"])
-def add_ivf_progress_comment(request):
-    try:
-        data = json.loads(request.body)
-        record_id = data.get('record_id')
-        comments = data.get('comments', '')
-
-        if not record_id or not comments:
-            return JsonResponse({'error': 'Missing record_id or comments'}, status=400)
-
-        ivf_record = get_object_or_404(IVFRecord, id=record_id)
-
-        IVFProgressUpdate.objects.create(
-            ivf_record=ivf_record,
-            status=ivf_record.status,  # Use the current status of the record for the comment
-            comments=comments,
-            updated_by=request.user
-        )
-
-        return JsonResponse({'success': True, 'message': 'Comment added to IVF progress successfully!'})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
