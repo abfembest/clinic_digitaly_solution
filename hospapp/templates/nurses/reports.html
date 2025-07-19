@@ -4,29 +4,159 @@
 {% block title %}HMS | Nurse Activity Report{% endblock %}
 
 {% block content %}
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0 text-dark">
-                    <i class="fas fa-chart-line text-info mr-2"></i>
-                    My Activity Dashboard
-                </h1>
-                <p class="text-muted mb-0">Overview of your daily and total nursing activities</p>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'nurse' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Activity Report</li>
-                </ol>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+
+  {%include "nurses/nurses.css"%}
+
+<div class="generate-reports-page">
+    <div class="container dashboard-container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body text-center py-3">
+                        <div class="icon-wrapper mx-auto mb-2">
+                            <i class="fas fa-chart-bar text-white fa-lg"></i>
+                        </div>
+                        <h4 class="mb-2 text-dark">Nurse Reports Dashboard</h4>
+                     
+
+                        <!-- Generate Reports Button -->
+                        <button class="btn btn-lg generate-btn px-4 py-2" data-bs-toggle="modal" data-bs-target="#reportsModal">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Generate Reports
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+
+    <!-- Reports Generation Modal -->
+    <div class="modal fade" id="reportsModal" tabindex="-1" aria-labelledby="reportsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="reportsModalLabel">
+                        <i class="fas fa-chart-bar me-1"></i>
+                        Generate Reports
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <form id="reportForm" novalidate>
+                        <div class="mb-2">
+                            <label for="selectUser" class="form-label">User *</label>
+                            <select class="form-select form-select-sm" id="selectUser" required>
+                                <option value="">Search for a user...</option>
+                                <option value="dr_smith">Dr. Sarah Smith</option>
+                                <option value="nurse_johnson">Nurse Jennifer Johnson</option>
+                                <option value="dr_williams">Dr. Michael Williams</option>
+                                <option value="nurse_brown">Nurse Patricia Brown</option>
+                                <option value="admin_davis">Admin Lisa Davis</option>
+                                <option value="dr_garcia">Dr. Maria Garcia</option>
+                                <option value="nurse_wilson">Nurse Robert Wilson</option>
+                                <option value="dr_lee">Dr. James Lee</option>
+                                <option value="nurse_taylor">Nurse Amanda Taylor</option>
+                                <option value="admin_martinez">Admin Carlos Martinez</option>
+                                <option value="dr_anderson">Dr. Emily Anderson</option>
+                                <option value="nurse_thomas">Nurse David Thomas</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a user.</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="reportType" class="form-label">Report Type *</label>
+                            <select class="form-select form-select-sm" id="reportType" required>
+                                <option value="">Select type...</option>
+                                <option value="patient_list">Patient List</option>
+                                <option value="admitted_patients">Admitted Patients</option>
+                                <option value="vitals">Vitals</option>
+                                <option value="nurse_notes">Nurse Notes</option>
+                                <option value="referrals">Referrals</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a report type.</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Date Filter</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="dateFilter" id="allDates" value="all" checked>
+                                <label class="form-check-label" for="allDates">All Dates</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="dateFilter" id="dateRange" value="range">
+                                <label class="form-check-label" for="dateRange">Date Range</label>
+                            </div>
+                        </div>
+
+                        <div id="dateFields" class="date-fields mb-2">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label for="startDate" class="form-label">Start</label>
+                                    <input type="date" class="form-control form-control-sm" id="startDate" disabled>
+                                    <div class="invalid-feedback">Select start date.</div>
+                                </div>
+                                <div class="col-6">
+                                    <label for="endDate" class="form-label">End</label>
+                                    <input type="date" class="form-control form-control-sm" id="endDate" disabled>
+                                    <div class="invalid-feedback">Select valid end date.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-generate-report btn-sm" onclick="generateReport()">
+                        <i class="fas fa-download me-1"></i>
+                        Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Report Generated Successfully
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-download fa-4x text-success"></i>
+                    </div>
+                    <h5>Your report is ready!</h5>
+                    <p class="text-muted">The report has been generated and is available for download.</p>
+                    <button class="btn btn-success">
+                        <i class="fas fa-download me-1"></i>
+                        Download Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 </div>
 
 <section class="content">
     <div class="container-fluid">
-        
+
+
+
         <div class="row">
             <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                 <div class="small-box bg-info">
@@ -42,7 +172,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                 <div class="small-box bg-success">
                     <div class="inner">
@@ -57,7 +187,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                 <div class="small-box bg-warning">
                     <div class="inner">
@@ -72,7 +202,7 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                 <div class="small-box bg-danger">
                     <div class="inner">
@@ -168,7 +298,8 @@
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4"> {# Changed colspan to 6 #}
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            {# Changed colspan to 6 #}
                                             <i class="fas fa-notes-medical fa-2x mb-2"></i>
                                             <br>No recent vital signs recorded by you.
                                         </td>
@@ -459,4 +590,151 @@
 
     </div>
 </section>
-{% endblock %}
+
+<!--GENERATE REPORT BUTTON JS-->
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+
+<script>
+    // Initialize Select2 for user selection
+    $(document).ready(function () {
+        $('#selectUser').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Search for a user...',
+            allowClear: true,
+            dropdownParent: $('#reportsModal')
+        });
+    });
+
+    // Date filter functionality
+    const allDatesRadio = document.getElementById('allDates');
+    const dateRangeRadio = document.getElementById('dateRange');
+    const dateFields = document.getElementById('dateFields');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+
+    function toggleDateFields() {
+        if (dateRangeRadio.checked) {
+            dateFields.classList.add('enabled');
+            startDateInput.disabled = false;
+            endDateInput.disabled = false;
+            startDateInput.required = true;
+            endDateInput.required = true;
+        } else {
+            dateFields.classList.remove('enabled');
+            startDateInput.disabled = true;
+            endDateInput.disabled = true;
+            startDateInput.required = false;
+            endDateInput.required = false;
+            startDateInput.value = '';
+            endDateInput.value = '';
+        }
+    }
+
+    allDatesRadio.addEventListener('change', toggleDateFields);
+    dateRangeRadio.addEventListener('change', toggleDateFields);
+
+    // Form validation
+    function validateForm() {
+        const form = document.getElementById('reportForm');
+        const selectUser = $('#selectUser');
+        const reportType = document.getElementById('reportType');
+        let isValid = true;
+
+        // Clear previous validation states
+        form.classList.remove('was-validated');
+
+        // Validate Select2 user field
+        if (!selectUser.val()) {
+            selectUser.next('.select2-container').find('.select2-selection').addClass('is-invalid');
+            document.getElementById('selectUser').classList.add('is-invalid');
+            isValid = false;
+        } else {
+            selectUser.next('.select2-container').find('.select2-selection').removeClass('is-invalid');
+            document.getElementById('selectUser').classList.remove('is-invalid');
+            document.getElementById('selectUser').classList.add('is-valid');
+        }
+
+        if (!reportType.value) {
+            reportType.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            reportType.classList.remove('is-invalid');
+            reportType.classList.add('is-valid');
+        }
+
+        // Validate date range if selected
+        if (dateRangeRadio.checked) {
+            if (!startDateInput.value) {
+                startDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                startDateInput.classList.remove('is-invalid');
+                startDateInput.classList.add('is-valid');
+            }
+
+            if (!endDateInput.value) {
+                endDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else if (startDateInput.value && endDateInput.value <= startDateInput.value) {
+                endDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                endDateInput.classList.remove('is-invalid');
+                endDateInput.classList.add('is-valid');
+            }
+        }
+
+        return isValid;
+    }
+
+    function generateReport() {
+        if (validateForm()) {
+            const generateBtn = document.querySelector('.btn-generate-report');
+            const originalText = generateBtn.innerHTML;
+
+            // Show loading state
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+            generateBtn.disabled = true;
+
+            // Simulate report generation
+            setTimeout(() => {
+                // Hide the main modal
+                const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
+                reportsModal.hide();
+
+                // Show success modal
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+
+                // Reset the button
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+
+                // Reset form
+                document.getElementById('reportForm').reset();
+                $('#selectUser').val(null).trigger('change');
+                toggleDateFields();
+            }, 2000);
+        }
+    }
+
+    // Add pulse animation to generate button periodically
+    setInterval(() => {
+        const btn = document.querySelector('.generate-btn');
+        btn.classList.add('pulse');
+        setTimeout(() => btn.classList.remove('pulse'), 2000);
+    }, 10000);
+
+    // Initialize date fields state
+    toggleDateFields();
+</script>
+
+        {% endblock %}
+
+
+

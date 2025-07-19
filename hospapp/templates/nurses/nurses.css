@@ -543,3 +543,182 @@
 }
 
 </style >
+
+
+
+<style >
+/*GENERATE REPORTS BUTTON ON NURSE ACTIVITY PAG*/
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.generate-reports-page .dashboard-container {
+    padding: 1rem 0;
+}
+
+.generate-reports-page .generate-btn {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    border: none;
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+    .generate-reports-page .generate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(40, 167, 69, 0.4);
+        background: linear-gradient(45deg, #218838, #1ba085);
+    }
+
+    .generate-reports-page .generate-btn:active {
+        transform: translateY(0);
+    }
+
+.generate-reports-page .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.generate-reports-page .modal-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    padding: 0.75rem 1rem;
+}
+
+.generate-reports-page .modal-title {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.generate-reports-page .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.generate-reports-page .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.generate-reports-page .form-control, .generate-reports-page .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    transition: all 0.3s ease;
+}
+
+/* Select2 Custom Styling */
+.generate-reports-page .select2-container--bootstrap-5 .select2-selection {
+    border-radius: 6px !important;
+    border: 1px solid #ced4da !important;
+    min-height: 31px !important;
+}
+
+.generate-reports-page .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+}
+
+.generate-reports-page .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+    padding-left: 0.5rem !important;
+}
+
+.generate-reports-page .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+    height: 29px !important;
+}
+
+.generate-reports-page .select2-dropdown {
+    border-radius: 6px !important;
+    border: 1px solid #ced4da !important;
+}
+
+.generate-reports-page .select2-results__option--highlighted {
+    background-color: #667eea !important;
+}
+
+/* Custom validation styling for Select2 */
+.generate-reports-page .select2-selection.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.generate-reports-page .form-control:focus, .generate-reports-page .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.generate-reports-page .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.generate-reports-page .btn-generate-report {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 0.375rem 1rem;
+    transition: all 0.3s ease;
+}
+
+    .generate-reports-page .btn-generate-report:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+.generate-reports-page .date-fields {
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+    .generate-reports-page .date-fields.enabled {
+        opacity: 1;
+    }
+
+
+
+.generate-reports-page .pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.generate-reports-page .card {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.generate-reports-page .icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(45deg, #28a745, #20c997);
+    border-radius: 50%;
+    margin-right: 1rem;
+}
+
+</style >
