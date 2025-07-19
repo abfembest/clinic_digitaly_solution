@@ -29,6 +29,7 @@ from django.utils import timezone
 from datetime import datetime, date
 import csv
 from decimal import Decimal
+from dateutil.relativedelta import relativedelta
 
 # Import your models (adjust the import path as needed)
 from .models import (
@@ -37,6 +38,104 @@ from .models import (
 )
 from .models import Patient  # Adjust import path as needed
 
+@login_required(login_url='home')
+def accounts(request):
+    # Core stats
+    total_revenue = Payment.objects.filter(status='completed').aggregate(total=Sum('amount'))['total'] or 0
+    start_month = datetime.today().replace(day=1)
+    monthly_income = Payment.objects.filter(status='completed', payment_date__gte=start_month)\
+                                    .aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Pending payments total amount (not just count)
+    pending_payments = Payment.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+    pending_payments_count = Payment.objects.filter(status='pending').count()
+    
+    # Outstanding balance from unpaid bills
+    outstanding_balance = sum(bill.outstanding_amount() for bill in 
+                              PatientBill.objects.exclude(status='paid'))
+
+    # Charts (past 6 months revenue/expense)
+    last6 = [datetime.today().replace(day=1) - relativedelta(months=i) for i in reversed(range(6))]
+    labels, income, expenses = [], [], []
+    
+    for dt in last6:
+        month_end = (dt + timedelta(days=32)).replace(day=1)
+        month_name = dt.strftime('%B')
+        labels.append(month_name)
+        
+        # Monthly income
+        month_income = Payment.objects.filter(
+            status='completed',
+            payment_date__date__gte=dt.date(),
+            payment_date__date__lt=month_end.date()
+        ).aggregate(sum=Sum('amount'))['sum'] or 0
+        income.append(float(month_income))
+        
+        # Monthly expenses (if you have an Expense model, otherwise use placeholder)
+        # Replace this with actual expense calculation if you have expense tracking
+        month_expenses = Expense.objects.filter(
+            status='paid',
+            expense_date__gte=dt.date(),
+            expense_date__lt=month_end.date()
+        ).aggregate(total=Sum('amount'))['total'] or 0
+  # Placeholder: 40% of income as expenses
+        expenses.append(float(month_expenses))
+
+    # Payment status chart values
+    paid_count = Payment.objects.filter(status='completed').count()
+    pending_count = Payment.objects.filter(status='pending').count()
+    
+    # Overdue payments (assuming you have a way to identify overdue payments)
+    # This is a placeholder - adjust based on your actual overdue logic
+    overdue_count = PatientBill.objects.filter(
+        status__in=['unpaid', 'partial'],
+        due_date__lt=datetime.today().date()
+    ).count() if hasattr(PatientBill, 'due_date') else 0
+    
+    # Calculate percentages for pie chart
+    total_payments = paid_count + pending_count + overdue_count
+    if total_payments > 0:
+        paid_percentage = round((paid_count / total_payments) * 100, 1)
+        pending_percentage = round((pending_count / total_payments) * 100, 1)
+        overdue_percentage = round((overdue_count / total_payments) * 100, 1)
+    else:
+        paid_percentage = pending_percentage = overdue_percentage = 0
+
+    # Recent transactions with better formatting
+    recent_transactions = Payment.objects.select_related('patient')\
+                            .filter(status__in=['completed', 'pending'])\
+                            .order_by('-payment_date')[:5]
+
+    # Budget data (if you have Budget model)
+    try:
+        budgets = Budget.objects.order_by('-created_at')[:3]
+    except:
+        budgets = []
+
+    context = {
+        'total_revenue': total_revenue,
+        'monthly_income': monthly_income,
+        'pending_payments': pending_payments,  # Amount, not count
+        'pending_payments_count': pending_payments_count,
+        'outstanding_balance': outstanding_balance,
+        'recent_transactions': recent_transactions,
+        'budgets': budgets,
+        
+        # Chart data for JavaScript (properly formatted)
+        'revenue_labels': json.dumps(labels),
+        'revenue_income': json.dumps(income),
+        'revenue_expenses': json.dumps(expenses),
+        
+        'payment_status_labels': json.dumps(['Paid', 'Pending', 'Overdue']),
+        'payment_status_values': json.dumps([paid_percentage, pending_percentage, overdue_percentage]),
+        
+        # Raw counts for display
+        'paid_count': paid_count,
+        'pending_count': pending_count,
+        'overdue_count': overdue_count,
+    }
+    
+    return render(request, 'accounts/index.html', context)
 
 @login_required(login_url='home')
 def payment_tracker_view(request):

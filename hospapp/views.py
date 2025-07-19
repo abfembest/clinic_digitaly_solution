@@ -2162,85 +2162,6 @@ def add_ivf_progress_comment(request):
     
 ''' ############################################################################################################################ End Doctors View ############################################################################################################################ '''
 
-#notification icon 
-
-
-def notification_data(request):
-    today = date.today()
-    notifications = []
-
-    test_outstanding = LabTest.objects.filter(testcompleted=False).count()
-    if test_outstanding > 0:
-        notifications.append({
-            "title": "Test Outstanding",
-            "count": test_outstanding,
-            "url": "/tests/pending/"
-        })
-
-    appointments_today = Appointment.objects.filter(scheduled_time=today).count()
-    if appointments_today > 0:
-        notifications.append({
-            "title": "Appointments Available",
-            "count": appointments_today,
-            "url": "/results/available/"
-        })
-
-    test_results = LabTest.objects.filter(testcompleted=True).count()
-    if test_results > 0:
-        notifications.append({
-            "title": "Available Test Results",
-            "count": test_results,
-            "url": "/bookings/"
-        })
-
-    return JsonResponse({
-        "notifications": notifications
-    })
-
-
-"""def notification_data(request):
-    return JsonResponse({
-        "notifications": [
-            {
-                "title": "Test Outstanding",
-                "count": LabTest.objects.filter(testcompleted=False).count(),
-                "url": "/tests/pending/"
-            },
-         
-            {
-                "title": "Appointments Available",
-                "count": Appointment.objects.filter(scheduled_time=today).count(),
-                "url": "/results/available/"
-            },
-            {
-                "title": "Available Test results",
-                "count": LabTest.objects.filter(testcompleted=True).count(),
-                "url": "/bookings/"
-            },
-        ]
-    })"""
-
-# @login_required(login_url='home')
-# def monitoring(request):
-#     patient_id = request.GET.get("patient_id")
-#     patient = Patient.objects.filter(id=patient_id).first() if patient_id else None
-
-#     context = {
-#         "all_patients": Patient.objects.all(),
-#         "patient": patient,
-#         "consultations": patient.consultations.all() if patient else [],
-#         "prescriptions": patient.prescriptions.all() if patient else [],
-#         "vitals": patient.vitals_set.all() if patient else [],
-#         "notes": patient.nursing_notes.all() if patient else [],
-#         "careplans": patient.careplan_set.all() if patient else [],
-#         "admissions": patient.admission_set.all() if patient else [],
-#     }
-#     return render(request, "doctors/treatment_monitoring.html", context)
-
-@login_required(login_url='home')                          
-def ae(request):     
-    return render(request, 'ae/base.html')
-
 ''' ############################################################################################################################ Laboratory View ############################################################################################################################ '''
 
 @login_required(login_url='home')
@@ -2249,13 +2170,10 @@ def laboratory(request):
     start_of_day = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     end_of_day = timezone.make_aware(datetime.combine(today, datetime.max.time()))
 
-    # Define a Q object for filtering by the current user's involvement
-    # This assumes 'his activities' means tests they requested or performed.
     user_filter = Q(requested_by=request.user) | Q(performed_by=request.user)
 
-    # Dashboard Counts - Filtered by logged-in user
     test_today = LabTest.objects.filter(
-        user_filter, # Apply user filter
+        user_filter,
         date_performed__range=(start_of_day, end_of_day),
         status='completed'
     ).count()
@@ -2264,9 +2182,6 @@ def laboratory(request):
     completed_count = LabTest.objects.filter(user_filter, status='completed').count()
     in_progress_count = LabTest.objects.filter(user_filter, status='in_progress').count()
 
-    # Total Patients Count and Uploaded Results Files Count might still be global
-    # or you might need a more specific filter based on roles.
-    # For now, keeping them global as they are not directly 'activities' of a single lab tech.
     total_patients_count = Patient.objects.count()
     uploaded_results_count = LabResultFile.objects.count()
 
@@ -2369,29 +2284,6 @@ def laboratory(request):
 
 @login_required(login_url='home')
 def lab_test_entry(request):
-    # if request.method == 'POST':
-    #     test_id = request.POST.get('test_id')
-    #     result_value = request.POST.get('result_value')
-    #     notes = request.POST.get('notes', '')
-
-    #     try:
-    #         test = LabTest.objects.select_related('patient', 'category').get(id=test_id, status='pending')
-    #         test.result_value = result_value
-    #         test.notes = notes
-    #         test.status = 'completed'
-    #         test.testcompleted = True
-    #         test.date_performed = timezone.now()
-    #         test.performed_by = request.user
-    #         test.recorded_by = request.user
-    #         test.save()
-
-    #         messages.success(request, f"Test {test.test_name} ({test.category.name}) for {test.patient.full_name} completed successfully.")
-    #     except LabTest.DoesNotExist:
-    #         messages.error(request, "Invalid test entry or test already completed.")
-
-    #     return redirect('lab_test_entry')
-
-    # Filter lab tests strictly by status='pending' and doctor_comments=0
     lab_tests = LabTest.objects.select_related('patient', 'category').filter(
         status='pending'
     ).order_by('-requested_at')
@@ -2468,6 +2360,216 @@ def lab_test_entry(request):
     }
 
     return render(request, 'laboratory/test_entry.html', context)
+
+@login_required(login_url='home')
+def lab_internal_logs(request):
+    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'category').order_by('-requested_at')
+
+    logs = []
+    for test in lab_tests:
+        key_results = test.result_value if test.result_value else "N/A"
+        
+        display_status = test.status.capitalize() if test.status else "N/A"
+
+        logs.append({
+            'id': test.id,
+            'date': test.date_performed.date() if test.date_performed else test.requested_at.date(),
+            'patient_name': test.patient.full_name,
+            'test_type': test.category.name if test.category else "Unknown Test Type",
+            'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
+            'key_results': key_results,
+            'notes': test.notes if test.notes else '',
+            'status': display_status,
+        })
+
+    context = {
+        'lab_logs': logs,
+    }
+    return render(request, 'laboratory/logs.html', context)
+
+@login_required
+@require_http_methods(["GET"])
+def lab_view_ivf_progress(request):
+    context = {
+        'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
+    }
+    return render(request, 'laboratory/ivf_progress.html', context)
+
+def lab_activity_report(request):
+    user = request.user
+    today = date.today()
+
+    total_tests_requested = LabTest.objects.count()
+
+    pending_tests = LabTest.objects.filter(status='pending').count()
+    completed_tests = LabTest.objects.filter(status='completed').count()
+    in_progress_tests = LabTest.objects.filter(status='in_progress').count()
+
+    recent_lab_activities = LabTest.objects.filter(
+        Q(performed_by=user) | Q(recorded_by=user)
+    ).order_by('-date_performed', '-requested_at')[:10]
+
+    recent_lab_files = LabResultFile.objects.filter(uploaded_by=user).order_by('-uploaded_at')[:5]
+
+    context = {
+        'total_tests_requested': total_tests_requested,
+        'pending_tests': pending_tests,
+        'completed_tests': completed_tests,
+        'in_progress_tests': in_progress_tests,
+        'recent_lab_activities': recent_lab_activities,
+        'recent_lab_files': recent_lab_files,
+    }
+
+    return render(request, 'laboratory/reports.html', context)
+
+##### Form Action #####
+
+@csrf_exempt
+def get_patient_info(request, patient_id):
+    try:
+        patient = Patient.objects.get(id=patient_id)
+        
+        # Build photo URL safely
+        photo_url = ''
+        if patient.photo:
+            try:
+                photo_url = patient.photo.url
+            except:
+                photo_url = ''
+        
+        return JsonResponse({
+            # Basic Demographics
+            'full_name': patient.full_name or '',
+            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '',
+            'gender': patient.gender or '',
+            'phone': patient.phone or '',
+            'email': patient.email or '',
+            'marital_status': patient.marital_status or '',
+            'address': patient.address or '',
+            'nationality': patient.nationality or '',
+            'state_of_origin': patient.state_of_origin or '',
+            
+            # ID Information
+            'id_type': patient.id_type or '',
+            'id_number': patient.id_number or '',
+            
+            # Medical Information
+            'blood_group': patient.blood_group or '',
+            'first_time': patient.first_time or '',
+            'referred_by': patient.referred_by or '',
+            'notes': patient.notes or '',
+            
+            # Next of Kin Information - ALL FIELDS
+            'next_of_kin_name': patient.next_of_kin_name or '',
+            'next_of_kin_phone': patient.next_of_kin_phone or '',
+            'next_of_kin_relationship': patient.next_of_kin_relationship or '',
+            'next_of_kin_email': patient.next_of_kin_email or '',
+            'next_of_kin_address': patient.next_of_kin_address or '',
+            
+            # Photo
+            'photo': photo_url,
+        })
+        
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Patient not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching patient info {patient_id}: {str(e)}")
+        return JsonResponse({'error': 'An error occurred while fetching patient information'}, status=500)
+    
+def test_details(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    pending_tests = LabTest.objects.filter(
+        patient=patient,
+        status='pending'
+    ).select_related('category', 'patient')
+
+    grouped_tests = defaultdict(list)
+    for test in pending_tests:
+        grouped_tests[test.category.name].append(test)
+
+    return render(request, 'laboratory/test_details.html', {
+        'pending_tests': dict(grouped_tests),
+        'patient': patient
+    })
+
+def lab_log_detail_ajax(request):
+    log_id = request.GET.get('log_id')
+    if not log_id:
+        return JsonResponse({"error": "Missing log ID"}, status=400)
+
+    try:
+        # Pre-fetch related objects for efficiency
+        lab_test = get_object_or_404(LabTest.objects.select_related('patient', 'recorded_by', 'category'), id=log_id)
+
+        data = {
+            'patient': lab_test.patient.full_name,
+            'test_type': lab_test.category.name if lab_test.category else "Unknown Test Type", # Corrected to category.name
+            'date': (lab_test.date_performed or lab_test.requested_at).strftime('%B %d, %Y'), # Use date_performed if exists, else requested_at
+            'recorded_by': lab_test.recorded_by.get_full_name() if lab_test.recorded_by else "Unknown",
+            'notes': lab_test.notes if lab_test.notes else 'No additional notes provided.', # Access notes directly
+            'result_value': lab_test.result_value if lab_test.result_value else "N/A", # General result value
+            'normal_range': lab_test.normal_range if lab_test.normal_range else "N/A", # Normal range
+        }
+        
+        return JsonResponse(data)
+
+    except LabTest.DoesNotExist:
+        return JsonResponse({"error": "Lab Test not found."}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    
+@csrf_exempt
+def submit_test_results(request, patient_id):
+    if request.method == 'POST':
+        patient = get_object_or_404(Patient, id=patient_id)
+        test_ids = request.POST.getlist('ids')
+        uploaded_file = request.FILES.get('result_file')
+        lab_result_file = None
+
+        if uploaded_file:
+            try:
+                lab_result_file = LabResultFile.objects.create(
+                    patient=patient,
+                    result_file=uploaded_file,
+                    uploaded_by=request.user
+                )
+            except Exception as e:
+                messages.error(request, f'File upload failed: {str(e)}')
+                return redirect('lab_test_entry')
+
+        for test_id in test_ids:
+            try:
+                lab_test = LabTest.objects.get(id=test_id)
+                result_value = request.POST.get(lab_test.test_name)
+
+                if result_value:
+                    lab_test.result_value = result_value
+                    lab_test.status = 'completed'
+                    lab_test.testcompleted = True
+
+                    # Fill additional fields
+                    lab_test.recorded_by = request.user
+                    lab_test.performed_by = request.user
+                    lab_test.date_performed = timezone.now()
+
+                    if lab_result_file:
+                        lab_test.labresulttestid = lab_result_file.id
+
+                    lab_test.save()
+            except LabTest.DoesNotExist:
+                continue
+
+        if uploaded_file and lab_result_file:
+            messages.success(request, f'Test results updated and file \"{uploaded_file.name}\" uploaded successfully!')
+        elif test_ids:
+            messages.success(request, 'Test results updated successfully!')
+        else:
+            messages.warning(request, 'No tests were selected for update.')
+
+        return redirect('lab_test_entry')
+
+    return redirect('lab_test_entry')
 
 @login_required(login_url='home')
 def patient_tests_ajax(request, patient_id):
@@ -2707,196 +2809,9 @@ def patient_search(request):
         results = [{'id': p.id, 'full_name': p.full_name} for p in patients[:10]]
 
     return JsonResponse({'results': results})
-
-@login_required(login_url='home')
-def lab_internal_logs(request):
-    lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'category').order_by('-requested_at')
-
-    logs = []
-    for test in lab_tests:
-        key_results = test.result_value if test.result_value else "N/A"
-        
-        display_status = test.status.capitalize() if test.status else "N/A"
-
-        logs.append({
-            'id': test.id,
-            'date': test.date_performed.date() if test.date_performed else test.requested_at.date(),
-            'patient_name': test.patient.full_name,
-            'test_type': test.category.name if test.category else "Unknown Test Type",
-            'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
-            'key_results': key_results,
-            'notes': test.notes if test.notes else '',
-            'status': display_status,
-        })
-
-    context = {
-        'lab_logs': logs,
-    }
-    return render(request, 'laboratory/logs.html', context)
-
-def lab_log_detail_ajax(request):
-    log_id = request.GET.get('log_id')
-    if not log_id:
-        return JsonResponse({"error": "Missing log ID"}, status=400)
-
-    try:
-        # Pre-fetch related objects for efficiency
-        lab_test = get_object_or_404(LabTest.objects.select_related('patient', 'recorded_by', 'category'), id=log_id)
-
-        data = {
-            'patient': lab_test.patient.full_name,
-            'test_type': lab_test.category.name if lab_test.category else "Unknown Test Type", # Corrected to category.name
-            'date': (lab_test.date_performed or lab_test.requested_at).strftime('%B %d, %Y'), # Use date_performed if exists, else requested_at
-            'recorded_by': lab_test.recorded_by.get_full_name() if lab_test.recorded_by else "Unknown",
-            'notes': lab_test.notes if lab_test.notes else 'No additional notes provided.', # Access notes directly
-            'result_value': lab_test.result_value if lab_test.result_value else "N/A", # General result value
-            'normal_range': lab_test.normal_range if lab_test.normal_range else "N/A", # Normal range
-        }
-        
-        return JsonResponse(data)
-
-    except LabTest.DoesNotExist:
-        return JsonResponse({"error": "Lab Test not found."}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-# Pharmacy Views
-@login_required(login_url='home')
-def pharmacy(request):
-    return render(request, 'pharmacy/index.html')
-
-@login_required(login_url='home')
-def review_prescriptions(request):
-    return render(request, 'pharmacy/prescriptions.html')
-
-@login_required(login_url='home')
-def dispense_medications(request):
-    return render(request, 'pharmacy/medication.html')
-
-@login_required(login_url='home')
-def manage_inventory(request):
-    return render(request, 'pharmacy/inventory.html')
-
-@login_required(login_url='home')
-def reorder_alerts(request):
-    return render(request, 'pharmacy/alerts.html')
-
-# Acoounts Views
-@login_required(login_url='home')
-def accounts(request):
-    # Core stats
-    total_revenue = Payment.objects.filter(status='completed').aggregate(total=Sum('amount'))['total'] or 0
-    start_month = datetime.today().replace(day=1)
-    monthly_income = Payment.objects.filter(status='completed', payment_date__gte=start_month)\
-                                    .aggregate(total=Sum('amount'))['total'] or 0
     
-    # Pending payments total amount (not just count)
-    pending_payments = Payment.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
-    pending_payments_count = Payment.objects.filter(status='pending').count()
-    
-    # Outstanding balance from unpaid bills
-    outstanding_balance = sum(bill.outstanding_amount() for bill in 
-                              PatientBill.objects.exclude(status='paid'))
+''' ############################################################################################################################ End Lab View ############################################################################################################################ '''
 
-    # Charts (past 6 months revenue/expense)
-    last6 = [datetime.today().replace(day=1) - relativedelta(months=i) for i in reversed(range(6))]
-    labels, income, expenses = [], [], []
-    
-    for dt in last6:
-        month_end = (dt + timedelta(days=32)).replace(day=1)
-        month_name = dt.strftime('%B')
-        labels.append(month_name)
-        
-        # Monthly income
-        month_income = Payment.objects.filter(
-            status='completed',
-            payment_date__date__gte=dt.date(),
-            payment_date__date__lt=month_end.date()
-        ).aggregate(sum=Sum('amount'))['sum'] or 0
-        income.append(float(month_income))
-        
-        # Monthly expenses (if you have an Expense model, otherwise use placeholder)
-        # Replace this with actual expense calculation if you have expense tracking
-        month_expenses = Expense.objects.filter(
-            status='paid',
-            expense_date__gte=dt.date(),
-            expense_date__lt=month_end.date()
-        ).aggregate(total=Sum('amount'))['total'] or 0
-  # Placeholder: 40% of income as expenses
-        expenses.append(float(month_expenses))
-
-    # Payment status chart values
-    paid_count = Payment.objects.filter(status='completed').count()
-    pending_count = Payment.objects.filter(status='pending').count()
-    
-    # Overdue payments (assuming you have a way to identify overdue payments)
-    # This is a placeholder - adjust based on your actual overdue logic
-    overdue_count = PatientBill.objects.filter(
-        status__in=['unpaid', 'partial'],
-        due_date__lt=datetime.today().date()
-    ).count() if hasattr(PatientBill, 'due_date') else 0
-    
-    # Calculate percentages for pie chart
-    total_payments = paid_count + pending_count + overdue_count
-    if total_payments > 0:
-        paid_percentage = round((paid_count / total_payments) * 100, 1)
-        pending_percentage = round((pending_count / total_payments) * 100, 1)
-        overdue_percentage = round((overdue_count / total_payments) * 100, 1)
-    else:
-        paid_percentage = pending_percentage = overdue_percentage = 0
-
-    # Recent transactions with better formatting
-    recent_transactions = Payment.objects.select_related('patient')\
-                            .filter(status__in=['completed', 'pending'])\
-                            .order_by('-payment_date')[:5]
-
-    # Budget data (if you have Budget model)
-    try:
-        budgets = Budget.objects.order_by('-created_at')[:3]
-    except:
-        budgets = []
-
-    context = {
-        'total_revenue': total_revenue,
-        'monthly_income': monthly_income,
-        'pending_payments': pending_payments,  # Amount, not count
-        'pending_payments_count': pending_payments_count,
-        'outstanding_balance': outstanding_balance,
-        'recent_transactions': recent_transactions,
-        'budgets': budgets,
-        
-        # Chart data for JavaScript (properly formatted)
-        'revenue_labels': json.dumps(labels),
-        'revenue_income': json.dumps(income),
-        'revenue_expenses': json.dumps(expenses),
-        
-        'payment_status_labels': json.dumps(['Paid', 'Pending', 'Overdue']),
-        'payment_status_values': json.dumps([paid_percentage, pending_percentage, overdue_percentage]),
-        
-        # Raw counts for display
-        'paid_count': paid_count,
-        'pending_count': pending_count,
-        'overdue_count': overdue_count,
-    }
-    
-    return render(request, 'accounts/index.html', context)
-
-@login_required(login_url='home')
-def patient_payment_tracker(request):
-    return render(request, 'accounts/payment_tracker.html')
-
-# @login_required(login_url='home')
-# def institution_financials(request):
-#     return render(request, 'accounts/financials.html')
-
-# @login_required(login_url='home')
-# def financial_reports(request):
-#     return render(request, 'accounts/financial_reports.html')
-
-# @login_required(login_url='home')
-# def budget_planning(request):
-#     return render(request, 'accounts/planning.html')
 
 ''' ############################################################################################################################ HR View ############################################################################################################################ '''
 
@@ -2964,9 +2879,10 @@ def hr(request):
     shift_assignments_today = ShiftAssignment.objects.filter(date=today).count()
     
     # Get shift distribution for today
-    shift_distribution = ShiftAssignment.objects.annotate(
-        count=Count('shiftassignment__id', filter=Q(shiftassignment__date=today))
-    ).values('shift', 'count')
+    # FIX: Corrected the aggregation for shift_distribution
+    shift_distribution = ShiftAssignment.objects.filter(date=today).values('shift').annotate(
+        count=Count('shift') # Count directly on 'shift' field within the filtered queryset
+    ).order_by('shift')
     
     # === DEPARTMENT STATISTICS ===
     # For Department Chart
@@ -3031,8 +2947,8 @@ def hr(request):
     # from datetime import timedelta
     # thirty_days_from_now = today + timedelta(days=30)
     # expiring_certs_count = StaffCertification.objects.filter(
-    #     expiry_date__lte=thirty_days_from_now,
-    #     expiry_date__gte=today
+    #    expiry_date__lte=thirty_days_from_now,
+    #    expiry_date__gte=today
     # ).count()
     
     context = {
@@ -3092,69 +3008,6 @@ def staff_profiles(request):
     }
     return render(request, 'hr/staff_profiles.html', context)
 
-@csrf_exempt
-def edit_staff_profile(request, staff_id):
-    try:
-        profile = Staff.objects.select_related('user').get(id=staff_id)
-        role = request.POST.get('role')
-        department_id = request.POST.get('department')
-        phone = request.POST.get('phone_number')
-        address = request.POST.get('address')
-
-        profile.role = role
-        profile.phone_number = phone
-        profile.address = address
-        if department_id:
-            profile.department_id = department_id
-        else:
-            profile.department = None
-        profile.save()
-
-        return JsonResponse({
-            'success': True,
-            'role': profile.get_role_display(),
-            'department': profile.department.name if profile.department else '—',
-            'phone': profile.phone_number or '—',
-            'name': f"{profile.user.first_name} {profile.user.last_name}",
-        })
-    except Staff.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Staff not found'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@csrf_exempt
-def change_staff_password(request, staff_id):
-    try:
-        profile = Staff.objects.select_related('user').get(id=staff_id)
-        new_password = request.POST.get('new_password')
-        confirm_password = request.POST.get('confirm_password')
-
-        if new_password != confirm_password:
-            return JsonResponse({'success': False, 'error': 'Passwords do not match'})
-
-        profile.user.set_password(new_password)
-        profile.user.save()
-
-        return JsonResponse({'success': True})
-    except Staff.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Staff not found'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-    
-def parse_date_to_datetime(date_str_or_obj):
-    if isinstance(date_str_or_obj, str):
-        dt = datetime.strptime(date_str_or_obj, '%Y-%m-%d')
-        return timezone.make_aware(dt, timezone.get_current_timezone())
-    elif isinstance(date_str_or_obj, datetime):
-        if timezone.is_naive(date_str_or_obj):
-            return timezone.make_aware(date_str_or_obj, timezone.get_current_timezone())
-        return date_str_or_obj
-    elif isinstance(date_str_or_obj, date) and not isinstance(date_str_or_obj, datetime):
-        dt = datetime.combine(date_str_or_obj, datetime.min.time())
-        return timezone.make_aware(dt, timezone.get_current_timezone())
-    else:
-        return timezone.now()
-
 @login_required(login_url='home')
 def staff_attendance_list(request):
     """
@@ -3169,11 +3022,13 @@ def staff_attendance_list(request):
         messages.error(request, "Your user profile is not set up properly.")
         return redirect('home')
 
-    staff_users = User.objects.filter(staff__isnull=False).order_by('first_name', 'last_name')
-    shifts = ShiftAssignment.objects.all().order_by('shift')
+    staff_users = Staff.objects.select_related('user').order_by('user__first_name', 'user__last_name') # Corrected to get Staff objects
+    
+    # FIX: Pass the SHIFT_CHOICES directly for the dropdown
+    shifts = ShiftAssignment.SHIFT_CHOICES 
 
-    attendance_records = Attendance.objects.select_related('staff').order_by('-date')
-    shift_records = ShiftAssignment.objects.select_related('staff', 'shift').order_by('-date')
+    attendance_records = Attendance.objects.select_related('staff__staff').order_by('-date')
+    shift_records = ShiftAssignment.objects.select_related('staff__staff').order_by('-date')
 
     return render(request, 'hr/staff_attendance_shift.html', {
         'attendance_records': attendance_records,
@@ -3183,77 +3038,6 @@ def staff_attendance_list(request):
         'shifts': shifts,
         'today': today,
     })
-
-
-@login_required(login_url='home')
-def record_attendance_view(request):
-    """
-    Handles the POST request for recording staff attendance.
-    This view should only be accessible via POST requests from the form.
-    """
-    if request.method == 'POST':
-        today = timezone.localdate() # Use localdate for consistency
-        staff_id = request.POST.get('staff_name')
-        date_input = request.POST.get('date') or today
-        status = request.POST.get('status')
-
-        try:
-            date_obj = parse_date_to_datetime(date_input)
-            staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
-        except User.DoesNotExist:
-            messages.error(request, "Selected staff not found.")
-            return redirect('staff_attendance_shift')
-        except ValueError as e:
-            messages.error(request, f"Invalid date format: {e}")
-            return redirect('staff_attendance_shift')
-
-        Attendance.objects.update_or_create(
-            staff=staff_user,
-            date=date_obj,
-            defaults={'status': status}
-        )
-        messages.success(request, "Attendance recorded successfully.")
-        return redirect('staff_attendance_shift')
-    else:
-        # If someone tries to access this URL via GET, redirect them to the main page
-        return redirect('staff_attendance_shift')
-
-
-@login_required(login_url='home')
-def assign_shift_view(request):
-    """
-    Handles the POST request for assigning shifts to staff.
-    This view should only be accessible via POST requests from the form.
-    """
-    if request.method == 'POST':
-        today = timezone.localdate()
-        staff_id = request.POST.get('staff_name')
-        shift_id = request.POST.get('shift')  # Change this to shift_id
-        date_input = request.POST.get('date') or today
-
-        try:
-            date_obj = parse_date_to_datetime(date_input)
-            staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
-            shift = ShiftAssignment.objects.get(id=shift_id)  # Change this to id=shift_id
-        except User.DoesNotExist:
-            messages.error(request, "Selected staff not found.")
-            return redirect('staff_attendance_shift')
-        except ShiftAssignment.DoesNotExist:
-            messages.error(request, f"Shift with ID '{shift_id}' not found.") # Updated error message
-            return redirect('staff_attendance_shift')
-        except ValueError as e:
-            messages.error(request, f"Invalid date format: {e}")
-            return redirect('staff_attendance_shift')
-
-        ShiftAssignment.objects.update_or_create(
-            staff=staff_user,
-            date=date_obj,
-            defaults={'shift': shift}
-        )
-        messages.success(request, "Shift assigned successfully.")
-        return redirect('staff_attendance_shift')
-    else:
-        return redirect('staff_attendance_shift')
 
 @login_required(login_url='home')
 def staff_transitions(request):
@@ -3283,10 +3067,6 @@ def staff_transitions(request):
         'staff_list': staff_list,
         'transitions': transitions,
     })
-
-@login_required(login_url='home')
-def staff_certifications(request):
-    return render(request, 'hr/certifications.html')
 
 @login_required(login_url='home')
 def hr_act_report(request):
@@ -3364,7 +3144,7 @@ def hr_act_report(request):
     
     for staff_member in active_staff:
         present_days = attendance_records.filter(
-            staff=staff_member.user,
+            staff=staff_member.user, # Assuming Attendance.staff links to User
             status='Present'
         ).count()
         
@@ -3381,25 +3161,29 @@ def hr_act_report(request):
     # SHIFT MANAGEMENT DATA
     # =====================================================
     
-    # All shifts
-    all_shifts = ShiftAssignment.objects.all()
+    # All distinct shift types available (e.g., 'Morning', 'Afternoon', 'Night')
+    # FIX: Get SHIFT_CHOICES directly, as 'shift' is a CharField, not a ForeignKey to a Shift model.
+    all_shifts_types = ShiftAssignment.SHIFT_CHOICES
     
     # Shift assignments for the date range
+    # FIX: Remove select_related('shift') as 'shift' is a CharField.
     shift_assignments = ShiftAssignment.objects.filter(
         date__range=[start_date, end_date]
-    ).select_related('staff', 'shift').order_by('-date')
+    ).select_related('staff').order_by('-date')
     
     # Shift distribution
-    shift_distribution = shift_assignments.values('shift__name').annotate(
+    # FIX: Use 'shift' directly, not 'shift__name'.
+    shift_distribution = shift_assignments.values('shift').annotate(
         count=Count('id')
-    ).order_by('shift__name')
+    ).order_by('shift')
     
     # Current week's shift assignments
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
+    # FIX: Remove select_related('shift') and use 'shift' directly in order_by.
     current_week_shifts = ShiftAssignment.objects.filter(
         date__range=[week_start, week_end]
-    ).select_related('staff', 'shift').order_by('date', 'shift__name')
+    ).select_related('staff').order_by('date', 'shift')
     
     # =====================================================
     # STAFF TRANSITIONS DATA
@@ -3523,7 +3307,7 @@ def hr_act_report(request):
         'absenteeism_rate': round(absenteeism_rate, 2),
         
         # Shift Data
-        'all_shifts': all_shifts,
+        'all_shifts_types': all_shifts_types, # Changed to all_shifts_types to reflect it's the choices
         'shift_assignments': shift_assignments[:30],  # Limit for display
         'shift_distribution': shift_distribution,
         'current_week_shifts': current_week_shifts,
@@ -3567,7 +3351,127 @@ def hr_act_report(request):
     
     return render(request, 'hr/reports.html', context)
 
-# Add this new AJAX view for HR activity details
+##### Form Actions #####
+
+@csrf_exempt
+def edit_staff_profile(request, staff_id):
+    try:
+        profile = Staff.objects.select_related('user').get(id=staff_id)
+        role = request.POST.get('role')
+        department_id = request.POST.get('department')
+        phone = request.POST.get('phone_number')
+        address = request.POST.get('address')
+
+        profile.role = role
+        profile.phone_number = phone
+        profile.address = address
+        if department_id:
+            profile.department_id = department_id
+        else:
+            profile.department = None
+        profile.save()
+
+        return JsonResponse({
+            'success': True,
+            'role': profile.get_role_display(),
+            'department': profile.department.name if profile.department else '—',
+            'phone': profile.phone_number or '—',
+            'name': f"{profile.user.first_name} {profile.user.last_name}",
+        })
+    except Staff.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Staff not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@csrf_exempt
+def change_staff_password(request, staff_id):
+    try:
+        profile = Staff.objects.select_related('user').get(id=staff_id)
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+
+        if new_password != confirm_password:
+            return JsonResponse({'success': False, 'error': 'Passwords do not match'})
+
+        profile.user.set_password(new_password)
+        profile.user.save()
+
+        return JsonResponse({'success': True})
+    except Staff.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Staff not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+@login_required(login_url='home')
+def record_attendance_view(request):
+    """
+    Handles the POST request for recording staff attendance.
+    This view should only be accessible via POST requests from the form.
+    """
+    if request.method == 'POST':
+        today = timezone.localdate() # Use localdate for consistency
+        staff_id = request.POST.get('staff_name')
+        date_input = request.POST.get('date') or today
+        status = request.POST.get('status')
+
+        try:
+            date_obj = parse_date_to_datetime(date_input)
+            staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
+        except User.DoesNotExist:
+            messages.error(request, "Selected staff not found.")
+            return redirect('staff_attendance_shift')
+        except ValueError as e:
+            messages.error(request, f"Invalid date format: {e}")
+            return redirect('staff_attendance_shift')
+
+        Attendance.objects.update_or_create(
+            staff=staff_user,
+            date=date_obj,
+            defaults={'status': status}
+        )
+        messages.success(request, "Attendance recorded successfully.")
+        return redirect('staff_attendance_shift')
+    else:
+        # If someone tries to access this URL via GET, redirect them to the main page
+        return redirect('staff_attendance_shift')
+
+
+@login_required(login_url='home')
+def assign_shift_view(request):
+    """
+    Handles the POST request for assigning shifts to staff.
+    This view should only be accessible via POST requests from the form.
+    """
+    if request.method == 'POST':
+        today = timezone.localdate()
+        staff_id = request.POST.get('staff_name')
+        shift_id = request.POST.get('shift')  # Change this to shift_id
+        date_input = request.POST.get('date') or today
+
+        try:
+            date_obj = parse_date_to_datetime(date_input)
+            staff_user = User.objects.filter(staff__isnull=False).get(id=staff_id)
+            shift = ShiftAssignment.objects.get(id=shift_id)  # Change this to id=shift_id
+        except User.DoesNotExist:
+            messages.error(request, "Selected staff not found.")
+            return redirect('staff_attendance_shift')
+        except ShiftAssignment.DoesNotExist:
+            messages.error(request, f"Shift with ID '{shift_id}' not found.") # Updated error message
+            return redirect('staff_attendance_shift')
+        except ValueError as e:
+            messages.error(request, f"Invalid date format: {e}")
+            return redirect('staff_attendance_shift')
+
+        ShiftAssignment.objects.update_or_create(
+            staff=staff_user,
+            date=date_obj,
+            defaults={'shift': shift}
+        )
+        messages.success(request, "Shift assigned successfully.")
+        return redirect('staff_attendance_shift')
+    else:
+        return redirect('staff_attendance_shift')
+    
 @login_required
 @require_GET
 def get_hr_activity_detail(request, activity_type, id):
@@ -3661,6 +3565,141 @@ def get_hr_activity_detail(request, activity_type, id):
         return JsonResponse({'error': str(e)}, status=500)
 
 ''' ############################################################################################################################ End HR View ############################################################################################################################ '''
+
+
+#notification icon 
+
+
+def notification_data(request):
+    today = date.today()
+    notifications = []
+
+    test_outstanding = LabTest.objects.filter(testcompleted=False).count()
+    if test_outstanding > 0:
+        notifications.append({
+            "title": "Test Outstanding",
+            "count": test_outstanding,
+            "url": "/tests/pending/"
+        })
+
+    appointments_today = Appointment.objects.filter(scheduled_time=today).count()
+    if appointments_today > 0:
+        notifications.append({
+            "title": "Appointments Available",
+            "count": appointments_today,
+            "url": "/results/available/"
+        })
+
+    test_results = LabTest.objects.filter(testcompleted=True).count()
+    if test_results > 0:
+        notifications.append({
+            "title": "Available Test Results",
+            "count": test_results,
+            "url": "/bookings/"
+        })
+
+    return JsonResponse({
+        "notifications": notifications
+    })
+
+
+"""def notification_data(request):
+    return JsonResponse({
+        "notifications": [
+            {
+                "title": "Test Outstanding",
+                "count": LabTest.objects.filter(testcompleted=False).count(),
+                "url": "/tests/pending/"
+            },
+         
+            {
+                "title": "Appointments Available",
+                "count": Appointment.objects.filter(scheduled_time=today).count(),
+                "url": "/results/available/"
+            },
+            {
+                "title": "Available Test results",
+                "count": LabTest.objects.filter(testcompleted=True).count(),
+                "url": "/bookings/"
+            },
+        ]
+    })"""
+
+# @login_required(login_url='home')
+# def monitoring(request):
+#     patient_id = request.GET.get("patient_id")
+#     patient = Patient.objects.filter(id=patient_id).first() if patient_id else None
+
+#     context = {
+#         "all_patients": Patient.objects.all(),
+#         "patient": patient,
+#         "consultations": patient.consultations.all() if patient else [],
+#         "prescriptions": patient.prescriptions.all() if patient else [],
+#         "vitals": patient.vitals_set.all() if patient else [],
+#         "notes": patient.nursing_notes.all() if patient else [],
+#         "careplans": patient.careplan_set.all() if patient else [],
+#         "admissions": patient.admission_set.all() if patient else [],
+#     }
+#     return render(request, "doctors/treatment_monitoring.html", context)
+
+@login_required(login_url='home')                          
+def ae(request):     
+    return render(request, 'ae/base.html')
+
+
+# Pharmacy Views
+@login_required(login_url='home')
+def pharmacy(request):
+    return render(request, 'pharmacy/index.html')
+
+@login_required(login_url='home')
+def review_prescriptions(request):
+    return render(request, 'pharmacy/prescriptions.html')
+
+@login_required(login_url='home')
+def dispense_medications(request):
+    return render(request, 'pharmacy/medication.html')
+
+@login_required(login_url='home')
+def manage_inventory(request):
+    return render(request, 'pharmacy/inventory.html')
+
+@login_required(login_url='home')
+def reorder_alerts(request):
+    return render(request, 'pharmacy/alerts.html')
+
+# @login_required(login_url='home')
+# def institution_financials(request):
+#     return render(request, 'accounts/financials.html')
+
+# @login_required(login_url='home')
+# def financial_reports(request):
+#     return render(request, 'accounts/financial_reports.html')
+
+# @login_required(login_url='home')
+# def budget_planning(request):
+#     return render(request, 'accounts/planning.html')
+
+
+
+
+
+
+    
+def parse_date_to_datetime(date_str_or_obj):
+    if isinstance(date_str_or_obj, str):
+        dt = datetime.strptime(date_str_or_obj, '%Y-%m-%d')
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    elif isinstance(date_str_or_obj, datetime):
+        if timezone.is_naive(date_str_or_obj):
+            return timezone.make_aware(date_str_or_obj, timezone.get_current_timezone())
+        return date_str_or_obj
+    elif isinstance(date_str_or_obj, date) and not isinstance(date_str_or_obj, datetime):
+        dt = datetime.combine(date_str_or_obj, datetime.min.time())
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    else:
+        return timezone.now()
+
 
 @login_required(login_url='home')             
 def inventory(request):
@@ -7324,57 +7363,7 @@ def update_patient_info(request):
     
     return redirect('register_patient')
 
-@csrf_exempt
-def get_patient_info(request, patient_id):
-    try:
-        patient = Patient.objects.get(id=patient_id)
-        
-        # Build photo URL safely
-        photo_url = ''
-        if patient.photo:
-            try:
-                photo_url = patient.photo.url
-            except:
-                photo_url = ''
-        
-        return JsonResponse({
-            # Basic Demographics
-            'full_name': patient.full_name or '',
-            'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '',
-            'gender': patient.gender or '',
-            'phone': patient.phone or '',
-            'email': patient.email or '',
-            'marital_status': patient.marital_status or '',
-            'address': patient.address or '',
-            'nationality': patient.nationality or '',
-            'state_of_origin': patient.state_of_origin or '',
-            
-            # ID Information
-            'id_type': patient.id_type or '',
-            'id_number': patient.id_number or '',
-            
-            # Medical Information
-            'blood_group': patient.blood_group or '',
-            'first_time': patient.first_time or '',
-            'referred_by': patient.referred_by or '',
-            'notes': patient.notes or '',
-            
-            # Next of Kin Information - ALL FIELDS
-            'next_of_kin_name': patient.next_of_kin_name or '',
-            'next_of_kin_phone': patient.next_of_kin_phone or '',
-            'next_of_kin_relationship': patient.next_of_kin_relationship or '',
-            'next_of_kin_email': patient.next_of_kin_email or '',
-            'next_of_kin_address': patient.next_of_kin_address or '',
-            
-            # Photo
-            'photo': photo_url,
-        })
-        
-    except Patient.DoesNotExist:
-        return JsonResponse({'error': 'Patient not found'}, status=404)
-    except Exception as e:
-        logger.error(f"Error fetching patient info {patient_id}: {str(e)}")
-        return JsonResponse({'error': 'An error occurred while fetching patient information'}, status=500)
+
 
 @csrf_exempt
 def schedule_appointment(request):
@@ -7621,109 +7610,11 @@ def waitinglist(request):
 
 #Test details and completion by lab
 
-def test_details(request, patient_id):
-    patient = get_object_or_404(Patient, id=patient_id)
 
-    pending_tests = LabTest.objects.filter(
-        patient=patient,
-        status='pending'
-    ).select_related('category', 'patient')
 
-    grouped_tests = defaultdict(list)
-    for test in pending_tests:
-        grouped_tests[test.category.name].append(test)
 
-    return render(request, 'laboratory/test_details.html', {
-        'pending_tests': dict(grouped_tests),
-        'patient': patient
-    })
 
-@csrf_exempt
-def submit_test_results(request, patient_id):
-    if request.method == 'POST':
-        patient = get_object_or_404(Patient, id=patient_id)
-        test_ids = request.POST.getlist('ids')
-        uploaded_file = request.FILES.get('result_file')
-        lab_result_file = None
 
-        if uploaded_file:
-            try:
-                lab_result_file = LabResultFile.objects.create(
-                    patient=patient,
-                    result_file=uploaded_file,
-                    uploaded_by=request.user
-                )
-            except Exception as e:
-                messages.error(request, f'File upload failed: {str(e)}')
-                return redirect('lab_test_entry')
-
-        for test_id in test_ids:
-            try:
-                lab_test = LabTest.objects.get(id=test_id)
-                result_value = request.POST.get(lab_test.test_name)
-
-                if result_value:
-                    lab_test.result_value = result_value
-                    lab_test.status = 'completed'
-                    lab_test.testcompleted = True
-
-                    # Fill additional fields
-                    lab_test.recorded_by = request.user
-                    lab_test.performed_by = request.user
-                    lab_test.date_performed = timezone.now()
-
-                    if lab_result_file:
-                        lab_test.labresulttestid = lab_result_file.id
-
-                    lab_test.save()
-            except LabTest.DoesNotExist:
-                continue
-
-        if uploaded_file and lab_result_file:
-            messages.success(request, f'Test results updated and file \"{uploaded_file.name}\" uploaded successfully!')
-        elif test_ids:
-            messages.success(request, 'Test results updated successfully!')
-        else:
-            messages.warning(request, 'No tests were selected for update.')
-
-        return redirect('lab_test_entry')
-
-    return redirect('lab_test_entry')
-
-def lab_activity_report(request):
-    user = request.user
-    today = date.today()
-
-    total_tests_requested = LabTest.objects.count()
-
-    pending_tests = LabTest.objects.filter(status='pending').count()
-    completed_tests = LabTest.objects.filter(status='completed').count()
-    in_progress_tests = LabTest.objects.filter(status='in_progress').count()
-
-    recent_lab_activities = LabTest.objects.filter(
-        Q(performed_by=user) | Q(recorded_by=user)
-    ).order_by('-date_performed', '-requested_at')[:10]
-
-    recent_lab_files = LabResultFile.objects.filter(uploaded_by=user).order_by('-uploaded_at')[:5]
-
-    context = {
-        'total_tests_requested': total_tests_requested,
-        'pending_tests': pending_tests,
-        'completed_tests': completed_tests,
-        'in_progress_tests': in_progress_tests,
-        'recent_lab_activities': recent_lab_activities,
-        'recent_lab_files': recent_lab_files,
-    }
-
-    return render(request, 'laboratory/reports.html', context)
-
-@login_required
-@require_http_methods(["GET"])
-def lab_view_ivf_progress(request):
-    context = {
-        'all_ivf_records': IVFRecord.objects.all().select_related('patient', 'ivf_package', 'treatment_location').order_by('-created_on'),
-    }
-    return render(request, 'laboratory/ivf_progress.html', context)
  
 
  #Doctor's fetching test results that were recommended

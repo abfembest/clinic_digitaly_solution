@@ -57,49 +57,25 @@ urlpatterns = [
     path('ivf/add_progress_comment/', views.add_ivf_progress_comment, name='add_ivf_progress_comment'),
 
     ########################### End Doctors URLS #################################
-    
-    # path('d/monitoring/', views.monitoring, name='monitoring'),
-    # path('d/home', views.chart_view, name='chart_view'),
-    # path('request-tests/', views.request_tests, name='request_tests'),
-    # path('d/testresults/', views.waitinglist, name='testresults'),
-
-    # path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
-    
-    
-
-
-    #path('doctors/individual', views.individual_record, name='individual_record'),
-    #path('doctors/all', views.all_record, name='all_record'),
-
-
-   
-    
-
-    path('ae/', views.ae, name='ae'),
 
     ########################### Labs URLS ####################################
 
     path('l/home', views.laboratory, name='laboratory'),
     path('l/test_entry', views.lab_test_entry, name='lab_test_entry'),
+    path('l/internal_logs', views.lab_internal_logs, name='lab_internal_logs'),
+    path('lab/ivf-progress/', views.lab_view_ivf_progress, name='lab_ivf_progress'),
+    path('lab/activity-report/', views.lab_activity_report, name='lab_activity_report'),
+    
     path('lab/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
     path('l/test_details/<int:patient_id>/', views.test_details, name='test_details'),
-    path('l/internal_logs', views.lab_internal_logs, name='lab_internal_logs'),
     path('ajax/lab-log-detail/', views.lab_log_detail_ajax, name='lab_log_detail_ajax'),
     path('labtests/submit/<int:patient_id>/', views.submit_test_results, name='submit_test_results'),
-    path('lab/activity-report/', views.lab_activity_report, name='lab_activity_report'),
-    path('lab/ivf-progress/', views.lab_view_ivf_progress, name='lab_ivf_progress'),
 
     ########################### End Lab URLS ####################################
 
-    path('p/home', views.pharmacy, name='pharmacy'),
-    path('p/review', views.review_prescriptions, name='review_prescriptions'),
-    path('p/medication', views.dispense_medications, name='dispense_medications'),
-    path('p/inventory', views.manage_inventory, name='manage_inventory'),
-    path('p/reorder_alerts', views.reorder_alerts, name='reorder_alerts'),
-
     ########################### ACCTS URLS ####################################
 
-    path('a/home', views.accounts, name='accounts'),
+    path('a/home', accts.accounts, name='accounts'),
     path('a/payment_tracker', accts.payment_tracker_view, name="patient_payment_tracker"),
     path('api/patients/', accts.patient_list_api, name='patient_list_api'),
     path('api/patients/<int:patient_id>/financial-details/', accts.get_patient_financial_details, name='patient_financial_details'),
@@ -120,17 +96,43 @@ urlpatterns = [
 
     path('hr/home', views.hr, name='hr'),
     path('hr/staff-profiles', views.staff_profiles, name='staff_profiles'),
+    path('hr/attendance-shifts', views.staff_attendance_list, name='staff_attendance_shift'),
+    path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
+    path('hr/report', views.hr_act_report, name='hr_report'),
+
     path('staff/<int:staff_id>/edit/', views.edit_staff_profile, name='edit_staff_profile'),
     path('staff/<int:staff_id>/change-password/', views.change_staff_password, name='change_staff_password'),
-    path('attendance-shifts/', views.staff_attendance_list, name='staff_attendance_shift'),
     path('attendance/record/', views.record_attendance_view, name='record_attendance'),
     path('shift/assign/', views.assign_shift_view, name='assign_shift'),
-    path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
-    path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),
-    path('report', views.hr_act_report, name='hr_report'),
     path('activity-details/<str:activity_type>/<int:id>/', views.get_hr_activity_detail, name='get_hr_activity_detail'),
+    # path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),
 
     ########################### End HR URLS ####################################
+
+    # path('d/monitoring/', views.monitoring, name='monitoring'),
+    # path('d/home', views.chart_view, name='chart_view'),
+    # path('request-tests/', views.request_tests, name='request_tests'),
+    # path('d/testresults/', views.waitinglist, name='testresults'),
+
+    # path('doctors/filtered-records/', views.filter_activities, name='filtered_records'),
+    
+    
+
+
+    #path('doctors/individual', views.individual_record, name='individual_record'),
+    #path('doctors/all', views.all_record, name='all_record'),
+
+
+   
+    
+
+    path('ae/', views.ae, name='ae'),
+
+    path('p/home', views.pharmacy, name='pharmacy'),
+    path('p/review', views.review_prescriptions, name='review_prescriptions'),
+    path('p/medication', views.dispense_medications, name='dispense_medications'),
+    path('p/inventory', views.manage_inventory, name='manage_inventory'),
+    path('p/reorder_alerts', views.reorder_alerts, name='reorder_alerts'),
 
     path('inventory/', views.inventory, name='inventory'),
 

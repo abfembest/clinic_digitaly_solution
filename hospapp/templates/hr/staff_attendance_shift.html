@@ -31,9 +31,9 @@
                 <select id="global_staff_select" class="form-control select2bs4" style="width: 100%;">
                   <option value="" disabled selected>Choose a staff member...</option>
                   {% for staff in staff_users %}
-                    <option value="{{ staff.id }}" data-role="{{ staff.staff.role|title }}">
-                      {{ staff.get_full_name }} - {{ staff.staff.role|title }}
-                    </option>
+                      <option value="{{ staff.id }}" data-role="{{ staff.role|title }}">
+                          {{ staff.user.get_full_name }} - {{ staff.role|title }}
+                      </option>
                   {% endfor %}
                 </select>
               </div>
@@ -173,10 +173,10 @@
                       </label>
                       <select id="shift_select" class="form-control select2bs4" name="shift" style="width: 100%;">
                         <option value="" disabled selected>Select a shift...</option>
-                        {% for shift in shifts %}
-                          <option value="{{ shift.id }}" {% if request.POST.shift == shift.id|stringformat:"s" %}selected{% endif %}>
-                            {{ shift.name }}
-                          </option>
+                        {% for value, label in shifts %}
+                            <option value="{{ value }}" {% if request.POST.shift == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
                         {% endfor %}
                       </select>
                     </div>
@@ -239,20 +239,20 @@
                           </td>
                           <td>{{ shift.date|date:"Y-m-d" }}</td>
                           <td>
-                            {% if shift.shift.name == "Morning" %}
-                              <span class="badge badge-info">{{ shift.shift.name }}</span>
-                            {% elif shift.shift.name == "Afternoon" %}
-                              <span class="badge badge-warning">{{ shift.shift.name }}</span>
+                            {% if shift.shift == "Morning" %}
+                              <span class="badge badge-info">{{ shift.shift }}</span>
+                            {% elif shift.shift == "Afternoon" %}
+                              <span class="badge badge-warning">{{ shift.shift }}</span>
                             {% else %}
-                              <span class="badge badge-dark">{{ shift.shift.name }}</span>
+                              <span class="badge badge-dark">{{ shift.shift }}</span>
                             {% endif %}
                           </td>
                           <td>
-                            {% if shift.shift.name == "Morning" %}
+                            {% if shift.shift == "Morning" %}
                               <small class="text-muted">08:00 - 16:00</small>
-                            {% elif shift.shift.name == "Afternoon" %}
+                            {% elif shift.shift == "Afternoon" %}
                               <small class="text-muted">16:00 - 00:00</small>
-                            {% elif shift.shift.name == "Night" %}
+                            {% elif shift.shift == "Night" %}
                               <small class="text-muted">00:00 - 08:00</small>
                             {% else %}
                               <small class="text-muted">Not specified</small>
