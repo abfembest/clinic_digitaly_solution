@@ -205,7 +205,7 @@ def nurses(request):
     my_shift_today = ShiftAssignment.objects.filter(
         staff=user,
         date=today
-    ).select_related('shift').first()
+    ).first()
     
     # ✅ Pending handovers (received by current nurse)
     pending_handovers = HandoverLog.objects.filter(
