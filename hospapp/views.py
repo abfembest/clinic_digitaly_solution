@@ -549,32 +549,32 @@ def update_patient_status(request):
     return redirect('nursing_actions')
 
 
-@csrf_exempt
-@login_required(login_url='home')
-def refer_patient(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        department_id = request.POST.get('department') #
-        notes = request.POST.get('notes') #
-        priority = request.POST.get('priority') #
+# @csrf_exempt
+# @login_required(login_url='home')
+# def refer_patient(request):
+#     if request.method == 'POST':
+#         patient_id = request.POST.get('patient_id')
+#         department_id = request.POST.get('department') #
+#         notes = request.POST.get('notes') #
+#         priority = request.POST.get('priority') #
         
-        patient = get_object_or_404(Patient, id=patient_id)
-        department = get_object_or_404(Department, id=department_id)
+#         patient = get_object_or_404(Patient, id=patient_id)
+#         department = get_object_or_404(Department, id=department_id)
 
-        # Prepend priority to notes since there's no dedicated field in the model
-        referral_notes = f"PRIORITY: {priority.upper()}\n\n{notes}"
+#         # Prepend priority to notes since there's no dedicated field in the model
+#         referral_notes = f"PRIORITY: {priority.upper()}\n\n{notes}"
 
-        Referral.objects.create(
-            patient=patient,
-            department=department,
-            priority=priority, #
-            notes=referral_notes #
-        )
+#         Referral.objects.create(
+#             patient=patient,
+#             department=department,
+#             priority=priority, #
+#             notes=referral_notes #
+#         )
 
-        messages.success(request, f"{patient.full_name} has been referred to {department.name}.")
-        return redirect('nursing_actions')
+#         messages.success(request, f"{patient.full_name} has been referred to {department.name}.")
+#         return redirect('nursing_actions')
 
-    return redirect('nursing_actions')
+#     return redirect('nursing_actions')
 
 @csrf_exempt
 @login_required(login_url='home')
@@ -3565,6 +3565,333 @@ def get_hr_activity_detail(request, activity_type, id):
         return JsonResponse({'error': str(e)}, status=500)
 
 ''' ############################################################################################################################ End HR View ############################################################################################################################ '''
+
+''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
+
+@login_required(login_url='home')
+def receptionist(request):
+    today = localdate()
+    start_of_week = today - timedelta(days=today.weekday())
+
+    current_receptionist = request.user
+
+    recent_activity = Patient.objects.filter(
+        registered_by=current_receptionist
+    ).order_by('-date_registered')[:5]
+
+    new_patients_today = Patient.objects.filter(
+        date_registered__date=today,
+        registered_by=current_receptionist
+    ).count()
+
+    active_patients = Patient.objects.count()
+
+    appointments_today = Appointment.objects.filter(
+        scheduled_time__date=today,
+        scheduled_by=current_receptionist
+    ).count()
+
+    admissions_this_week = Admission.objects.filter(
+        admitted_on__range=[start_of_week, today],
+        admitted_by=current_receptionist
+    ).count()
+
+    queue = Appointment.objects.filter(
+        scheduled_time__date=today,
+        scheduled_by=current_receptionist
+    ).order_by('scheduled_time')[:5]
+
+    context = {
+        'new_patients_today': new_patients_today,
+        'active_patients': active_patients,
+        'appointments_today': appointments_today,
+        'admissions_this_week': admissions_this_week,
+        'recent_activity': recent_activity,
+        'queue': queue,
+    }
+    return render(request, 'receptionist/index.html', context)
+
+@login_required(login_url='home')
+def register_patient(request):
+    patients = Patient.objects.all().order_by('-date_registered')
+    departments = Department.objects.all()
+
+    doctors = Staff.objects.filter(role='doctor')
+    nurses = Staff.objects.filter(role='nurse')
+
+    return render(request, 'receptionist/register.html', {
+        'patients': patients,
+        'department': departments,
+        'doctors': doctors,
+        'nurses': nurses,
+    })
+
+@login_required(login_url='home')
+def receptionist_activity_report(request):
+    user = request.user
+    
+    patients_registered = Patient.objects.filter(registered_by=user).order_by('-date_registered')
+    
+    admissions_made = Admission.objects.filter(admitted_by=user).order_by('-admission_date')
+
+    appointments_scheduled = Appointment.objects.filter(patient__registered_by=user).order_by('-scheduled_time')
+    
+    referrals_made = Referral.objects.filter(patient__registered_by=user).order_by('-created_at')
+
+    # Aggregated data
+    total_patients_registered = patients_registered.count()
+    total_admissions_made = admissions_made.count()
+    total_appointments_scheduled = appointments_scheduled.count()
+    total_referrals_made = referrals_made.count()
+
+    context = {
+        'patients_registered': patients_registered,
+        'admissions_made': admissions_made,
+        'appointments_scheduled': appointments_scheduled,
+        'referrals_made': referrals_made,
+        'total_patients_registered': total_patients_registered,
+        'total_admissions_made': total_admissions_made,
+        'total_appointments_scheduled': total_appointments_scheduled,
+        'total_referrals_made': total_referrals_made,
+    }
+    return render(request, 'receptionist/activity_report.html', context)
+
+@csrf_exempt
+def register_p(request):
+    if request.method == 'POST':
+        data = request.POST
+        photo = request.FILES.get('photo')
+
+        # Basic required fields
+        full_name = data.get('full_name')
+        date_of_birth = data.get('date_of_birth')
+        gender = data.get('gender')
+        phone = data.get('phone')
+        marital_status = data.get('marital_status')
+        address = data.get('address')
+        nationality = data.get('nationality')
+        next_of_kin_name = data.get('next_of_kin_name')
+        next_of_kin_phone = data.get('next_of_kin_phone')
+        next_of_kin_relationship = data.get('next_of_kin_relationship')
+
+        if not all([full_name, date_of_birth, gender, phone, marital_status, address,
+                    nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
+            messages.error(request, "Please fill all required fields marked with *.")
+            return redirect('register_patient')
+
+        # Check for duplicates
+        if Patient.objects.filter(full_name=full_name, date_of_birth=date_of_birth).exists():
+            messages.warning(request, "A patient with this name and date of birth already exists.")
+            return redirect('register_patient')
+
+        try:
+            patient = Patient.objects.create(
+                full_name=full_name,
+                date_of_birth=date_of_birth,
+                gender=gender,
+                phone=phone,
+                email=data.get('email'),
+                marital_status=marital_status,
+                address=address,
+                nationality=nationality,
+                state_of_origin=data.get('state_of_origin'),
+                registered_by=request.user,
+                id_type=data.get('id_type'),
+                id_number=data.get('id_number'),
+                photo=photo,
+                blood_group=data.get('blood_group'),
+                referred_by=data.get('referred_by'),
+                notes=data.get('notes'),
+                first_time=data.get('first_time'),
+
+                # Next of kin
+                next_of_kin_name=next_of_kin_name,
+                next_of_kin_phone=next_of_kin_phone,
+                next_of_kin_relationship=next_of_kin_relationship,
+                next_of_kin_email=data.get('next_of_kin_email'),
+                next_of_kin_address=data.get('next_of_kin_address'),
+            )
+
+            messages.success(request, f"Patient '{patient.full_name}' registered successfully.")
+            return redirect('register_patient')
+
+        except Exception as e:
+            messages.error(request, f"An error occurred during registration: {e}")
+            return redirect('register_patient')
+
+    return redirect('register_patient')
+
+@csrf_exempt
+def admit_patient(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        reason = request.POST.get('admission_reason')
+        attending_id = request.POST.get('attending')
+
+        if not all([patient_id, reason, attending_id]):
+            messages.error(request, "All fields are required.")
+            return redirect('register_patient')
+
+        try:
+            patient = Patient.objects.get(id=patient_id)
+        except Patient.DoesNotExist:
+            messages.error(request, "Selected patient not found.")
+            return redirect('register_patient')
+
+        # Check for existing admission
+        if Admission.objects.filter(patient=patient, status='Admitted').exists():
+            messages.warning(request, f"{patient.full_name} is already admitted and not yet discharged.")
+            return redirect('register_patient')
+
+        try:
+            attending_profile = Staff.objects.get(user__id=attending_id).user  # Access the actual User object
+        except Staff.DoesNotExist:
+            messages.error(request, "Attending staff not found.")
+            return redirect('register_patient')
+
+        # Update patient status
+        patient.is_inpatient = True
+        patient.status = 'stable'
+        patient.notes = reason
+        patient.save()
+
+        # Create admission
+        Admission.objects.create(
+            patient=patient,
+            doctor_assigned=attending_profile,
+            admitted_by=request.user,
+            status='Admitted'
+        )
+
+        messages.success(request, f"{patient.full_name} has been admitted successfully.")
+        return redirect('register_patient')
+
+    return redirect('register_patient')
+
+@csrf_exempt
+def update_patient_info(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        
+        if not patient_id:
+            messages.error(request, "Patient ID is required.")
+            return redirect('register_patient')
+            
+        try:
+            patient = Patient.objects.get(id=patient_id)
+            
+            # Update basic information
+            patient.full_name = request.POST.get('full_name', patient.full_name)
+            
+            # Handle date parsing - CORRECTED: use 'date_of_birth' not 'dob'
+            dob = request.POST.get('date_of_birth')
+            if dob:
+                try:
+                    patient.date_of_birth = parse_date(dob)
+                except:
+                    logger.warning(f"Invalid date format: {dob}")
+            
+            patient.gender = request.POST.get('gender', patient.gender)
+            patient.phone = request.POST.get('phone', patient.phone)
+            patient.email = request.POST.get('email') or patient.email
+            patient.marital_status = request.POST.get('marital_status') or patient.marital_status
+            patient.address = request.POST.get('address', patient.address)
+            patient.nationality = request.POST.get('nationality', patient.nationality)
+            patient.state_of_origin = request.POST.get('state_of_origin') or patient.state_of_origin
+            patient.id_type = request.POST.get('id_type') or patient.id_type
+            patient.id_number = request.POST.get('id_number') or patient.id_number
+            
+            # Handle photo upload if present
+            if 'photo' in request.FILES and request.FILES['photo']:
+                patient.photo = request.FILES['photo']
+            
+            # Update additional medical info
+            patient.blood_group = request.POST.get('blood_group') or patient.blood_group
+            patient.first_time = request.POST.get('first_time') or patient.first_time
+            patient.referred_by = request.POST.get('referred_by') or patient.referred_by
+            patient.notes = request.POST.get('notes') or patient.notes
+            
+            # Update Next of Kin information
+            patient.next_of_kin_name = request.POST.get('next_of_kin_name', patient.next_of_kin_name)
+            patient.next_of_kin_phone = request.POST.get('next_of_kin_phone', patient.next_of_kin_phone)
+            patient.next_of_kin_relationship = request.POST.get('next_of_kin_relationship') or patient.next_of_kin_relationship
+            patient.next_of_kin_email = request.POST.get('next_of_kin_email') or patient.next_of_kin_email
+            patient.next_of_kin_address = request.POST.get('next_of_kin_address') or patient.next_of_kin_address
+            
+            patient.save()
+            
+            messages.success(request, f"Patient {patient.full_name}'s information updated successfully.")
+            
+        except Patient.DoesNotExist:
+            messages.error(request, "Patient not found.")
+        except Exception as e:
+            messages.error(request, f"An error occurred while updating patient information: {str(e)}")
+            logger.error(f"Error updating patient {patient_id}: {str(e)}")
+            
+        return redirect('register_patient')
+    
+    return redirect('register_patient')
+
+@csrf_exempt
+def schedule_appointment(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        department_id = request.POST.get('department')
+        scheduled_time = request.POST.get('scheduled_time')
+
+        try:
+            patient = Patient.objects.get(id=patient_id)
+            department = Department.objects.get(id=department_id)
+
+            existing = Appointment.objects.filter(patient=patient, department=department).first()
+
+            if existing:
+                existing.scheduled_time = scheduled_time
+                existing.save()
+                messages.success(request, "Appointment rescheduled successfully.")
+            else:
+                Appointment.objects.create(
+                    patient=patient,
+                    department=department,
+                    scheduled_time=scheduled_time,
+                    scheduled_by=request.user
+                )
+                messages.success(request, "Appointment scheduled successfully.")
+        
+        except Patient.DoesNotExist:
+            messages.error(request, "Patient not found.")
+        except Department.DoesNotExist:
+            messages.error(request, "Selected department not found.")
+
+        return redirect('register_patient')
+
+@csrf_exempt
+def refer_patient(request):
+    if request.method == 'POST':
+        patient_id = request.POST.get('patient_id')
+        department_id = request.POST.get('department')
+        notes = request.POST.get('notes')
+
+        try:
+            patient = Patient.objects.get(id=patient_id)
+            department = Department.objects.get(id=department_id)
+
+            Referral.objects.create(
+                patient=patient,
+                department=department,
+                notes=notes,
+                referred_by=request.user
+            )
+            messages.success(request, "Patient referred successfully.")
+        except Patient.DoesNotExist:
+            messages.error(request, "Patient not found.")
+        except Department.DoesNotExist:
+            messages.error(request, "Department not found.")
+        
+        referer = request.META.get('HTTP_REFERER', '/')
+        return redirect(referer)
+    
+''' ############################################################################################################################ End Receptionist View ############################################################################################################################ '''
 
 
 #notification icon 
@@ -7127,333 +7454,6 @@ def _export_receptionist_report_pdf(
     doc.build(elements)
     buffer.seek(0)
     return HttpResponse(buffer, content_type='application/pdf')
-
-''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
-
-@login_required(login_url='home')
-def receptionist(request):
-    today = localdate()
-    start_of_week = today - timedelta(days=today.weekday())
-
-    current_receptionist = request.user
-
-    recent_activity = Patient.objects.filter(
-        registered_by=current_receptionist
-    ).order_by('-date_registered')[:5]
-
-    new_patients_today = Patient.objects.filter(
-        date_registered__date=today,
-        registered_by=current_receptionist
-    ).count()
-
-    active_patients = Patient.objects.count()
-
-    appointments_today = Appointment.objects.filter(
-        scheduled_time__date=today,
-        scheduled_by=current_receptionist
-    ).count()
-
-    admissions_this_week = Admission.objects.filter(
-        admitted_on__range=[start_of_week, today],
-        admitted_by=current_receptionist
-    ).count()
-
-    queue = Appointment.objects.filter(
-        scheduled_time__date=today,
-        scheduled_by=current_receptionist
-    ).order_by('scheduled_time')[:5]
-
-    context = {
-        'new_patients_today': new_patients_today,
-        'active_patients': active_patients,
-        'appointments_today': appointments_today,
-        'admissions_this_week': admissions_this_week,
-        'recent_activity': recent_activity,
-        'queue': queue,
-    }
-    return render(request, 'receptionist/index.html', context)
-
-@login_required(login_url='home')
-def register_patient(request):
-    patients = Patient.objects.all().order_by('-date_registered')
-    departments = Department.objects.all()
-
-    doctors = Staff.objects.filter(role='doctor')
-    nurses = Staff.objects.filter(role='nurse')
-
-    return render(request, 'receptionist/register.html', {
-        'patients': patients,
-        'department': departments,
-        'doctors': doctors,
-        'nurses': nurses,
-    })
-
-@csrf_exempt
-def register_p(request):
-    if request.method == 'POST':
-        data = request.POST
-        photo = request.FILES.get('photo')
-
-        # Basic required fields
-        full_name = data.get('full_name')
-        date_of_birth = data.get('date_of_birth')
-        gender = data.get('gender')
-        phone = data.get('phone')
-        marital_status = data.get('marital_status')
-        address = data.get('address')
-        nationality = data.get('nationality')
-        next_of_kin_name = data.get('next_of_kin_name')
-        next_of_kin_phone = data.get('next_of_kin_phone')
-        next_of_kin_relationship = data.get('next_of_kin_relationship')
-
-        if not all([full_name, date_of_birth, gender, phone, marital_status, address,
-                    nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
-            messages.error(request, "Please fill all required fields marked with *.")
-            return redirect('register_patient')
-
-        # Check for duplicates
-        if Patient.objects.filter(full_name=full_name, date_of_birth=date_of_birth).exists():
-            messages.warning(request, "A patient with this name and date of birth already exists.")
-            return redirect('register_patient')
-
-        try:
-            patient = Patient.objects.create(
-                full_name=full_name,
-                date_of_birth=date_of_birth,
-                gender=gender,
-                phone=phone,
-                email=data.get('email'),
-                marital_status=marital_status,
-                address=address,
-                nationality=nationality,
-                state_of_origin=data.get('state_of_origin'),
-                registered_by=request.user,
-                id_type=data.get('id_type'),
-                id_number=data.get('id_number'),
-                photo=photo,
-                blood_group=data.get('blood_group'),
-                referred_by=data.get('referred_by'),
-                notes=data.get('notes'),
-                first_time=data.get('first_time'),
-
-                # Next of kin
-                next_of_kin_name=next_of_kin_name,
-                next_of_kin_phone=next_of_kin_phone,
-                next_of_kin_relationship=next_of_kin_relationship,
-                next_of_kin_email=data.get('next_of_kin_email'),
-                next_of_kin_address=data.get('next_of_kin_address'),
-            )
-
-            messages.success(request, f"Patient '{patient.full_name}' registered successfully.")
-            return redirect('register_patient')
-
-        except Exception as e:
-            messages.error(request, f"An error occurred during registration: {e}")
-            return redirect('register_patient')
-
-    return redirect('register_patient')
-
-def admit_patient(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        reason = request.POST.get('admission_reason')
-        attending_id = request.POST.get('attending')
-
-        if not all([patient_id, reason, attending_id]):
-            messages.error(request, "All fields are required.")
-            return redirect('register_patient')
-
-        try:
-            patient = Patient.objects.get(id=patient_id)
-        except Patient.DoesNotExist:
-            messages.error(request, "Selected patient not found.")
-            return redirect('register_patient')
-
-        # Check for existing admission
-        if Admission.objects.filter(patient=patient, status='Admitted').exists():
-            messages.warning(request, f"{patient.full_name} is already admitted and not yet discharged.")
-            return redirect('register_patient')
-
-        try:
-            attending_profile = Staff.objects.get(user__id=attending_id).user  # Access the actual User object
-        except Staff.DoesNotExist:
-            messages.error(request, "Attending staff not found.")
-            return redirect('register_patient')
-
-        # Update patient status
-        patient.is_inpatient = True
-        patient.status = 'stable'
-        patient.notes = reason
-        patient.save()
-
-        # Create admission
-        Admission.objects.create(
-            patient=patient,
-            doctor_assigned=attending_profile,
-            admitted_by=request.user,
-            status='Admitted'
-        )
-
-        messages.success(request, f"{patient.full_name} has been admitted successfully.")
-        return redirect('register_patient')
-
-    return redirect('register_patient')
-
-@csrf_exempt
-def update_patient_info(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        
-        if not patient_id:
-            messages.error(request, "Patient ID is required.")
-            return redirect('register_patient')
-            
-        try:
-            patient = Patient.objects.get(id=patient_id)
-            
-            # Update basic information
-            patient.full_name = request.POST.get('full_name', patient.full_name)
-            
-            # Handle date parsing - CORRECTED: use 'date_of_birth' not 'dob'
-            dob = request.POST.get('date_of_birth')
-            if dob:
-                try:
-                    patient.date_of_birth = parse_date(dob)
-                except:
-                    logger.warning(f"Invalid date format: {dob}")
-            
-            patient.gender = request.POST.get('gender', patient.gender)
-            patient.phone = request.POST.get('phone', patient.phone)
-            patient.email = request.POST.get('email') or patient.email
-            patient.marital_status = request.POST.get('marital_status') or patient.marital_status
-            patient.address = request.POST.get('address', patient.address)
-            patient.nationality = request.POST.get('nationality', patient.nationality)
-            patient.state_of_origin = request.POST.get('state_of_origin') or patient.state_of_origin
-            patient.id_type = request.POST.get('id_type') or patient.id_type
-            patient.id_number = request.POST.get('id_number') or patient.id_number
-            
-            # Handle photo upload if present
-            if 'photo' in request.FILES and request.FILES['photo']:
-                patient.photo = request.FILES['photo']
-            
-            # Update additional medical info
-            patient.blood_group = request.POST.get('blood_group') or patient.blood_group
-            patient.first_time = request.POST.get('first_time') or patient.first_time
-            patient.referred_by = request.POST.get('referred_by') or patient.referred_by
-            patient.notes = request.POST.get('notes') or patient.notes
-            
-            # Update Next of Kin information
-            patient.next_of_kin_name = request.POST.get('next_of_kin_name', patient.next_of_kin_name)
-            patient.next_of_kin_phone = request.POST.get('next_of_kin_phone', patient.next_of_kin_phone)
-            patient.next_of_kin_relationship = request.POST.get('next_of_kin_relationship') or patient.next_of_kin_relationship
-            patient.next_of_kin_email = request.POST.get('next_of_kin_email') or patient.next_of_kin_email
-            patient.next_of_kin_address = request.POST.get('next_of_kin_address') or patient.next_of_kin_address
-            
-            patient.save()
-            
-            messages.success(request, f"Patient {patient.full_name}'s information updated successfully.")
-            
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-        except Exception as e:
-            messages.error(request, f"An error occurred while updating patient information: {str(e)}")
-            logger.error(f"Error updating patient {patient_id}: {str(e)}")
-            
-        return redirect('register_patient')
-    
-    return redirect('register_patient')
-
-
-
-@csrf_exempt
-def schedule_appointment(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        department_id = request.POST.get('department')
-        scheduled_time = request.POST.get('scheduled_time')
-
-        try:
-            patient = Patient.objects.get(id=patient_id)
-            department = Department.objects.get(id=department_id)
-
-            existing = Appointment.objects.filter(patient=patient, department=department).first()
-
-            if existing:
-                existing.scheduled_time = scheduled_time
-                existing.save()
-                messages.success(request, "Appointment rescheduled successfully.")
-            else:
-                Appointment.objects.create(
-                    patient=patient,
-                    department=department,
-                    scheduled_time=scheduled_time,
-                    scheduled_by=request.user
-                )
-                messages.success(request, "Appointment scheduled successfully.")
-        
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-        except Department.DoesNotExist:
-            messages.error(request, "Selected department not found.")
-
-        return redirect('register_patient')
-
-@csrf_exempt
-def refer_patient(request):
-    if request.method == 'POST':
-        patient_id = request.POST.get('patient_id')
-        department_id = request.POST.get('department')
-        notes = request.POST.get('notes')
-
-        try:
-            patient = Patient.objects.get(id=patient_id)
-            department = Department.objects.get(id=department_id)
-
-            Referral.objects.create(
-                patient=patient,
-                department=department,
-                notes=notes,
-                referred_by=request.user
-            )
-            messages.success(request, "Patient referred successfully.")
-        except Patient.DoesNotExist:
-            messages.error(request, "Patient not found.")
-        except Department.DoesNotExist:
-            messages.error(request, "Department not found.")
-        
-        referer = request.META.get('HTTP_REFERER', '/')
-        return redirect(referer)
-    
-def receptionist_activity_report(request):
-    user = request.user
-    
-    patients_registered = Patient.objects.filter(registered_by=user).order_by('-date_registered')
-    
-    admissions_made = Admission.objects.filter(admitted_by=user).order_by('-admission_date')
-
-    appointments_scheduled = Appointment.objects.filter(patient__registered_by=user).order_by('-scheduled_time')
-    
-    referrals_made = Referral.objects.filter(patient__registered_by=user).order_by('-created_at')
-
-    # Aggregated data
-    total_patients_registered = patients_registered.count()
-    total_admissions_made = admissions_made.count()
-    total_appointments_scheduled = appointments_scheduled.count()
-    total_referrals_made = referrals_made.count()
-
-    context = {
-        'patients_registered': patients_registered,
-        'admissions_made': admissions_made,
-        'appointments_scheduled': appointments_scheduled,
-        'referrals_made': referrals_made,
-        'total_patients_registered': total_patients_registered,
-        'total_admissions_made': total_admissions_made,
-        'total_appointments_scheduled': total_appointments_scheduled,
-        'total_referrals_made': total_referrals_made,
-    }
-    return render(request, 'receptionist/activity_report.html', context)
-    
-''' ############################################################################################################################ End Receptionist View ############################################################################################################################ '''
 
 #Charts views
 def chart_view(request):

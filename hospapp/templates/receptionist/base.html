@@ -16,6 +16,9 @@
     <link href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
     <!-- Google Font: Source Sans Pro -->
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+
+    <link href="{% static 'plugins/select2/css/select2.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}" rel="stylesheet" />
 </head>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -162,11 +165,20 @@
     <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <!-- AdminLTE App -->
     <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
-    
+    <script src="{% static 'plugins/select2/js/select2.full.min.js' %}" async></script>
     <script>
         $(document).ready(function () {
             // Initialize toast notifications
             $('.toast').toast('show');
+
+            // Initialize Select2 for all elements with class 'select2'
+            // Ensure this is run after Select2 JS is loaded
+            $('.select2').select2(); // Basic Select2 initialization
+            
+            // If you want the Bootstrap 4 theme
+            $('.select2bs4').select2({
+                theme: 'bootstrap4'
+            });
         });
     </script>
 </body>

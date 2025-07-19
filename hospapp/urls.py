@@ -105,9 +105,22 @@ urlpatterns = [
     path('attendance/record/', views.record_attendance_view, name='record_attendance'),
     path('shift/assign/', views.assign_shift_view, name='assign_shift'),
     path('activity-details/<str:activity_type>/<int:id>/', views.get_hr_activity_detail, name='get_hr_activity_detail'),
-    # path('hr/staff_certifications', views.staff_certifications, name='staff_certifications'),
 
     ########################### End HR URLS ####################################
+
+    ########################### Receptionist URLS #################################
+    path('r/home', views.receptionist, name='receptionist'),
+    path('r/new_patient', views.register_patient, name='register_patient'),
+    path('r/my-activities/', views.receptionist_activity_report, name='receptionist_activity_report'),
+
+    path('receptionist/register/submit', views.register_p, name='register_p'),
+    path('receptionist/admit', views.admit_patient, name='admit_patient'),
+    path('receptionist/update', views.update_patient_info, name='update_patient_info'),
+    path('receptionist/schedule', views.schedule_appointment, name='schedule_appointment'),
+    path('receptionist/refer', views.refer_patient, name='refer_patient'),
+
+    path('ajax/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
+    ########################### Receptionist URLS #################################
 
     # path('d/monitoring/', views.monitoring, name='monitoring'),
     # path('d/home', views.chart_view, name='chart_view'),
@@ -174,22 +187,6 @@ urlpatterns = [
     
     path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
 
-
-    ########################### Receptionist URLS #################################
-    path('r/home', views.receptionist, name='receptionist'),
-    path('r/new_patient', views.register_patient, name='register_patient'),
-
-    path('receptionist/register/submit', views.register_p, name='register_p'),
-    path('receptionist/admit', views.admit_patient, name='admit_patient'),
-
-    path('receptionist/update', views.update_patient_info, name='update_patient_info'),
-    path('receptionist/schedule', views.schedule_appointment, name='schedule_appointment'),
-    path('receptionist/refer', views.refer_patient, name='refer_patient'),
-
-    path('my-activities/', views.receptionist_activity_report, name='receptionist_activity_report'),
-    
-    path('ajax/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
-    ########################### Receptionist URLS #################################
 
     # path('ajax/get-available-beds/', views.get_available_beds, name='get_available_beds'),
     
