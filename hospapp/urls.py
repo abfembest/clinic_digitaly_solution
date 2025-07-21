@@ -14,7 +14,8 @@ urlpatterns = [
     path('n/home', views.nurses, name='nurse'),
     path('n/vitals', views.vitals, name='vitals'),
     path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
-    path('nurse/activity-report/', views.nurse_activity_report, name='nurse_activity_report'),
+    path('nurse/reports/', views.nurse_reports_dashboard, name='nurse_activity_report'),
+    path('api/generate-nurse-report/', views.generate_nurse_report, name='generate_nurse_report'),
     path('nurse/ivf-progress/', views.nurse_view_ivf_progress, name='nurse_ivf_progress'),
 
     path('n/record_vitals', views.record_vitals, name='record_vitals'),

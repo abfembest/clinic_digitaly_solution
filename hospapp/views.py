@@ -318,59 +318,186 @@ def nursing_actions(request):
     }
     return render(request, 'nurses/nursing_actions.html', context)
 
-@csrf_exempt
 @login_required(login_url='home')
-def nurse_activity_report(request):
-    nurse_user = request.user
+def nurse_reports_dashboard(request):
+    # Fetch all staff who are nurses or doctors for the dropdown
+    staff_users = Staff.objects.filter(Q(role='nurse') | Q(role='doctor')).select_related('user').order_by('user__first_name')
     
-    today = timezone.localdate()
-
-    total_vitals_recorded = Vitals.objects.filter(recorded_by=nurse_user).count()
-    vitals_today = Vitals.objects.filter(recorded_by=nurse_user, recorded_at__date=today).count()
-
-    nursing_notes_added = NursingNote.objects.filter(nurse=nurse_user).count()
-    nursing_notes_today = NursingNote.objects.filter(nurse=nurse_user, created_at__date=today).count()
-
-    admissions_processed = Admission.objects.filter(admitted_by=nurse_user).count()
-    admissions_today = Admission.objects.filter(admitted_by=nurse_user, admission_date=today).count()
-
-    discharges_processed = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').count()
-    discharges_today = Admission.objects.filter(discharged_by=nurse_user, status='Discharged', discharge_date=today).count()
-
-    referrals_made = Referral.objects.filter(referred_by=nurse_user).count()
-    referrals_today = Referral.objects.filter(referred_by=nurse_user, created_at__date=today).count()
-
-    handovers_logged = HandoverLog.objects.filter(author=nurse_user).count()
-    handovers_today = HandoverLog.objects.filter(author=nurse_user, timestamp__date=today).count()
-    
-    recent_vitals = Vitals.objects.filter(recorded_by=nurse_user).order_by('-recorded_at')[:5]
-    recent_nursing_notes = NursingNote.objects.filter(nurse=nurse_user).order_by('-created_at')[:5]
-    recent_admissions = Admission.objects.filter(admitted_by=nurse_user).order_by('-admission_date')[:5]
-    recent_discharges = Admission.objects.filter(discharged_by=nurse_user, status='Discharged').order_by('-discharge_date')[:5]
-    recent_referrals = Referral.objects.filter(referred_by=nurse_user).order_by('-created_at')[:5]
-    recent_handovers = HandoverLog.objects.filter(author=nurse_user).order_by('-timestamp')[:5]
+    users_data = [
+        {'id': staff.user.id, 'full_name': staff.user.get_full_name() or staff.user.username}
+        for staff in staff_users
+    ]
 
     context = {
-        'total_vitals_recorded': total_vitals_recorded,
-        'vitals_today': vitals_today,
-        'nursing_notes_added': nursing_notes_added,
-        'nursing_notes_today': nursing_notes_today,
-        'admissions_processed': admissions_processed,
-        'admissions_today': admissions_today,
-        'discharges_processed': discharges_processed,
-        'discharges_today': discharges_today,
-        'referrals_made': referrals_made,
-        'referrals_today': referrals_today,
-        'handovers_logged': handovers_logged,
-        'handovers_today': handovers_today,
-        'recent_vitals': recent_vitals,
-        'recent_nursing_notes': recent_nursing_notes,
-        'recent_admissions': recent_admissions,
-        'recent_discharges': recent_discharges,
-        'recent_referrals': recent_referrals,
-        'recent_handovers': recent_handovers,
+        'users': users_data,
     }
     return render(request, 'nurses/reports.html', context)
+
+
+@login_required(login_url='home')
+def generate_nurse_report(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        report_type = data.get('report_type')
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+
+        # Convert date strings to datetime objects
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+
+        user_filter = Q(pk=user_id) if user_id else Q() # Filter by user if selected
+
+        report_data = []
+        headers = []
+
+        if report_type == 'patient_list':
+            patients = Patient.objects.filter(user_filter).order_by('-date_registered')
+            headers = ['Patient ID', 'Full Name', 'Gender', 'Date of Birth', 'Phone', 'Email', 'Registered By', 'Date Registered']
+            for patient in patients:
+                report_data.append({
+                    'patient_id': patient.patient_id,
+                    'full_name': patient.full_name,
+                    'gender': patient.gender,
+                    'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
+                    'phone': patient.phone,
+                    'email': patient.email or 'N/A',
+                    'registered_by': patient.registered_by.get_full_name() if patient.registered_by else 'N/A',
+                    'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+                })
+        
+        elif report_type == 'admitted_patients':
+            admissions = Admission.objects.filter(user_filter).order_by('-admission_date')
+            if start_date and end_date:
+                admissions = admissions.filter(admission_date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Admission Date', 'Admission Reason', 'Admitted By', 'Status']
+            for admission in admissions:
+                report_data.append({
+                    'patient_name': admission.patient.full_name,
+                    'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
+                    'admission_reason': admission.admission_reason or 'N/A',
+                    'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'N/A',
+                    'status': admission.status,
+                })
+
+        elif report_type == 'vitals':
+            vitals = Vitals.objects.filter(recorded_by__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user')).order_by('-recorded_at')
+            if start_date and end_date:
+                vitals = vitals.filter(recorded_at__date__range=[start_date, end_date])
+
+            headers = ['Patient', 'Temperature (°C)', 'Blood Pressure', 'Pulse', 'BMI', 'Recorded By', 'Recorded At']
+            for vital in vitals:
+                report_data.append({
+                    'patient_name': vital.patient.full_name,
+                    'temperature': vital.temperature or 'N/A',
+                    'blood_pressure': vital.blood_pressure or 'N/A',
+                    'pulse': vital.pulse or 'N/A',
+                    'bmi': f"{vital.bmi:.2f}" if vital.bmi else 'N/A',
+                    'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
+                    'recorded_at': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
+                })
+
+        elif report_type == 'nurse_notes':
+            nursing_notes = NursingNote.objects.filter(nurse__in=Staff.objects.filter(Q(role='nurse'), user_filter).values('user')).order_by('-created_at')
+            if start_date and end_date:
+                nursing_notes = nursing_notes.filter(created_at__date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Note Type', 'Notes', 'Nurse', 'Created At']
+            for note in nursing_notes:
+                report_data.append({
+                    'patient_name': note.patient.full_name,
+                    'note_type': note.get_note_type_display(),
+                    'notes': note.notes,
+                    'nurse_name': note.nurse.get_full_name() if note.nurse else 'N/A',
+                    'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
+                })
+
+        elif report_type == 'referrals':
+            referrals = Referral.objects.filter(referred_by__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user')).order_by('-created_at')
+            if start_date and end_date:
+                referrals = referrals.filter(created_at__date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Department', 'Notes', 'Referred By', 'Created At']
+            for referral in referrals:
+                report_data.append({
+                    'patient_name': referral.patient.full_name,
+                    'department': referral.department.name,
+                    'notes': referral.notes,
+                    'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'N/A',
+                    'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),
+                })
+
+        elif report_type == 'consultations':
+            consultations = Consultation.objects.filter(doctor__in=Staff.objects.filter(Q(role='doctor'), user_filter).values('user')).order_by('-created_at')
+            if start_date and end_date:
+                consultations = consultations.filter(created_at__date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Doctor', 'Symptoms', 'Diagnosis Summary', 'Advice', 'Consultation Date']
+            for consultation in consultations:
+                report_data.append({
+                    'patient_name': consultation.patient.full_name,
+                    'doctor_name': consultation.doctor.get_full_name() if consultation.doctor else 'N/A',
+                    'symptoms': consultation.symptoms,
+                    'diagnosis_summary': consultation.diagnosis_summary,
+                    'advice': consultation.advice,
+                    'created_at': consultation.created_at.strftime('%Y-%m-%d %H:%M'),
+                })
+        
+        elif report_type == 'prescriptions':
+            prescriptions = Prescription.objects.filter(prescribed_by__in=Staff.objects.filter(Q(role='doctor'), user_filter).values('user')).order_by('-created_at')
+            if start_date and end_date:
+                prescriptions = prescriptions.filter(created_at__date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Medication', 'Instructions', 'Prescribed By', 'Start Date', 'Prescription Date']
+            for prescription in prescriptions:
+                report_data.append({
+                    'patient_name': prescription.patient.full_name,
+                    'medication': prescription.medication,
+                    'instructions': prescription.instructions,
+                    'prescribed_by': prescription.prescribed_by.get_full_name() if prescription.prescribed_by else 'N/A',
+                    'start_date': prescription.start_date.strftime('%Y-%m-%d'),
+                    'created_at': prescription.created_at.strftime('%Y-%m-%d %H:%M'),
+                })
+
+        elif report_type == 'lab_tests':
+            lab_tests = LabTest.objects.filter(Q(requested_by__in=Staff.objects.filter(Q(role='doctor') | Q(role='nurse'), user_filter).values('user')) |
+                                                Q(performed_by__in=Staff.objects.filter(Q(role='lab'), user_filter).values('user'))).order_by('-requested_at')
+            if start_date and end_date:
+                lab_tests = lab_tests.filter(requested_at__date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Test Name', 'Category', 'Status', 'Result Value', 'Requested By', 'Performed By', 'Requested At']
+            for test in lab_tests:
+                report_data.append({
+                    'patient_name': test.patient.full_name,
+                    'test_name': test.test_name,
+                    'category': test.category.name if test.category else 'N/A',
+                    'status': test.get_status_display(),
+                    'result_value': test.result_value or 'N/A',
+                    'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
+                    'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
+                    'requested_at': test.requested_at.strftime('%Y-%m-%d %H:%M'),
+                })
+        
+        elif report_type == 'handovers':
+            handovers = HandoverLog.objects.filter(Q(author__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user')) |
+                                                    Q(recipient__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user'))).order_by('-timestamp')
+            if start_date and end_date:
+                handovers = handovers.filter(timestamp__date__range=[start_date, end_date])
+            
+            headers = ['Patient', 'Author', 'Recipient', 'Notes', 'Timestamp']
+            for handover in handovers:
+                report_data.append({
+                    'patient_name': handover.patient.full_name,
+                    'author': handover.author.get_full_name() if handover.author else 'N/A',
+                    'recipient': handover.recipient.get_full_name() if handover.recipient else 'N/A',
+                    'notes': handover.notes,
+                    'timestamp': handover.timestamp.strftime('%Y-%m-%d %H:%M'),
+                })
+
+        return JsonResponse({'headers': headers, 'data': report_data})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @login_required
 @require_http_methods(["GET"])

@@ -8,9 +8,10 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css"
+    rel="stylesheet">
 
-  {%include "nurses/nurses.css"%}
+{%include "nurses/nurses.css"%}
 
 <div class="generate-reports-page">
     <div class="container dashboard-container">
@@ -21,11 +22,10 @@
                         <div class="icon-wrapper mx-auto mb-2">
                             <i class="fas fa-chart-bar text-white fa-lg"></i>
                         </div>
-                        <h4 class="mb-2 text-dark">Nurse Reports Dashboard</h4>
-                     
+                        <h4 class="mb-2 text-dark">Reports Dashboard</h4>
 
-                        <!-- Generate Reports Button -->
-                        <button class="btn btn-lg generate-btn px-4 py-2" data-bs-toggle="modal" data-bs-target="#reportsModal">
+                        <button class="btn btn-lg generate-btn px-4 py-2" data-bs-toggle="modal"
+                            data-bs-target="#reportsModal">
                             <i class="fas fa-chart-line me-2"></i>
                             Generate Reports
                         </button>
@@ -36,7 +36,6 @@
     </div>
 
 
-    <!-- Reports Generation Modal -->
     <div class="modal fade" id="reportsModal" tabindex="-1" aria-labelledby="reportsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content">
@@ -50,21 +49,12 @@
                 <div class="modal-body p-3">
                     <form id="reportForm" novalidate>
                         <div class="mb-2">
-                            <label for="selectUser" class="form-label">User *</label>
-                            <select class="form-select form-select-sm" id="selectUser" required>
-                                <option value="">Search for a user...</option>
-                                <option value="dr_smith">Dr. Sarah Smith</option>
-                                <option value="nurse_johnson">Nurse Jennifer Johnson</option>
-                                <option value="dr_williams">Dr. Michael Williams</option>
-                                <option value="nurse_brown">Nurse Patricia Brown</option>
-                                <option value="admin_davis">Admin Lisa Davis</option>
-                                <option value="dr_garcia">Dr. Maria Garcia</option>
-                                <option value="nurse_wilson">Nurse Robert Wilson</option>
-                                <option value="dr_lee">Dr. James Lee</option>
-                                <option value="nurse_taylor">Nurse Amanda Taylor</option>
-                                <option value="admin_martinez">Admin Carlos Martinez</option>
-                                <option value="dr_anderson">Dr. Emily Anderson</option>
-                                <option value="nurse_thomas">Nurse David Thomas</option>
+                            <label for="selectUser" class="form-label">User (Nurses & Doctors)</label>
+                            <select class="form-select form-select-sm" id="selectUser">
+                                <option value="">Select a user (Optional)</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.full_name }}</option>
+                                {% endfor %}
                             </select>
                             <div class="invalid-feedback">Please select a user.</div>
                         </div>
@@ -78,6 +68,10 @@
                                 <option value="vitals">Vitals</option>
                                 <option value="nurse_notes">Nurse Notes</option>
                                 <option value="referrals">Referrals</option>
+                                <option value="consultations">Consultations</option>
+                                <option value="prescriptions">Prescriptions</option>
+                                <option value="lab_tests">Lab Tests</option>
+                                <option value="handovers">Handovers</option>
                             </select>
                             <div class="invalid-feedback">Please select a report type.</div>
                         </div>
@@ -85,11 +79,13 @@
                         <div class="mb-2">
                             <label class="form-label">Date Filter</label>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="dateFilter" id="allDates" value="all" checked>
+                                <input class="form-check-input" type="radio" name="dateFilter" id="allDates" value="all"
+                                    checked>
                                 <label class="form-check-label" for="allDates">All Dates</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="dateFilter" id="dateRange" value="range">
+                                <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
+                                    value="range">
                                 <label class="form-check-label" for="dateRange">Date Range</label>
                             </div>
                         </div>
@@ -121,9 +117,39 @@
         </div>
     </div>
 
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card card-primary" id="reportTableCard" style="display: none;">
+                <div class="card-header">
+                    <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover" id="reportDataTable">
+                            <thead>
+                                </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                    <button class="btn btn-success btn-sm mt-2">
+                        <i class="fas fa-file-excel me-1"></i> Export to Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-
-    <!-- Success Modal -->
     <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -139,11 +165,10 @@
                         <i class="fas fa-file-download fa-4x text-success"></i>
                     </div>
                     <h5>Your report is ready!</h5>
-                    <p class="text-muted">The report has been generated and is available for download.</p>
-                    <button class="btn btn-success">
-                        <i class="fas fa-download me-1"></i>
-                        Download Report
-                    </button>
+                    <p class="text-muted">The report has been generated and displayed below.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -151,448 +176,6 @@
 
 
 </div>
-
-<section class="content">
-    <div class="container-fluid">
-
-
-
-        <div class="row">
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3>{{ total_vitals_recorded }}</h3>
-                        <p>Vitals Recorded</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-heartbeat"></i>
-                    </div>
-                    <a href="#" class="small-box-footer">
-                        Today: {{ vitals_today }} <i class="fas fa-arrow-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        <h3>{{ nursing_notes_added }}</h3>
-                        <p>Nursing Notes Added</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-sticky-note"></i>
-                    </div>
-                    <a href="#" class="small-box-footer">
-                        Today: {{ nursing_notes_today }} <i class="fas fa-arrow-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        <h3>{{ admissions_processed }}</h3>
-                        <p>Patients Admitted</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-plus-circle"></i>
-                    </div>
-                    <a href="#" class="small-box-footer">
-                        Today: {{ admissions_today }} <i class="fas fa-arrow-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-danger">
-                    <div class="inner">
-                        <h3>{{ discharges_processed }}</h3>
-                        <p>Patients Discharged</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
-                    <a href="#" class="small-box-footer">
-                        Today: {{ discharges_today }} <i class="fas fa-arrow-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-primary">
-                    <div class="inner">
-                        <h3>{{ referrals_made }}</h3>
-                        <p>Referrals Made</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-share-alt"></i>
-                    </div>
-                    <a href="#" class="small-box-footer">
-                        Today: {{ referrals_today }} <i class="fas fa-arrow-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        <h3>{{ handovers_logged }}</h3>
-                        <p>Handovers Logged</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
-                    <a href="#" class="small-box-footer">
-                        Today: {{ handovers_today }} <i class="fas fa-arrow-circle-right"></i>
-                    </a>
-                </div>
-            </div>
-            {# Add more summary boxes if needed #}
-        </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-info">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-heartbeat mr-2"></i>
-                            Recent Vitals Recorded
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-info">{{ recent_vitals|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Temp (°C)</th>
-                                        <th>BP</th>
-                                        <th>Pulse</th>
-                                        <th>BMI</th> {# Added BMI column header #}
-                                        <th>Recorded At</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for vital in recent_vitals %}
-                                    <tr>
-                                        <td><strong>{{ vital.patient.full_name }}</strong></td>
-                                        <td>{{ vital.temperature|default:"N/A" }}</td>
-                                        <td>{{ vital.blood_pressure|default:"N/A" }}</td>
-                                        <td>{{ vital.pulse|default:"N/A" }}</td>
-                                        <td>{{ vital.bmi|default:"N/A" }}</td> {# Displaying BMI #}
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ vital.recorded_at|date:"M d, Y H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
-                                            {# Changed colspan to 6 #}
-                                            <i class="fas fa-notes-medical fa-2x mb-2"></i>
-                                            <br>No recent vital signs recorded by you.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card card-success">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-sticky-note mr-2"></i>
-                            Recent Nursing Notes
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-success">{{ recent_nursing_notes|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Note Type</th>
-                                        <th>Notes Summary</th>
-                                        <th>Date/Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for note in recent_nursing_notes %}
-                                    <tr>
-                                        <td><strong>{{ note.patient.full_name }}</strong></td>
-                                        <td><span class="badge badge-primary">{{ note.get_note_type_display }}</span></td>
-                                        <td>{{ note.notes|truncatechars:50 }}</td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ note.created_at|date:"M d, Y H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
-                                            <i class="fas fa-file-alt fa-2x mb-2"></i>
-                                            <br>No recent nursing notes added by you.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-warning">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-hospital-user mr-2"></i>
-                            Recent Patients Admitted
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-warning">{{ recent_admissions|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Reason</th>
-                                        <th>Admitted On</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for admission in recent_admissions %}
-                                    <tr>
-                                        <td><strong>{{ admission.patient.full_name }}</strong></td>
-                                        <td>{{ admission.admission_reason|truncatechars:50 }}</td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ admission.admission_date|date:"M d, Y" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-bed fa-2x mb-2"></i>
-                                            <br>No recent admissions processed by you.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card card-danger">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-sign-out-alt mr-2"></i>
-                            Recent Patients Discharged
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-danger">{{ recent_discharges|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Summary</th>
-                                        <th>Discharged On</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for discharge in recent_discharges %}
-                                    <tr>
-                                        <td><strong>{{ discharge.patient.full_name }}</strong></td>
-                                        <td>{{ discharge.discharge_notes|truncatechars:50 }}</td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ discharge.discharge_date|date:"M d, Y" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-procedures fa-2x mb-2"></i>
-                                            <br>No recent discharges processed by you.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-primary">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-share-alt mr-2"></i>
-                            Recent Referrals Made
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-primary">{{ recent_referrals|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Department</th>
-                                        <th>Notes Summary</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for referral in recent_referrals %}
-                                    <tr>
-                                        <td><strong>{{ referral.patient.full_name }}</strong></td>
-                                        <td>{{ referral.department.name }}</td>
-                                        <td>{{ referral.notes|truncatechars:50 }}</td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ referral.created_at|date:"M d, Y H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
-                                            <i class="fas fa-paper-plane fa-2x mb-2"></i>
-                                            <br>No recent referrals made by you.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card card-secondary">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-exchange-alt mr-2"></i>
-                            Recent Handovers Logged
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-secondary">{{ recent_handovers|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Handover To</th>
-                                        <th>Notes Summary</th>
-                                        <th>Date/Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for handover in recent_handovers %}
-                                    <tr>
-                                        <td><strong>{{ handover.patient.full_name }}</strong></td>
-                                        <td>{{ handover.recipient.get_full_name }}</td>
-                                        <td>{{ handover.notes|truncatechars:50 }}</td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ handover.timestamp|date:"M d, Y H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
-                                            <i class="fas fa-handshake fa-2x mb-2"></i>
-                                            <br>No recent handovers logged by you.
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</section>
-
-<!--GENERATE REPORT BUTTON JS-->
-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -604,7 +187,7 @@
         $('#selectUser').select2({
             theme: 'bootstrap-5',
             width: '100%',
-            placeholder: 'Search for a user...',
+            placeholder: 'Select a user (Optional)',
             allowClear: true,
             dropdownParent: $('#reportsModal')
         });
@@ -632,6 +215,8 @@
             endDateInput.required = false;
             startDateInput.value = '';
             endDateInput.value = '';
+            startDateInput.classList.remove('is-invalid', 'is-valid');
+            endDateInput.classList.remove('is-invalid', 'is-valid');
         }
     }
 
@@ -641,29 +226,20 @@
     // Form validation
     function validateForm() {
         const form = document.getElementById('reportForm');
-        const selectUser = $('#selectUser');
         const reportType = document.getElementById('reportType');
         let isValid = true;
 
         // Clear previous validation states
         form.classList.remove('was-validated');
+        reportType.classList.remove('is-invalid', 'is-valid');
+        startDateInput.classList.remove('is-invalid', 'is-valid');
+        endDateInput.classList.remove('is-invalid', 'is-valid');
 
-        // Validate Select2 user field
-        if (!selectUser.val()) {
-            selectUser.next('.select2-container').find('.select2-selection').addClass('is-invalid');
-            document.getElementById('selectUser').classList.add('is-invalid');
-            isValid = false;
-        } else {
-            selectUser.next('.select2-container').find('.select2-selection').removeClass('is-invalid');
-            document.getElementById('selectUser').classList.remove('is-invalid');
-            document.getElementById('selectUser').classList.add('is-valid');
-        }
 
         if (!reportType.value) {
             reportType.classList.add('is-invalid');
             isValid = false;
         } else {
-            reportType.classList.remove('is-invalid');
             reportType.classList.add('is-valid');
         }
 
@@ -673,24 +249,40 @@
                 startDateInput.classList.add('is-invalid');
                 isValid = false;
             } else {
-                startDateInput.classList.remove('is-invalid');
                 startDateInput.classList.add('is-valid');
             }
 
             if (!endDateInput.value) {
                 endDateInput.classList.add('is-invalid');
                 isValid = false;
-            } else if (startDateInput.value && endDateInput.value <= startDateInput.value) {
+            } else if (startDateInput.value && endDateInput.value < startDateInput.value) {
                 endDateInput.classList.add('is-invalid');
                 isValid = false;
             } else {
-                endDateInput.classList.remove('is-invalid');
                 endDateInput.classList.add('is-valid');
             }
         }
-
+        
         return isValid;
     }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
 
     function generateReport() {
         if (validateForm()) {
@@ -701,40 +293,100 @@
             generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
             generateBtn.disabled = true;
 
-            // Simulate report generation
-            setTimeout(() => {
-                // Hide the main modal
-                const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
-                reportsModal.hide();
+            const userId = $('#selectUser').val();
+            const reportType = document.getElementById('reportType').value;
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
 
-                // Show success modal
-                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                successModal.show();
+            const payload = {
+                user_id: userId,
+                report_type: reportType,
+                start_date: startDate,
+                end_date: endDate,
+            };
 
+            fetch('/api/generate-nurse-report/', { // Ensure this URL matches your urls.py
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify(payload),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Populate the table
+                const tableHead = document.querySelector('#reportDataTable thead');
+                const tableBody = document.querySelector('#reportDataTable tbody');
+                const reportTableCard = document.getElementById('reportTableCard');
+                const reportTableTitle = document.getElementById('reportTableTitle');
+                const reportTableFooter = document.getElementById('reportTableFooter');
+
+                // Clear previous content
+                tableHead.innerHTML = '';
+                tableBody.innerHTML = '';
+
+                if (data.headers && data.data && data.data.length > 0) {
+                    // Populate headers
+                    let headerRow = '<tr>';
+                    data.headers.forEach(header => {
+                        headerRow += `<th>${header}</th>`;
+                    });
+                    headerRow += '</tr>';
+                    tableHead.innerHTML = headerRow;
+
+                    // Populate data
+                    data.data.forEach(rowData => {
+                        let dataRow = '<tr>';
+                        Object.values(rowData).forEach(value => {
+                            dataRow += `<td>${value}</td>`;
+                        });
+                        dataRow += '</tr>';
+                        tableBody.innerHTML += dataRow;
+                    });
+
+                    reportTableCard.style.display = 'block'; // Show the table card
+                    reportTableFooter.style.display = 'block'; // Show the footer
+                    reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
+
+                    // Show success modal
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                } else {
+                    reportTableCard.style.display = 'block'; // Still show the card to display no data message
+                    reportTableFooter.style.display = 'none'; // Hide footer if no data
+                    reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
+                    tableBody.innerHTML = `<tr><td colspan="${data.headers.length || 1}" class="text-center text-muted py-4">No data found for the selected criteria.</td></tr>`;
+
+                    // Show success modal even if no data, but with a different message if needed (or just let this one show)
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                }
+            })
+            .catch(error => {
+                console.error('Error generating report:', error);
+                alert('An error occurred while generating the report. Please try again.');
+            })
+            .finally(() => {
                 // Reset the button
                 generateBtn.innerHTML = originalText;
                 generateBtn.disabled = false;
-
-                // Reset form
+                
+                // Reset form fields
                 document.getElementById('reportForm').reset();
                 $('#selectUser').val(null).trigger('change');
-                toggleDateFields();
-            }, 2000);
+                toggleDateFields(); // Reset date fields state
+            });
         }
     }
 
-    // Add pulse animation to generate button periodically
-    setInterval(() => {
-        const btn = document.querySelector('.generate-btn');
-        btn.classList.add('pulse');
-        setTimeout(() => btn.classList.remove('pulse'), 2000);
-    }, 10000);
-
-    // Initialize date fields state
+    // Initialize date fields state on page load
     toggleDateFields();
 </script>
 
-        {% endblock %}
-
-
-
+{% endblock %}
