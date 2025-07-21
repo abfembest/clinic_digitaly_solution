@@ -320,6 +320,10 @@ def nursing_actions(request):
 
 @login_required(login_url='home')
 def nurse_reports_dashboard(request):
+    """
+    Renders the nurse reports dashboard, fetching all staff who are nurses or doctors
+    for the user selection dropdown.
+    """
     # Fetch all staff who are nurses or doctors for the dropdown
     staff_users = Staff.objects.filter(Q(role='nurse') | Q(role='doctor')).select_related('user').order_by('user__first_name')
     
@@ -336,6 +340,9 @@ def nurse_reports_dashboard(request):
 
 @login_required(login_url='home')
 def generate_nurse_report(request):
+    """
+    Generates a report based on the selected report type, user, and date range.
+    """
     if request.method == 'POST':
         data = json.loads(request.body)
         user_id = data.get('user_id')
@@ -343,17 +350,21 @@ def generate_nurse_report(request):
         start_date_str = data.get('start_date')
         end_date_str = data.get('end_date')
 
-        # Convert date strings to datetime objects
+        # Convert date strings to datetime.date objects
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
-
-        user_filter = Q(pk=user_id) if user_id else Q() # Filter by user if selected
 
         report_data = []
         headers = []
 
         if report_type == 'patient_list':
-            patients = Patient.objects.filter(user_filter).order_by('-date_registered')
+            # Patient List: Filter by registered_by if a user is selected, otherwise all patients.
+            patients = Patient.objects.all().order_by('-date_registered')
+            if user_id:
+                patients = patients.filter(registered_by_id=user_id)
+            if start_date and end_date:
+                patients = patients.filter(date_registered__date__range=[start_date, end_date])
+            
             headers = ['Patient ID', 'Full Name', 'Gender', 'Date of Birth', 'Phone', 'Email', 'Registered By', 'Date Registered']
             for patient in patients:
                 report_data.append({
@@ -368,22 +379,29 @@ def generate_nurse_report(request):
                 })
         
         elif report_type == 'admitted_patients':
-            admissions = Admission.objects.filter(user_filter).order_by('-admission_date')
+            # Admitted Patients: Filter by admitted_by or doctor_assigned if a user is selected.
+            admissions = Admission.objects.all().order_by('-admission_date')
+            if user_id:
+                admissions = admissions.filter(Q(admitted_by_id=user_id) | Q(doctor_assigned_id=user_id))
             if start_date and end_date:
                 admissions = admissions.filter(admission_date__range=[start_date, end_date])
             
-            headers = ['Patient', 'Admission Date', 'Admission Reason', 'Admitted By', 'Status']
+            headers = ['Patient', 'Admission Date', 'Admission Reason', 'Admitted By', 'Doctor Assigned', 'Status']
             for admission in admissions:
                 report_data.append({
                     'patient_name': admission.patient.full_name,
                     'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
                     'admission_reason': admission.admission_reason or 'N/A',
                     'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'N/A',
+                    'doctor_assigned': admission.doctor_assigned.get_full_name() if admission.doctor_assigned else 'N/A',
                     'status': admission.status,
                 })
 
         elif report_type == 'vitals':
-            vitals = Vitals.objects.filter(recorded_by__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user')).order_by('-recorded_at')
+            # Vitals: Filter by recorded_by if a user is selected.
+            vitals = Vitals.objects.all().order_by('-recorded_at')
+            if user_id:
+                vitals = vitals.filter(recorded_by_id=user_id)
             if start_date and end_date:
                 vitals = vitals.filter(recorded_at__date__range=[start_date, end_date])
 
@@ -400,7 +418,10 @@ def generate_nurse_report(request):
                 })
 
         elif report_type == 'nurse_notes':
-            nursing_notes = NursingNote.objects.filter(nurse__in=Staff.objects.filter(Q(role='nurse'), user_filter).values('user')).order_by('-created_at')
+            # Nurse Notes: Filter by nurse if a user is selected.
+            nursing_notes = NursingNote.objects.all().order_by('-created_at')
+            if user_id:
+                nursing_notes = nursing_notes.filter(nurse_id=user_id)
             if start_date and end_date:
                 nursing_notes = nursing_notes.filter(created_at__date__range=[start_date, end_date])
             
@@ -415,7 +436,10 @@ def generate_nurse_report(request):
                 })
 
         elif report_type == 'referrals':
-            referrals = Referral.objects.filter(referred_by__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user')).order_by('-created_at')
+            # Referrals: Filter by referred_by if a user is selected.
+            referrals = Referral.objects.all().order_by('-created_at')
+            if user_id:
+                referrals = referrals.filter(referred_by_id=user_id)
             if start_date and end_date:
                 referrals = referrals.filter(created_at__date__range=[start_date, end_date])
             
@@ -430,7 +454,10 @@ def generate_nurse_report(request):
                 })
 
         elif report_type == 'consultations':
-            consultations = Consultation.objects.filter(doctor__in=Staff.objects.filter(Q(role='doctor'), user_filter).values('user')).order_by('-created_at')
+            # Consultations: Filter by doctor if a user is selected.
+            consultations = Consultation.objects.all().order_by('-created_at')
+            if user_id:
+                consultations = consultations.filter(doctor_id=user_id)
             if start_date and end_date:
                 consultations = consultations.filter(created_at__date__range=[start_date, end_date])
             
@@ -446,7 +473,10 @@ def generate_nurse_report(request):
                 })
         
         elif report_type == 'prescriptions':
-            prescriptions = Prescription.objects.filter(prescribed_by__in=Staff.objects.filter(Q(role='doctor'), user_filter).values('user')).order_by('-created_at')
+            # Prescriptions: Filter by prescribed_by if a user is selected.
+            prescriptions = Prescription.objects.all().order_by('-created_at')
+            if user_id:
+                prescriptions = prescriptions.filter(prescribed_by_id=user_id)
             if start_date and end_date:
                 prescriptions = prescriptions.filter(created_at__date__range=[start_date, end_date])
             
@@ -462,8 +492,10 @@ def generate_nurse_report(request):
                 })
 
         elif report_type == 'lab_tests':
-            lab_tests = LabTest.objects.filter(Q(requested_by__in=Staff.objects.filter(Q(role='doctor') | Q(role='nurse'), user_filter).values('user')) |
-                                                Q(performed_by__in=Staff.objects.filter(Q(role='lab'), user_filter).values('user'))).order_by('-requested_at')
+            # Lab Tests: Filter by requested_by, performed_by, or recorded_by if a user is selected.
+            lab_tests = LabTest.objects.all().order_by('-requested_at')
+            if user_id:
+                lab_tests = lab_tests.filter(Q(requested_by_id=user_id) | Q(performed_by_id=user_id) | Q(recorded_by_id=user_id))
             if start_date and end_date:
                 lab_tests = lab_tests.filter(requested_at__date__range=[start_date, end_date])
             
@@ -481,8 +513,10 @@ def generate_nurse_report(request):
                 })
         
         elif report_type == 'handovers':
-            handovers = HandoverLog.objects.filter(Q(author__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user')) |
-                                                    Q(recipient__in=Staff.objects.filter(Q(role='nurse') | Q(role='doctor'), user_filter).values('user'))).order_by('-timestamp')
+            # Handovers: Filter by author or recipient if a user is selected.
+            handovers = HandoverLog.objects.all().order_by('-timestamp')
+            if user_id:
+                handovers = handovers.filter(Q(author_id=user_id) | Q(recipient_id=user_id))
             if start_date and end_date:
                 handovers = handovers.filter(timestamp__date__range=[start_date, end_date])
             

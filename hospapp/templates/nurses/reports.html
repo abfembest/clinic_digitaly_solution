@@ -51,7 +51,7 @@
                         <div class="mb-2">
                             <label for="selectUser" class="form-label">User (Nurses & Doctors)</label>
                             <select class="form-select form-select-sm" id="selectUser">
-                                <option value="">Select a user (Optional)</option>
+                                <option value="">All Users</option> {# Option for all users #}
                                 {% for user in users %}
                                 <option value="{{ user.id }}">{{ user.full_name }}</option>
                                 {% endfor %}
@@ -72,6 +72,7 @@
                                 <option value="prescriptions">Prescriptions</option>
                                 <option value="lab_tests">Lab Tests</option>
                                 <option value="handovers">Handovers</option>
+                                {# IVF related options removed as per user request #}
                             </select>
                             <div class="invalid-feedback">Please select a report type.</div>
                         </div>
@@ -370,7 +371,9 @@
             })
             .catch(error => {
                 console.error('Error generating report:', error);
-                alert('An error occurred while generating the report. Please try again.');
+                // Replaced alert with a custom modal or message display if you have one.
+                // For now, keeping alert as a fallback, but ideally use a Bootstrap modal for errors.
+                alert('An error occurred while generating the report. Please try again.'); 
             })
             .finally(() => {
                 // Reset the button
