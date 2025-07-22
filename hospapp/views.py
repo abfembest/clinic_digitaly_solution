@@ -331,7 +331,7 @@ def nurse_reports_dashboard(request):
     ]
 
     context = {
-        'users': patients_data,  # Renamed to 'users' to match the template's 'selectUser'
+        'users': patients_data,
     }
     return render(request, 'nurses/reports.html', context)
 
@@ -341,11 +341,12 @@ def generate_nurse_report(request):
     """
     Generates a report based on the selected report type, user (patient), and date range.
     Handles 'All Patients' when user_id is empty, and 'All Dates' when alldate is 'all'.
+    Includes a new 'all_combined_reports' option to fetch data for multiple report types.
     """
     if request.method == 'POST':
         data = json.loads(request.body)
-        alldate = data.get('alldate')  # 'all' or 'range'
-        user_id = data.get('user_id')  # This will now be patient_id
+        alldate = data.get('alldate')
+        user_id = data.get('user_id')
         report_type = data.get('report_type')
         start_date_str = data.get('start_date')
         end_date_str = data.get('end_date')
@@ -354,18 +355,30 @@ def generate_nurse_report(request):
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
 
-        report_data = []
-        headers = []
+        # Helper function to get common filters
+        def get_common_filters(model_queryset, date_field_name):
+            filters = Q()
+            if user_id:
+                if model_queryset.model == IVFProgressUpdate:
+                    filters &= Q(ivf_record__patient_id=user_id)
+                else:
+                    filters &= Q(patient_id=user_id)
+            if alldate == 'range' and start_date and end_date:
+                # Use a dictionary to dynamically set the date range filter
+                date_filter = {f'{date_field_name}__date__range': [start_date, end_date]}
+                filters &= Q(**date_filter)
+            return model_queryset.filter(filters)
 
-        if report_type == 'patient_list':
-            # Patient List: Filter by patient ID if selected, otherwise all patients.
+        # Define functions to generate data for each report type
+        def get_patient_list_data():
             patients = Patient.objects.all().order_by('-date_registered')
-            if user_id: # If a specific patient is selected
+            if user_id:
                 patients = patients.filter(id=user_id)
             if alldate == 'range' and start_date and end_date:
                 patients = patients.filter(date_registered__date__range=[start_date, end_date])
             
             headers = ['Patient ID', 'Full Name', 'Gender', 'Date of Birth', 'Phone', 'Email', 'Registered By', 'Date Registered']
+            report_data = []
             for patient in patients:
                 report_data.append({
                     'patient_id': patient.patient_id,
@@ -377,17 +390,12 @@ def generate_nurse_report(request):
                     'registered_by': patient.registered_by.get_full_name() if patient.registered_by else 'N/A',
                     'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'admitted_patients':
-            # Admitted Patients: Filter by patient if a user is selected.
-            admissions = Admission.objects.all().order_by('-admission_date')
-            if user_id:
-                admissions = admissions.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                admissions = admissions.filter(admission_date__range=[start_date, end_date])
-            
+        def get_admitted_patients_data():
+            admissions = get_common_filters(Admission.objects.all().order_by('-admission_date'), 'admission_date')
             headers = ['Patient', 'Admission Date', 'Admission Reason', 'Admitted By', 'Doctor Assigned', 'Status']
-
+            report_data = []
             for admission in admissions:
                 report_data.append({
                     'patient_name': admission.patient.full_name,
@@ -397,35 +405,29 @@ def generate_nurse_report(request):
                     'doctor_assigned': admission.doctor_assigned.get_full_name() if admission.doctor_assigned else 'N/A',
                     'status': admission.status,
                 })
+            return headers, report_data
 
-        elif report_type == 'vitals':
-            # Vitals: Filter by patient if a user is selected.
-            vitals = Vitals.objects.all().order_by('-recorded_at')
-            if user_id:
-                vitals = vitals.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                vitals = vitals.filter(recorded_at__date__range=[start_date, end_date])
-            headers = ['Patient', 'Temperature (°C)', 'Blood Pressure', 'Pulse', 'Respiratory Rate', 'BMI', 'Recorded By', 'Recorded At'] # Added 'Respiratory Rate'
+        def get_vitals_data():
+            vitals = get_common_filters(Vitals.objects.all().order_by('-recorded_at'), 'recorded_at')
+            headers = ['Patient', 'Temperature (°C)', 'Blood Pressure', 'Pulse', 'Respiratory Rate', 'BMI', 'Recorded By', 'Recorded At']
+            report_data = []
             for vital in vitals:
                 report_data.append({
                     'patient_name': vital.patient.full_name,
                     'temperature': vital.temperature or 'N/A',
                     'blood_pressure': vital.blood_pressure or 'N/A',
                     'pulse': vital.pulse or 'N/A',
-                    'respiratory_rate': vital.respiratory_rate or 'N/A', # Added respiratory_rate
+                    'respiratory_rate': vital.respiratory_rate or 'N/A',
                     'bmi': f"{vital.bmi:.2f}" if vital.bmi else 'N/A',
                     'recorded_by': vital.recorded_by.get_full_name() if vital.recorded_by else 'N/A',
                     'recorded_at': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'nurse_notes':
-            # Nurse Notes: Filter by patient if a user is selected.
-            nursing_notes = NursingNote.objects.all().order_by('-created_at')
-            if user_id:
-                nursing_notes = nursing_notes.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                nursing_notes = nursing_notes.filter(created_at__date__range=[start_date, end_date])
+        def get_nurse_notes_data():
+            nursing_notes = get_common_filters(NursingNote.objects.all().order_by('-created_at'), 'created_at')
             headers = ['Patient', 'Note Type', 'Notes', 'Nurse', 'Created At']
+            report_data = []
             for note in nursing_notes:
                 report_data.append({
                     'patient_name': note.patient.full_name,
@@ -434,15 +436,12 @@ def generate_nurse_report(request):
                     'nurse_name': note.nurse.get_full_name() if note.nurse else 'N/A',
                     'created_at': note.created_at.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'referrals':
-            # Referrals: Filter by patient if a user is selected.
-            referrals = Referral.objects.all().order_by('-created_at')
-            if user_id:
-                referrals = referrals.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                referrals = referrals.filter(created_at__date__range=[start_date, end_date])
+        def get_referrals_data():
+            referrals = get_common_filters(Referral.objects.all().order_by('-created_at'), 'created_at')
             headers = ['Patient', 'Department', 'Notes', 'Referred By', 'Created At']
+            report_data = []
             for referral in referrals:
                 report_data.append({
                     'patient_name': referral.patient.full_name,
@@ -451,15 +450,12 @@ def generate_nurse_report(request):
                     'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'N/A',
                     'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'consultations':
-            # Consultations: Filter by patient if a user is selected.
-            consultations = Consultation.objects.all().order_by('-created_at')
-            if user_id:
-                consultations = consultations.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                consultations = consultations.filter(created_at__date__range=[start_date, end_date])
+        def get_consultations_data():
+            consultations = get_common_filters(Consultation.objects.all().order_by('-created_at'), 'created_at')
             headers = ['Patient', 'Doctor', 'Symptoms', 'Diagnosis Summary', 'Advice', 'Consultation Date']
+            report_data = []
             for consultation in consultations:
                 report_data.append({
                     'patient_name': consultation.patient.full_name,
@@ -469,15 +465,12 @@ def generate_nurse_report(request):
                     'advice': consultation.advice,
                     'created_at': consultation.created_at.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'prescriptions':
-            # Prescriptions: Filter by patient if a user is selected.
-            prescriptions = Prescription.objects.all().order_by('-created_at')
-            if user_id:
-                prescriptions = prescriptions.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                prescriptions = prescriptions.filter(created_at__date__range=[start_date, end_date])
+        def get_prescriptions_data():
+            prescriptions = get_common_filters(Prescription.objects.all().order_by('-created_at'), 'created_at')
             headers = ['Patient', 'Medication', 'Instructions', 'Prescribed By', 'Start Date', 'Prescription Date']
+            report_data = []
             for prescription in prescriptions:
                 report_data.append({
                     'patient_name': prescription.patient.full_name,
@@ -487,15 +480,12 @@ def generate_nurse_report(request):
                     'start_date': prescription.start_date.strftime('%Y-%m-%d'),
                     'created_at': prescription.created_at.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'lab_tests':
-            # Lab Tests: Filter by patient if a user is selected.
-            lab_tests = LabTest.objects.all().order_by('-requested_at')
-            if user_id:
-                lab_tests = lab_tests.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                lab_tests = lab_tests.filter(requested_at__date__range=[start_date, end_date])
+        def get_lab_tests_data():
+            lab_tests = get_common_filters(LabTest.objects.all().order_by('-requested_at'), 'requested_at')
             headers = ['Patient', 'Test Name', 'Category', 'Status', 'Result Value', 'Requested By', 'Performed By', 'Requested At']
+            report_data = []
             for test in lab_tests:
                 report_data.append({
                     'patient_name': test.patient.full_name,
@@ -507,15 +497,12 @@ def generate_nurse_report(request):
                     'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
                     'requested_at': test.requested_at.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'handovers':
-            # Handovers: Filter by patient if a user is selected.
-            handovers = HandoverLog.objects.all().order_by('-timestamp')
-            if user_id:
-                handovers = handovers.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                handovers = handovers.filter(timestamp__date__range=[start_date, end_date])
+        def get_handovers_data():
+            handovers = get_common_filters(HandoverLog.objects.all().order_by('-timestamp'), 'timestamp')
             headers = ['Patient', 'Author', 'Recipient', 'Notes', 'Timestamp']
+            report_data = []
             for handover in handovers:
                 report_data.append({
                     'patient_name': handover.patient.full_name,
@@ -524,43 +511,107 @@ def generate_nurse_report(request):
                     'notes': handover.notes,
                     'timestamp': handover.timestamp.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
         
-        elif report_type == 'ivf_records':
-            # IVF Records: Filter by patient if a user is selected.
-            ivf_records = IVFRecord.objects.all().order_by('-date_created')
-            if user_id:
-                ivf_records = ivf_records.filter(patient_id=user_id)
-            if alldate == 'range' and start_date and end_date:
-                ivf_records = ivf_records.filter(date_created__date__range=[start_date, end_date])
-            headers = ['Patient', 'Cycle ID', 'Start Date', 'Status', 'Created At']
+        def get_ivf_records_data():
+            # Fixed: Use 'created_on' instead of 'date_created' based on model
+            ivf_records = get_common_filters(IVFRecord.objects.all().order_by('-created_on'), 'created_on')
+            headers = ['Patient', 'IVF Package', 'Treatment Location', 'Doctor Name', 'Status', 'Created On']
+            report_data = []
             for record in ivf_records:
                 report_data.append({
                     'patient_name': record.patient.full_name,
-                    'cycle_id': record.cycle_id,
-                    'start_date': record.start_date.strftime('%Y-%m-%d'),
+                    'ivf_package': record.ivf_package.name if record.ivf_package else 'N/A',
+                    'treatment_location': record.treatment_location.name if record.treatment_location else 'N/A',
+                    'doctor_name': record.doctor_name,
                     'status': record.get_status_display(),
-                    'created_at': record.date_created.strftime('%Y-%m-%d %H:%M'),
+                    'created_on': record.created_on.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        elif report_type == 'ivf_progress_updates':
-            # IVF Progress Updates: Filter by patient if a user is selected.
-            ivf_progress_updates = IVFProgressUpdate.objects.all().order_by('-timestamp')
-            if user_id:
-                ivf_progress_updates = ivf_progress_updates.filter(ivf_record__patient_id=user_id) # Filter through the related IVFRecord's patient
-            if alldate == 'range' and start_date and end_date:
-                ivf_progress_updates = ivf_progress_updates.filter(timestamp__date__range=[start_date, end_date])
-            headers = ['Patient', 'IVF Cycle ID', 'Status', 'Comments', 'Updated By', 'Timestamp']
+        def get_ivf_progress_updates_data():
+            ivf_progress_updates = get_common_filters(IVFProgressUpdate.objects.all().order_by('-timestamp'), 'timestamp')
+            headers = ['Patient', 'IVF Record ID', 'Status', 'Comments', 'Updated By', 'Timestamp']
+            report_data = []
             for update in ivf_progress_updates:
                 report_data.append({
                     'patient_name': update.ivf_record.patient.full_name,
-                    'ivf_cycle_id': update.ivf_record.cycle_id,
+                    'ivf_record_id': update.ivf_record.id,  # Fixed: Use record ID instead of cycle_id
                     'status': update.get_status_display(),
                     'comments': update.comments or 'N/A',
                     'updated_by': update.updated_by.get_full_name() if update.updated_by else 'N/A',
                     'timestamp': update.timestamp.strftime('%Y-%m-%d %H:%M'),
                 })
+            return headers, report_data
 
-        return JsonResponse({'headers': headers, 'data': report_data})
+        # New function for Care Plans
+        def get_care_plans_data():
+            care_plans = get_common_filters(CarePlan.objects.all().order_by('-created_at'), 'created_at')
+            headers = ['Patient', 'Clinical Findings', 'Plan of Care', 'Created By', 'Created At']
+            report_data = []
+            for plan in care_plans:
+                report_data.append({
+                    'patient_name': plan.patient.full_name,
+                    'clinical_findings': plan.clinical_findings[:100] + '...' if len(plan.clinical_findings) > 100 else plan.clinical_findings,
+                    'plan_of_care': plan.plan_of_care[:100] + '...' if len(plan.plan_of_care) > 100 else plan.plan_of_care,
+                    'created_by': plan.created_by.get_full_name() if plan.created_by else 'N/A',
+                    'created_at': plan.created_at.strftime('%Y-%m-%d %H:%M'),
+                })
+            return headers, report_data
+
+        # New function for Appointments
+        def get_appointments_data():
+            appointments = get_common_filters(Appointment.objects.all().order_by('-scheduled_time'), 'scheduled_time')
+            headers = ['Patient', 'Department', 'Scheduled Time', 'Scheduled By']
+            report_data = []
+            for appointment in appointments:
+                report_data.append({
+                    'patient_name': appointment.patient.full_name,
+                    'department': appointment.department.name,
+                    'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
+                    'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'N/A',
+                })
+            return headers, report_data
+
+        # Map report types to their data generation functions
+        report_generators = {
+            'patient_list': get_patient_list_data,
+            'admitted_patients': get_admitted_patients_data,
+            'vitals': get_vitals_data,
+            'nurse_notes': get_nurse_notes_data,
+            'referrals': get_referrals_data,
+            'consultations': get_consultations_data,
+            'prescriptions': get_prescriptions_data,
+            'lab_tests': get_lab_tests_data,
+            'handovers': get_handovers_data,
+            'ivf_records': get_ivf_records_data,
+            'ivf_progress_updates': get_ivf_progress_updates_data,
+            'care_plans': get_care_plans_data,
+            'appointments': get_appointments_data,
+        }
+
+        # Handle the requests with proper error handling
+        try:
+            if report_type == 'all_combined_reports':
+                all_combined_reports_data = {}
+                for key, generator_func in report_generators.items():
+                    try:
+                        headers, data = generator_func()
+                        # Only include reports with actual data
+                        if data:
+                            all_combined_reports_data[key] = {'headers': headers, 'data': data}
+                    except Exception as e:
+                        # Log the error but continue with other reports
+                        print(f"Error generating {key} report: {str(e)}")
+                        continue
+                return JsonResponse({'combined_reports': all_combined_reports_data})
+            elif report_type in report_generators:
+                headers, report_data = report_generators[report_type]()
+                return JsonResponse({'headers': headers, 'data': report_data})
+            else:
+                return JsonResponse({'error': 'Invalid report type'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': f'Error generating report: {str(e)}'}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
         

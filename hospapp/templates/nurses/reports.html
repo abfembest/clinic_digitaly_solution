@@ -35,7 +35,6 @@
         </div>
     </div>
 
-
     <div class="modal fade" id="reportsModal" tabindex="-1" aria-labelledby="reportsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content">
@@ -51,7 +50,7 @@
                         <div class="mb-2">
                             <label for="selectUser" class="form-label">Patients</label>
                             <select class="form-select form-select-sm" id="selectUser">
-                                <option value="">All Patients</option> {# Option for all patients already exists #}
+                                <option value="">All Patients</option>
                                 {% for user in users %}
                                 <option value="{{ user.id }}">{{ user.full_name }}</option>
                                 {% endfor %}
@@ -63,6 +62,7 @@
                             <label for="reportType" class="form-label">Report Type *</label>
                             <select class="form-select form-select-sm" id="reportType" required>
                                 <option value="">Select type...</option>
+                                <option value="all_combined_reports">All Combined Reports</option>
                                 <option value="patient_list">Patient List</option>
                                 <option value="admitted_patients">Admitted Patients</option>
                                 <option value="vitals">Vitals</option>
@@ -74,6 +74,8 @@
                                 <option value="handovers">Handovers</option>
                                 <option value="ivf_records">IVF Records</option>
                                 <option value="ivf_progress_updates">IVF Progress Updates</option>
+                                <option value="care_plans">Care Plans</option>
+                                <option value="appointments">Appointments</option>
                             </select>
                             <div class="invalid-feedback">Please select a report type.</div>
                         </div>
@@ -119,7 +121,8 @@
         </div>
     </div>
 
-    <div class="row mt-4">
+    {# Container for single report table #}
+    <div class="row mt-4" id="singleReportContainer">
         <div class="col-12">
             <div class="card card-primary" id="reportTableCard" style="display: none;">
                 <div class="card-header">
@@ -137,19 +140,24 @@
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="reportDataTable">
                             <thead>
-                                </thead>
+                            </thead>
                             <tbody>
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
                 <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
-                    <button class="btn btn-success btn-sm mt-2">
+                    <button class="btn btn-success btn-sm mt-2" onclick="exportToExcel()">
                         <i class="fas fa-file-excel me-1"></i> Export to Excel
                     </button>
                 </div>
             </div>
         </div>
+    </div>
+
+    {# Container for combined reports #}
+    <div id="combinedReportsDisplayArea" class="row mt-4">
+        {# Combined reports will be dynamically added here #}
     </div>
 
     <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
@@ -175,8 +183,6 @@
             </div>
         </div>
     </div>
-
-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
@@ -184,7 +190,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 
 <script>
-    // Initialize Select2 for patient selection
     $(document).ready(function () {
         $('#selectUser').select2({
             theme: 'bootstrap-5',
@@ -195,7 +200,6 @@
         });
     });
 
-    // Date filter functionality
     const allDatesRadio = document.getElementById('allDates');
     const dateRangeRadio = document.getElementById('dateRange');
     const dateFields = document.getElementById('dateFields');
@@ -225,18 +229,15 @@
     allDatesRadio.addEventListener('change', toggleDateFields);
     dateRangeRadio.addEventListener('change', toggleDateFields);
 
-    // Form validation
     function validateForm() {
         const form = document.getElementById('reportForm');
         const reportType = document.getElementById('reportType');
         let isValid = true;
 
-        // Clear previous validation states
         form.classList.remove('was-validated');
         reportType.classList.remove('is-invalid', 'is-valid');
         startDateInput.classList.remove('is-invalid', 'is-valid');
         endDateInput.classList.remove('is-invalid', 'is-valid');
-
 
         if (!reportType.value) {
             reportType.classList.add('is-invalid');
@@ -245,7 +246,6 @@
             reportType.classList.add('is-valid');
         }
 
-        // Validate date range if selected
         if (dateRangeRadio.checked) {
             if (!startDateInput.value) {
                 startDateInput.classList.add('is-invalid');
@@ -274,7 +274,6 @@
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -285,21 +284,18 @@
     }
     const csrftoken = getCookie('csrftoken');
 
-
     function generateReport() {
         if (validateForm()) {
             const generateBtn = document.querySelector('.btn-generate-report');
             const originalText = generateBtn.innerHTML;
 
-            // Show loading state
             generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
             generateBtn.disabled = true;
 
-            const userId = $('#selectUser').val(); // This is now patient_id
+            const userId = $('#selectUser').val();
             const reportType = document.getElementById('reportType').value;
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
-
             const alldate = allDatesRadio.checked ? 'all' : 'range';
 
             const payload = {
@@ -318,79 +314,193 @@
                 },
                 body: JSON.stringify(payload),
             })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    const tableHead = document.querySelector('#reportDataTable thead');
-                    const tableBody = document.querySelector('#reportDataTable tbody');
-                    const reportTableCard = document.getElementById('reportTableCard');
-                    const reportTableTitle = document.getElementById('reportTableTitle');
-                    const reportTableFooter = document.getElementById('reportTableFooter');
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const singleReportContainer = document.getElementById('singleReportContainer');
+                const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
+                const reportTableCard = document.getElementById('reportTableCard');
+                const reportTableTitle = document.getElementById('reportTableTitle');
+                const reportTableFooter = document.getElementById('reportTableFooter');
+                const reportDataTableHead = document.querySelector('#reportDataTable thead');
+                const reportDataTableBody = document.querySelector('#reportDataTable tbody');
 
-                    tableHead.innerHTML = '';
-                    tableBody.innerHTML = '';
+                singleReportContainer.style.display = 'none';
+                combinedReportsDisplayArea.innerHTML = '';
+
+                if (reportType === 'all_combined_reports') {
+                    if (data.combined_reports && Object.keys(data.combined_reports).length > 0) {
+                        for (const [key, reportDetails] of Object.entries(data.combined_reports)) {
+                            if (reportDetails.data && reportDetails.data.length > 0) {
+                                const reportTitle = key.replace(/_/g, ' ').toUpperCase();
+                                
+                                let tableRows = '';
+                                reportDetails.data.forEach(rowData => {
+                                    let row = '<tr>';
+                                    Object.values(rowData).forEach(value => {
+                                        row += `<td>${value || 'N/A'}</td>`;
+                                    });
+                                    row += '</tr>';
+                                    tableRows += row;
+                                });
+
+                                const cardHtml = `
+                                    <div class="col-12 mb-4">
+                                        <div class="card card-primary">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h5 class="card-title mb-0">${reportTitle} Report (${reportDetails.data.length} records)</h5>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool" onclick="toggleCard(this)">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-0">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-hover mb-0">
+                                                        <thead class="table-dark">
+                                                            <tr>
+                                                                ${reportDetails.headers.map(header => `<th class="text-nowrap">${header}</th>`).join('')}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            ${tableRows}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer text-center">
+                                                <button class="btn btn-success btn-sm" onclick="exportTableToExcel('${key}', this)">
+                                                    <i class="fas fa-file-excel me-1"></i> Export to Excel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                combinedReportsDisplayArea.innerHTML += cardHtml;
+                            }
+                        }
+                        
+                        if (combinedReportsDisplayArea.innerHTML === '') {
+                            showNoDataMessage();
+                        }
+                    } else {
+                        showNoDataMessage();
+                    }
+                } else {
+                    singleReportContainer.style.display = 'block';
+                    reportDataTableHead.innerHTML = '';
+                    reportDataTableBody.innerHTML = '';
 
                     if (data.headers && data.data && data.data.length > 0) {
-                        let headerRow = '<tr>';
+                        let headerRow = '<tr class="table-dark">';
                         data.headers.forEach(header => {
-                            headerRow += `<th>${header}</th>`;
+                            headerRow += `<th class="text-nowrap">${header}</th>`;
                         });
                         headerRow += '</tr>';
-                        tableHead.innerHTML = headerRow;
+                        reportDataTableHead.innerHTML = headerRow;
 
                         data.data.forEach(rowData => {
                             let dataRow = '<tr>';
                             Object.values(rowData).forEach(value => {
-                                dataRow += `<td>${value}</td>`;
+                                dataRow += `<td>${value || 'N/A'}</td>`;
                             });
                             dataRow += '</tr>';
-                            tableBody.innerHTML += dataRow;
+                            reportDataTableBody.innerHTML += dataRow;
                         });
 
                         reportTableCard.style.display = 'block';
                         reportTableFooter.style.display = 'block';
-                        reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
-
+                        reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report (${data.data.length} records)`;
                     } else {
-                        // If no data, hide the table and footer, and display a message
                         reportTableCard.style.display = 'none';
-                        reportTableFooter.style.display = 'none';
-                        alert('No data found for the selected criteria.'); // You might want a more elegant message
+                        showNoDataMessage();
                     }
-                    
-                    // Show success modal regardless of data presence (it indicates the report generation process completed)
-                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
+                }
+                
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
 
-                })
-                .catch(error => {
-                    console.error('Error generating report:', error);
-                    alert('An error occurred while generating the report. Please try again.'); 
-                })
-                .finally(() => {
-                    // Reset the button
-                    generateBtn.innerHTML = originalText;
-                    generateBtn.disabled = false;
-                    
-                    // Reset form fields and close the modal
-                    document.getElementById('reportForm').reset();
-                    $('#selectUser').val(null).trigger('change');
-                    toggleDateFields(); // Reset date fields state
-                    const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
-                    if (reportsModal) {
-                        reportsModal.hide();
-                    }
-                });
+            })
+            .catch(error => {
+                console.error('Error generating report:', error);
+                alert('An error occurred while generating the report. Please try again.');
+            })
+            .finally(() => {
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+                
+                document.getElementById('reportForm').reset();
+                $('#selectUser').val(null).trigger('change');
+                toggleDateFields();
+                const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
+                if (reportsModal) {
+                    reportsModal.hide();
+                }
+            });
         }
     }
 
+    function showNoDataMessage() {
+        const messageHtml = `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Data Found</h5>
+                        <p class="text-muted">No records match your selected criteria. Try adjusting your filters.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('combinedReportsDisplayArea').innerHTML = messageHtml;
+    }
 
-    // Initialize date fields state on page load
+    function toggleCard(button) {
+        const card = button.closest('.card');
+        const cardBody = card.querySelector('.card-body');
+        const cardFooter = card.querySelector('.card-footer');
+        const icon = button.querySelector('i');
+        
+        if (cardBody.style.display === 'none') {
+            cardBody.style.display = 'block';
+            cardFooter.style.display = 'block';
+            icon.classList.remove('fa-plus');
+            icon.classList.add('fa-minus');
+        } else {
+            cardBody.style.display = 'none';
+            cardFooter.style.display = 'none';
+            icon.classList.remove('fa-minus');
+            icon.classList.add('fa-plus');
+        }
+    }
+
+    function exportToExcel() {
+        const table = document.getElementById('reportDataTable');
+        const title = document.getElementById('reportTableTitle').textContent;
+        exportTableToExcel(title, table);
+    }
+
+    function exportTableToExcel(filename, elementOrButton) {
+        let table;
+        if (typeof elementOrButton === 'string') {
+            table = elementOrButton;
+        } else {
+            table = elementOrButton.closest('.card').querySelector('table');
+        }
+        
+        const wb = XLSX.utils.table_to_book(table);
+        const cleanFilename = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        XLSX.writeFile(wb, `${cleanFilename}_report.xlsx`);
+    }
+
     toggleDateFields();
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 {% endblock %}
