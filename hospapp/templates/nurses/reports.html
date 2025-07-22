@@ -9,7 +9,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css"
-    rel="stylesheet">
+      rel="stylesheet">
 
 {%include "nurses/nurses.css"%}
 
@@ -25,7 +25,7 @@
                         <h4 class="mb-2 text-dark">Reports Dashboard</h4>
 
                         <button class="btn btn-lg generate-btn px-4 py-2" data-bs-toggle="modal"
-                            data-bs-target="#reportsModal">
+                                data-bs-target="#reportsModal">
                             <i class="fas fa-chart-line me-2"></i>
                             Generate Reports
                         </button>
@@ -50,6 +50,7 @@
                         <div class="mb-2">
                             <label for="selectUser" class="form-label">Patients</label>
                             <select class="form-select form-select-sm" id="selectUser">
+                                <option disabled selected>Select patient</option>
                                 <option value="">All Patients</option>
                                 {% for user in users %}
                                 <option value="{{ user.id }}">{{ user.full_name }}</option>
@@ -61,7 +62,7 @@
                         <div class="mb-2">
                             <label for="reportType" class="form-label">Report Type *</label>
                             <select class="form-select form-select-sm" id="reportType" required>
-                                <option value="">Select type...</option>
+                                <option disabled selected>Select type...</option>
                                 <option value="all_combined_reports">All Combined Reports</option>
                                 <option value="patient_list">Patient List</option>
                                 <option value="admitted_patients">Admitted Patients</option>
@@ -84,12 +85,12 @@
                             <label class="form-label">Date Filter</label>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="dateFilter" id="allDates" value=""
-                                    checked>
+                                       checked>
                                 <label class="form-check-label" for="allDates">All Dates</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
-                                    value="range">
+                                       value="range">
                                 <label class="form-check-label" for="dateRange">Date Range</label>
                             </div>
                         </div>
@@ -121,69 +122,80 @@
         </div>
     </div>
 
-    {# Container for single report table #}
-    <div class="row mt-4" id="singleReportContainer">
-        <div class="col-12">
-            <div class="card card-primary" id="reportTableCard" style="display: none;">
-                <div class="card-header">
-                    <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                            <i class="fas fa-expand"></i>
-                        </button>
+
+    <section class="content">
+        <div class="container-fluid">
+            {# Container for single report table #}
+            <div class="row mt-4" id="singleReportContainer">
+                <div class="col-12">
+                    <div class="card card-primary" id="reportTableCard" style="display: none;">
+                        <div class="card-header">
+                            <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <button type="button" class="btn btn-tool" data-card-widget="maximize">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover" id="reportDataTable">
+                                    <thead>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                            <button class="btn btn-success btn-sm mt-2" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel me-1"></i> Export to Excel
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover" id="reportDataTable">
-                            <thead>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
-                    <button class="btn btn-success btn-sm mt-2" onclick="exportToExcel()">
-                        <i class="fas fa-file-excel me-1"></i> Export to Excel
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    {# Container for combined reports #}
-    <div id="combinedReportsDisplayArea" class="row mt-4">
-        {# Combined reports will be dynamically added here #}
-    </div>
 
-    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-check-circle me-2"></i>
-                        Report Generated Successfully
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body text-center py-4">
-                    <div class="mb-3">
-                        <i class="fas fa-file-download fa-4x text-success"></i>
+    <section class="content">
+        <div class="container-fluid">
+            {# Container for combined reports #}
+            <div id="combinedReportsDisplayArea" class="row mt-4">
+                {# Combined reports will be dynamically added here #}
+            </div>
+
+            <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Report Generated Successfully
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-file-download fa-4x text-success"></i>
+                            </div>
+                            <h5>Your report is ready!</h5>
+                            <p class="text-muted">The report has been generated and displayed below.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                        </div>
                     </div>
-                    <h5>Your report is ready!</h5>
-                    <p class="text-muted">The report has been generated and displayed below.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-        </div>
-    </div>
+            </div>
+    </section>
 </div>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -264,7 +276,7 @@
                 endDateInput.classList.add('is-valid');
             }
         }
-        
+
         return isValid;
     }
 
@@ -314,41 +326,41 @@
                 },
                 body: JSON.stringify(payload),
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                const singleReportContainer = document.getElementById('singleReportContainer');
-                const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
-                const reportTableCard = document.getElementById('reportTableCard');
-                const reportTableTitle = document.getElementById('reportTableTitle');
-                const reportTableFooter = document.getElementById('reportTableFooter');
-                const reportDataTableHead = document.querySelector('#reportDataTable thead');
-                const reportDataTableBody = document.querySelector('#reportDataTable tbody');
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const singleReportContainer = document.getElementById('singleReportContainer');
+                    const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
+                    const reportTableCard = document.getElementById('reportTableCard');
+                    const reportTableTitle = document.getElementById('reportTableTitle');
+                    const reportTableFooter = document.getElementById('reportTableFooter');
+                    const reportDataTableHead = document.querySelector('#reportDataTable thead');
+                    const reportDataTableBody = document.querySelector('#reportDataTable tbody');
 
-                singleReportContainer.style.display = 'none';
-                combinedReportsDisplayArea.innerHTML = '';
+                    singleReportContainer.style.display = 'none';
+                    combinedReportsDisplayArea.innerHTML = '';
 
-                if (reportType === 'all_combined_reports') {
-                    if (data.combined_reports && Object.keys(data.combined_reports).length > 0) {
-                        for (const [key, reportDetails] of Object.entries(data.combined_reports)) {
-                            if (reportDetails.data && reportDetails.data.length > 0) {
-                                const reportTitle = key.replace(/_/g, ' ').toUpperCase();
-                                
-                                let tableRows = '';
-                                reportDetails.data.forEach(rowData => {
-                                    let row = '<tr>';
-                                    Object.values(rowData).forEach(value => {
-                                        row += `<td>${value || 'N/A'}</td>`;
+                    if (reportType === 'all_combined_reports') {
+                        if (data.combined_reports && Object.keys(data.combined_reports).length > 0) {
+                            for (const [key, reportDetails] of Object.entries(data.combined_reports)) {
+                                if (reportDetails.data && reportDetails.data.length > 0) {
+                                    const reportTitle = key.replace(/_/g, ' ').toUpperCase();
+
+                                    let tableRows = '';
+                                    reportDetails.data.forEach(rowData => {
+                                        let row = '<tr>';
+                                        Object.values(rowData).forEach(value => {
+                                            row += `<td>${value || 'N/A'}</td>`;
+                                        });
+                                        row += '</tr>';
+                                        tableRows += row;
                                     });
-                                    row += '</tr>';
-                                    tableRows += row;
-                                });
 
-                                const cardHtml = `
+                                    const cardHtml = `
                                     <div class="col-12 mb-4">
                                         <div class="card card-primary">
                                             <div class="card-header d-flex justify-content-between align-items-center">
@@ -381,67 +393,67 @@
                                         </div>
                                     </div>
                                 `;
-                                combinedReportsDisplayArea.innerHTML += cardHtml;
+                                    combinedReportsDisplayArea.innerHTML += cardHtml;
+                                }
                             }
-                        }
-                        
-                        if (combinedReportsDisplayArea.innerHTML === '') {
+
+                            if (combinedReportsDisplayArea.innerHTML === '') {
+                                showNoDataMessage();
+                            }
+                        } else {
                             showNoDataMessage();
                         }
                     } else {
-                        showNoDataMessage();
-                    }
-                } else {
-                    singleReportContainer.style.display = 'block';
-                    reportDataTableHead.innerHTML = '';
-                    reportDataTableBody.innerHTML = '';
+                        singleReportContainer.style.display = 'block';
+                        reportDataTableHead.innerHTML = '';
+                        reportDataTableBody.innerHTML = '';
 
-                    if (data.headers && data.data && data.data.length > 0) {
-                        let headerRow = '<tr class="table-dark">';
-                        data.headers.forEach(header => {
-                            headerRow += `<th class="text-nowrap">${header}</th>`;
-                        });
-                        headerRow += '</tr>';
-                        reportDataTableHead.innerHTML = headerRow;
-
-                        data.data.forEach(rowData => {
-                            let dataRow = '<tr>';
-                            Object.values(rowData).forEach(value => {
-                                dataRow += `<td>${value || 'N/A'}</td>`;
+                        if (data.headers && data.data && data.data.length > 0) {
+                            let headerRow = '<tr class="table-dark">';
+                            data.headers.forEach(header => {
+                                headerRow += `<th class="text-nowrap">${header}</th>`;
                             });
-                            dataRow += '</tr>';
-                            reportDataTableBody.innerHTML += dataRow;
-                        });
+                            headerRow += '</tr>';
+                            reportDataTableHead.innerHTML = headerRow;
 
-                        reportTableCard.style.display = 'block';
-                        reportTableFooter.style.display = 'block';
-                        reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report (${data.data.length} records)`;
-                    } else {
-                        reportTableCard.style.display = 'none';
-                        showNoDataMessage();
+                            data.data.forEach(rowData => {
+                                let dataRow = '<tr>';
+                                Object.values(rowData).forEach(value => {
+                                    dataRow += `<td>${value || 'N/A'}</td>`;
+                                });
+                                dataRow += '</tr>';
+                                reportDataTableBody.innerHTML += dataRow;
+                            });
+
+                            reportTableCard.style.display = 'block';
+                            reportTableFooter.style.display = 'block';
+                            reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report (${data.data.length} records)`;
+                        } else {
+                            reportTableCard.style.display = 'none';
+                            showNoDataMessage();
+                        }
                     }
-                }
-                
-                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                successModal.show();
 
-            })
-            .catch(error => {
-                console.error('Error generating report:', error);
-                alert('An error occurred while generating the report. Please try again.');
-            })
-            .finally(() => {
-                generateBtn.innerHTML = originalText;
-                generateBtn.disabled = false;
-                
-                document.getElementById('reportForm').reset();
-                $('#selectUser').val(null).trigger('change');
-                toggleDateFields();
-                const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
-                if (reportsModal) {
-                    reportsModal.hide();
-                }
-            });
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+
+                })
+                .catch(error => {
+                    console.error('Error generating report:', error);
+                    alert('An error occurred while generating the report. Please try again.');
+                })
+                .finally(() => {
+                    generateBtn.innerHTML = originalText;
+                    generateBtn.disabled = false;
+
+                    document.getElementById('reportForm').reset();
+                    $('#selectUser').val(null).trigger('change');
+                    toggleDateFields();
+                    const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
+                    if (reportsModal) {
+                        reportsModal.hide();
+                    }
+                });
         }
     }
 
@@ -465,7 +477,7 @@
         const cardBody = card.querySelector('.card-body');
         const cardFooter = card.querySelector('.card-footer');
         const icon = button.querySelector('i');
-        
+
         if (cardBody.style.display === 'none') {
             cardBody.style.display = 'block';
             cardFooter.style.display = 'block';
@@ -492,7 +504,7 @@
         } else {
             table = elementOrButton.closest('.card').querySelector('table');
         }
-        
+
         const wb = XLSX.utils.table_to_book(table);
         const cleanFilename = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         XLSX.writeFile(wb, `${cleanFilename}_report.xlsx`);

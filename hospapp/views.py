@@ -484,13 +484,13 @@ def generate_nurse_report(request):
 
         def get_lab_tests_data():
             lab_tests = get_common_filters(LabTest.objects.all().order_by('-requested_at'), 'requested_at')
-            headers = ['Patient', 'Test Name', 'Category', 'Status', 'Result Value', 'Requested By', 'Performed By', 'Requested At']
+            headers = ['Patient','Category', 'Test Name', 'Status', 'Result Value', 'Requested By', 'Performed By', 'Requested At']
             report_data = []
             for test in lab_tests:
-                report_data.append({
-                    'patient_name': test.patient.full_name,
-                    'test_name': test.test_name,
+                report_data.append({                    
+                    'patient_name': test.patient.full_name,                    
                     'category': test.category.name if test.category else 'N/A',
+                    'test_name': test.test_name,
                     'status': test.get_status_display(),
                     'result_value': test.result_value or 'N/A',
                     'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',

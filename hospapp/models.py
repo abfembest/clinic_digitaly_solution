@@ -168,7 +168,7 @@ class Appointment(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     scheduled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    scheduled_time = models.DateTimeField()
+    scheduled_time = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.patient.full_name} - {self.department}"
