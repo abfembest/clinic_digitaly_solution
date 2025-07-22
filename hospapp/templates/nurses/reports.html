@@ -1,4 +1,4 @@
-{% extends "nurses/base.html" %}
+﻿{% extends "nurses/base.html" %}
 {% load static %}
 
 {% block title %}HMS | Nurse Activity Report{% endblock %}
@@ -49,11 +49,11 @@
                 <div class="modal-body p-3">
                     <form id="reportForm" novalidate>
                         <div class="mb-2">
-                            <label for="selectUser" class="form-label">User (Nurses & Doctors)</label>
+                            <label for="selectUser" class="form-label">Patients</label>
                             <select class="form-select form-select-sm" id="selectUser">
                                 <option value="">Select a user (Optional)</option>
-                                {% for user in users %}
-                                <option value="{{ user.id }}">{{ user.full_name }}</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.id}} - {{patient.full_name }}</option>
                                 {% endfor %}
                             </select>
                             <div class="invalid-feedback">Please select a user.</div>
@@ -79,7 +79,7 @@
                         <div class="mb-2">
                             <label class="form-label">Date Filter</label>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="dateFilter" id="allDates" value="all"
+                                <input class="form-check-input" type="radio" name="dateFilter" id="allDates" value=""
                                     checked>
                                 <label class="form-check-label" for="allDates">All Dates</label>
                             </div>
@@ -179,7 +179,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 
 <script>
     // Initialize Select2 for user selection
@@ -298,14 +297,17 @@
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
 
+            const alldate = allDatesRadio.checked ? 'all' : 'range';  // ✅ FIXED
+
             const payload = {
+                alldate: alldate,
                 user_id: userId,
                 report_type: reportType,
                 start_date: startDate,
                 end_date: endDate,
             };
 
-            fetch('/api/generate-nurse-report/', { // Ensure this URL matches your urls.py
+            fetch('/api/generate-nurse-report/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -313,77 +315,70 @@
                 },
                 body: JSON.stringify(payload),
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Populate the table
-                const tableHead = document.querySelector('#reportDataTable thead');
-                const tableBody = document.querySelector('#reportDataTable tbody');
-                const reportTableCard = document.getElementById('reportTableCard');
-                const reportTableTitle = document.getElementById('reportTableTitle');
-                const reportTableFooter = document.getElementById('reportTableFooter');
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const tableHead = document.querySelector('#reportDataTable thead');
+                    const tableBody = document.querySelector('#reportDataTable tbody');
+                    const reportTableCard = document.getElementById('reportTableCard');
+                    const reportTableTitle = document.getElementById('reportTableTitle');
+                    const reportTableFooter = document.getElementById('reportTableFooter');
 
-                // Clear previous content
-                tableHead.innerHTML = '';
-                tableBody.innerHTML = '';
+                    tableHead.innerHTML = '';
+                    tableBody.innerHTML = '';
 
-                if (data.headers && data.data && data.data.length > 0) {
-                    // Populate headers
-                    let headerRow = '<tr>';
-                    data.headers.forEach(header => {
-                        headerRow += `<th>${header}</th>`;
-                    });
-                    headerRow += '</tr>';
-                    tableHead.innerHTML = headerRow;
-
-                    // Populate data
-                    data.data.forEach(rowData => {
-                        let dataRow = '<tr>';
-                        Object.values(rowData).forEach(value => {
-                            dataRow += `<td>${value}</td>`;
+                    if (data.headers && data.data && data.data.length > 0) {
+                        let headerRow = '<tr>';
+                        data.headers.forEach(header => {
+                            headerRow += `<th>${header}</th>`;
                         });
-                        dataRow += '</tr>';
-                        tableBody.innerHTML += dataRow;
-                    });
+                        headerRow += '</tr>';
+                        tableHead.innerHTML = headerRow;
 
-                    reportTableCard.style.display = 'block'; // Show the table card
-                    reportTableFooter.style.display = 'block'; // Show the footer
-                    reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
+                        data.data.forEach(rowData => {
+                            let dataRow = '<tr>';
+                            Object.values(rowData).forEach(value => {
+                                dataRow += `<td>${value}</td>`;
+                            });
+                            dataRow += '</tr>';
+                            tableBody.innerHTML += dataRow;
+                        });
 
-                    // Show success modal
-                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
-                } else {
-                    reportTableCard.style.display = 'block'; // Still show the card to display no data message
-                    reportTableFooter.style.display = 'none'; // Hide footer if no data
-                    reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
-                    tableBody.innerHTML = `<tr><td colspan="${data.headers.length || 1}" class="text-center text-muted py-4">No data found for the selected criteria.</td></tr>`;
+                        reportTableCard.style.display = 'block';
+                        reportTableFooter.style.display = 'block';
+                        reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
 
-                    // Show success modal even if no data, but with a different message if needed (or just let this one show)
-                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
-                }
-            })
-            .catch(error => {
-                console.error('Error generating report:', error);
-                alert('An error occurred while generating the report. Please try again.');
-            })
-            .finally(() => {
-                // Reset the button
-                generateBtn.innerHTML = originalText;
-                generateBtn.disabled = false;
-                
-                // Reset form fields
-                document.getElementById('reportForm').reset();
-                $('#selectUser').val(null).trigger('change');
-                toggleDateFields(); // Reset date fields state
-            });
+                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                        successModal.show();
+                    } else {
+                        reportTableCard.style.display = 'block';
+                        reportTableFooter.style.display = 'none';
+                        reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
+                        tableBody.innerHTML = `<tr><td colspan="${data.headers.length || 1}" class="text-center text-muted py-4">No data found for the selected criteria.</td></tr>`;
+
+                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                        successModal.show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error generating report:', error);
+                    alert('An error occurred while generating the report. Please try again.');
+                })
+                .finally(() => {
+                    generateBtn.innerHTML = originalText;
+                    generateBtn.disabled = false;
+
+                    document.getElementById('reportForm').reset();
+                    $('#selectUser').val(null).trigger('change');
+                    toggleDateFields();
+                });
         }
     }
+
 
     // Initialize date fields state on page load
     toggleDateFields();
