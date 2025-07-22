@@ -51,18 +51,12 @@
                         <div class="mb-2">
                             <label for="selectUser" class="form-label">Patients</label>
                             <select class="form-select form-select-sm" id="selectUser">
-<<<<<<< HEAD
-                                <option value="">Select a user (Optional)</option>
-                                {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.id}} - {{patient.full_name }}</option>
-=======
-                                <option value="">All Users</option> {# Option for all users #}
+                                <option value="">All Patients</option> {# Option for all patients already exists #}
                                 {% for user in users %}
                                 <option value="{{ user.id }}">{{ user.full_name }}</option>
->>>>>>> 5d793160f0ac3056c247c6baf903e105b40d01c8
                                 {% endfor %}
                             </select>
-                            <div class="invalid-feedback">Please select a user.</div>
+                            <div class="invalid-feedback">Please select a patient.</div>
                         </div>
 
                         <div class="mb-2">
@@ -78,7 +72,8 @@
                                 <option value="prescriptions">Prescriptions</option>
                                 <option value="lab_tests">Lab Tests</option>
                                 <option value="handovers">Handovers</option>
-                                {# IVF related options removed as per user request #}
+                                <option value="ivf_records">IVF Records</option>
+                                <option value="ivf_progress_updates">IVF Progress Updates</option>
                             </select>
                             <div class="invalid-feedback">Please select a report type.</div>
                         </div>
@@ -186,14 +181,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 
 <script>
-    // Initialize Select2 for user selection
+    // Initialize Select2 for patient selection
     $(document).ready(function () {
         $('#selectUser').select2({
             theme: 'bootstrap-5',
             width: '100%',
-            placeholder: 'Select a user (Optional)',
+            placeholder: 'Select a patient (Optional)',
             allowClear: true,
             dropdownParent: $('#reportsModal')
         });
@@ -299,12 +295,12 @@
             generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
             generateBtn.disabled = true;
 
-            const userId = $('#selectUser').val();
+            const userId = $('#selectUser').val(); // This is now patient_id
             const reportType = document.getElementById('reportType').value;
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
 
-            const alldate = allDatesRadio.checked ? 'all' : 'range';  // ✅ FIXED
+            const alldate = allDatesRadio.checked ? 'all' : 'range';
 
             const payload = {
                 alldate: alldate,
@@ -359,54 +355,36 @@
                         reportTableFooter.style.display = 'block';
                         reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
 
-<<<<<<< HEAD
-                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                        successModal.show();
                     } else {
-                        reportTableCard.style.display = 'block';
+                        // If no data, hide the table and footer, and display a message
+                        reportTableCard.style.display = 'none';
                         reportTableFooter.style.display = 'none';
-                        reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
-                        tableBody.innerHTML = `<tr><td colspan="${data.headers.length || 1}" class="text-center text-muted py-4">No data found for the selected criteria.</td></tr>`;
-
-                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                        successModal.show();
+                        alert('No data found for the selected criteria.'); // You might want a more elegant message
                     }
+                    
+                    // Show success modal regardless of data presence (it indicates the report generation process completed)
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+
                 })
                 .catch(error => {
                     console.error('Error generating report:', error);
-                    alert('An error occurred while generating the report. Please try again.');
+                    alert('An error occurred while generating the report. Please try again.'); 
                 })
                 .finally(() => {
+                    // Reset the button
                     generateBtn.innerHTML = originalText;
                     generateBtn.disabled = false;
-
+                    
+                    // Reset form fields and close the modal
                     document.getElementById('reportForm').reset();
                     $('#selectUser').val(null).trigger('change');
-                    toggleDateFields();
+                    toggleDateFields(); // Reset date fields state
+                    const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
+                    if (reportsModal) {
+                        reportsModal.hide();
+                    }
                 });
-=======
-                    // Show success modal even if no data, but with a different message if needed (or just let this one show)
-                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
-                }
-            })
-            .catch(error => {
-                console.error('Error generating report:', error);
-                // Replaced alert with a custom modal or message display if you have one.
-                // For now, keeping alert as a fallback, but ideally use a Bootstrap modal for errors.
-                alert('An error occurred while generating the report. Please try again.'); 
-            })
-            .finally(() => {
-                // Reset the button
-                generateBtn.innerHTML = originalText;
-                generateBtn.disabled = false;
-                
-                // Reset form fields
-                document.getElementById('reportForm').reset();
-                $('#selectUser').val(null).trigger('change');
-                toggleDateFields(); // Reset date fields state
-            });
->>>>>>> 5d793160f0ac3056c247c6baf903e105b40d01c8
         }
     }
 
