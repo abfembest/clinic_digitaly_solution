@@ -51,9 +51,15 @@
                         <div class="mb-2">
                             <label for="selectUser" class="form-label">Patients</label>
                             <select class="form-select form-select-sm" id="selectUser">
+<<<<<<< HEAD
                                 <option value="">Select a user (Optional)</option>
                                 {% for patient in patients %}
                                 <option value="{{ patient.id }}">{{ patient.id}} - {{patient.full_name }}</option>
+=======
+                                <option value="">All Users</option> {# Option for all users #}
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.full_name }}</option>
+>>>>>>> 5d793160f0ac3056c247c6baf903e105b40d01c8
                                 {% endfor %}
                             </select>
                             <div class="invalid-feedback">Please select a user.</div>
@@ -72,6 +78,7 @@
                                 <option value="prescriptions">Prescriptions</option>
                                 <option value="lab_tests">Lab Tests</option>
                                 <option value="handovers">Handovers</option>
+                                {# IVF related options removed as per user request #}
                             </select>
                             <div class="invalid-feedback">Please select a report type.</div>
                         </div>
@@ -352,6 +359,7 @@
                         reportTableFooter.style.display = 'block';
                         reportTableTitle.textContent = `${reportType.replace(/_/g, ' ').toUpperCase()} Report`;
 
+<<<<<<< HEAD
                         const successModal = new bootstrap.Modal(document.getElementById('successModal'));
                         successModal.show();
                     } else {
@@ -376,6 +384,29 @@
                     $('#selectUser').val(null).trigger('change');
                     toggleDateFields();
                 });
+=======
+                    // Show success modal even if no data, but with a different message if needed (or just let this one show)
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                }
+            })
+            .catch(error => {
+                console.error('Error generating report:', error);
+                // Replaced alert with a custom modal or message display if you have one.
+                // For now, keeping alert as a fallback, but ideally use a Bootstrap modal for errors.
+                alert('An error occurred while generating the report. Please try again.'); 
+            })
+            .finally(() => {
+                // Reset the button
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+                
+                // Reset form fields
+                document.getElementById('reportForm').reset();
+                $('#selectUser').val(null).trigger('change');
+                toggleDateFields(); // Reset date fields state
+            });
+>>>>>>> 5d793160f0ac3056c247c6baf903e105b40d01c8
         }
     }
 
