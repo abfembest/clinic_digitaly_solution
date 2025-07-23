@@ -66,6 +66,7 @@ urlpatterns = [
     path('l/internal_logs', views.lab_internal_logs, name='lab_internal_logs'),
     path('lab/ivf-progress/', views.lab_view_ivf_progress, name='lab_ivf_progress'),
     path('lab/activity-report/', views.lab_activity_report, name='lab_activity_report'),
+    path('lab/generate-report/', views.generate_lab_report, name='generate_lab_report'),
     
     path('lab/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
     path('l/test_details/<int:patient_id>/', views.test_details, name='test_details'),
