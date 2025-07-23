@@ -54,7 +54,7 @@
                             <div class="col-md-6">
                                 <div class="mb-2" id="patientSelectDiv">
                                     <label for="selectPatient" class="form-label">Patients</label>
-                                    <select class="form-select form-select-sm"">
+                                    <select class="form-select form-select-sm" >
                                         <option value="">All Patients</option>
                                         {% for patient in patients %}
                                         <option value="{{ patient.id }}">{{ patient.full_name }} -{{ patient.patient_id }}</option>
