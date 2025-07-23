@@ -72,14 +72,7 @@
                                     </select>
                                 </div>
 
-                        <div class="mb-2" id="patientSelectDiv">
-                            <label for="selectPatient" class="form-label">Patients</label>
-                            <select class="form-select form-select-sm" id="selectPatient">
-                                <option value="">All Patients</option>
-                                {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.display_name }}</option>
-                                {% endfor %}
-                            </select>
+                            </div>
                         </div>
 
                         <div class="mb-2">
