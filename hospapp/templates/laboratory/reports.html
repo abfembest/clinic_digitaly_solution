@@ -4,22 +4,132 @@
 {% block title %}HMS | Laboratory Activity Report{% endblock %}
 
 {% block content %}
-
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet">
-
-{% include "nurses/nurses.css" %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Laboratory Activity Report</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item"><a href="#">Laboratory</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="generate-reports-page">
-    <div class="container dashboard-container">
-        <div class="row justify-content-center">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-flask me-1"></i>
+                            Generate Laboratory Reports
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="reportForm" novalidate>
+                            <div class="mb-3" id="patientSelectDiv">
+                                <label for="selectPatient" class="form-label">Patients</label>
+                                <select class="form-control select2bs4" id="selectPatient" name="patient_id"
+                                    style="width: 100%;">
+                                    <option value="">All Patients</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reportType" class="form-label">Report Type <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-control select2bs4" id="reportType" required
+                                    style="width: 100%;">
+                                    <option value="" disabled selected>Select type...</option>
+                                    <option value="all_combined_reports">All Combined Reports</option>
+                                    <option value="lab_tests">All Lab Tests</option>
+                                    <option value="pending_lab_tests">Pending Lab Tests</option>
+                                    <option value="completed_lab_tests">Completed Lab Tests</option>
+                                    <option value="lab_result_files">Lab Result Files</option>
+                                    <option value="test_categories">Test Categories Statistics</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a report type.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Date Filter</label>
+                                <div class="d-flex flex-wrap">
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="allDates"
+                                            value="" checked>
+                                        <label class="form-check-label" for="allDates">All Dates</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
+                                            value="range">
+                                        <label class="form-check-label" for="dateRange">Date Range</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="todayFilter"
+                                            value="today">
+                                        <label class="form-check-label" for="todayFilter">Today</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="weekFilter"
+                                            value="week">
+                                        <label class="form-check-label" for="weekFilter">This Week</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="monthFilter"
+                                            value="month">
+                                        <label class="form-check-label" for="monthFilter">This Month</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="dateFields" class="date-fields mb-3" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="startDate" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="startDate" disabled>
+                                        <div class="invalid-feedback">Select start date.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="endDate" class="form-label">End Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="endDate" disabled>
+                                        <div class="invalid-feedback">Select valid end date.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-block mt-3" onclick="generateReport()">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Generate Report
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-body text-center py-3">
-                        <div class="icon-wrapper mx-auto mb-2">
-                            <i class="fas fa-flask text-white fa-lg"></i>
+                <div id="singleReportContainer" class="card card-info" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel"></i> Export
+                            </button>
                         </div>
+<<<<<<< HEAD
                         <h4 class="mb-2 text-dark">Laboratory Reports Dashboard</h4>
                         <p class="text-muted mb-3">
                             Total Patients: {{ total_patients|default:0 }} |
@@ -30,12 +140,29 @@
                             <i class="fas fa-chart-line me-2"></i>
                             Generate Lab Reports
                         </button>
+=======
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
                     </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover table-striped" id="reportDataTable">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                        <span class="text-muted" id="recordCount">Total Records: 0</span>
+                    </div>
+                </div>
+
+                <div id="combinedReportsDisplayArea" class="row">
                 </div>
             </div>
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- Reports Modal -->
     <div class="modal fade" id="reportsModal" tabindex="-1" aria-labelledby="reportsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -182,6 +309,8 @@
     </section>
 
     <!-- Success Modal -->
+=======
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
     <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -206,7 +335,6 @@
         </div>
     </div>
 
-    <!-- Error Modal -->
     <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -232,41 +360,69 @@
     </div>
 </div>
 
+<<<<<<< HEAD
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
+=======
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
 
 <script>
     $(document).ready(function () {
-        // Initialize Select2 for patient selection
+        // Select2 JavaScript library is loaded in base.html.
+        // We initialize specific Select2 elements here. This does not re-initialize the library itself,
+        // but rather applies Select2 functionality to these specific DOM elements.
+
+        // For selectPatient: Apply specific placeholder and allowClear
         $('#selectPatient').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Select a patient (Optional)',
+            theme: 'bootstrap4',
+            // Removed placeholder to ensure "All Patients" is always visible
             allowClear: true,
-            dropdownParent: $('#reportsModal')
+            // minimumResultsForSearch: Infinity // Add this if you don't want a search box for single selects
         });
 
+<<<<<<< HEAD
         // Show/hide patient selector based on report type
+=======
+        // For reportType: Apply specific placeholder and allowClear
+        $('#reportType').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Select type...',
+            allowClear: true,
+            // minimumResultsForSearch: Infinity // Add this if you don't want a search box for single selects
+        });
+
+
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
         $('#reportType').change(function () {
             const selectedType = $(this).val();
             const patientDiv = $('#patientSelectDiv');
+            const patientSelect = $('#selectPatient');
 
-            if (selectedType === 'test_categories') {
-                patientDiv.hide();
-                $('#selectPatient').val(null).trigger('change');
-            } else {
+            // List of report types that can be filtered by patient
+            const patientFilterableTypes = ['all_combined_reports', 'lab_tests', 'pending_lab_tests', 'completed_lab_tests', 'lab_result_files'];
+
+            if (patientFilterableTypes.includes(selectedType)) {
+                // If the selected type allows patient filtering, ensure the div is visible
                 patientDiv.show();
+                // Do NOT reset patientSelect here, preserve the user's current selection if any
+            } else {
+                // If the selected type does NOT allow patient filtering, hide the div and reset selection
+                patientDiv.hide();
+                patientSelect.val('').trigger('change'); // Clear selection only if not patient-filterable
             }
         });
 
-        // Date filter handling
+        // Initialize date fields visibility
         toggleDateFields();
     });
 
-    // Date filter radio buttons event handlers
     document.querySelectorAll('input[name="dateFilter"]').forEach(radio => {
         radio.addEventListener('change', toggleDateFields);
     });
@@ -308,10 +464,8 @@
         const dateRangeRadio = document.getElementById('dateRange');
         let isValid = true;
 
-        // Clear previous validation
         clearValidation([reportType, startDateInput, endDateInput]);
 
-        // Validate report type
         if (!reportType.value) {
             reportType.classList.add('is-invalid');
             isValid = false;
@@ -319,7 +473,6 @@
             reportType.classList.add('is-valid');
         }
 
-        // Validate date range if selected
         if (dateRangeRadio.checked) {
             if (!startDateInput.value) {
                 startDateInput.classList.add('is-invalid');
@@ -348,14 +501,14 @@
             return;
         }
 
-        // Show loading state
-        const generateBtn = document.querySelector('.btn-generate-report');
+        const generateBtn = document.querySelector('.btn-primary');
         const originalText = generateBtn.innerHTML;
         generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
         generateBtn.disabled = true;
 
         const reportType = document.getElementById('reportType').value;
         const patientId = $('#selectPatient').val();
+
         const alldate = document.querySelector('input[name="dateFilter"]:checked').value;
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
@@ -384,25 +537,16 @@
                 throw new Error(data.error || 'Unknown error occurred');
             }
 
-            // Clear previous reports
             document.getElementById('singleReportContainer').style.display = 'none';
             document.getElementById('reportDataTable').innerHTML = '';
             document.getElementById('combinedReportsDisplayArea').innerHTML = '';
 
             if (reportType === 'all_combined_reports') {
                 displayCombinedReports(data.combined_reports);
-                document.getElementById('successMessage').textContent = 'Combined reports generated successfully!';
-                document.getElementById('successDetails').textContent = `${data.total_reports} report sections generated.`;
             } else {
-                displaySingleReport(reportType, data.headers, data.data);
+                displaySingleReport(reportType, data.headers, data.data, data.title);
                 document.getElementById('successMessage').textContent = `${data.title} report generated successfully!`;
                 document.getElementById('successDetails').textContent = `${data.count} records found.`;
-            }
-
-            // Hide the modal and show success
-            const reportsModal = bootstrap.Modal.getInstance(document.getElementById('reportsModal'));
-            if (reportsModal) {
-                reportsModal.hide();
             }
 
             const successModal = new bootstrap.Modal(document.getElementById('successModal'));
@@ -414,29 +558,31 @@
             const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
             errorModal.show();
         } finally {
-            // Reset button state
             generateBtn.innerHTML = originalText;
             generateBtn.disabled = false;
         }
     }
 
-    function displaySingleReport(reportType, headers, data) {
-        const reportTableCard = document.getElementById('reportTableCard');
+    function displaySingleReport(reportType, headers, data, title) {
         const reportTableTitle = document.getElementById('reportTableTitle');
         const reportDataTable = document.getElementById('reportDataTable');
         const reportTableFooter = document.getElementById('reportTableFooter');
         const recordCount = document.getElementById('recordCount');
 
+<<<<<<< HEAD
         reportTableTitle.textContent = formatReportTypeTitle(reportType);
 
         // Build table header
+=======
+        reportTableTitle.textContent = title || formatReportTypeTitle(reportType);
+
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
         let thead = '<thead class="table-dark"><tr>';
         headers.forEach(header => {
             thead += `<th>${header}</th>`;
         });
         thead += '</tr></thead>';
 
-        // Build table body
         let tbody = '<tbody>';
         if (data && data.length > 0) {
             data.forEach(row => {
@@ -445,7 +591,19 @@
                     const key = formatHeaderToKey(header);
                     let value = row[key];
 
+<<<<<<< HEAD
                     if (value === null || value === undefined) {
+=======
+                    if (reportType === 'lab_result_files' && key === 'action') {
+                        // For 'Action' column in Lab Result Files, create a download link
+                        const fileUrl = row['file_url']; // Access the file_url
+                        if (fileUrl && fileUrl !== '#') {
+                            value = `<a href="${fileUrl}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-download me-1"></i> Download</a>`;
+                        } else {
+                            value = 'N/A';
+                        }
+                    } else if (value === null || value === undefined) {
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
                         value = 'N/A';
                     } else if (typeof value === 'boolean') {
                         value = value ? 'Yes' : 'No';
@@ -465,7 +623,10 @@
         reportDataTable.innerHTML = thead + tbody;
         document.getElementById('singleReportContainer').style.display = 'block';
 
+<<<<<<< HEAD
         // Update record count and show footer
+=======
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
         recordCount.textContent = `Total Records: ${data ? data.length : 0}`;
         if (data && data.length > 0) {
             reportTableFooter.style.display = 'block';
@@ -478,13 +639,16 @@
         const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
         combinedReportsDisplayArea.innerHTML = '';
 
+        let totalReportsCount = 0;
         for (const reportTypeKey in combinedReportsData) {
             const report = combinedReportsData[reportTypeKey];
             const headers = report.headers;
             const data = report.data;
 
             if (data && data.length > 0) {
+                totalReportsCount++;
                 const cardHtml = `
+<<<<<<< HEAD
                     <div class="col-12 mb-4">
                         <div class="card card-info">
                             <div class="card-header">
@@ -529,14 +693,72 @@
                             <div class="card-footer text-center">
                                 <button class="btn btn-success btn-sm mt-2" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
                                     <i class="fas fa-file-excel me-1"></i> Export to Excel
+=======
+                <div class="col-12 mb-4">
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">${report.title || formatReportTypeTitle(reportTypeKey)}</h3>
+                            <div class="card-tools">
+                                <span class="badge bg-primary me-2">${report.count || data.length} records</span>
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <button type="button" class="btn btn-tool" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
+                                    <i class="fas fa-file-excel"></i>
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
                                 </button>
                             </div>
                         </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            ${headers.map(header => `<th>${header}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.map(row => `
+                                            <tr>
+                                                ${headers.map(header => {
+                    const key = formatHeaderToKey(header);
+                    let value = row[key];
+
+                    if (reportTypeKey === 'lab_result_files' && key === 'action') {
+                        // For 'Action' column in Lab Result Files, create a download link
+                        const fileUrl = row['file_url']; // Access the file_url
+                        if (fileUrl && fileUrl !== '#') {
+                            value = `<a href="${fileUrl}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-download me-1"></i> Download</a>`;
+                        } else {
+                            value = 'N/A';
+                        }
+                    } else if (value === null || value === undefined) {
+                        value = 'N/A';
+                    } else if (typeof value === 'boolean') {
+                        value = value ? 'Yes' : 'No';
+                    }
+                    return `<td>${value}</td>`;
+                }).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-success btn-sm" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
+                                <i class="fas fa-file-excel me-1"></i> Export to Excel
+                            </button>
+                        </div>
                     </div>
-                `;
+                </div>
+            `;
                 combinedReportsDisplayArea.insertAdjacentHTML('beforeend', cardHtml);
             }
         }
+        // Update success modal with actual total reports generated
+        document.getElementById('successMessage').textContent = 'Combined reports generated successfully!';
+        document.getElementById('successDetails').textContent = `${totalReportsCount} report sections generated.`;
     }
 
     function formatReportTypeTitle(reportTypeKey) {
@@ -562,25 +784,7 @@
         return cookieValue;
     }
 
-    function toggleCard(button) {
-        const card = button.closest('.card');
-        const cardBody = card.querySelector('.card-body');
-        const cardFooter = card.querySelector('.card-footer');
-        const icon = button.querySelector('i');
-
-        if (cardBody.style.display === 'none') {
-            cardBody.style.display = 'block';
-            if (cardFooter) cardFooter.style.display = 'block';
-            icon.classList.remove('fa-plus');
-            icon.classList.add('fa-minus');
-        } else {
-            cardBody.style.display = 'none';
-            if (cardFooter) cardFooter.style.display = 'none';
-            icon.classList.remove('fa-minus');
-            icon.classList.add('fa-plus');
-        }
-    }
-
+    // Function to handle export for a single report table
     function exportToExcel() {
         const table = document.getElementById('reportDataTable');
         const title = document.getElementById('reportTableTitle').textContent;
@@ -589,6 +793,7 @@
         XLSX.writeFile(wb, `${cleanFilename}_lab_report.xlsx`);
     }
 
+    // Function to handle export for combined report tables
     function exportCombinedToExcel(filename, button) {
         const table = button.closest('.card').querySelector('table');
         if (table) {
@@ -598,7 +803,10 @@
         }
     }
 </script>
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> 1719081b4a275ceef71eef430840d712216d5849
 {% endblock %}
