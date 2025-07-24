@@ -2640,39 +2640,14 @@ def lab_view_ivf_progress(request):
 
 @login_required(login_url='home')
 def lab_activity_report(request):
-    """
-    Renders the laboratory activity report page and provides initial data for filters.
-    Only shows data relevant to lab activities and what a lab user should access.
-    """
-    # Get all patients for filtering (lab users need to see all patients for test requests)
     patients = Patient.objects.all().order_by('full_name')
     patients_data = [
         {'id': patient.id, 'full_name': patient.full_name, 'patient_id': patient.patient_id}
         for patient in patients
     ]
 
-    # Fetch lab technicians for filtering reports
-    lab_technicians = User.objects.filter(staff__role='lab').order_by('first_name', 'last_name')
-    lab_technicians_data = [
-        {
-            'id': technician.id, 
-            'full_name': technician.get_full_name() or technician.username,
-            'username': technician.username
-        }
-        for technician in lab_technicians
-    ]
-
-    # Get test categories for additional filtering options
-    test_categories = TestCategory.objects.all().order_by('name')
-    categories_data = [
-        {'id': category.id, 'name': category.name}
-        for category in test_categories
-    ]
-
     context = {
         'patients': patients_data,
-        'lab_technicians': lab_technicians_data,
-        'test_categories': categories_data,
     }
     return render(request, 'laboratory/reports.html', context)
 
@@ -2688,7 +2663,6 @@ def generate_lab_report(request):
             data = json.loads(request.body)
             alldate = data.get('alldate')
             patient_id = data.get('patient_id')
-            lab_technician_id = data.get('lab_technician_id')
             report_type = data.get('report_type')
             start_date_str = data.get('start_date')
             end_date_str = data.get('end_date')
@@ -2696,46 +2670,53 @@ def generate_lab_report(request):
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
 
+            # Adjust dates for 'today', 'week', 'month' filters
+            if alldate == 'today':
+                start_date = timezone.now().date()
+                end_date = timezone.now().date()
+            elif alldate == 'week':
+                today = timezone.now().date()
+                start_date = today - timedelta(days=today.weekday())  # Monday of current week
+                end_date = start_date + timedelta(days=6)  # Sunday of current week
+            elif alldate == 'month':
+                today = timezone.now().date()
+                start_date = today.replace(day=1)  # First day of current month
+                # Calculate the last day of the current month
+                next_month = today.replace(day=28) + timedelta(days=4)
+                end_date = next_month.replace(day=1) - timedelta(days=1)
+
             def get_common_filters(model_queryset, date_field_name, filter_by_patient=True):
                 filters = Q()
-                
+
                 if filter_by_patient and patient_id:
                     filters &= Q(patient__id=patient_id)
-                
-                # Special handling for LabTest when filtering by performed_by
-                if model_queryset.model == LabTest and lab_technician_id:
-                    filters &= Q(performed_by__id=lab_technician_id)
 
-                if alldate == 'range' and start_date and end_date:
+                if start_date and end_date:  # Apply date filters based on calculated start/end dates
                     date_filter = {f'{date_field_name}__date__range': [start_date, end_date]}
                     filters &= Q(**date_filter)
-                    
+
                 return model_queryset.filter(filters)
 
             def get_lab_tests_data():
                 """All lab tests with optional filtering"""
                 lab_tests = get_common_filters(
                     LabTest.objects.select_related('patient', 'category', 'requested_by', 'performed_by')
-                    .order_by('-requested_at'), 
-                    'requested_at', 
+                    .order_by('-requested_at'),
+                    'requested_at',
                     filter_by_patient=True
                 )
-                
-                # Additional filtering by lab technician if specified
-                if lab_technician_id:
-                    lab_tests = lab_tests.filter(performed_by__id=lab_technician_id)
 
                 headers = [
-                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name', 
-                    'Status', 'Result Value', 'Normal Range', 'Requested By', 
+                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name',
+                    'Status', 'Result Value', 'Normal Range', 'Requested By',
                     'Performed By', 'Requested At', 'Date Performed', 'Notes'
                 ]
                 report_data = []
-                
+
                 for test in lab_tests:
                     report_data.append({
-                        'patient_id': test.patient.patient_id,
-                        'patient_name': test.patient.full_name,
+                        'patient_id': test.patient.patient_id if test.patient else 'N/A',
+                        'patient_name': test.patient.full_name if test.patient else 'N/A',
                         'category': test.category.name if test.category else 'N/A',
                         'test_name': test.test_name,
                         'status': test.get_status_display(),
@@ -2747,63 +2728,32 @@ def generate_lab_report(request):
                         'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else 'N/A',
                         'notes': test.notes or 'N/A',
                     })
-                return headers, report_data
-
-            def get_my_performed_lab_tests_data():
-                """Lab tests performed by the current user"""
-                lab_tests_queryset = LabTest.objects.filter(performed_by=request.user).select_related(
-                    'patient', 'category', 'requested_by'
-                ).order_by('-requested_at')
-                
-                lab_tests = get_common_filters(lab_tests_queryset, 'requested_at', filter_by_patient=True)
-                
-                headers = [
-                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name', 
-                    'Status', 'Result Value', 'Normal Range', 'Requested By', 
-                    'Requested At', 'Date Performed', 'Notes'
-                ]
-                report_data = []
-                
-                for test in lab_tests:
-                    report_data.append({
-                        'patient_id': test.patient.patient_id,
-                        'patient_name': test.patient.full_name,
-                        'category': test.category.name if test.category else 'N/A',
-                        'test_name': test.test_name,
-                        'status': test.get_status_display(),
-                        'result_value': test.result_value or 'Pending',
-                        'normal_range': test.normal_range or 'N/A',
-                        'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
-                        'requested_at': test.requested_at.strftime('%Y-%m-%d %H:%M'),
-                        'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else 'N/A',
-                        'notes': test.notes or 'N/A',
-                    })
-                return headers, report_data
+                return headers, report_data, len(report_data), "All Lab Tests"
 
             def get_pending_lab_tests_data():
                 """Lab tests that are still pending"""
                 lab_tests = get_common_filters(
                     LabTest.objects.filter(status='pending').select_related(
                         'patient', 'category', 'requested_by'
-                    ).order_by('-requested_at'), 
-                    'requested_at', 
+                    ).order_by('-requested_at'),
+                    'requested_at',
                     filter_by_patient=True
                 )
-                
+
                 headers = [
-                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name', 
+                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name',
                     'Requested By', 'Requested At', 'Notes', 'Priority'
                 ]
                 report_data = []
-                
+
                 for test in lab_tests:
                     # Calculate days pending
                     days_pending = (timezone.now().date() - test.requested_at.date()).days
                     priority = 'High' if days_pending > 2 else 'Normal'
-                    
+
                     report_data.append({
-                        'patient_id': test.patient.patient_id,
-                        'patient_name': test.patient.full_name,
+                        'patient_id': test.patient.patient_id if test.patient else 'N/A',
+                        'patient_name': test.patient.full_name if test.patient else 'N/A',
                         'category': test.category.name if test.category else 'N/A',
                         'test_name': test.test_name,
                         'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
@@ -2811,28 +2761,25 @@ def generate_lab_report(request):
                         'notes': test.notes or 'N/A',
                         'priority': priority,
                     })
-                return headers, report_data
+                return headers, report_data, len(report_data), "Pending Lab Tests"
 
             def get_completed_lab_tests_data():
                 """Lab tests that have been completed"""
                 lab_tests = get_common_filters(
                     LabTest.objects.filter(status='completed').select_related(
                         'patient', 'category', 'requested_by', 'performed_by'
-                    ).order_by('-date_performed'), 
-                    'date_performed', 
+                    ).order_by('-date_performed'),
+                    'date_performed',
                     filter_by_patient=True
                 )
-                
-                if lab_technician_id:
-                    lab_tests = lab_tests.filter(performed_by__id=lab_technician_id)
 
                 headers = [
-                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name', 
-                    'Result Value', 'Normal Range', 'Performed By', 
+                    'Patient ID', 'Patient Name', 'Test Category', 'Test Name',
+                    'Result Value', 'Normal Range', 'Performed By',
                     'Date Performed', 'Turnaround Time (Hours)'
                 ]
                 report_data = []
-                
+
                 for test in lab_tests:
                     # Calculate turnaround time
                     if test.date_performed and test.requested_at:
@@ -2840,10 +2787,10 @@ def generate_lab_report(request):
                         turnaround_time = round(turnaround_time, 1)
                     else:
                         turnaround_time = 'N/A'
-                    
+
                     report_data.append({
-                        'patient_id': test.patient.patient_id,
-                        'patient_name': test.patient.full_name,
+                        'patient_id': test.patient.patient_id if test.patient else 'N/A',
+                        'patient_name': test.patient.full_name if test.patient else 'N/A',
                         'category': test.category.name if test.category else 'N/A',
                         'test_name': test.test_name,
                         'result_value': test.result_value or 'N/A',
@@ -2852,159 +2799,107 @@ def generate_lab_report(request):
                         'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else 'N/A',
                         'turnaround_time': turnaround_time,
                     })
-                return headers, report_data
+                return headers, report_data, len(report_data), "Completed Lab Tests"
 
             def get_lab_result_files_data():
-                """Lab result files uploaded"""
-                lab_result_files = get_common_filters(
+                """Lab Result Files with optional filtering"""
+                lab_files = get_common_filters(
                     LabResultFile.objects.select_related('patient', 'uploaded_by')
-                    .order_by('-uploaded_at'), 
-                    'uploaded_at'
+                    .order_by('-uploaded_at'),
+                    'uploaded_at',
+                    filter_by_patient=True
                 )
-                
-                headers = ['Patient ID', 'Patient Name', 'Result File', 'Uploaded By', 'Uploaded At']
+
+                headers = [
+                    'Patient ID', 'Patient Name', 'File Name', 'File Type',
+                    'Uploaded By', 'Uploaded At', 'Description', 'Action'  # Added 'Action' header
+                ]
                 report_data = []
-                
-                for result_file in lab_result_files:
+                for f in lab_files:
+                    file_url = f.result_file.url if f.result_file else '#'  # Get the URL of the file
                     report_data.append({
-                        'patient_id': result_file.patient.patient_id,
-                        'patient_name': result_file.patient.full_name,
-                        'result_file': result_file.result_file.name.split('/')[-1] if result_file.result_file else 'N/A',
-                        'uploaded_by': result_file.uploaded_by.get_full_name() if result_file.uploaded_by else 'N/A',
-                        'uploaded_at': result_file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
+                        'patient_id': f.patient.patient_id if f.patient else 'N/A',
+                        'patient_name': f.patient.full_name if f.patient else 'N/A',
+                        'file_name': f.result_file.name.split('/')[-1] if f.result_file else 'N/A',
+                        'file_type': f.file_type if hasattr(f, 'file_type') and f.file_type else 'N/A',
+                        'uploaded_by': f.uploaded_by.get_full_name() if f.uploaded_by else 'N/A',
+                        'uploaded_at': f.uploaded_at.strftime('%Y-%m-%d %H:%M') if f.uploaded_at else 'N/A',
+                        'description': f.description if hasattr(f, 'description') and f.description else 'N/A',
+                        'file_url': file_url  # Pass the file URL to the frontend
                     })
-                return headers, report_data
+                return headers, report_data, len(report_data), "Lab Result Files"
 
             def get_test_categories_data():
-                """Test categories and their usage statistics"""
-                test_categories = TestCategory.objects.all().order_by('name')
-                headers = [
-                    'Category Name', 'Total Tests', 'Pending Tests', 
-                    'Completed Tests', 'In Progress Tests'
-                ]
-                report_data = []
-                
-                for category in test_categories:
-                    # Apply date filtering if specified
-                    base_query = LabTest.objects.filter(category=category)
-                    if alldate == 'range' and start_date and end_date:
-                        base_query = base_query.filter(requested_at__date__range=[start_date, end_date])
-                    
-                    total_tests = base_query.count()
-                    pending_tests = base_query.filter(status='pending').count()
-                    completed_tests = base_query.filter(status='completed').count()
-                    in_progress_tests = base_query.filter(status='in_progress').count()
-                    
-                    report_data.append({
-                        'category_name': category.name,
-                        'total_tests': total_tests,
-                        'pending_tests': pending_tests,
-                        'completed_tests': completed_tests,
-                        'in_progress_tests': in_progress_tests,
-                    })
-                return headers, report_data
+                """Test Categories Statistics"""
+                category_stats = LabTest.objects.values(
+                    'category__name'
+                ).annotate(
+                    total_tests=Count('id'),
+                    pending_tests=Count('id', filter=Q(status='pending')),
+                    completed_tests=Count('id', filter=Q(status='completed'))
+                ).order_by('category__name')
 
-            def get_lab_technician_performance_data():
-                """Performance report for lab technicians"""
-                # Get all lab technicians
-                lab_techs = User.objects.filter(staff__role='lab')
-                
-                # If specific technician selected, filter to that one
-                if lab_technician_id:
-                    lab_techs = lab_techs.filter(id=lab_technician_id)
-                
-                headers = [
-                    'Technician Name', 'Total Tests Performed', 'Tests This Period',
-                    'Pending Tests Assigned', 'Average Turnaround Time (Hours)'
-                ]
+                headers = ['Category', 'Total Tests', 'Pending Tests', 'Completed Tests']
                 report_data = []
-                
-                for tech in lab_techs:
-                    # Base query for this technician's tests
-                    base_query = LabTest.objects.filter(performed_by=tech)
-                    
-                    # Apply date filtering for "this period" if specified
-                    period_query = base_query
-                    if alldate == 'range' and start_date and end_date:
-                        period_query = base_query.filter(date_performed__date__range=[start_date, end_date])
-                    
-                    total_tests = base_query.filter(status='completed').count()
-                    period_tests = period_query.filter(status='completed').count()
-                    pending_tests = LabTest.objects.filter(
-                        performed_by=tech, 
-                        status__in=['pending', 'in_progress']
-                    ).count()
-                    
-                    # Calculate average turnaround time
-                    completed_tests_with_times = base_query.filter(
-                        status='completed',
-                        date_performed__isnull=False,
-                        requested_at__isnull=False
-                    )
-                    
-                    if completed_tests_with_times.exists():
-                        total_turnaround = 0
-                        count = 0
-                        for test in completed_tests_with_times:
-                            turnaround = (test.date_performed - test.requested_at).total_seconds() / 3600
-                            total_turnaround += turnaround
-                            count += 1
-                        avg_turnaround = round(total_turnaround / count, 1) if count > 0 else 0
-                    else:
-                        avg_turnaround = 'N/A'
-                    
+                for stat in category_stats:
                     report_data.append({
-                        'technician_name': tech.get_full_name() or tech.username,
-                        'total_tests': total_tests,
-                        'period_tests': period_tests,
-                        'pending_tests': pending_tests,
-                        'avg_turnaround': avg_turnaround,
+                        'category': stat['category__name'] if stat['category__name'] else 'Uncategorized',
+                        'total_tests': stat['total_tests'],
+                        'pending_tests': stat['pending_tests'],
+                        'completed_tests': stat['completed_tests'],
                     })
-                return headers, report_data
+                return headers, report_data, len(report_data), "Test Categories Statistics"
 
-            # Lab-focused report generators
+
+            # Lab-focused report generators - only the ones requested by user in HTML
             report_generators = {
                 'lab_tests': get_lab_tests_data,
-                'my_performed_lab_tests': get_my_performed_lab_tests_data,
                 'pending_lab_tests': get_pending_lab_tests_data,
                 'completed_lab_tests': get_completed_lab_tests_data,
                 'lab_result_files': get_lab_result_files_data,
                 'test_categories': get_test_categories_data,
-                'lab_technician_performance': get_lab_technician_performance_data,
             }
 
             if report_type == 'all_combined_reports':
-                all_combined_reports_data = {}
-                for key, generator_func in report_generators.items():
-                    try:
-                        headers, data = generator_func()
-                        if data:
-                            all_combined_reports_data[key] = {
-                                'headers': headers, 
+                combined_reports = {}
+                total_reports_generated = 0
+                for key, func in report_generators.items():
+                    # Exclude 'test_categories' from combined reports if it's too different in structure
+                    if key != 'test_categories':  # Exclude if not suitable for a combined list table
+                        headers, data, count, title = func()
+                        if data:  # Only include if there is data
+                            combined_reports[key] = {
+                                'headers': headers,
                                 'data': data,
-                                'title': key.replace('_', ' ').title()
+                                'count': count,
+                                'title': title
                             }
-                    except Exception as e:
-                        print(f"Error generating {key} report: {str(e)}")
-                        continue
-                return JsonResponse({'combined_reports': all_combined_reports_data})
-            
-            elif report_type in report_generators:
-                headers, report_data = report_generators[report_type]()
+                            total_reports_generated += 1
                 return JsonResponse({
-                    'headers': headers, 
+                    'combined_reports': combined_reports,
+                    'total_reports': total_reports_generated
+                })
+
+            elif report_type in report_generators:
+                headers, report_data, count, title = report_generators[report_type]()
+                return JsonResponse({
+                    'headers': headers,
                     'data': report_data,
-                    'title': report_type.replace('_', ' ').title()
+                    'count': count,
+                    'title': title
                 })
             else:
-                return JsonResponse({'error': 'Invalid report type'}, status=400)
+                return JsonResponse({'error': 'Invalid report type selected.'}, status=400)
 
         except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+            return JsonResponse({'error': 'Invalid JSON in request body.'}, status=400)
         except Exception as e:
+            # Log the error for debugging
+            import traceback
+            traceback.print_exc()
             return JsonResponse({'error': f'Error generating report: {str(e)}'}, status=500)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+    return JsonResponse({'error': 'Invalid request method.'}, status=400)
 
 ##### Form Action #####
 
