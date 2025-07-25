@@ -4327,35 +4327,657 @@ def register_patient(request):
         'nurses': nurses,
     })
 
-@login_required(login_url='home')
+def is_receptionist(user):
+    """
+    Checks if the given user is authenticated and has the 'receptionist' role.
+    Assumes a Staff profile is linked to the User.
+    """
+    return user.is_authenticated and hasattr(user, 'staff') and user.staff.role == 'receptionist' 
+
+@login_required
+# @user_passes_test(is_receptionist, login_url='/access_denied/') # Redirect if not receptionist
 def receptionist_activity_report(request):
-    user = request.user
-    
-    patients_registered = Patient.objects.filter(registered_by=user).order_by('-date_registered')
-    
-    admissions_made = Admission.objects.filter(admitted_by=user).order_by('-admission_date')
-
-    appointments_scheduled = Appointment.objects.filter(patient__registered_by=user).order_by('-scheduled_time')
-    
-    referrals_made = Referral.objects.filter(patient__registered_by=user).order_by('-created_at')
-
-    # Aggregated data
-    total_patients_registered = patients_registered.count()
-    total_admissions_made = admissions_made.count()
-    total_appointments_scheduled = appointments_scheduled.count()
-    total_referrals_made = referrals_made.count()
-
+    """
+    Renders the receptionist activity report page.
+    Fetches all patients to populate the patient filter dropdown.
+    """
+    patients = Patient.objects.all().order_by('full_name') 
     context = {
-        'patients_registered': patients_registered,
-        'admissions_made': admissions_made,
-        'appointments_scheduled': appointments_scheduled,
-        'referrals_made': referrals_made,
-        'total_patients_registered': total_patients_registered,
-        'total_admissions_made': total_admissions_made,
-        'total_appointments_scheduled': total_appointments_scheduled,
-        'total_referrals_made': total_referrals_made,
+        'patients': patients,
     }
-    return render(request, 'receptionist/activity_report.html', context)
+    return render(request, 'receptionist/activity_report.html', context) 
+
+@login_required
+@user_passes_test(is_receptionist)
+def generate_receptionist_report_ajax(request):
+    """
+    Handles AJAX POST requests to generate receptionist activity reports based on filters.
+    Returns JSON data for the report table.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) 
+            report_type = data.get('report_type') 
+            patient_id = data.get('patient_id') 
+            date_filter = data.get('date_filter') 
+            start_date_str = data.get('start_date') 
+            end_date_str = data.get('end_date') 
+
+            current_user = request.user 
+            
+            response_data = {}
+            
+            # Handle combined reports first
+            if report_type == 'all_combined_reports': 
+                combined_reports = {}
+
+                # --- Patients Registered by Me ---
+                patients_registered_query = Patient.objects.filter(registered_by=current_user) 
+                if date_filter == 'today':
+                    patients_registered_query = patients_registered_query.filter(date_registered__date=timezone.localdate()) 
+                elif date_filter == 'week':
+                    today = timezone.localdate() [cite: 4]
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    patients_registered_query = patients_registered_query.filter(date_registered__date__range=(start_of_week, end_of_week)) [cite: 4]
+                elif date_filter == 'month':
+                    today = timezone.localdate() [cite: 4]
+                    patients_registered_query = patients_registered_query.filter(date_registered__year=today.year, date_registered__month=today.month) [cite: 4]
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() [cite: 4]
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    patients_registered_query = patients_registered_query.filter(date_registered__date__range=(start_date, end_date)) [cite: 4]
+
+                patients_registered_data = list(patients_registered_query.values(
+                    'full_name', 'patient_id', 'date_registered', 'phone', 'email'
+                )) [cite: 4]
+                for item in patients_registered_data:
+                    item['date_registered'] = item['date_registered'].strftime('%Y-%m-%d %H:%M') if item['date_registered'] else 'N/A' [cite: 5]
+
+                combined_reports['patients_registered'] = {
+                    'title': 'Patients Registered by Me',
+                    'headers': ['Full Name', 'Patient ID', 'Date Registered', 'Phone', 'Email'],
+                    'data': patients_registered_data,
+                    'count': len(patients_registered_data)
+                } [cite: 5]
+
+                # --- Appointments Scheduled by Me ---
+                appointments_query = Appointment.objects.filter(scheduled_by=current_user) [cite: 5]
+                if patient_id:
+                    appointments_query = appointments_query.filter(patient_id=patient_id)
+                
+                if date_filter == 'today':
+                    appointments_query = appointments_query.filter(scheduled_time__date=timezone.localdate()) [cite: 5]
+                elif date_filter == 'week':
+                    today = timezone.localdate() [cite: 5]
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    appointments_query = appointments_query.filter(scheduled_time__date__range=(start_of_week, end_of_week)) [cite: 6]
+                elif date_filter == 'month':
+                    today = timezone.localdate() [cite: 6]
+                    appointments_query = appointments_query.filter(scheduled_time__year=today.year, scheduled_time__month=today.month) [cite: 6]
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() [cite: 6]
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    appointments_query = appointments_query.filter(scheduled_time__date__range=(start_date, end_date)) [cite: 6]
+
+                appointments_data = list(appointments_query.select_related('patient', 'department').values(
+                    'patient__full_name', 'department__name', 'scheduled_time'
+                )) [cite: 6]
+                for item in appointments_data:
+                    item['scheduled_time'] = item['scheduled_time'].strftime('%Y-%m-%d %H:%M') if item['scheduled_time'] else 'N/A'
+                
+                combined_reports['appointments_scheduled'] = {
+                    'title': 'Appointments Scheduled by Me',
+                    'headers': ['Patient Name', 'Department', 'Scheduled Time'],
+                    'data': appointments_data,
+                    'count': len(appointments_data)
+                } [cite: 6]
+
+                # --- Bills Created by Me ---
+                bills_query = PatientBill.objects.filter(created_by=current_user) [cite: 6]
+                if patient_id:
+                    bills_query = bills_query.filter(patient_id=patient_id)
+            
+                if date_filter == 'today':
+                    bills_query = bills_query.filter(created_at__date=timezone.localdate()) [cite: 6]
+                elif date_filter == 'week':
+                    today = timezone.localdate() [cite: 6]
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    bills_query = bills_query.filter(created_at__date__range=(start_of_week, end_of_week)) [cite: 7]
+                elif date_filter == 'month':
+                    today = timezone.localdate() [cite: 7]
+                    bills_query = bills_query.filter(created_at__year=today.year, created_at__month=today.month) [cite: 7]
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() [cite: 7]
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    bills_query = bills_query.filter(created_at__date__range=(start_date, end_date)) [cite: 7]
+
+                bills_data = list(bills_query.select_related('patient').values(
+                    'bill_number', 'patient__full_name', 'total_amount', 'final_amount', 'status', 'created_at'
+                )) [cite: 7]
+                for item in bills_data:
+                    item['created_at'] = item['created_at'].strftime('%Y-%m-%d %H:%M') if item['created_at'] else 'N/A' [cite: 8]
+                
+                combined_reports['bills_created'] = {
+                    'title': 'Bills Created by Me',
+                    'headers': ['Bill Number', 'Patient Name', 'Total Amount', 'Final Amount', 'Status', 'Created At'],
+                    'data': bills_data,
+                    'count': len(bills_data)
+                } [cite: 8]
+
+                # --- Payments Processed by Me ---
+                payments_query = Payment.objects.filter(processed_by=current_user) [cite: 8]
+                if patient_id:
+                    payments_query = payments_query.filter(patient_id=patient_id)
+
+                if date_filter == 'today':
+                    payments_query = payments_query.filter(payment_date__date=timezone.localdate()) [cite: 8]
+                elif date_filter == 'week':
+                    today = timezone.localdate() [cite: 9]
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    payments_query = payments_query.filter(payment_date__date__range=(start_of_week, end_of_week)) [cite: 9]
+                elif date_filter == 'month':
+                    today = timezone.localdate() [cite: 9]
+                    payments_query = payments_query.filter(payment_date__year=today.year, payment_date__month=today.month) [cite: 9]
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() [cite: 9]
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    payments_query = payments_query.filter(payment_date__date__range=(start_date, end_date)) [cite: 9]
+
+                payments_data = list(payments_query.select_related('patient', 'bill').values(
+                    'patient__full_name', 'amount', 'payment_method', 'status', 'payment_date', 'bill__bill_number'
+                )) [cite: 9]
+                for item in payments_data:
+                    item['payment_date'] = item['payment_date'].strftime('%Y-%m-%d %H:%M') if item['payment_date'] else 'N/A'
+                
+                combined_reports['payments_processed'] = {
+                    'title': 'Payments Processed by Me',
+                    'headers': ['Patient Name', 'Amount', 'Method', 'Status', 'Payment Date', 'Bill Number'],
+                    'data': payments_data,
+                    'count': len(payments_data)
+                } [cite: 9]
+
+                # --- Admissions Conducted by Me (Admitted By) ---
+                admissions_conducted_query = Admission.objects.filter(admitted_by=current_user) [cite: 9]
+                if patient_id:
+                    admissions_conducted_query = admissions_conducted_query.filter(patient_id=patient_id)
+                if date_filter == 'today':
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date__year=today.year, admission_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date__range=(start_date, end_date))
+
+                admissions_conducted_data = list(admissions_conducted_query.select_related('patient').values(
+                    'patient__full_name', 'admission_id', 'admission_date', 'ward', 'bed_number'
+                ))
+                for item in admissions_conducted_data:
+                    item['admission_date'] = item['admission_date'].strftime('%Y-%m-%d') if item['admission_date'] else 'N/A'
+                
+                combined_reports['admissions_conducted'] = {
+                    'title': 'Admissions Conducted by Me',
+                    'headers': ['Admitted Patient', 'Admission ID', 'Admission Date', 'Ward', 'Bed Number'],
+                    'data': admissions_conducted_data,
+                    'count': len(admissions_conducted_data)
+                }
+
+                # --- Discharges Conducted by Me ---
+                discharges_conducted_query = Discharge.objects.filter(discharged_by=current_user)
+                if patient_id:
+                    discharges_conducted_query = discharges_conducted_query.filter(patient_id=patient_id)
+                
+                if date_filter == 'today':
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date__year=today.year, discharge_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date__range=(start_date, end_date))
+
+                discharges_conducted_data = list(discharges_conducted_query.select_related('patient').values(
+                    'patient__full_name', 'discharge_date', 'reason'
+                ))
+                for item in discharges_conducted_data:
+                    item['discharge_date'] = item['discharge_date'].strftime('%Y-%m-%d') if item['discharge_date'] else 'N/A'
+                
+                combined_reports['discharges_conducted'] = {
+                    'title': 'Discharges Conducted by Me',
+                    'headers': ['Discharged Patient', 'Discharge Date', 'Reason'],
+                    'data': discharges_conducted_data,
+                    'count': len(discharges_conducted_data)
+                }
+
+                # --- My Attendance ---
+                my_attendance_query = Attendance.objects.filter(staff=current_user.staff)
+                if date_filter == 'today':
+                    my_attendance_query = my_attendance_query.filter(date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    my_attendance_query = my_attendance_query.filter(date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    my_attendance_query = my_attendance_query.filter(date__year=today.year, date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    my_attendance_query = my_attendance_query.filter(date__range=(start_date, end_date))
+
+                my_attendance_data = list(my_attendance_query.values(
+                    'date', 'check_in_time', 'check_out_time'
+                ))
+                for item in my_attendance_data:
+                    item['date'] = item['date'].strftime('%Y-%m-%d') if item['date'] else 'N/A'
+                    item['check_in_time'] = item['check_in_time'].strftime('%H:%M') if item['check_in_time'] else 'N/A'
+                    item['check_out_time'] = item['check_out_time'].strftime('%H:%M') if item['check_out_time'] else 'N/A'
+                
+                combined_reports['my_attendance'] = {
+                    'title': 'My Attendance',
+                    'headers': ['Date', 'Check-in Time', 'Check-out Time'],
+                    'data': my_attendance_data,
+                    'count': len(my_attendance_data)
+                }
+
+                # --- Expenses Requested by Me ---
+                expenses_requested_query = Expense.objects.filter(requested_by=current_user)
+                if date_filter == 'today':
+                    expenses_requested_query = expenses_requested_query.filter(request_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    expenses_requested_query = expenses_requested_query.filter(request_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    expenses_requested_query = expenses_requested_query.filter(request_date__year=today.year, request_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    expenses_requested_query = expenses_requested_query.filter(request_date__range=(start_date, end_date))
+
+                expenses_requested_data = list(expenses_requested_query.values(
+                    'description', 'amount', 'status', 'request_date'
+                ))
+                for item in expenses_requested_data:
+                    item['request_date'] = item['request_date'].strftime('%Y-%m-%d') if item['request_date'] else 'N/A'
+                
+                combined_reports['expenses_requested'] = {
+                    'title': 'Expenses Requested by Me',
+                    'headers': ['Description', 'Amount', 'Status', 'Request Date'],
+                    'data': expenses_requested_data,
+                    'count': len(expenses_requested_data)
+                }
+
+                # --- Handovers Made by Me ---
+                handovers_made_query = Handover.objects.filter(from_staff__user=current_user)
+                if date_filter == 'today':
+                    handovers_made_query = handovers_made_query.filter(handover_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    handovers_made_query = handovers_made_query.filter(handover_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    handovers_made_query = handovers_made_query.filter(handover_date__year=today.year, handover_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    handovers_made_query = handovers_made_query.filter(handover_date__range=(start_date, end_date))
+                
+                handovers_made_data = list(handovers_made_query.select_related('from_staff__user', 'to_staff__user').values(
+                    'handover_date', 'summary', 'from_staff__user__first_name', 'from_staff__user__last_name',
+                    'to_staff__user__first_name', 'to_staff__user__last_name'
+                ))
+                for item in handovers_made_data:
+                    item['handover_date'] = item['handover_date'].strftime('%Y-%m-%d') if item['handover_date'] else 'N/A'
+
+                combined_reports['handovers_made'] = {
+                    'title': 'Handovers Made by Me',
+                    'headers': ['Handover Date', 'Summary', 'From Staff', 'To Staff'],
+                    'data': handovers_made_data,
+                    'count': len(handovers_made_data)
+                }
+
+                response_data = combined_reports # For 'all_combined_reports', return the dictionary of reports
+
+            # Handle individual reports (similar filtering logic as above)
+            elif report_type == 'patients_registered':
+                patients_registered_query = Patient.objects.filter(registered_by=current_user)
+                # Apply date filters
+                if date_filter == 'today':
+                    patients_registered_query = patients_registered_query.filter(date_registered__date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    patients_registered_query = patients_registered_query.filter(date_registered__date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    patients_registered_query = patients_registered_query.filter(date_registered__year=today.year, date_registered__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    patients_registered_query = patients_registered_query.filter(date_registered__date__range=(start_date, end_date))
+
+                patients_registered_data = list(patients_registered_query.values(
+                    'full_name', 'patient_id', 'date_registered', 'phone', 'email'
+                ))
+                for item in patients_registered_data:
+                    item['date_registered'] = item['date_registered'].strftime('%Y-%m-%d %H:%M') if item['date_registered'] else 'N/A'
+                
+                response_data = {
+                    'patients_registered': {
+                        'title': 'Patients Registered by Me',
+                        'headers': ['Full Name', 'Patient ID', 'Date Registered', 'Phone', 'Email'],
+                        'data': patients_registered_data,
+                        'count': len(patients_registered_data)
+                    }
+                }
+            
+            elif report_type == 'appointments_scheduled':
+                appointments_query = Appointment.objects.filter(scheduled_by=current_user)
+                if patient_id:
+                    appointments_query = appointments_query.filter(patient_id=patient_id)
+                # Apply date filters
+                if date_filter == 'today':
+                    appointments_query = appointments_query.filter(scheduled_time__date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    appointments_query = appointments_query.filter(scheduled_time__date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    appointments_query = appointments_query.filter(scheduled_time__year=today.year, scheduled_time__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    appointments_query = appointments_query.filter(scheduled_time__date__range=(start_date, end_date))
+
+                appointments_data = list(appointments_query.select_related('patient', 'department').values(
+                    'patient__full_name', 'department__name', 'scheduled_time'
+                ))
+                for item in appointments_data:
+                    item['scheduled_time'] = item['scheduled_time'].strftime('%Y-%m-%d %H:%M') if item['scheduled_time'] else 'N/A'
+                
+                response_data = {
+                    'appointments_scheduled': {
+                        'title': 'Appointments Scheduled by Me',
+                        'headers': ['Patient Name', 'Department', 'Scheduled Time'],
+                        'data': appointments_data,
+                        'count': len(appointments_data)
+                    }
+                }
+            
+            elif report_type == 'bills_created':
+                bills_query = PatientBill.objects.filter(created_by=current_user)
+                if patient_id:
+                    bills_query = bills_query.filter(patient_id=patient_id)
+                # Apply date filters
+                if date_filter == 'today':
+                    bills_query = bills_query.filter(created_at__date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    bills_query = bills_query.filter(created_at__date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    bills_query = bills_query.filter(created_at__year=today.year, created_at__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    bills_query = bills_query.filter(created_at__date__range=(start_date, end_date))
+
+                bills_data = list(bills_query.select_related('patient').values(
+                    'bill_number', 'patient__full_name', 'total_amount', 'final_amount', 'status', 'created_at'
+                ))
+                for item in bills_data:
+                    item['created_at'] = item['created_at'].strftime('%Y-%m-%d %H:%M') if item['created_at'] else 'N/A'
+                
+                response_data = {
+                    'bills_created': {
+                        'title': 'Bills Created by Me',
+                        'headers': ['Bill Number', 'Patient Name', 'Total Amount', 'Final Amount', 'Status', 'Created At'],
+                        'data': bills_data,
+                        'count': len(bills_data)
+                    }
+                }
+
+            elif report_type == 'payments_processed':
+                payments_query = Payment.objects.filter(processed_by=current_user)
+                if patient_id:
+                    payments_query = payments_query.filter(patient_id=patient_id)
+                # Apply date filters
+                if date_filter == 'today':
+                    payments_query = payments_query.filter(payment_date__date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    payments_query = payments_query.filter(payment_date__date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    payments_query = payments_query.filter(payment_date__year=today.year, payment_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    payments_query = payments_query.filter(payment_date__date__range=(start_date, end_date))
+
+                payments_data = list(payments_query.select_related('patient', 'bill').values(
+                    'patient__full_name', 'amount', 'payment_method', 'status', 'payment_date', 'bill__bill_number'
+                ))
+                for item in payments_data:
+                    item['payment_date'] = item['payment_date'].strftime('%Y-%m-%d %H:%M') if item['payment_date'] else 'N/A'
+                
+                response_data = {
+                    'payments_processed': {
+                        'title': 'Payments Processed by Me',
+                        'headers': ['Patient Name', 'Amount', 'Method', 'Status', 'Payment Date', 'Bill Number'],
+                        'data': payments_data,
+                        'count': len(payments_data)
+                    }
+                }
+
+            elif report_type == 'admissions_conducted':
+                admissions_conducted_query = Admission.objects.filter(admitted_by=current_user)
+                if patient_id:
+                    admissions_conducted_query = admissions_conducted_query.filter(patient_id=patient_id)
+                if date_filter == 'today':
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date__year=today.year, admission_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    admissions_conducted_query = admissions_conducted_query.filter(admission_date__range=(start_date, end_date))
+
+                admissions_conducted_data = list(admissions_conducted_query.select_related('patient').values(
+                    'patient__full_name', 'admission_id', 'admission_date', 'ward', 'bed_number'
+                ))
+                for item in admissions_conducted_data:
+                    item['admission_date'] = item['admission_date'].strftime('%Y-%m-%d') if item['admission_date'] else 'N/A'
+                
+                response_data = {
+                    'admissions_conducted': {
+                        'title': 'Admissions Conducted by Me',
+                        'headers': ['Admitted Patient', 'Admission ID', 'Admission Date', 'Ward', 'Bed Number'],
+                        'data': admissions_conducted_data,
+                        'count': len(admissions_conducted_data)
+                    }
+                }
+
+            elif report_type == 'discharges_conducted':
+                discharges_conducted_query = Discharge.objects.filter(discharged_by=current_user)
+                if patient_id:
+                    discharges_conducted_query = discharges_conducted_query.filter(patient_id=patient_id)
+                
+                if date_filter == 'today':
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date__year=today.year, discharge_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    discharges_conducted_query = discharges_conducted_query.filter(discharge_date__range=(start_date, end_date))
+
+                discharges_conducted_data = list(discharges_conducted_query.select_related('patient').values(
+                    'patient__full_name', 'discharge_date', 'reason'
+                ))
+                for item in discharges_conducted_data:
+                    item['discharge_date'] = item['discharge_date'].strftime('%Y-%m-%d') if item['discharge_date'] else 'N/A'
+                
+                response_data = {
+                    'discharges_conducted': {
+                        'title': 'Discharges Conducted by Me',
+                        'headers': ['Discharged Patient', 'Discharge Date', 'Reason'],
+                        'data': discharges_conducted_data,
+                        'count': len(discharges_conducted_data)
+                    }
+                }
+
+            elif report_type == 'my_attendance':
+                my_attendance_query = Attendance.objects.filter(staff=current_user.staff)
+                if date_filter == 'today':
+                    my_attendance_query = my_attendance_query.filter(date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    my_attendance_query = my_attendance_query.filter(date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    my_attendance_query = my_attendance_query.filter(date__year=today.year, date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    my_attendance_query = my_attendance_query.filter(date__range=(start_date, end_date))
+
+                my_attendance_data = list(my_attendance_query.values(
+                    'date', 'check_in_time', 'check_out_time'
+                ))
+                for item in my_attendance_data:
+                    item['date'] = item['date'].strftime('%Y-%m-%d') if item['date'] else 'N/A'
+                    item['check_in_time'] = item['check_in_time'].strftime('%H:%M') if item['check_in_time'] else 'N/A'
+                    item['check_out_time'] = item['check_out_time'].strftime('%H:%M') if item['check_out_time'] else 'N/A'
+                
+                response_data = {
+                    'my_attendance': {
+                        'title': 'My Attendance',
+                        'headers': ['Date', 'Check-in Time', 'Check-out Time'],
+                        'data': my_attendance_data,
+                        'count': len(my_attendance_data)
+                    }
+                }
+
+            elif report_type == 'expenses_requested':
+                expenses_requested_query = Expense.objects.filter(requested_by=current_user)
+                if date_filter == 'today':
+                    expenses_requested_query = expenses_requested_query.filter(request_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    expenses_requested_query = expenses_requested_query.filter(request_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    expenses_requested_query = expenses_requested_query.filter(request_date__year=today.year, request_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    expenses_requested_query = expenses_requested_query.filter(request_date__range=(start_date, end_date))
+
+                expenses_requested_data = list(expenses_requested_query.values(
+                    'description', 'amount', 'status', 'request_date'
+                ))
+                for item in expenses_requested_data:
+                    item['request_date'] = item['request_date'].strftime('%Y-%m-%d') if item['request_date'] else 'N/A'
+                
+                response_data = {
+                    'expenses_requested': {
+                        'title': 'Expenses Requested by Me',
+                        'headers': ['Description', 'Amount', 'Status', 'Request Date'],
+                        'data': expenses_requested_data,
+                        'count': len(expenses_requested_data)
+                    }
+                }
+
+            elif report_type == 'handovers_made':
+                handovers_made_query = Handover.objects.filter(from_staff__user=current_user)
+                if date_filter == 'today':
+                    handovers_made_query = handovers_made_query.filter(handover_date=timezone.localdate())
+                elif date_filter == 'week':
+                    today = timezone.localdate()
+                    start_of_week = today - timedelta(days=today.weekday())
+                    end_of_week = start_of_week + timedelta(days=6)
+                    handovers_made_query = handovers_made_query.filter(handover_date__range=(start_of_week, end_of_week))
+                elif date_filter == 'month':
+                    today = timezone.localdate()
+                    handovers_made_query = handovers_made_query.filter(handover_date__year=today.year, handover_date__month=today.month)
+                elif date_filter == 'range' and start_date_str and end_date_str:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    handovers_made_query = handovers_made_query.filter(handover_date__range=(start_date, end_date))
+                
+                handovers_made_data = list(handovers_made_query.select_related('from_staff__user', 'to_staff__user').values(
+                    'handover_date', 'summary', 'from_staff__user__first_name', 'from_staff__user__last_name',
+                    'to_staff__user__first_name', 'to_staff__user__last_name'
+                ))
+                for item in handovers_made_data:
+                    item['handover_date'] = item['handover_date'].strftime('%Y-%m-%d') if item['handover_date'] else 'N/A'
+
+                response_data = {
+                    'handovers_made': {
+                        'title': 'Handovers Made by Me',
+                        'headers': ['Handover Date', 'Summary', 'From Staff', 'To Staff'],
+                        'data': handovers_made_data,
+                        'count': len(handovers_made_data)
+                    }
+                }
+
+            return JsonResponse({'status': 'success', 'data': response_data})
+
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON in request body.'}, status=400)
+        except Exception as e:
+            # Log the error for debugging purposes in your server logs
+            # import logging
+            # logger = logging.getLogger(__name__)
+            # logger.exception("Error generating receptionist report:")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
 @csrf_exempt
 def register_p(request):

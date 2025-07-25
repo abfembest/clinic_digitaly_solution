@@ -114,7 +114,8 @@ urlpatterns = [
     ########################### Receptionist URLS #################################
     path('r/home', views.receptionist, name='receptionist'),
     path('r/new_patient', views.register_patient, name='register_patient'),
-    path('r/reports', views.receptionist_activity_report, name='receptionist_activity_report'),
+    path('r/reports/', views.receptionist_activity_report, name='receptionist_activity_report'),
+    path('ajax/generate_receptionist_report/', views.generate_receptionist_report_ajax, name='generate_receptionist_report_ajax'),
 
     path('receptionist/register/submit', views.register_p, name='register_p'),
     path('receptionist/admit', views.admit_patient, name='admit_patient'),
