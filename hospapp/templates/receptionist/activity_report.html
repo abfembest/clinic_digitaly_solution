@@ -1,6 +1,6 @@
 {% extends "receptionist/base.html" %}
 
-{% block title %}HMS | Activity Dashboard{% endblock %}
+{% block title %}HMS | Activity Reports{% endblock %}
 
 {% block content %}
 <div class="content-header">
@@ -8,15 +8,15 @@
         <div class="row mb-2">
             <div class="col-sm-6">
                 <h1 class="m-0 text-dark">
-                    <i class="fas fa-chart-line text-primary mr-2"></i>
-                    Activity Dashboard
+                    <i class="fas fa-chart-bar text-primary mr-2"></i>
+                    Activity Reports
                 </h1>
-                <p class="text-muted mb-0">Track your daily performance and productivity</p>
+                <p class="text-muted mb-0">Generate custom reports for your activities</p>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{% url 'receptionist' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Activity Report</li>
+                    <li class="breadcrumb-item active">Activity Reports</li>
                 </ol>
             </div>
         </div>
@@ -25,454 +25,280 @@
 
 <section class="content">
     <div class="container-fluid">
-        
         <div class="row">
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3>{{ total_patients_registered }}</h3>
-                        <p>Patients Registered</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Total registrations</i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        <h3>{{ total_admissions_made }}</h3>
-                        <p>Admissions Processed</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-hospital-user"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Admissions handled</i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        <h3>{{ total_appointments_scheduled }}</h3>
-                        <p>Appointments Booked</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Scheduled appointments</i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-danger">
-                    <div class="inner">
-                        <h3>{{ total_referrals_made }}</h3>
-                        <p>Referrals Made</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-share-alt"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Patient referrals</i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-primary card-outline">
+            <div class="col-md-4">
+                <div class="card card-primary">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Performance Summary
+                            <i class="fas fa-filter mr-2"></i>
+                            Report Filters
                         </h3>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_patients_registered }}</b>/&infin;</span>
-                                    <span class="progress-text">Patient Registrations</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-info" style="width: 100%"></div>
-                                    </div>
-                                </div>
+                    <form id="reportForm" method="POST">
+                        {% csrf_token %}
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="patient_select">
+                                    <i class="fas fa-users mr-1"></i>
+                                    Select Patient
+                                </label>
+                                <select class="form-control select2" id="patient_select" name="patients" data-placeholder="Select a patient or 'All Patients'">
+                                    <option value="all">All Patients</option>
+                                    {% for patient in all_patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_admissions_made }}</b>/&infin;</span>
-                                    <span class="progress-text">Admissions Handled</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-success" style="width: 100%"></div>
-                                    </div>
-                                </div>
+
+                            <div class="form-group">
+                                <label for="report_type">
+                                    <i class="fas fa-clipboard-list mr-1"></i>
+                                    Report Type
+                                </label>
+                                <select class="form-control select2" id="report_type" name="report_type" required data-placeholder="Choose report type...">
+                                    <option value="">Choose report type...</option>
+                                    <option value="registrations">Patient Registrations</option>
+                                    <option value="admissions">Patient Admissions</option>
+                                    <option value="appointments">Scheduled Appointments</option>
+                                    <option value="referrals">Patient Referrals</option>
+                                    <option value="billing_payments">Patient Billing & Payments</option> {# Added option #}
+                                    <option value="all_activity">All Activity Types</option> {# Renamed 'all' for clarity #}
+                                </select>
                             </div>
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_appointments_scheduled }}</b>/&infin;</span>
-                                    <span class="progress-text">Appointments Booked</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-warning" style="width: 100%"></div>
+
+                            <div class="form-group">
+                                <label>
+                                    <i class="fas fa-calendar-alt mr-1"></i>
+                                    Date Range
+                                </label>
+                                <div class="row">
+                                    <div class="col">
+                                        <input type="date" class="form-control" id="start_date" name="start_date" placeholder="Start Date">
+                                    </div>
+                                    <div class="col">
+                                        <input type="date" class="form-control" id="end_date" name="end_date" placeholder="End Date">
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_referrals_made }}</b>/&infin;</span>
-                                    <span class="progress-text">Referrals Made</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-danger" style="width: 100%"></div>
-                                    </div>
-                                </div>
+                                <small class="form-text text-muted">Leave empty for all-time data</small>
                             </div>
                         </div>
-                    </div>
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-chart-line mr-2"></i>
+                                Generate Report
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </div>
 
-        <div class="row">
-            <div class="col-12"> {# Changed to col-12 to take full width for the comprehensive table #}
-                <div class="card card-info">
+            <div class="col-md-8">
+                <div id="reportResults" class="card" style="display: none;">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-users mr-2"></i>
-                            All Patient Data
+                            <i class="fas fa-table mr-2"></i>
+                            Report Results
                         </h3>
                         <div class="card-tools">
-                            <span class="badge badge-info">{{ patients_registered|length }}</span>
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
                             <button type="button" class="btn btn-tool" data-card-widget="maximize">
                                 <i class="fas fa-expand"></i>
                             </button>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-success" id="exportExcel">
+                                    <i class="fas fa-file-excel mr-1"></i>
+                                    Excel
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" id="exportPdf">
+                                    <i class="fas fa-file-pdf mr-1"></i>
+                                    PDF
+                                </button>
+                                <button type="button" class="btn btn-sm btn-info" id="printReport">
+                                    <i class="fas fa-print mr-1"></i>
+                                    Print
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover">
+                            <table id="reportTable" class="table table-sm table-striped table-hover">
                                 <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-image mr-1"></i>Picture</th>
-                                        <th><i class="fas fa-user mr-1"></i>Patient Name</th>
-                                        <th><i class="fas fa-id-card mr-1"></i>Patient ID</th>
-                                        <th><i class="fas fa-calendar-alt mr-1"></i>Date of Birth</th>
-                                        <th><i class="fas fa-venus-mars mr-1"></i>Gender</th>
-                                        <th><i class="fas fa-phone mr-1"></i>Contact</th>
-                                        <th><i class="fas fa-envelope mr-1"></i>Email</th>
-                                        <th><i class="fas fa-map-marker-alt mr-1"></i>Address</th>
-                                        <th><i class="fas fa-clock mr-1"></i>Registered Date</th>
-                                    </tr>
-                                </thead>
+                                    </thead>
                                 <tbody>
-                                    {% for patient in patients_registered %} {# Removed slice filter #}
-                                    <tr>
-                                        <td>
-                                            {% if patient.photo %}
-                                                <img src="{{ patient.photo.url }}" alt="Profile Picture" class="img-circle img-size-32 mr-2" style="width: 32px; height: 32px; object-fit: cover;">
-                                            {% else %}
-                                                <img src="/static/path/to/default_profile_pic.png" alt="Default Picture" class="img-circle img-size-32 mr-2" style="width: 32px; height: 32px; object-fit: cover;"> {# Provide a path to a default image #}
-                                            {% endif %}
-                                        </td>
-                                        <td><strong>{{ patient.full_name }}</strong></td>
-                                        <td>{{ patient.patient_id }}</td> {# Assuming a patient_id field exists #}
-                                        <td>{{ patient.date_of_birth|date:"M d, Y" }}</td> {# Assuming date_of_birth field exists #}
-                                        <td>{{ patient.gender }}</td>
-                                        <td>
-                                            <span class="badge badge-secondary">
-                                                <i class="fas fa-phone-alt mr-1"></i>{{ patient.phone }}
-                                            </span>
-                                        </td>
-                                        <td>{{ patient.email|default:"N/A" }}</td>
-                                        <td>{{ patient.address|default:"N/A" }}</td> {# Assuming an address field exists #}
-                                        <td>
-                                            <small class="text-success">
-                                                <i class="fas fa-calendar mr-1"></i>
-                                                {{ patient.date_registered|date:"M d, Y" }}
-                                                <br>{{ patient.date_registered|date:"H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="9" class="text-center text-muted py-4">
-                                            <i class="fas fa-users fa-2x mb-2"></i>
-                                            <br>No patient registrations yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
+                                    </tbody>
                             </table>
                         </div>
+                    </div>
+                    <div class="card-footer">
+                        <div id="reportSummary" class="text-muted">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="welcomeMessage" class="card card-outline card-secondary">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Welcome to Activity Reports</h4>
+                        <p class="text-muted">
+                            Use the filters on the left to generate detailed reports about your receptionist activities.
+                            <br>Select patients, report types, and date ranges to get started.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-success">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-hospital mr-2"></i>
-                            Recent Admissions
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-success">{{ admissions_made|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-user-injured mr-1"></i>Patient</th>
-                                        <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
-                                        <th><i class="fas fa-info-circle mr-1"></i>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for admission in admissions_made|slice:":5" %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ admission.patient.full_name }}</strong>
-                                            <br><small class="text-muted">{{ admission.admission_date|date:"M d, Y" }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="text-primary">
-                                                <i class="fas fa-stethoscope mr-1"></i>
-                                                {{ admission.doctor_assigned|default:"Not assigned" }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if admission.status == 'Admitted' %}
-                                            <span class="badge badge-success">
-                                                <i class="fas fa-check mr-1"></i>{{ admission.status }}
-                                            </span>
-                                            {% else %}
-                                            <span class="badge badge-warning">
-                                                <i class="fas fa-clock mr-1"></i>{{ admission.status }}
-                                            </span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-hospital fa-2x mb-2"></i>
-                                            <br>No admissions processed yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if admissions_made|length > 5 %}
-                        <div class="card-footer text-center">
-                            <small class="text-muted">Showing 5 of {{ admissions_made|length }} admissions</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card card-warning">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-calendar-alt mr-2"></i>
-                            Scheduled Appointments
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-warning">{{ appointments_scheduled|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                        <th><i class="fas fa-building mr-1"></i>Department</th>
-                                        <th><i class="fas fa-clock mr-1"></i>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for appointment in appointments_scheduled|slice:":5" %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ appointment.patient.full_name }}</strong>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-primary">
-                                                {{ appointment.department.name }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small class="text-warning">
-                                                <i class="fas fa-calendar mr-1"></i>
-                                                {{ appointment.scheduled_time|date:"M d" }}
-                                                <br><i class="fas fa-clock mr-1"></i>
-                                                {{ appointment.scheduled_time|date:"H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                                            <br>No appointments scheduled yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if appointments_scheduled|length > 5 %}
-                        <div class="card-footer text-center">
-                            <small class="text-muted">Showing 5 of {{ appointments_scheduled|length }} appointments</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-danger">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-share-alt mr-2"></i>
-                            Patient Referrals
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-danger">{{ referrals_made|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                        <th><i class="fas fa-building mr-1"></i>Department</th>
-                                        <th><i class="fas fa-sticky-note mr-1"></i>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for referral in referrals_made|slice:":5" %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ referral.patient.full_name }}</strong>
-                                            <br><small class="text-muted">{{ referral.created_at|date:"M d, Y" }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-info">
-                                                {{ referral.department.name }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {% if referral.notes %}
-                                                <i class="fas fa-comment mr-1"></i>
-                                                {{ referral.notes|truncatechars:30 }}
-                                                {% else %}
-                                                <i class="fas fa-minus mr-1"></i>No notes
-                                                {% endif %}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-share-alt fa-2x mb-2"></i>
-                                            <br>No referrals made yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if referrals_made|length > 5 %}
-                        <div class="card-footer text-center">
-                            <small class="text-muted">Showing 5 of {{ referrals_made|length }} referrals</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-outline card-secondary">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-bolt mr-2"></i>
-                            Quick Actions
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}" class="btn btn-info btn-block">
-                                    <i class="fas fa-user-plus mr-2"></i>
-                                    Register New Patient
-                                </a>
-                            </div>
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}#admit" class="btn btn-success btn-block">
-                                    <i class="fas fa-hospital-user mr-2"></i>
-                                    Process Admission
-                                </a>
-                            </div>
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}#appointment" class="btn btn-warning btn-block">
-                                    <i class="fas fa-calendar-plus mr-2"></i>
-                                    Schedule Appointment
-                                </a>
-                            </div>
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}#refer" class="btn btn-danger btn-block">
-                                    <i class="fas fa-share-alt mr-2"></i>
-                                    Make Referral
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </section>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for Patient Selection (single select)
+    $('#patient_select').select2({
+        theme: 'bootstrap4',
+        width: '100%',
+        minimumResultsForSearch: 10 // Show search box if more than 10 results
+    });
+
+    // Initialize Select2 for Report Type Selection (single select)
+    $('#report_type').select2({
+        theme: 'bootstrap4',
+        width: '100%',
+        minimumResultsForSearch: Infinity // Hides the search box for this single-select dropdown
+    });
+
+
+    // Handle form submission
+    $('#reportForm').on('submit', function(e) {
+        e.preventDefault();
+
+        // Show loading state
+        var $btn = $(this).find('button[type="submit"]');
+        var originalText = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin mr-2"></i>Generating...').prop('disabled', true);
+
+        // Hide welcome message and show report results
+        $('#welcomeMessage').hide();
+        $('#reportResults').show();
+
+        // Simulate report generation (replace with actual AJAX call)
+        setTimeout(function() {
+            generateReportTable();
+            $btn.html(originalText).prop('disabled', false);
+        }, 1500);
+    });
+
+    // Export functions (remain as alerts for demonstration)
+    $('#exportExcel').on('click', function() {
+        alert('Excel export functionality would be implemented here');
+    });
+
+    $('#exportPdf').on('click', function() {
+        alert('PDF export functionality would be implemented here');
+    });
+
+    $('#printReport').on('click', function() {
+        window.print();
+    });
+
+    function generateReportTable() {
+        var reportType = $('#report_type').val();
+        var tableHeaders = '';
+        var tableBody = '';
+        var summary = '';
+
+        // Generate different table structures based on report type
+        switch(reportType) {
+            case 'registrations':
+                tableHeaders = `
+                    <tr>
+                        <th><i class="fas fa-user mr-1"></i>Patient Name</th>
+                        <th><i class="fas fa-id-card mr-1"></i>Patient ID</th>
+                        <th><i class="fas fa-calendar mr-1"></i>Registration Date</th>
+                        <th><i class="fas fa-phone mr-1"></i>Contact</th>
+                        <th><i class="fas fa-venus-mars mr-1"></i>Gender</th>
+                    </tr>
+                `;
+                summary = 'Showing patient registration data based on selected filters';
+                break;
+            case 'admissions':
+                tableHeaders = `
+                    <tr>
+                        <th><i class="fas fa-user-injured mr-1"></i>Patient</th>
+                        <th><i class="fas fa-calendar mr-1"></i>Admission Date</th>
+                        <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
+                        <th><i class="fas fa-info-circle mr-1"></i>Status</th>
+                        <th><i class="fas fa-building mr-1"></i>Department</th>
+                    </tr>
+                `;
+                summary = 'Showing admission records based on selected filters';
+                break;
+            case 'appointments':
+                tableHeaders = `
+                    <tr>
+                        <th><i class="fas fa-user mr-1"></i>Patient</th>
+                        <th><i class="fas fa-calendar-check mr-1"></i>Appointment Date</th>
+                        <th><i class="fas fa-clock mr-1"></i>Time</th>
+                        <th><i class="fas fa-building mr-1"></i>Department</th>
+                        <th><i class="fas fa-info-circle mr-1"></i>Status</th>
+                    </tr>
+                `;
+                summary = 'Showing scheduled appointments based on selected filters';
+                break;
+            case 'referrals':
+                tableHeaders = `
+                    <tr>
+                        <th><i class="fas fa-user mr-1"></i>Patient</th>
+                        <th><i class="fas fa-calendar mr-1"></i>Referral Date</th>
+                        <th><i class="fas fa-building mr-1"></i>Department</th>
+                        <th><i class="fas fa-sticky-note mr-1"></i>Notes</th>
+                        <th><i class="fas fa-info-circle mr-1"></i>Status</th>
+                    </tr>
+                `;
+                summary = 'Showing patient referrals based on selected filters';
+                break;
+            case 'billing_payments': // New case for Billing & Payments
+                tableHeaders = `
+                    <tr>
+                        <th><i class="fas fa-user mr-1"></i>Patient</th>
+                        <th><i class="fas fa-file-invoice-dollar mr-1"></i>Bill Number</th>
+                        <th><i class="fas fa-calendar mr-1"></i>Date</th>
+                        <th><i class="fas fa-hand-holding-usd mr-1"></i>Amount</th>
+                        <th><i class="fas fa-money-check-alt mr-1"></i>Status</th>
+                    </tr>
+                `;
+                summary = 'Showing patient billing and payment data based on selected filters';
+                break;
+            case 'all_activity': // Updated case
+            default:
+                tableHeaders = `
+                    <tr>
+                        <th><i class="fas fa-list mr-1"></i>Activity Type</th>
+                        <th><i class="fas fa-user mr-1"></i>Patient</th>
+                        <th><i class="fas fa-calendar mr-1"></i>Date</th>
+                        <th><i class="fas fa-info-circle mr-1"></i>Details</th>
+                    </tr>
+                `;
+                summary = 'Showing a comprehensive activity report for all types based on selected filters.';
+        }
+
+        // Sample data row (replace with actual data from backend)
+        tableBody = `
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <br>Report data would be populated here based on your filters
+                    <br><small>This is a template - integrate with your backend data</small>
+                </td>
+            </tr>
+        `;
+
+        $('#reportTable thead').html(tableHeaders);
+        $('#reportTable tbody').html(tableBody);
+        $('#reportSummary').html('<i class="fas fa-info-circle mr-1"></i>' + summary);
+    }
+});
+</script>
 {% endblock %}
