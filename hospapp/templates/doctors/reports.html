@@ -12,7 +12,7 @@
                     <i class="fas fa-user-md text-primary mr-2"></i>
                     My Doctor Activity Dashboard
                 </h1>
-                <p class="text-muted mb-0">Comprehensive overview of your medical activities from {{ start_date }} to {{ end_date }}</p>
+                <p class="text-muted mb-0">Comprehensive overview of your medical activities</p>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
@@ -24,276 +24,187 @@
     </div>
 </div>
 
-<section class="content">
+<div class="generate-reports-page">
     <div class="container-fluid">
-
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card">
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-bar me-1"></i>
+                            Generate Doctor Activity Reports
+                        </h3>
+                    </div>
                     <div class="card-body">
-                        <form method="GET" class="form-inline">
-                            <div class="form-group mr-3">
-                                <label for="start_date" class="mr-2">From:</label>
-                                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                        <form id="reportForm" novalidate>
+                            <div class="mb-3" id="patientSelectDiv">
+                                <label for="selectPatient" class="form-label">Patients</label>
+                                <select class="form-control select2bs4" id="selectPatient" name="patient_id"
+                                    style="width: 100%;">
+                                    <option value="">All Patients</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <div class="form-group mr-3">
-                                <label for="end_date" class="mr-2">To:</label>
-                                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+
+                            <div class="mb-3">
+                                <label for="reportType" class="form-label">Report Type <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-control select2bs4" id="reportType" required
+                                    style="width: 100%;">
+                                    <option value="" disabled selected>Select type...</option>
+                                    <option value="all_combined_reports">All Combined Reports</option>
+                                    <option value="consultations">Consultations Conducted</option>
+                                    <option value="prescriptions">Prescriptions Written</option>
+                                    <option value="admissions_assigned">Admissions Assigned</option>
+                                    <option value="admissions_conducted">Admissions Conducted</option>
+                                    <option value="discharges">Discharges Conducted</option>
+                                    <option value="care_plans">Care Plans Created</option>
+                                    <option value="referrals">Referrals Made</option>
+                                    <option value="lab_tests_requested">Lab Tests Requested</option>
+                                    <option value="vitals_recorded">Vitals Recorded</option>
+                                    <option value="patients_registered">Patients Registered by Me</option>
+                                    <option value="appointments_scheduled">Appointments Scheduled by Me</option>
+                                    <option value="doctor_comments">My Comments</option>
+                                    <option value="ivf_records">IVF Records Handled by Me</option>
+                                    <option value="ivf_progress_updates">IVF Progress Updates by Me</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a report type.</div>
                             </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Filter
+
+                            <div class="mb-3">
+                                <label class="form-label">Date Filter</label>
+                                <div class="d-flex flex-wrap">
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="allDates"
+                                            value="" checked>
+                                        <label class="form-check-label" for="allDates">All Dates</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
+                                            value="range">
+                                        <label class="form-check-label" for="dateRange">Date Range</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="todayFilter"
+                                            value="today">
+                                        <label class="form-check-label" for="todayFilter">Today</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="weekFilter"
+                                            value="week">
+                                        <label class="form-check-label" for="weekFilter">This Week</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="monthFilter"
+                                            value="month">
+                                        <label class="form-check-label" for="monthFilter">This Month</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="dateFields" class="date-fields mb-3" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="startDate" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="startDate" disabled>
+                                        <div class="invalid-feedback">Select start date.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="endDate" class="form-label">End Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="endDate" disabled>
+                                        <div class="invalid-feedback">Select valid end date.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-block mt-3" onclick="generateReport()">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Generate Report
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Enhanced Statistics Cards -->
-        <div class="row">
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_consultations }}</h3>
-                        <p>Total Consultations</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-stethoscope"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_prescriptions }}</h3>
-                        <p>Prescriptions</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-prescription"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_admissions_assigned }}</h3>
-                        <p>Admissions Assigned</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-hospital-user"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-danger">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_discharges }}</h3>
-                        <p>Discharges</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-primary">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_referrals }}</h3>
-                        <p>Referrals</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-share"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-secondary">
-                    <div class="inner">
-                        <h3>{{ summary_stats.current_active_patients }}</h3>
-                        <p>Active Patients</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-injured"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Additional Stats Row -->
-        <div class="row mb-3">
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-purple">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_lab_tests }}</h3>
-                        <p>Lab Tests</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-flask"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-teal">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_care_plans }}</h3>
-                        <p>Care Plans</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-orange">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_vitals }}</h3>
-                        <p>Vitals Recorded</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-heartbeat"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-indigo">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_patients_registered }}</h3>
-                        <p>Patients Registered</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-pink">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_appointments_scheduled }}</h3>
-                        <p>Appointments</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4 col-sm-6 col-12">
-                <div class="small-box bg-dark">
-                    <div class="inner">
-                        <h3>{{ summary_stats.total_comments }}</h3>
-                        <p>Comments</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-comment-medical"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-lg-8">
+                <div id="singleReportContainer" class="card card-info" style="display: none;">
                     <div class="card-header">
-                        <h3 class="card-title">Patient Status Breakdown</h3>
+                        <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel"></i> Export
+                            </button>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <canvas id="patientStatusChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover table-striped" id="reportDataTable">
+                                <thead></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Recent Activities (Last 7 Days)</h3>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="recentActivitiesChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="container-fluid py-4">
-            <div class="advanced-table-container">
-                <div class="advanced-table-header">
-                    <h2><i class="bi bi-table"></i> Complete Activity Management Dashboard</h2>
-                    <p class="text-muted mb-0">All your medical activities in one comprehensive view with advanced filtering</p>
-                </div>
-
-                <div class="advanced-table-controls">
-                    <div class="advanced-search-box">
-                        <i class="bi bi-search"></i>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search all activities...">
-                    </div>
-                    <div class="d-flex gap-2">
-                        <select id="activityFilter" class="form-control mr-2" style="width: auto;">
-                            <option value="">All Activities</option>
-                            <option value="consultation">Consultations</option>
-                            <option value="prescription">Prescriptions</option>
-                            <option value="admission">Admissions</option>
-                            <option value="discharge">Discharges</option>
-                            <option value="referral">Referrals</option>
-                            <option value="lab_test">Lab Tests</option>
-                            <option value="care_plan">Care Plans</option>
-                            <option value="vitals">Vitals</option>
-                            <option value="appointment">Appointments</option>
-                            <option value="comment">Comments</option>
-                        </select>
-                        <button class="advanced-btn" id="printTable">
-                            <i class="bi bi-printer me-1"></i>Print
-                        </button>
-                        <button class="advanced-btn" id="exportPDF">
-                            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
-                        </button>
+                    <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                        <span class="text-muted" id="recordCount">Total Records: 0</span>
                     </div>
                 </div>
 
-                <div class="advanced-table-wrapper">
-                    <table class="table advanced-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable(0)">Date <i class="bi bi-arrow-down-up ms-1"></i></th>
-                                <th onclick="sortTable(1)">Patient <i class="bi bi-arrow-down-up ms-1"></i></th>
-                                <th onclick="sortTable(2)">Activity Type <i class="bi bi-arrow-down-up ms-1"></i></th>
-                                <th onclick="sortTable(3)">Details <i class="bi bi-arrow-down-up ms-1"></i></th>
-                                <th onclick="sortTable(4)">Status <i class="bi bi-arrow-down-up ms-1"></i></th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                        </tbody>
-                    </table>
-                    <div id="noResults" class="no-results" style="display: none;">
-                        <i class="bi bi-search fs-1 text-muted"></i>
-                        <h4>No results found</h4>
-                        <p>Try adjusting your search criteria</p>
-                    </div>
-                </div>
-
-                <div class="advanced-pagination" id="pagination">
-                    <button id="prevBtn">← Previous</button>
-                    <span id="pageInfo">Page 1 of 1</span>
-                    <button id="nextBtn">Next →</button>
+                <div id="combinedReportsDisplayArea" class="row">
                 </div>
             </div>
         </div>
-
     </div>
-</section>
 
-<!-- Activity Detail Modal -->
-<div class="modal fade" id="activityDetailModal" tabindex="-1" aria-labelledby="activityDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="activityDetailModalLabel">Activity Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Report Generated Successfully
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-download fa-4x text-success"></i>
+                    </div>
+                    <h5 id="successMessage">Your report is ready!</h5>
+                    <p class="text-muted" id="successDetails">The report has been generated and displayed below.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Content will be populated by JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="editActivityBtn" style="display: none;">Edit Activity</button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error Generating Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-triangle fa-4x text-danger"></i>
+                    </div>
+                    <h5>An error occurred</h5>
+                    <p class="text-muted" id="errorMessage">Please try again or contact support.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -301,861 +212,389 @@
 
 {% endblock %}
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.X/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
-
-<style>
-    .advanced-table-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 0.75rem;
-        border-radius: 10px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        margin: 0.75rem 0;
-    }
-
-    .advanced-table-header {
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 8px;
-        padding: 0.75rem;
-        margin-bottom: 0.75rem;
-        box-shadow: 0 3px 15px rgba(0,0,0,0.1);
-    }
-
-    .advanced-table-header h2 {
-        color: #2d3748;
-        font-weight: 700;
-        margin-bottom: 0.2rem;
-        font-size: 1.3rem;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .advanced-table-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 0.5rem;
-    }
-
-    .advanced-search-box {
-        position: relative;
-        flex: 1;
-        min-width: 150px;
-        max-width: 300px;
-    }
-
-    .advanced-search-box input {
-        border: 1px solid #e2e8f0;
-        border-radius: 18px;
-        padding: 6px 12px 6px 30px;
-        font-size: 0.85rem;
-        transition: all 0.3s ease;
-        background: rgba(255,255,255,0.9);
-        backdrop-filter: blur(5px);
-    }
-
-    .advanced-search-box input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        background: white;
-    }
-
-    .advanced-search-box i {
-        position: absolute;
-        left: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #64748b;
-        z-index: 2;
-        font-size: 0.8rem;
-    }
-
-    .advanced-table-wrapper {
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-
-    .advanced-table {
-        margin-bottom: 0;
-        border: none;
-    }
-
-    .advanced-table thead th {
-        background: linear-gradient(135deg, #4a5568, #2d3748);
-        color: white;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        padding: 0.6rem;
-        border: none;
-        position: relative;
-        cursor: pointer;
-        transition: background 0.3s ease;
-        font-size: 0.75rem;
-    }
-
-    .advanced-table thead th:hover {
-        background: linear-gradient(135deg, #2d3748, #1a202c);
-    }
-
-    .advanced-table thead th::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-    }
-
-    .advanced-table tbody tr {
-        transition: all 0.3s ease;
-        border: none;
-    }
-
-    .advanced-table tbody tr:nth-child(even) {
-        background: rgba(248, 250, 252, 0.8);
-    }
-
-    .advanced-table tbody tr:hover {
-        background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-
-    .advanced-table tbody td {
-        padding: 0.6rem;
-        border: none;
-        vertical-align: middle;
-        font-weight: 500;
-        color: #2d3748;
-        font-size: 0.85rem;
-    }
-
-    .advanced-status-badge {
-        padding: 0.3rem 0.6rem;
-        border-radius: 15px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-
-    .status-active { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
-    .status-inactive { background: linear-gradient(135deg, #f56565, #e53e3e); color: white; }
-    .status-pending { background: linear-gradient(135deg, #ed8936, #dd6b20); color: white; }
-    .status-completed { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
-    .status-cancelled { background: linear-gradient(135deg, #f56565, #e53e3e); color: white; }
-
-    .advanced-btn {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border: none;
-        border-radius: 16px;
-        padding: 6px 14px;
-        color: white;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        font-size: 0.8rem;
-    }
-
-    .advanced-btn:hover {
-        background: linear-gradient(135deg, #5a67d8, #6b46c1);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-
-    .advanced-pagination {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-        padding: 0.6rem;
-        background: rgba(255,255,255,0.8);
-        backdrop-filter: blur(5px);
-        border-radius: 8px;
-    }
-
-    .advanced-pagination button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        border: none;
-        border-radius: 5px;
-        padding: 5px 10px;
-        color: white;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        font-size: 0.8rem;
-    }
-
-    .advanced-pagination button:hover:not(:disabled) {
-        background: linear-gradient(135deg, #5a67d8, #6b46c1);
-        transform: translateY(-1px);
-    }
-
-    .advanced-pagination button:disabled {
-        background: #cbd5e0;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .advanced-pagination span {
-        color: #4a5568;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-
-    .no-results {
-        text-align: center;
-        padding: 1.5rem;
-        color: #64748b;
-        font-style: italic;
-    }
-
-    /* Additional color classes for new stats boxes */
-    .bg-purple { background-color: #6f42c1 !important; }
-    .bg-teal { background-color: #20c997 !important; }
-    .bg-orange { background-color: #fd7e14 !important; }
-    .bg-indigo { background-color: #6610f2 !important; }
-    .bg-pink { background-color: #e83e8c !important; }
-
-    @media print {
-        .advanced-table-container { background: white !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
-        .advanced-table-header, .advanced-table-controls, .advanced-pagination { display: none !important; }
-        .advanced-table-wrapper { background: white !important; box-shadow: none !important; border-radius: 0 !important; }
-        .advanced-table thead th { background: #4a5568 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .advanced-table tbody tr:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
-    }
-
-    @media (max-width: 768px) {
-        .advanced-table-container { padding: 0.75rem; margin: 0.75rem 0; }
-        .advanced-table-header { padding: 0.75rem; }
-        .advanced-table-controls { flex-direction: column; align-items: stretch; gap: 0.5rem; }
-        .advanced-search-box { min-width: auto; width: 100%; }
-        .advanced-table-wrapper { overflow-x: auto; }
-        .advanced-table { min-width: 600px; }
-        .advanced-pagination { flex-wrap: wrap; gap: 0.4rem; }
-    }
-</style>
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
-    $(function () {
-        // Charts code
-        var patientStatusCanvas = $('#patientStatusChart').get(0).getContext('2d');
-        var patientStatusData = {
-            labels: [{% for entry in patient_status_stats %}'{{ entry.status|title }}',{% endfor %}],
-            datasets: [{
-                data: [{% for entry in patient_status_stats %}{{ entry.count }},{% endfor %}],
-                backgroundColor: ['#007bff', '#dc3545', '#28a745', '#ffc107', '#6c757d', '#17a2b8'],
-            }]
+    $(document).ready(function () {
+        $('#selectPatient').select2({
+            theme: 'bootstrap4',
+            allowClear: true,
+        });
+
+        $('#reportType').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Select type...',
+            allowClear: true,
+        });
+
+        $('#reportType').change(function () {
+            const selectedType = $(this).val();
+            const patientDiv = $('#patientSelectDiv');
+            const patientSelect = $('#selectPatient');
+
+            // List of report types that can be filtered by patient
+            const patientFilterableTypes = [
+                'consultations', 'prescriptions', 'admissions_assigned', 'admissions_conducted',
+                'discharges', 'care_plans', 'referrals', 'lab_tests_requested',
+                'vitals_recorded', 'appointments_scheduled', 'ivf_records', 'ivf_progress_updates',
+                'all_combined_reports' // Keep this here for UI visibility logic
+            ];
+
+            // Specific reports that are NOT patient filterable (doctor's own actions not tied to a specific patient)
+            const nonPatientFilterableTypes = ['patients_registered', 'doctor_comments'];
+
+
+            if (patientFilterableTypes.includes(selectedType) && !nonPatientFilterableTypes.includes(selectedType)) {
+                patientDiv.show();
+            } else if (nonPatientFilterableTypes.includes(selectedType)) {
+                patientDiv.hide();
+                patientSelect.val('').trigger('change'); // Clear selection when not applicable
+            } else { // Handle the "Select type..." or other non-patient-filterable types
+                patientDiv.hide();
+                patientSelect.val('').trigger('change');
+            }
+        });
+
+        toggleDateFields(); // Initialize date fields visibility
+    });
+
+    document.querySelectorAll('input[name="dateFilter"]').forEach(radio => {
+        radio.addEventListener('change', toggleDateFields);
+    });
+
+    function toggleDateFields() {
+        const dateRangeRadio = document.getElementById('dateRange');
+        const dateFields = document.getElementById('dateFields');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+
+        if (dateRangeRadio.checked) {
+            dateFields.style.display = 'block';
+            startDateInput.disabled = false;
+            endDateInput.disabled = false;
+            startDateInput.required = true;
+            endDateInput.required = true;
+        } else {
+            dateFields.style.display = 'none';
+            startDateInput.disabled = true;
+            endDateInput.disabled = true;
+            startDateInput.required = false;
+            endDateInput.required = false;
+            startDateInput.value = '';
+            endDateInput.value = '';
+            clearValidation([startDateInput, endDateInput]);
         }
-        new Chart(patientStatusCanvas, { type: 'doughnut', data: patientStatusData, options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { position: 'bottom' }}}});
+    }
 
-        var recentActivitiesCanvas = $('#recentActivitiesChart').get(0).getContext('2d');
-        var recentActivitiesData = {
-            labels: ['Consultations', 'Prescriptions', 'Admissions', 'Referrals'],
-            datasets: [{
-                label: 'Last 7 Days',
-                data: [{{ recent_activities.consultations }}, {{ recent_activities.prescriptions }}, {{ recent_activities.admissions }}, {{ recent_activities.referrals }}],
-                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
-                borderColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
-                borderWidth: 1
-            }]
+    function clearValidation(elements) {
+        elements.forEach(element => {
+            element.classList.remove('is-invalid', 'is-valid');
+        });
+    }
+
+    function validateForm() {
+        const reportType = document.getElementById('reportType');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const dateRangeRadio = document.getElementById('dateRange');
+        let isValid = true;
+
+        clearValidation([reportType, startDateInput, endDateInput]);
+
+        if (!reportType.value) {
+            reportType.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            reportType.classList.add('is-valid');
         }
-        new Chart(recentActivitiesCanvas, { type: 'bar', data: recentActivitiesData, options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false }}, scales: { y: { beginAtZero: true, ticks: { precision: 0 }}}}});
 
-        // Enhanced activities data with ALL activity types
-        const allActivitiesData = [
-            // Consultations
-            {% for consultation in consultations %}
-            { 
-                id: 'cons_{{ consultation.id }}',
-                date: "{{ consultation.created_at|date:"d F Y" }}", 
-                patient: "{{ consultation.patient.full_name|escapejs }}", 
-                type: "consultation", 
-                details: "{{ consultation.reason_for_consultation|truncatechars:50|escapejs }}", 
-                status: "{{ consultation.status|default:'Completed'|escapejs }}", 
-                rawDate: new Date("{{ consultation.created_at|date:'c' }}"),
-                fullData: {
-                    reason: "{{ consultation.reason_for_consultation|escapejs }}",
-                    diagnosis: "{{ consultation.diagnosis|default:'Not specified'|escapejs }}",
-                    patient_id: "{{ consultation.patient.id }}",
-                    admission: "{{ consultation.admission.id|default:'None' }}"
-                }
-            },
-            {% endfor %}
-            // Prescriptions
-            {% for prescription in prescriptions %}
-            { 
-                id: 'pres_{{ prescription.id }}',
-                date: "{{ prescription.created_at|date:"d F Y" }}", 
-                patient: "{{ prescription.patient.full_name|escapejs }}", 
-                type: "prescription", 
-                details: "{{ prescription.medication|truncatechars:50|escapejs }}", 
-                status: "{{ prescription.status|default:'Active'|escapejs }}", 
-                rawDate: new Date("{{ prescription.created_at|date:'c' }}"),
-                fullData: {
-                    medication: "{{ prescription.medication|escapejs }}",
-                    dosage: "{{ prescription.dosage|escapejs }}",
-                    frequency: "{{ prescription.frequency|escapejs }}",
-                    duration: "{{ prescription.duration|escapejs }}",
-                    instructions: "{{ prescription.instructions|default:''|escapejs }}"
-                }
-            },
-            {% endfor %}
-            // Admissions Assigned
-            {% for admission in admissions_assigned %}
-            { 
-                id: 'adm_{{ admission.id }}',
-                date: "{{ admission.admission_date|date:"d F Y" }}", 
-                patient: "{{ admission.patient.full_name|escapejs }}", 
-                type: "admission", 
-                details: "Admitted by {{ admission.admitted_by.get_full_name|escapejs }}", 
-                status: "{{ admission.status|escapejs }}", 
-                rawDate: new Date("{{ admission.admission_date|date:'c' }}"),
-                fullData: {
-                    admitted_by: "{{ admission.admitted_by.get_full_name|escapejs }}",
-                    reason: "{{ admission.reason|default:'Not specified'|escapejs }}",
-                    bed: "{{ admission.bed|default:'Not assigned'|escapejs }}",
-                    ward: "{{ admission.ward.name|default:'Not assigned'|escapejs }}"
-                }
-            },
-            {% endfor %}
-            // Discharges
-            {% for discharge in discharges %}
-            { 
-                id: 'disc_{{ discharge.id }}',
-                date: "{{ discharge.discharge_date|date:"d F Y" }}", 
-                patient: "{{ discharge.patient.full_name|escapejs }}", 
-                type: "discharge", 
-                details: "Discharged by {{ discharge.discharged_by.get_full_name|escapejs }}", 
-                status: "Completed", 
-                rawDate: new Date("{{ discharge.discharge_date|date:'c' }}"),
-                fullData: {
-                    admission_date: "{{ discharge.admission_date|date:"d F Y" }}",
-                    discharge_summary: "{{ discharge.discharge_summary|default:'Not provided'|escapejs }}",
-                    follow_up: "{{ discharge.follow_up_instructions|default:'None'|escapejs }}"
-                }
-            },
-            {% endfor %}
-            // Referrals
-            {% for referral in referrals %}
-            { 
-                id: 'ref_{{ referral.id }}',
-                date: "{{ referral.created_at|date:"d F Y" }}", 
-                patient: "{{ referral.patient.full_name|escapejs }}", 
-                type: "referral", 
-                details: "To {{ referral.department.name|escapejs }}", 
-                status: "{{ referral.status|escapejs }}", 
-                rawDate: new Date("{{ referral.created_at|date:'c' }}"),
-                fullData: {
-                    department: "{{ referral.department.name|escapejs }}",
-                    reason: "{{ referral.reason|escapejs }}",
-                    urgency: "{{ referral.urgency|default:'Normal'|escapejs }}",
-                    notes: "{{ referral.notes|default:'None'|escapejs }}"},
-            {% endfor %}
-            // Lab Tests
-            {% for lab_test in lab_tests %}
-            { 
-                id: 'lab_{{ lab_test.id }}',
-                date: "{{ lab_test.requested_at|date:"d F Y" }}", 
-                patient: "{{ lab_test.patient.full_name|escapejs }}", 
-                type: "lab_test", 
-                details: "{{ lab_test.category.name|escapejs }} - {{ lab_test.test_name|truncatechars:30|escapejs }}", 
-                status: "{{ lab_test.status|default:'Pending'|escapejs }}", 
-                rawDate: new Date("{{ lab_test.requested_at|date:'c' }}"),
-                fullData: {
-                    test_name: "{{ lab_test.test_name|escapejs }}",
-                    category: "{{ lab_test.category.name|escapejs }}",
-                    instructions: "{{ lab_test.special_instructions|default:'None'|escapejs }}",
-                    priority: "{{ lab_test.priority|default:'Normal'|escapejs }}"
-                }
-            },
-            {% endfor %}
-            // Care Plans
-            {% for care_plan in care_plans %}
-            { 
-                id: 'care_{{ care_plan.id }}',
-                date: "{{ care_plan.created_at|date:"d F Y" }}", 
-                patient: "{{ care_plan.patient.full_name|escapejs }}", 
-                type: "care_plan", 
-                details: "{{ care_plan.plan_title|truncatechars:50|escapejs }}", 
-                status: "{{ care_plan.status|default:'Active'|escapejs }}", 
-                rawDate: new Date("{{ care_plan.created_at|date:'c' }}"),
-                fullData: {
-                    title: "{{ care_plan.plan_title|escapejs }}",
-                    description: "{{ care_plan.description|default:'No description'|escapejs }}",
-                    start_date: "{{ care_plan.start_date|date:"d F Y" }}",
-                    review_date: "{{ care_plan.review_date|date:"d F Y"|default:'Not set' }}"
-                }
-            },
-            {% endfor %}
-            // Vitals
-            {% for vital in vitals_recorded %}
-            { 
-                id: 'vital_{{ vital.id }}',
-                date: "{{ vital.recorded_at|date:"d F Y" }}", 
-                patient: "{{ vital.patient.full_name|escapejs }}", 
-                type: "vitals", 
-                details: "BP: {{ vital.blood_pressure|default:'--' }}, Temp: {{ vital.temperature|default:'--' }}°C", 
-                status: "Recorded", 
-                rawDate: new Date("{{ vital.recorded_at|date:'c' }}"),
-                fullData: {
-                    blood_pressure: "{{ vital.blood_pressure|default:'Not recorded' }}",
-                    temperature: "{{ vital.temperature|default:'Not recorded' }}",
-                    pulse: "{{ vital.pulse_rate|default:'Not recorded' }}",
-                    respiratory_rate: "{{ vital.respiratory_rate|default:'Not recorded' }}",
-                    weight: "{{ vital.weight|default:'Not recorded' }}",
-                    height: "{{ vital.height|default:'Not recorded' }}"
-                }
-            },
-            {% endfor %}
-            // Appointments
-            {% for appointment in appointments_scheduled %}
-            { 
-                id: 'app_{{ appointment.id }}',
-                date: "{{ appointment.scheduled_time|date:"d F Y" }}", 
-                patient: "{{ appointment.patient.full_name|escapejs }}", 
-                type: "appointment", 
-                details: "{{ appointment.department.name|escapejs }} - {{ appointment.scheduled_time|time:"H:i" }}", 
-                status: "{{ appointment.status|default:'Scheduled'|escapejs }}", 
-                rawDate: new Date("{{ appointment.scheduled_time|date:'c' }}"),
-                fullData: {
-                    department: "{{ appointment.department.name|escapejs }}",
-                    time: "{{ appointment.scheduled_time|time:"H:i" }}",
-                    notes: "{{ appointment.notes|default:'No notes'|escapejs }}",
-                    type: "{{ appointment.appointment_type|default:'General'|escapejs }}"
-                }
-            },
-            {% endfor %}
-            // Comments
-            {% for comment in doctor_comments %}
-            { 
-                id: 'comm_{{ comment.id }}',
-                date: "{{ comment.date|date:"d F Y" }}", 
-                patient: "{{ comment.patient.full_name|escapejs }}", 
-                type: "comment", 
-                details: "{{ comment.comments|truncatechars:50|escapejs }}", 
-                status: "Added", 
-                rawDate: new Date("{{ comment.date|date:'c' }}"),
-                fullData: {
-                    comment: "{{ comment.comment|escapejs }}",
-                    patient_id: "{{ comment.patient.patient_id|default:'Unknown' }}",
-                    category: "{{ comment.category|default:'General'|escapejs }}"
-                }
-            },
-            {% endfor %}
-        ].filter(item => item.date && item.patient && item.type); // Filter out any incomplete entries
-
-        // Sort by date (newest first)
-        allActivitiesData.sort((a, b) => b.rawDate - a.rawDate);
-
-        // Pagination and filtering variables
-        let currentPage = 1;
-        const itemsPerPage = 10;
-        let filteredData = [...allActivitiesData];
-
-        // Function to get status badge class
-        function getStatusBadgeClass(status, type) {
-            const statusLower = status.toLowerCase();
-            if (statusLower.includes('active') || statusLower.includes('completed') || statusLower.includes('recorded')) {
-                return 'status-completed';
-            } else if (statusLower.includes('pending') || statusLower.includes('scheduled')) {
-                return 'status-pending';
-            } else if (statusLower.includes('cancelled') || statusLower.includes('inactive')) {
-                return 'status-cancelled';
+        if (dateRangeRadio.checked) {
+            if (!startDateInput.value) {
+                startDateInput.classList.add('is-invalid');
+                isValid = false;
             } else {
-                return 'status-active';
+                startDateInput.classList.add('is-valid');
             }
-        }
 
-        // Function to get activity type display name and icon
-        function getActivityTypeInfo(type) {
-            const types = {
-                'consultation': { name: 'Consultation', icon: 'fa-stethoscope', color: '#007bff' },
-                'prescription': { name: 'Prescription', icon: 'fa-prescription', color: '#28a745' },
-                'admission': { name: 'Admission', icon: 'fa-hospital-user', color: '#ffc107' },
-                'discharge': { name: 'Discharge', icon: 'fa-sign-out-alt', color: '#dc3545' },
-                'referral': { name: 'Referral', icon: 'fa-share', color: '#6f42c1' },
-                'lab_test': { name: 'Lab Test', icon: 'fa-flask', color: '#20c997' },
-                'care_plan': { name: 'Care Plan', icon: 'fa-clipboard-list', color: '#fd7e14' },
-                'vitals': { name: 'Vitals', icon: 'fa-heartbeat', color: '#e83e8c' },
-                'appointment': { name: 'Appointment', icon: 'fa-calendar-check', color: '#6610f2' },
-                'comment': { name: 'Comment', icon: 'fa-comment-medical', color: '#6c757d' }
-            };
-            return types[type] || { name: type, icon: 'fa-file-medical', color: '#6c757d' };
-        }
-
-        // Function to render table
-        function renderTable() {
-            const tableBody = document.getElementById('tableBody');
-            const noResults = document.getElementById('noResults');
-            
-            if (filteredData.length === 0) {
-                tableBody.innerHTML = '';
-                noResults.style.display = 'block';
-                updatePagination();
-                return;
-            }
-            
-            noResults.style.display = 'none';
-            
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageData = filteredData.slice(startIndex, endIndex);
-            
-            tableBody.innerHTML = pageData.map(item => {
-                const typeInfo = getActivityTypeInfo(item.type);
-                const statusClass = getStatusBadgeClass(item.status, item.type);
-                
-                return `
-                    <tr data-id="${item.id}">
-                        <td><strong>${item.date}</strong><br><small class="text-muted">${item.rawDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</small></td>
-                        <td><strong>${item.patient}</strong></td>
-                        <td>
-                            <span style="color: ${typeInfo.color};">
-                                <i class="fas ${typeInfo.icon} mr-1"></i>
-                                ${typeInfo.name}
-                            </span>
-                        </td>
-                        <td>${item.details}</td>
-                        <td><span class="advanced-status-badge ${statusClass}">${item.status}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary view-details" data-id="${item.id}" title="View Details">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-            
-            updatePagination();
-        }
-
-        // Function to update pagination
-        function updatePagination() {
-            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-            const pageInfo = document.getElementById('pageInfo');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            
-            pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredData.length} total)`;
-            prevBtn.disabled = currentPage <= 1;
-            nextBtn.disabled = currentPage >= totalPages;
-        }
-
-        // Function to show activity details in modal
-        function showActivityDetails(activityId) {
-            const activity = allActivitiesData.find(item => item.id === activityId);
-            if (!activity) return;
-            
-            const typeInfo = getActivityTypeInfo(activity.type);
-            const modalTitle = document.getElementById('activityDetailModalLabel');
-            const modalBody = document.getElementById('modalBody');
-            
-            modalTitle.innerHTML = `
-                <i class="fas ${typeInfo.icon} mr-2" style="color: ${typeInfo.color};"></i>
-                ${typeInfo.name} Details
-            `;
-            
-            let detailsHTML = `
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-calendar mr-1"></i> Date & Time</h6>
-                        <p>${activity.date} at ${activity.rawDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-user mr-1"></i> Patient</h6>
-                        <p>${activity.patient}</p>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-info-circle mr-1"></i> Status</h6>
-                        <p><span class="advanced-status-badge ${getStatusBadgeClass(activity.status, activity.type)}">${activity.status}</span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6><i class="fas fa-tag mr-1"></i> Activity Type</h6>
-                        <p>${typeInfo.name}</p>
-                    </div>
-                </div>
-                <hr>
-            `;
-            
-            // Add specific details based on activity type
-            if (activity.fullData) {
-                detailsHTML += '<h6><i class="fas fa-list mr-1"></i> Additional Details</h6>';
-                detailsHTML += '<div class="row">';
-                
-                Object.entries(activity.fullData).forEach(([key, value]) => {
-                    if (value && value !== 'None' && value !== 'Not specified') {
-                        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        detailsHTML += `
-                            <div class="col-md-6 mb-2">
-                                <strong>${label}:</strong><br>
-                                <span class="text-muted">${value}</span>
-                            </div>
-                        `;
-                    }
-                });
-                
-                detailsHTML += '</div>';
-            }
-            
-            modalBody.innerHTML = detailsHTML;
-            
-            // Show modal (assuming Bootstrap modal)
-            const modal = new bootstrap.Modal(document.getElementById('activityDetailModal'));
-            modal.show();
-        }
-
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            filteredData = allActivitiesData.filter(item => 
-                item.patient.toLowerCase().includes(searchTerm) ||
-                item.details.toLowerCase().includes(searchTerm) ||
-                getActivityTypeInfo(item.type).name.toLowerCase().includes(searchTerm) ||
-                item.status.toLowerCase().includes(searchTerm)
-            );
-            currentPage = 1;
-            renderTable();
-        });
-
-        // Activity filter
-        document.getElementById('activityFilter').addEventListener('change', function(e) {
-            const filterType = e.target.value;
-            if (filterType === '') {
-                filteredData = [...allActivitiesData];
+            if (!endDateInput.value) {
+                endDateInput.classList.add('is-invalid');
+                isValid = false;
             } else {
-                filteredData = allActivitiesData.filter(item => item.type === filterType);
-            }
-            currentPage = 1;
-            renderTable();
-        });
-
-        // Pagination event listeners
-        document.getElementById('prevBtn').addEventListener('click', function() {
-            if (currentPage > 1) {
-                currentPage--;
-                renderTable();
-            }
-        });
-
-        document.getElementById('nextBtn').addEventListener('click', function() {
-            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderTable();
-            }
-        });
-
-        // View details event listener
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.view-details')) {
-                const activityId = e.target.closest('.view-details').getAttribute('data-id');
-                showActivityDetails(activityId);
-            }
-        });
-
-        // Print functionality
-        document.getElementById('printTable').addEventListener('click', function() {
-            window.print();
-        });
-
-        // Export PDF functionality (basic implementation)
-        document.getElementById('exportPDF').addEventListener('click', function() {
-            // Create a simplified version for PDF export
-            const printContent = `
-                <h2>Doctor Activity Report</h2>
-                <p>Period: {{ start_date }} to {{ end_date }}</p>
-                <p>Total Activities: ${filteredData.length}</p>
-                <table border="1" style="width:100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background-color: #f8f9fa;">
-                            <th style="padding: 8px;">Date</th>
-                            <th style="padding: 8px;">Patient</th>
-                            <th style="padding: 8px;">Activity</th>
-                            <th style="padding: 8px;">Details</th>
-                            <th style="padding: 8px;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filteredData.map(item => `
-                            <tr>
-                                <td style="padding: 8px;">${item.date}</td>
-                                <td style="padding: 8px;">${item.patient}</td>
-                                <td style="padding: 8px;">${getActivityTypeInfo(item.type).name}</td>
-                                <td style="padding: 8px;">${item.details}</td>
-                                <td style="padding: 8px;">${item.status}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Doctor Activity Report</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            table { width: 100%; border-collapse: collapse; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                            th { background-color: #f2f2f2; }
-                        </style>
-                    </head>
-                    <body>${printContent}</body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        });
-
-        // Table sorting functionality
-        window.sortTable = function(columnIndex) {
-            const isAscending = filteredData.sortDirection !== 'asc';
-            
-            filteredData.sort((a, b) => {
-                let aVal, bVal;
-                
-                switch(columnIndex) {
-                    case 0: // Date
-                        return isAscending ? a.rawDate - b.rawDate : b.rawDate - a.rawDate;
-                    case 1: // Patient
-                        aVal = a.patient.toLowerCase();
-                        bVal = b.patient.toLowerCase();
-                        break;
-                    case 2: // Activity Type
-                        aVal = getActivityTypeInfo(a.type).name.toLowerCase();
-                        bVal = getActivityTypeInfo(b.type).name.toLowerCase();
-                        break;
-                    case 3: // Details
-                        aVal = a.details.toLowerCase();
-                        bVal = b.details.toLowerCase();
-                        break;
-                    case 4: // Status
-                        aVal = a.status.toLowerCase();
-                        bVal = b.status.toLowerCase();
-                        break;
-                    default:
-                        return 0;
+                if (startDateInput.value && endDateInput.value && new Date(endDateInput.value) < new Date(startDateInput.value)) {
+                    endDateInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    endDateInput.classList.add('is-valid');
                 }
-                
-                if (aVal < bVal) return isAscending ? -1 : 1;
-                if (aVal > bVal) return isAscending ? 1 : -1;
-                return 0;
-            });
-            
-            filteredData.sortDirection = isAscending ? 'asc' : 'desc';
-            currentPage = 1;
-            renderTable();
+            }
+        }
+        return isValid;
+    }
+
+    async function generateReport() {
+        if (!validateForm()) {
+            return;
+        }
+
+        const generateBtn = document.querySelector('.btn-primary');
+        const originalText = generateBtn.innerHTML;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        generateBtn.disabled = true;
+
+        const reportType = document.getElementById('reportType').value;
+        let patientId = null;
+
+        // Determine if patient_id should be included based on selected report type
+        const nonPatientFilterableTypes = ['patients_registered', 'doctor_comments'];
+        if (!nonPatientFilterableTypes.includes(reportType)) {
+            patientId = $('#selectPatient').val() || null;
+        }
+
+        const dateFilter = document.querySelector('input[name="dateFilter"]:checked').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        const requestData = {
+            report_type: reportType,
+            patient_id: patientId, // This will be null if not applicable or not selected
+            date_filter: dateFilter,
+            start_date: startDate || null,
+            end_date: endDate || null,
         };
 
-        // Initialize table on page load
-        renderTable();
-
-        // Add some utility functions for better UX
-        function showToast(message, type = 'info') {
-            // Simple toast notification
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${type} position-fixed`;
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            toast.innerHTML = `
-                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}!</strong> ${message}
-                <button type="button" class="btn-close" aria-label="Close"></button>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 5000);
-            
-            // Manual close
-            toast.querySelector('.btn-close').addEventListener('click', () => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
+        try {
+            const response = await fetch('{% url "generate_doctor_report_ajax" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify(requestData),
             });
-        }
 
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl+F to focus search
-            if (e.ctrlKey && e.key === 'f') {
-                e.preventDefault();
-                document.getElementById('searchInput').focus();
+            const data = await response.json();
+
+            if (!response.ok) {
+                // If response.ok is false, it means an HTTP error occurred (e.g., 400, 403, 500)
+                // The backend JsonResponse for errors will have an 'error' key.
+                throw new Error(data.error || 'Unknown error occurred on server.');
             }
-            
-            // Ctrl+P to print
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                document.getElementById('printTable').click();
+
+            document.getElementById('singleReportContainer').style.display = 'none';
+            document.getElementById('reportDataTable').innerHTML = '';
+            document.getElementById('combinedReportsDisplayArea').innerHTML = '';
+
+            if (reportType === 'all_combined_reports') {
+                displayCombinedReports(data.combined_reports);
+            } else {
+                displaySingleReport(reportType, data.headers, data.data, data.title);
+                document.getElementById('successMessage').textContent = `${data.title} report generated successfully!`;
+                document.getElementById('successDetails').textContent = `${data.count} records found.`;
             }
-        });
 
-        // Show loading indicator during table operations
-        function showLoading() {
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            // Display the error message from the caught error object
+            document.getElementById('errorMessage').textContent = error.message;
+            const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+            errorModal.show();
+        } finally {
+            generateBtn.innerHTML = originalText;
+            generateBtn.disabled = false;
         }
+    }
 
-        // Performance optimization: debounce search
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
+    function displaySingleReport(reportType, headers, data, title) {
+        const reportTableTitle = document.getElementById('reportTableTitle');
+        const reportDataTable = document.getElementById('reportDataTable');
+        const reportTableFooter = document.getElementById('reportTableFooter');
+        const recordCount = document.getElementById('recordCount');
+
+        reportTableTitle.textContent = title || formatReportTypeTitle(reportType);
+
+        let thead = '<thead class="table-dark"><tr>';
+        headers.forEach(header => {
+            thead += `<th>${header}</th>`;
+        });
+        thead += '</tr></thead>';
+
+        let tbody = '<tbody>';
+        if (data && data.length > 0) {
+            data.forEach(row => {
+                tbody += '<tr>';
+                headers.forEach(header => {
+                    const key = formatHeaderToKey(header);
+                    let value = row[key];
+
+                    if (value === null || value === undefined) {
+                        value = 'N/A';
+                    }
+                    tbody += `<td>${value}</td>`;
+                });
+                tbody += '</tr>';
+            });
+        } else {
+            tbody += `<tr><td colspan="${headers.length}" class="text-center text-muted">No data found</td></tr>`;
         }
+        tbody += '</tbody>';
 
-        // Apply debounced search
-        const debouncedSearch = debounce(function(searchTerm) {
-            filteredData = allActivitiesData.filter(item => 
-                item.patient.toLowerCase().includes(searchTerm) ||
-                item.details.toLowerCase().includes(searchTerm) ||
-                getActivityTypeInfo(item.type).name.toLowerCase().includes(searchTerm) ||
-                item.status.toLowerCase().includes(searchTerm)
-            );
-            currentPage = 1;
-            renderTable();
-        }, 300);
+        reportDataTable.innerHTML = thead + tbody;
+        document.getElementById('singleReportContainer').style.display = 'block';
 
-        // Update search listener to use debounced version
-        document.getElementById('searchInput').removeEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            debouncedSearch(searchTerm);
-        });
+        recordCount.textContent = `Total Records: ${data ? data.length : 0}`;
+        if (data && data.length > 0) {
+            reportTableFooter.style.display = 'block';
+        } else {
+            reportTableFooter.style.display = 'none';
+        }
+    }
 
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            debouncedSearch(searchTerm);
-        });
+    function displayCombinedReports(combinedReportsData) {
+        const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
+        combinedReportsDisplayArea.innerHTML = '';
 
-        console.log('Doctor Activity Dashboard initialized successfully');
-        console.log(`Total activities loaded: ${allActivitiesData.length}`);
-    });
+        let totalReportsCount = 0;
+        for (const reportTypeKey in combinedReportsData) {
+            const report = combinedReportsData[reportTypeKey];
+            const headers = report.headers;
+            const data = report.data;
+
+            if (data && data.length > 0) {
+                totalReportsCount++;
+                const cardHtml = `
+                <div class="col-12 mb-4">
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">${report.title || formatReportTypeTitle(reportTypeKey)}</h3>
+                            <div class="card-tools">
+                                <span class="badge bg-primary me-2">${report.count || data.length} records</span>
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <button type="button" class="btn btn-tool" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
+                                    <i class="fas fa-file-excel"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            ${headers.map(header => `<th>${header}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.map(row => `
+                                            <tr>
+                                                ${headers.map(header => {
+                                                    const key = formatHeaderToKey(header);
+                                                    let value = row[key];
+
+                                                    if (value === null || value === undefined) {
+                                                        value = 'N/A';
+                                                    }
+                                                    return `<td>${value}</td>`;
+                                                }).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-success btn-sm" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
+                                <i class="fas fa-file-excel me-1"></i> Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+                combinedReportsDisplayArea.insertAdjacentHTML('beforeend', cardHtml);
+            }
+        }
+        document.getElementById('successMessage').textContent = 'Combined reports generated successfully!';
+        document.getElementById('successDetails').textContent = `${totalReportsCount} report sections generated.`;
+    }
+
+    function formatReportTypeTitle(reportTypeKey) {
+        // More specific formatting for doctor's reports
+        const customTitles = {
+            'consultations': 'Consultations Conducted',
+            'prescriptions': 'Prescriptions Written',
+            'admissions_assigned': 'Admissions Assigned',
+            'admissions_conducted': 'Admissions Conducted',
+            'discharges': 'Discharges Conducted',
+            'care_plans': 'Care Plans Created',
+            'referrals': 'Referrals Made',
+            'lab_tests_requested': 'Lab Tests Requested',
+            'vitals_recorded': 'Vitals Recorded',
+            'patients_registered': 'Patients Registered by Me',
+            'appointments_scheduled': 'Appointments Scheduled by Me',
+            'doctor_comments': 'My Comments',
+            'ivf_records': 'IVF Records Handled by Me',
+            'ivf_progress_updates': 'IVF Progress Updates by Me',
+        };
+        return customTitles[reportTypeKey] || reportTypeKey.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()).trim();
+    }
+
+    function formatHeaderToKey(header) {
+        // Adjust header to key mapping to match the serialized field names from Django
+        let key = header.toLowerCase().replace(/\s+/g, '_');
+
+        // Handle specific remappings for related fields that get flattened in serialization
+        if (key === 'patient_name') return 'patient_full_name';
+        if (key === 'admission_id') return 'admission_id'; // For Consultation.admission__id
+        if (key === 'doctor_assigned') return 'doctor_assigned_first_name'; // Assuming this gets serialized as doctor_assigned__first_name
+        if (key === 'admitted_by') return 'admitted_by_first_name'; // Assuming this gets serialized as admitted_by__first_name
+        if (key === 'department') return 'department_name';
+        if (key === 'category') return 'category_name';
+        if (key === 'ivf_package') return 'ivf_package_name';
+        if (key === 'treatment_location') return 'treatment_location_name';
+        if (key === 'ivf_record_id') return 'ivf_record_id'; // For IVFProgressUpdate.ivf_record__id
+        if (key === 'lab_technician_name') return 'labtech_name'; // For DoctorComments
+
+        // Remove any non-alphanumeric characters except underscores
+        return key.replace(/[^\w_]/g, '');
+    }
+
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Function to handle export for a single report table
+    function exportToExcel() {
+        const table = document.getElementById('reportDataTable');
+        const title = document.getElementById('reportTableTitle').textContent;
+        const wb = XLSX.utils.table_to_book(table);
+        const cleanFilename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        XLSX.writeFile(wb, `${cleanFilename}_doctor_report.xlsx`);
+    }
+
+    // Function to handle export for combined report tables
+    function exportCombinedToExcel(filename, button) {
+        const table = button.closest('.card').querySelector('table');
+        if (table) {
+            const wb = XLSX.utils.table_to_book(table);
+            const cleanFilename = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            XLSX.writeFile(wb, `${cleanFilename}_doctor_report.xlsx`);
+        }
+    }
 </script>
 {% endblock %}

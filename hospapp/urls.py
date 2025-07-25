@@ -14,9 +14,8 @@ urlpatterns = [
     path('n/home', views.nurses, name='nurse'),
     path('n/vitals', views.vitals, name='vitals'),
     path('n/nursing_actions', views.nursing_actions, name='nursing_actions'),
-    path('nurse/reports/', views.nurse_reports_dashboard, name='nurse_activity_report'),
-    path('api/generate-nurse-report/', views.generate_nurse_report, name='generate_nurse_report'),
-    path('nurse/ivf-progress/', views.nurse_view_ivf_progress, name='nurse_ivf_progress'),
+    path('n/reports', views.nurse_reports_dashboard, name='nurse_activity_report'),
+    path('n/ivf-progress', views.nurse_view_ivf_progress, name='nurse_ivf_progress'),
 
     path('n/record_vitals', views.record_vitals, name='record_vitals'),
     path('n/admit_patient_nurse', views.admit_patient_nurse, name='admit_patient_nurse'),
@@ -26,6 +25,7 @@ urlpatterns = [
     path('n/save_nursing_note', views.save_nursing_note, name='nursing_note'),
     path('n/handover_log', views.handover_log, name='handover_log'),
     path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
+    path('api/generate-nurse-report/', views.generate_nurse_report, name='generate_nurse_report'),
 
     ########################### End Nurses URLS #################################
 
@@ -37,7 +37,8 @@ urlpatterns = [
     path('d/requesttest/', views.requesttest, name='requesttest'),
     path('d/recomended_tests', views.recomended_tests, name='recomended_tests'),
     path('d/ivf/start/', views.start_ivf, name='start_ivf'),
-    path('d/report', views.doctor_report, name='doctor_report'),
+    path('d/reports', views.doctor_report, name='doctor_report'),
+    path('api/doctor/generate_report/', views.generate_doctor_report_ajax, name='generate_doctor_report_ajax'),
     path('d/test_results/<int:patient_id>/', views.test_results, name='test_results'),
 
     path('d/chart', views.admissions_data, name='admissions_data'),
@@ -64,14 +65,14 @@ urlpatterns = [
     path('l/home', views.laboratory, name='laboratory'),
     path('l/test_entry', views.lab_test_entry, name='lab_test_entry'),
     path('l/internal_logs', views.lab_internal_logs, name='lab_internal_logs'),
-    path('lab/ivf-progress/', views.lab_view_ivf_progress, name='lab_ivf_progress'),
-    path('lab/activity-report/', views.lab_activity_report, name='lab_activity_report'),
-    path('lab/generate-report/', views.generate_lab_report, name='generate_lab_report'),
+    path('l/ivf-progress', views.lab_view_ivf_progress, name='lab_ivf_progress'),
+    path('l/reports', views.lab_activity_report, name='lab_activity_report'),
     
     path('lab/patient-info/<int:patient_id>/', views.get_patient_info, name='get_patient_info'),
     path('l/test_details/<int:patient_id>/', views.test_details, name='test_details'),
     path('ajax/lab-log-detail/', views.lab_log_detail_ajax, name='lab_log_detail_ajax'),
     path('labtests/submit/<int:patient_id>/', views.submit_test_results, name='submit_test_results'),
+    path('lab/generate-report/', views.generate_lab_report, name='generate_lab_report'),
 
     ########################### End Lab URLS ####################################
 
@@ -86,11 +87,11 @@ urlpatterns = [
     # path('a/payment_tracker', views.patient_payment_tracker, name='patient_payment_tracker'),
     # path('a/financials', views.institution_financials, name='institution_financials'),
     path('a/financial_reports', accts.financial_reports, name='financial_reports'),
-    path('a/budget-planning/', accts.budget_planning, name='budget_planning'),
-    path('budget-analytics/', accts.budget_analytics, name='budget_analytics'),
-    path('budget/delete/<int:budget_id>/', accts.delete_budget, name='delete_budget'),
+    path('a/budget-planning', accts.budget_planning, name='budget_planning'),
+    path('budget-analytics', accts.budget_analytics, name='budget_analytics'),
+    path('budget/delete/<int:budget_id>', accts.delete_budget, name='delete_budget'),
     path('export_budget_data', accts.export_budget_data, name='export_budget_data'),
-    path('my-activity-report/', accts.acct_report, name='acct_report'),
+    path('a/reports', accts.acct_report, name='acct_report'),
 
     ########################### END ACCTS URLS ####################################
 
@@ -100,7 +101,7 @@ urlpatterns = [
     path('hr/staff-profiles', views.staff_profiles, name='staff_profiles'),
     path('hr/attendance-shifts', views.staff_attendance_list, name='staff_attendance_shift'),
     path('hr/staff_transitions', views.staff_transitions, name='staff_transitions'),
-    path('hr/report', views.hr_act_report, name='hr_report'),
+    path('hr/reports', views.hr_act_report, name='hr_report'),
 
     path('staff/<int:staff_id>/edit/', views.edit_staff_profile, name='edit_staff_profile'),
     path('staff/<int:staff_id>/change-password/', views.change_staff_password, name='change_staff_password'),
@@ -113,7 +114,7 @@ urlpatterns = [
     ########################### Receptionist URLS #################################
     path('r/home', views.receptionist, name='receptionist'),
     path('r/new_patient', views.register_patient, name='register_patient'),
-    path('r/my-activities/', views.receptionist_activity_report, name='receptionist_activity_report'),
+    path('r/reports', views.receptionist_activity_report, name='receptionist_activity_report'),
 
     path('receptionist/register/submit', views.register_p, name='register_p'),
     path('receptionist/admit', views.admit_patient, name='admit_patient'),
