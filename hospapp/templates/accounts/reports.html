@@ -1,457 +1,647 @@
-{% extends 'accounts/base.html' %}
+{% extends "accounts/base.html" %}
 {% load static %}
 
-{% block title %}Account Activity Report{% endblock %}
-
-{% block extra_css %}
-<style>
-    .report-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-    }
-    
-    .table-container {
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 2rem;
-    }
-    
-    .table-header {
-        background: linear-gradient(135deg, #343a40 0%, #495057 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-bottom: none;
-    }
-    
-    .table-header h3 {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: 600;
-    }
-    
-    .table thead th {
-        background-color: #495057;
-        color: white;
-        border: none;
-        font-weight: 600;
-        padding: 1rem;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-    
-    .table tbody td {
-        padding: 1rem;
-        vertical-align: middle;
-        border-bottom: 1px solid #e9ecef;
-    }
-    
-    .table tbody tr:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .activity-type {
-        padding: 0.4rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: bold;
-        color: white;
-        display: inline-block;
-        min-width: 100px;
-        text-align: center;
-    }
-    
-    .type-expense { background-color: #ffc107; color: #000; }
-    .type-revenue { background-color: #28a745; }
-    .type-bill { background-color: #17a2b8; }
-    .type-payment { background-color: #6f42c1; }
-    .type-budget { background-color: #fd7e14; }
-    
-    .status-badge {
-        padding: 0.3rem 0.7rem;
-        border-radius: 15px;
-        font-size: 0.75rem;
-        font-weight: bold;
-        display: inline-block;
-        min-width: 80px;
-        text-align: center;
-    }
-    
-    .status-pending { background-color: #ffc107; color: #000; }
-    .status-approved { background-color: #28a745; color: white; }
-    .status-paid { background-color: #28a745; color: white; }
-    .status-completed { background-color: #28a745; color: white; }
-    .status-rejected { background-color: #dc3545; color: white; }
-    .status-partial { background-color: #fd7e14; color: white; }
-    .status-outstanding { background-color: #dc3545; color: white; }
-    .status-created { background-color: #17a2b8; color: white; }
-    
-    .amount-positive {
-        font-weight: bold;
-        font-size: 1.1rem;
-        color: #28a745;
-    }
-    
-    .amount-negative {
-        font-weight: bold;
-        font-size: 1.1rem;
-        color: #dc3545;
-    }
-    
-    .amount-neutral {
-        font-weight: bold;
-        font-size: 1.1rem;
-        color: #6c757d;
-    }
-    
-    .reference-text {
-        font-family: 'Courier New', monospace;
-        font-size: 0.8rem;
-        color: #6c757d;
-        background-color: #f8f9fa;
-        padding: 0.2rem 0.4rem;
-        border-radius: 3px;
-    }
-    
-    .print-btn {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        border: none;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-    
-    .summary-stats {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        margin-bottom: 2rem;
-    }
-    
-    .stat-item {
-        text-align: center;
-        padding: 1rem;
-    }
-    
-    .stat-value {
-        font-size: 1.8rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .text-revenue { color: #28a745; }
-    .text-expense { color: #dc3545; }
-    .text-pending { color: #ffc107; }
-    .text-activities { color: #17a2b8; }
-    
-    @media print {
-        .no-print { display: none !important; }
-        .report-header { background: #333 !important; }
-        .table-container { box-shadow: none !important; }
-    }
-    
-    @media (max-width: 768px) {
-        .table-responsive {
-            font-size: 0.85rem;
-        }
-        .activity-type, .status-badge {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-        }
-        .stat-item {
-            margin-bottom: 1rem;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}HMS | Accounting Report{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Report Header -->
-    <div class="report-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-chart-line me-3"></i>
-                    Complete Account Activity Report
-                </h1>
-                <p class="mb-0">
-                    <i class="fas fa-user me-2"></i>{{ staff.user.get_full_name|default:"All Staff" }}
-                    <span class="mx-3">|</span>
-                    <i class="fas fa-calendar me-2"></i>All Time Activities
-                </p>
+<div class="content-header no-print">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Accounting Report</h1>
             </div>
-            <div class="col-md-4 text-end no-print">
-                <button onclick="window.print()" class="btn print-btn me-2">
-                    <i class="fas fa-print me-2"></i>Print Report
-                </button>
-                <small class="text-light d-block mt-2">
-                    Generated: {% now "M d, Y H:i" %}
-                </small>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="#">Accounting</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
             </div>
         </div>
-    </div>
-
-    <!-- Summary Statistics -->
-    <div class="summary-stats">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value text-revenue">₦{{ total_revenue|default:0|floatformat:2 }}</div>
-                    <div class="stat-label">Total Revenue</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value text-expense">₦{{ total_expenses|default:0|floatformat:2 }}</div>
-                    <div class="stat-label">Total Expenses</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value text-pending">{{ pending_items|default:0 }}</div>
-                    <div class="stat-label">Pending Items</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value text-activities">{{ total_activities|default:0 }}</div>
-                    <div class="stat-label">Total Activities</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Comprehensive Activity Table -->
-    <div class="table-container">
-        <div class="table-header">
-            <h3><i class="fas fa-list me-2"></i>All Account Activities</h3>
-        </div>
-        <div class="table-responsive" style="max-height: 800px; overflow-y: auto;">
-            <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Description</th>
-                        <th>Reference</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Category</th>
-                        <th>Staff</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Expenses -->
-                    {% for expense in all_expenses %}
-                    <tr>
-                        <td>{{ expense.created_at|date:"M d, Y H:i" }}</td>
-                        <td>
-                            <span class="activity-type type-expense">
-                                <i class="fas fa-receipt me-1"></i>EXPENSE
-                            </span>
-                        </td>
-                        <td>{{ expense.description|default:"Expense Request" }}</td>
-                        <td><span class="reference-text">EXP-{{ expense.id }}</span></td>
-                        <td class="amount-negative">₦{{ expense.amount|floatformat:2 }}</td>
-                        <td>
-                            <span class="status-badge status-{{ expense.status }}">
-                                {{ expense.status|capfirst }}
-                            </span>
-                        </td>
-                        <td>{{ expense.category|default:"General" }}</td>
-                        <td>{{ expense.requested_by.get_full_name|default:"N/A" }}</td>
-                    </tr>
-                    {% endfor %}
-
-                    <!-- Bills -->
-                    {% for bill in all_bills %}
-                    <tr>
-                        <td>{{ bill.created_at|date:"M d, Y H:i" }}</td>
-                        <td>
-                            <span class="activity-type type-bill">
-                                <i class="fas fa-file-invoice me-1"></i>BILL
-                            </span>
-                        </td>
-                        <td>Bill for {{ bill.patient.full_name|default:"Patient" }}</td>
-                        <td><span class="reference-text">{{ bill.bill_number|default:bill.id }}</span></td>
-                        <td class="amount-positive">₦{{ bill.total_amount|floatformat:2 }}</td>
-                        <td>
-                            <span class="status-badge status-{{ bill.status }}">
-                                {{ bill.status|capfirst }}
-                            </span>
-                        </td>
-                        <td>Billing</td>
-                        <td>{{ bill.created_by.get_full_name|default:"System" }}</td>
-                    </tr>
-                    {% endfor %}
-
-                    <!-- Payments -->
-                    {% for payment in all_payments %}
-                    <tr>
-                        <td>{{ payment.created_at|date:"M d, Y H:i" }}</td>
-                        <td>
-                            <span class="activity-type type-payment">
-                                <i class="fas fa-credit-card me-1"></i>PAYMENT
-                            </span>
-                        </td>
-                        <td>Payment {{ payment.payment_method|default:"processed" }}</td>
-                        <td><span class="reference-text">PAY-{{ payment.id }}</span></td>
-                        <td class="amount-positive">₦{{ payment.amount|floatformat:2 }}</td>
-                        <td>
-                            <span class="status-badge status-{{ payment.status }}">
-                                {{ payment.status|capfirst }}
-                            </span>
-                        </td>
-                        <td>Payment</td>
-                        <td>{{ payment.processed_by.get_full_name|default:"System" }}</td>
-                    </tr>
-                    {% endfor %}
-
-                    <!-- Budget Activities -->
-                    {% for budget in budget_activities %}
-                    <tr>
-                        <td>{{ budget.created_at|date:"M d, Y H:i" }}</td>
-                        <td>
-                            <span class="activity-type type-budget">
-                                <i class="fas fa-chart-pie me-1"></i>BUDGET
-                            </span>
-                        </td>
-                        <td>Budget allocation: {{ budget.category }}</td>
-                        <td><span class="reference-text">BUD-{{ budget.id }}</span></td>
-                        <td class="amount-neutral">₦{{ budget.allocated_amount|floatformat:2 }}</td>
-                        <td>
-                            <span class="status-badge status-approved">
-                                Active
-                            </span>
-                        </td>
-                        <td>{{ budget.category }}</td>
-                        <td>{{ budget.created_by.get_full_name|default:"Admin" }}</td>
-                    </tr>
-                    {% endfor %}
-
-                    <!-- Revenue/Income entries -->
-                    {% for revenue in revenue_entries %}
-                    <tr>
-                        <td>{{ revenue.created_at|date:"M d, Y H:i" }}</td>
-                        <td>
-                            <span class="activity-type type-revenue">
-                                <i class="fas fa-money-bill-wave me-1"></i>REVENUE
-                            </span>
-                        </td>
-                        <td>{{ revenue.description|default:"Revenue Entry" }}</td>
-                        <td><span class="reference-text">REV-{{ revenue.id }}</span></td>
-                        <td class="amount-positive">₦{{ revenue.amount|floatformat:2 }}</td>
-                        <td>
-                            <span class="status-badge status-completed">
-                                Completed
-                            </span>
-                        </td>
-                        <td>{{ revenue.source|default:"Revenue" }}</td>
-                        <td>{{ revenue.recorded_by.get_full_name|default:"System" }}</td>
-                    </tr>
-                    {% endfor %}
-
-                    <!-- Fallback row if no data -->
-                    {% if not all_expenses and not all_bills and not all_payments and not budget_activities and not revenue_entries %}
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No account activities found in the system.
-                        </td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Report Footer -->
-    <div class="mt-5 pt-4 border-top text-center text-muted">
-        <p>
-            <strong>Hospital Management System</strong> - Complete Account Activity Report<br>
-            Generated on {% now "l, F d, Y \a\t H:i" %}<br>
-            <small>This report contains all recorded financial activities in the system</small>
-        </p>
     </div>
 </div>
+
+<div class="generate-reports-page">
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-lg-4 no-print">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-bar me-1"></i>
+                            Generate Accounting Reports
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="reportForm" novalidate>
+                            <div class="mb-3" id="patientSelectDiv">
+                                <label for="selectPatient" class="form-label">Patients</label>
+                                <select class="form-control select2bs4" id="selectPatient" name="patient_id"
+                                    style="width: 100%;">
+                                    <option value="">All Patients</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reportType" class="form-label">Report Type <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-control select2bs4" id="reportType" required
+                                    style="width: 100%;">
+                                    <option value="" disabled selected>Select type...</option>
+                                    <option value="all_combined_reports">All Combined Financial Reports</option>
+                                    <option value="bills">Patient Bills</option>
+                                    <option value="payments">Patient Payments</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a report type.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Date Filter</label>
+                                <div class="d-flex flex-wrap">
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="allDates"
+                                            value="" checked>
+                                        <label class="form-check-label" for="allDates">All Dates</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
+                                            value="range">
+                                        <label class="form-check-label" for="dateRange">Date Range</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="todayFilter"
+                                            value="today">
+                                        <label class="form-check-label" for="todayFilter">Today</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="weekFilter"
+                                            value="week">
+                                        <label class="form-check-label" for="weekFilter">This Week</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="monthFilter"
+                                            value="month">
+                                        <label class="form-check-label" for="monthFilter">This Month</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="dateFields" class="date-fields mb-3" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="startDate" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="startDate" disabled>
+                                        <div class="invalid-feedback">Select start date.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="endDate" class="form-label">End Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="endDate" disabled>
+                                        <div class="invalid-feedback">Select valid end date.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-block mt-3" onclick="generateReport()">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Generate Report
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="report-header" id="dynamicReportHeader" style="display: none;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="mb-2" id="reportMainTitle">
+                                <i class="fas fa-chart-line me-3"></i>
+                                Accounting Report
+                            </h1>
+                            <p class="mb-0">
+                                <i class="fas fa-user me-2"></i>Accounting User
+                                <span class="mx-3">|</span>
+                                <i class="fas fa-calendar me-2"></i><span id="reportDateRange">All Time Financial Activities</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end no-print">
+                            <button onclick="window.print()" class="btn print-btn me-2">
+                                <i class="fas fa-print me-2"></i>Print Report
+                            </button>
+                            <small class="text-light d-block mt-2">
+                                Generated: {% now "M d, Y H:i" %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-stats" id="dynamicSummaryStats" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <div class="stat-value text-total-bills" id="totalBillsCount">0</div>
+                                <div class="stat-label">Total Bills</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <div class="stat-value text-total-payments" id="totalPaymentsCount">0</div>
+                                <div class="stat-label">Total Payments</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <div class="stat-value text-outstanding-amount" id="totalOutstandingAmount">₦0.00</div>
+                                <div class="stat-label">Outstanding Amount</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="singleReportContainer" class="table-container" style="display: none;">
+                    <div class="card card-primary card-outline collapsed-card">
+                        <div class="card-header">
+                            <h3 class="card-title" id="reportTableTitle"><i class="fas fa-list me-2"></i>Generated Report</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button type="button" class="btn btn-tool" onclick="exportToExcel('reportDataTable', document.getElementById('reportTableTitle').textContent.replace('Generated Report - ', ''))">
+                                    <i class="fas fa-file-excel"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 800px; overflow-y: auto;">
+                                <table class="table table-bordered table-striped mb-0" id="reportDataTable">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                            <span class="text-muted" id="recordCount">Total Records: 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="combinedReportsDisplayArea" class="row">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Report Generated Successfully
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-download fa-4x text-success"></i>
+                    </div>
+                    <h5 id="successMessage">Your report is ready!</h5>
+                    <p class="text-muted" id="successDetails">The report has been generated and displayed below.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error Generating Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-triangle fa-4x text-danger"></i>
+                    </div>
+                    <h5>An error occurred</h5>
+                    <p class="text-muted" id="errorMessage">Please try again or contact support.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-5 pt-4 border-top text-center text-muted" id="reportOverallFooter" style="display: none;">
+    <p>
+        <strong>Hospital Management System</strong> - Accounting Report<br>
+        Generated on {% now "l, F d, Y \a\t H:i" %}<br>
+        <small>This report contains financial activities recorded in the system</small>
+    </p>
+</div>
+
 {% endblock %}
 
-{% block extra_js %}
-<script>
-// Print functionality
-function printReport() {
-    window.print();
-}
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-// Table row highlighting
-document.addEventListener('DOMContentLoaded', function() {
-    const tableRows = document.querySelectorAll('.table tbody tr');
-    tableRows.forEach(row => {
-        row.addEventListener('mouseenter', function() {
-            this.style.backgroundColor = '#f8f9fa';
+<script>
+    // Function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    $(document).ready(function () {
+        // Initialize Select2 for patient dropdown
+        $('#selectPatient').select2({
+            theme: 'bootstrap4',
+            allowClear: true,
+            placeholder: 'All Patients'
         });
-        row.addEventListener('mouseleave', function() {
-            this.style.backgroundColor = '';
+
+        // Initialize Select2 for report type dropdown
+        $('#reportType').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Select type...',
+            allowClear: true,
         });
+
+        $('#reportType').change(function () {
+            const selectedType = $(this).val();
+            const patientDiv = $('#patientSelectDiv');
+            const patientSelect = $('#selectPatient');
+
+            // All accounting reports are patient-filterable for now
+            // If you add hospital-wide reports (e.g., total payroll), you might hide patient filter for those
+            if (selectedType) {
+                patientDiv.show();
+            } else {
+                patientDiv.hide();
+                patientSelect.val('').trigger('change');
+            }
+        });
+
+        toggleDateFields();
     });
 
-    // Add sorting functionality to table headers
-    const headers = document.querySelectorAll('.table thead th');
-    headers.forEach((header, index) => {
-        if (index < 7) { // Don't make the last column sortable
-            header.style.cursor = 'pointer';
-            header.addEventListener('click', function() {
-                sortTable(index);
+    document.querySelectorAll('input[name="dateFilter"]').forEach(radio => {
+        radio.addEventListener('change', toggleDateFields);
+    });
+
+    function toggleDateFields() {
+        const dateRangeRadio = document.getElementById('dateRange');
+        const dateFields = document.getElementById('dateFields');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+
+        if (dateRangeRadio.checked) {
+            dateFields.style.display = 'block';
+            startDateInput.disabled = false;
+            endDateInput.disabled = false;
+            startDateInput.required = true;
+            endDateInput.required = true;
+        } else {
+            dateFields.style.display = 'none';
+            startDateInput.disabled = true;
+            endDateInput.disabled = true;
+            startDateInput.required = false;
+            endDateInput.required = false;
+            startDateInput.value = '';
+            endDateInput.value = '';
+            clearValidation([startDateInput, endDateInput]);
+        }
+    }
+
+    function clearValidation(elements) {
+        elements.forEach(element => {
+            element.classList.remove('is-invalid', 'is-valid');
+        });
+    }
+
+    function validateForm() {
+        const reportType = document.getElementById('reportType');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const dateRangeRadio = document.getElementById('dateRange');
+        let isValid = true;
+
+        clearValidation([reportType, startDateInput, endDateInput]);
+
+        if (!reportType.value) {
+            reportType.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            reportType.classList.add('is-valid');
+        }
+
+        if (dateRangeRadio.checked) {
+            if (!startDateInput.value) {
+                startDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                startDateInput.classList.add('is-valid');
+            }
+
+            if (!endDateInput.value) {
+                endDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                if (startDateInput.value && endDateInput.value && new Date(endDateInput.value) < new Date(startDateInput.value)) {
+                    endDateInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    endDateInput.classList.add('is-valid');
+                }
+            }
+        }
+        return isValid;
+    }
+
+    async function generateReport() {
+        if (!validateForm()) {
+            return;
+        }
+
+        const generateBtn = document.querySelector('.btn-primary');
+        const originalText = generateBtn.innerHTML;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        generateBtn.disabled = true;
+
+        const reportType = document.getElementById('reportType').value;
+        const patientId = $('#selectPatient').val();
+        const alldate = document.querySelector('input[name="dateFilter"]:checked').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        const requestData = {
+            report_type: reportType,
+            patient_id: patientId || null,
+            alldate: alldate,
+            start_date: startDate || null,
+            end_date: endDate || null,
+        };
+
+        try {
+            const response = await fetch('{% url "generate_accounting_report" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify(requestData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unknown error occurred');
+            }
+
+            // Hide previous displays
+            document.getElementById('singleReportContainer').style.display = 'none';
+            document.getElementById('reportDataTable').innerHTML = '';
+            document.getElementById('combinedReportsDisplayArea').innerHTML = '';
+            document.getElementById('dynamicReportHeader').style.display = 'none';
+            document.getElementById('dynamicSummaryStats').style.display = 'none';
+            document.getElementById('reportOverallFooter').style.display = 'none';
+
+
+            if (reportType === 'all_combined_reports') {
+                displayCombinedReports(data.combined_reports, data.summary_stats, alldate, startDate, endDate);
+            } else {
+                displaySingleReport(reportType, data.headers, data.data, data.title, data.summary_stats, alldate, startDate, endDate);
+                document.getElementById('successMessage').textContent = `${data.title} report generated successfully!`;
+                document.getElementById('successDetails').textContent = `${data.count} records found.`;
+            }
+
+            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            document.getElementById('errorMessage').textContent = error.message;
+            const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+            errorModal.show();
+        } finally {
+            generateBtn.innerHTML = originalText;
+            generateBtn.disabled = false;
+        }
+    }
+
+    function updateReportHeaderAndFooter(title, dateFilter, startDate, endDate) {
+        const mainTitleElem = document.getElementById('reportMainTitle');
+        const dateRangeElem = document.getElementById('reportDateRange');
+        const headerElem = document.getElementById('dynamicReportHeader');
+        const footerElem = document.getElementById('reportOverallFooter');
+
+        mainTitleElem.textContent = title;
+
+        let dateText = 'All Time Financial Activities';
+        if (dateFilter === 'today') {
+            dateText = 'Financial Activities for Today';
+        } else if (dateFilter === 'week') {
+            dateText = 'Financial Activities for This Week';
+        } else if (dateFilter === 'month') {
+            dateText = 'Financial Activities for This Month';
+        } else if (dateFilter === 'range' && startDate && endDate) {
+            dateText = `Financial Activities from ${startDate} to ${endDate}`;
+        }
+        dateRangeElem.textContent = dateText;
+        headerElem.style.display = 'block';
+        footerElem.style.display = 'block';
+    }
+
+    function updateSummaryStats(summaryData) {
+        document.getElementById('totalBillsCount').textContent = summaryData.total_bills_count || 0;
+        document.getElementById('totalPaymentsCount').textContent = summaryData.total_payments_count || 0;
+        document.getElementById('totalOutstandingAmount').textContent = `₦${(summaryData.total_outstanding_amount || 0).toFixed(2)}`;
+        document.getElementById('dynamicSummaryStats').style.display = 'block';
+    }
+
+    function displaySingleReport(reportType, headers, data, title, summaryData, alldate, startDate, endDate) {
+        const tableContainer = document.getElementById('singleReportContainer');
+        const dataTable = document.getElementById('reportDataTable');
+        const tableTitleElem = document.getElementById('reportTableTitle');
+        const recordCountElem = document.getElementById('recordCount');
+        const tableFooter = document.getElementById('reportTableFooter');
+
+        // Update header and summary stats
+        updateReportHeaderAndFooter(`Accounting Report - ${title}`, alldate, startDate, endDate);
+        updateSummaryStats(summaryData);
+
+        tableTitleElem.textContent = `Generated Report - ${title}`;
+        tableContainer.style.display = 'block';
+
+        // Clear existing table content
+        dataTable.innerHTML = '';
+
+        // Create table header
+        let thead = dataTable.createTHead();
+        let headerRow = thead.insertRow();
+        headers.forEach(header => {
+            let th = document.createElement('th');
+            th.textContent = header.title;
+            headerRow.appendChild(th);
+        });
+
+        // Create table body
+        let tbody = dataTable.createTBody();
+        if (data.length === 0) {
+            let row = tbody.insertRow();
+            let cell = row.insertCell();
+            cell.colSpan = headers.length;
+            cell.textContent = "No records found for the selected criteria.";
+            cell.className = "text-center text-muted py-3";
+        } else {
+            data.forEach(item => {
+                let row = tbody.insertRow();
+                headers.forEach(header => {
+                    let cell = row.insertCell();
+                    let value = item[header.data];
+                    // Format currency fields
+                    if (header.data.includes('amount') && typeof value === 'number') {
+                        cell.textContent = `₦${value.toFixed(2)}`;
+                    } else {
+                        cell.textContent = value !== null && value !== undefined ? value : 'N/A';
+                    }
+                });
             });
         }
-    });
-});
 
-// Simple table sorting function
-function sortTable(columnIndex) {
-    const table = document.querySelector('.table tbody');
-    const rows = Array.from(table.querySelectorAll('tr'));
-    const isNumeric = columnIndex === 4; // Amount column
-    const isDate = columnIndex === 0; // Date column
-    
-    rows.sort((a, b) => {
-        const aValue = a.cells[columnIndex].textContent.trim();
-        const bValue = b.cells[columnIndex].textContent.trim();
-        
-        if (isNumeric) {
-            const aNum = parseFloat(aValue.replace(/[₦,]/g, ''));
-            const bNum = parseFloat(bValue.replace(/[₦,]/g, ''));
-            return aNum - bNum;
-        } else if (isDate) {
-            return new Date(aValue) - new Date(bValue);
-        } else {
-            return aValue.localeCompare(bValue);
+        recordCountElem.textContent = `Total Records: ${data.length}`;
+        tableFooter.style.display = 'block';
+        $(tableContainer).find('.card').removeClass('collapsed-card'); // Ensure card is expanded
+    }
+
+    function displayCombinedReports(combinedReportsData, summaryData, alldate, startDate, endDate) {
+        const combinedDisplayArea = document.getElementById('combinedReportsDisplayArea');
+        combinedDisplayArea.innerHTML = ''; // Clear previous combined reports
+
+        // Update header and summary stats
+        updateReportHeaderAndFooter('All Combined Financial Reports', alldate, startDate, endDate);
+        updateSummaryStats(summaryData);
+
+        if (Object.keys(combinedReportsData).length === 0) {
+            combinedDisplayArea.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        No financial reports found for the selected criteria.
+                    </div>
+                </div>
+            `;
+            return;
         }
-    });
-    
-    // Re-append sorted rows
-    rows.forEach(row => table.appendChild(row));
-}
 
-// Auto-refresh notification (optional)
-console.log('Account Activity Report loaded successfully');
+        for (const reportType in combinedReportsData) {
+            const report = combinedReportsData[reportType];
+            const headers = report.headers;
+            const data = report.data;
+            const title = report.title;
+            const count = report.count;
+
+            const reportCardHtml = `
+                <div class="col-12 mt-4">
+                    <div class="card card-primary card-outline collapsed-card">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-list me-2"></i>${title}</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button type="button" class="btn btn-tool" onclick="exportToExcel('combinedTable_${reportType}', '${title}')">
+                                    <i class="fas fa-file-excel"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-bordered table-striped mb-0" id="combinedTable_${reportType}">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center">
+                            <span class="text-muted">Total Records: ${count}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            combinedDisplayArea.insertAdjacentHTML('beforeend', reportCardHtml);
+
+            const dataTable = document.getElementById(`combinedTable_${reportType}`);
+            let thead = dataTable.createTHead();
+            let headerRow = thead.insertRow();
+            headers.forEach(header => {
+                let th = document.createElement('th');
+                th.textContent = header.title;
+                headerRow.appendChild(th);
+            });
+
+            let tbody = dataTable.createTBody();
+            if (data.length === 0) {
+                let row = tbody.insertRow();
+                let cell = row.insertCell();
+                cell.colSpan = headers.length;
+                cell.textContent = "No records found for this report type.";
+                cell.className = "text-center text-muted py-3";
+            } else {
+                data.forEach(item => {
+                    let row = tbody.insertRow();
+                    headers.forEach(header => {
+                        let cell = row.insertCell();
+                        let value = item[header.data];
+                        // Format currency fields
+                        if (header.data.includes('amount') && typeof value === 'number') {
+                            cell.textContent = `₦${value.toFixed(2)}`;
+                        } else {
+                            cell.textContent = value !== null && value !== undefined ? value : 'N/A';
+                        }
+                    });
+                });
+            }
+        }
+    }
+
+
+    function exportToExcel(tableId, fileName) {
+        const table = document.getElementById(tableId);
+        if (!table) {
+            console.error(`Table with ID ${tableId} not found.`);
+            return;
+        }
+
+        // Clone the table to avoid modifying the displayed one
+        const clonedTable = table.cloneNode(true);
+
+        // Remove any unwanted elements like "N/A" for excel export if needed
+        // For simplicity, we are exporting as is.
+
+        const wb = XLSX.utils.table_to_book(clonedTable, { sheet: fileName });
+        XLSX.writeFile(wb, `${fileName}_Report_${new Date().toLocaleDateString()}.xlsx`);
+    }
 </script>
 {% endblock %}

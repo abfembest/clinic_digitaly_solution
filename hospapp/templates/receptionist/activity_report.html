@@ -1,478 +1,547 @@
-{% extends "receptionist/base.html" %}
+{% extends "receptionist/base.html" %} {# Changed base.html path to receptionist/base.html #}
+{% load static %}
 
-{% block title %}HMS | Activity Dashboard{% endblock %}
+{% block title %}HMS | Activity Report{% endblock %}
 
 {% block content %}
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">
-                    <i class="fas fa-chart-line text-primary mr-2"></i>
-                    Activity Dashboard
-                </h1>
-                <p class="text-muted mb-0">Track your daily performance and productivity</p>
+                <h1 class="m-0">Activity Report</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{% url 'receptionist' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Activity Report</li>
+                    <li class="breadcrumb-item"><a href="#">Receptionist</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
                 </ol>
             </div>
         </div>
     </div>
 </div>
 
-<section class="content">
+<div class="generate-reports-page">
     <div class="container-fluid">
-        
         <div class="row">
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-info">
-                    <div class="inner">
-                        <h3>{{ total_patients_registered }}</h3>
-                        <p>Patients Registered</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Total registrations</i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-success">
-                    <div class="inner">
-                        <h3>{{ total_admissions_made }}</h3>
-                        <p>Admissions Processed</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-hospital-user"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Admissions handled</i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-warning">
-                    <div class="inner">
-                        <h3>{{ total_appointments_scheduled }}</h3>
-                        <p>Appointments Booked</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Scheduled appointments</i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                <div class="small-box bg-danger">
-                    <div class="inner">
-                        <h3>{{ total_referrals_made }}</h3>
-                        <p>Referrals Made</p>
-                    </div>
-                    <div class="icon">
-                        <i class="fas fa-share-alt"></i>
-                    </div>
-                    <div class="small-box-footer">
-                        Patient referrals</i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
+            <div class="col-lg-4">
                 <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Performance Summary
+                            <i class="fas fa-chart-bar me-1"></i>
+                            Generate Activity Reports
                         </h3>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_patients_registered }}</b>/&infin;</span>
-                                    <span class="progress-text">Patient Registrations</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-info" style="width: 100%"></div>
+                        <form id="reportForm" novalidate>
+                            <div class="mb-3" id="patientSelectDiv">
+                                <label for="selectPatient" class="form-label">Patients</label>
+                                <select class="form-control select2bs4" id="selectPatient" name="patient_id"
+                                    style="width: 100%;">
+                                    <option value="">All Patients</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reportType" class="form-label">Report Type <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-control select2bs4" id="reportType" required
+                                    style="width: 100%;">
+                                    <option value="" disabled selected>Select type...</option>
+                                    <option value="all_combined_reports">All Combined Reports</option>
+                                    <option value="patients">Patients Registered</option>
+                                    <option value="appointments">Appointments Scheduled</option>
+                                    <option value="admissions">Admissions Made</option>
+                                    <option value="referrals">Referrals Made</option> {# Added Referral Report #}
+                                    <option value="bills">Patient Bills</option>
+                                    <option value="payments">Patient Payments</option>
+                                    <option value="staff_attendance">Staff Attendance</option>
+                                    <option value="staff_onboarding_offboarding">Staff Onboarding/Offboarding</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a report type.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Date Filter</label>
+                                <div class="d-flex flex-wrap">
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="allDates"
+                                            value="" checked>
+                                        <label class="form-check-label" for="allDates">All Dates</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
+                                            value="range">
+                                        <label class="form-check-label" for="dateRange">Date Range</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="todayFilter"
+                                            value="today">
+                                        <label class="form-check-label" for="todayFilter">Today</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="weekFilter"
+                                            value="week">
+                                        <label class="form-check-label" for="weekFilter">This Week</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="monthFilter"
+                                            value="month">
+                                        <label class="form-check-label" for="monthFilter">This Month</label>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_admissions_made }}</b>/&infin;</span>
-                                    <span class="progress-text">Admissions Handled</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-success" style="width: 100%"></div>
+
+                            <div id="dateFields" class="date-fields mb-3" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="startDate" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="startDate" disabled>
+                                        <div class="invalid-feedback">Select start date.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="endDate" class="form-label">End Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="endDate" disabled>
+                                        <div class="invalid-feedback">Select valid end date.</div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_appointments_scheduled }}</b>/&infin;</span>
-                                    <span class="progress-text">Appointments Booked</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-warning" style="width: 100%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 text-center">
-                                <div class="progress-group">
-                                    <span class="float-right"><b>{{ total_referrals_made }}</b>/&infin;</span>
-                                    <span class="progress-text">Referrals Made</span>
-                                    <div class="progress progress-sm">
-                                        <div class="progress-bar bg-danger" style="width: 100%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
+                            <button type="button" class="btn btn-primary btn-block mt-3" onclick="generateReport()">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Generate Report
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row">
-            <div class="col-12"> {# Changed to col-12 to take full width for the comprehensive table #}
-                <div class="card card-info">
+            <div class="col-lg-8">
+                <div id="singleReportContainer" class="card card-info" style="display: none;">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-users mr-2"></i>
-                            All Patient Data
-                        </h3>
+                        <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
                         <div class="card-tools">
-                            <span class="badge badge-info">{{ patients_registered|length }}</span>
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
+                            <button type="button" class="btn btn-tool" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel"></i> Export
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-image mr-1"></i>Picture</th>
-                                        <th><i class="fas fa-user mr-1"></i>Patient Name</th>
-                                        <th><i class="fas fa-id-card mr-1"></i>Patient ID</th>
-                                        <th><i class="fas fa-calendar-alt mr-1"></i>Date of Birth</th>
-                                        <th><i class="fas fa-venus-mars mr-1"></i>Gender</th>
-                                        <th><i class="fas fa-phone mr-1"></i>Contact</th>
-                                        <th><i class="fas fa-envelope mr-1"></i>Email</th>
-                                        <th><i class="fas fa-map-marker-alt mr-1"></i>Address</th>
-                                        <th><i class="fas fa-clock mr-1"></i>Registered Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for patient in patients_registered %} {# Removed slice filter #}
-                                    <tr>
-                                        <td>
-                                            {% if patient.photo %}
-                                                <img src="{{ patient.photo.url }}" alt="Profile Picture" class="img-circle img-size-32 mr-2" style="width: 32px; height: 32px; object-fit: cover;">
-                                            {% else %}
-                                                <img src="/static/path/to/default_profile_pic.png" alt="Default Picture" class="img-circle img-size-32 mr-2" style="width: 32px; height: 32px; object-fit: cover;"> {# Provide a path to a default image #}
-                                            {% endif %}
-                                        </td>
-                                        <td><strong>{{ patient.full_name }}</strong></td>
-                                        <td>{{ patient.patient_id }}</td> {# Assuming a patient_id field exists #}
-                                        <td>{{ patient.date_of_birth|date:"M d, Y" }}</td> {# Assuming date_of_birth field exists #}
-                                        <td>{{ patient.gender }}</td>
-                                        <td>
-                                            <span class="badge badge-secondary">
-                                                <i class="fas fa-phone-alt mr-1"></i>{{ patient.phone }}
-                                            </span>
-                                        </td>
-                                        <td>{{ patient.email|default:"N/A" }}</td>
-                                        <td>{{ patient.address|default:"N/A" }}</td> {# Assuming an address field exists #}
-                                        <td>
-                                            <small class="text-success">
-                                                <i class="fas fa-calendar mr-1"></i>
-                                                {{ patient.date_registered|date:"M d, Y" }}
-                                                <br>{{ patient.date_registered|date:"H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="9" class="text-center text-muted py-4">
-                                            <i class="fas fa-users fa-2x mb-2"></i>
-                                            <br>No patient registrations yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
+                            <table class="table table-sm table-hover table-striped" id="reportDataTable">
+                                <thead></thead>
+                                <tbody></tbody>
                             </table>
                         </div>
                     </div>
+                    <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                        <span class="text-muted" id="recordCount">Total Records: 0</span>
+                    </div>
+                </div>
+
+                <div id="combinedReportsDisplayArea" class="row">
                 </div>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-success">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-hospital mr-2"></i>
-                            Recent Admissions
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-success">{{ admissions_made|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-user-injured mr-1"></i>Patient</th>
-                                        <th><i class="fas fa-user-md mr-1"></i>Doctor</th>
-                                        <th><i class="fas fa-info-circle mr-1"></i>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for admission in admissions_made|slice:":5" %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ admission.patient.full_name }}</strong>
-                                            <br><small class="text-muted">{{ admission.admission_date|date:"M d, Y" }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="text-primary">
-                                                <i class="fas fa-stethoscope mr-1"></i>
-                                                {{ admission.doctor_assigned|default:"Not assigned" }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if admission.status == 'Admitted' %}
-                                            <span class="badge badge-success">
-                                                <i class="fas fa-check mr-1"></i>{{ admission.status }}
-                                            </span>
-                                            {% else %}
-                                            <span class="badge badge-warning">
-                                                <i class="fas fa-clock mr-1"></i>{{ admission.status }}
-                                            </span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-hospital fa-2x mb-2"></i>
-                                            <br>No admissions processed yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if admissions_made|length > 5 %}
-                        <div class="card-footer text-center">
-                            <small class="text-muted">Showing 5 of {{ admissions_made|length }} admissions</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card card-warning">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-calendar-alt mr-2"></i>
-                            Scheduled Appointments
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-warning">{{ appointments_scheduled|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                        <th><i class="fas fa-building mr-1"></i>Department</th>
-                                        <th><i class="fas fa-clock mr-1"></i>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for appointment in appointments_scheduled|slice:":5" %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ appointment.patient.full_name }}</strong>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-primary">
-                                                {{ appointment.department.name }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small class="text-warning">
-                                                <i class="fas fa-calendar mr-1"></i>
-                                                {{ appointment.scheduled_time|date:"M d" }}
-                                                <br><i class="fas fa-clock mr-1"></i>
-                                                {{ appointment.scheduled_time|date:"H:i" }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                                            <br>No appointments scheduled yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if appointments_scheduled|length > 5 %}
-                        <div class="card-footer text-center">
-                            <small class="text-muted">Showing 5 of {{ appointments_scheduled|length }} appointments</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card card-danger">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-share-alt mr-2"></i>
-                            Patient Referrals
-                        </h3>
-                        <div class="card-tools">
-                            <span class="badge badge-danger">{{ referrals_made|length }}</span>
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <button type="button" class="btn btn-tool" data-card-widget="maximize">
-                                <i class="fas fa-expand"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th><i class="fas fa-user mr-1"></i>Patient</th>
-                                        <th><i class="fas fa-building mr-1"></i>Department</th>
-                                        <th><i class="fas fa-sticky-note mr-1"></i>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for referral in referrals_made|slice:":5" %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ referral.patient.full_name }}</strong>
-                                            <br><small class="text-muted">{{ referral.created_at|date:"M d, Y" }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-info">
-                                                {{ referral.department.name }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {% if referral.notes %}
-                                                <i class="fas fa-comment mr-1"></i>
-                                                {{ referral.notes|truncatechars:30 }}
-                                                {% else %}
-                                                <i class="fas fa-minus mr-1"></i>No notes
-                                                {% endif %}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-4">
-                                            <i class="fas fa-share-alt fa-2x mb-2"></i>
-                                            <br>No referrals made yet
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if referrals_made|length > 5 %}
-                        <div class="card-footer text-center">
-                            <small class="text-muted">Showing 5 of {{ referrals_made|length }} referrals</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-outline card-secondary">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-bolt mr-2"></i>
-                            Quick Actions
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}" class="btn btn-info btn-block">
-                                    <i class="fas fa-user-plus mr-2"></i>
-                                    Register New Patient
-                                </a>
-                            </div>
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}#admit" class="btn btn-success btn-block">
-                                    <i class="fas fa-hospital-user mr-2"></i>
-                                    Process Admission
-                                </a>
-                            </div>
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}#appointment" class="btn btn-warning btn-block">
-                                    <i class="fas fa-calendar-plus mr-2"></i>
-                                    Schedule Appointment
-                                </a>
-                            </div>
-                            <div class="col-md-3 col-sm-6 col-12 mb-2">
-                                <a href="{% url 'register_patient' %}#refer" class="btn btn-danger btn-block">
-                                    <i class="fas fa-share-alt mr-2"></i>
-                                    Make Referral
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
-</section>
+
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Activity Report Generated Successfully
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-download fa-4x text-success"></i>
+                    </div>
+                    <h5 id="successMessage">Your activity report is ready!</h5>
+                    <p class="text-muted" id="successDetails">The report has been generated and displayed below.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error Generating Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-triangle fa-4x text-danger"></i>
+                    </div>
+                    <h5>An error occurred</h5>
+                    <p class="text-muted" id="errorMessage">Please try again or contact support.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#selectPatient').select2({
+            theme: 'bootstrap4',
+            allowClear: true,
+        });
+
+        $('#reportType').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Select type...',
+            allowClear: true,
+        });
+
+        $('#reportType').change(function () {
+            const selectedType = $(this).val();
+            const patientDiv = $('#patientSelectDiv');
+            const patientSelect = $('#selectPatient');
+
+            // List of report types that can be filtered by patient
+            const patientFilterableTypes = ['all_combined_reports', 'patients', 'appointments', 'admissions', 'bills', 'payments', 'referrals'];
+
+            if (patientFilterableTypes.includes(selectedType)) {
+                patientDiv.show();
+            } else {
+                patientDiv.hide();
+                patientSelect.val('').trigger('change');
+            }
+        });
+
+        toggleDateFields();
+    });
+
+    document.querySelectorAll('input[name="dateFilter"]').forEach(radio => {
+        radio.addEventListener('change', toggleDateFields);
+    });
+
+    function toggleDateFields() {
+        const dateRangeRadio = document.getElementById('dateRange');
+        const dateFields = document.getElementById('dateFields');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+
+        if (dateRangeRadio.checked) {
+            dateFields.style.display = 'block';
+            startDateInput.disabled = false;
+            endDateInput.disabled = false;
+            startDateInput.required = true;
+            endDateInput.required = true;
+        } else {
+            dateFields.style.display = 'none';
+            startDateInput.disabled = true;
+            endDateInput.disabled = true;
+            startDateInput.required = false;
+            endDateInput.required = false;
+            startDateInput.value = '';
+            endDateInput.value = '';
+            clearValidation([startDateInput, endDateInput]);
+        }
+    }
+
+    function clearValidation(elements) {
+        elements.forEach(element => {
+            element.classList.remove('is-invalid', 'is-valid');
+        });
+    }
+
+    function validateForm() {
+        const reportType = document.getElementById('reportType');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const dateRangeRadio = document.getElementById('dateRange');
+        let isValid = true;
+
+        clearValidation([reportType, startDateInput, endDateInput]);
+
+        if (!reportType.value) {
+            reportType.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            reportType.classList.add('is-valid');
+        }
+
+        if (dateRangeRadio.checked) {
+            if (!startDateInput.value) {
+                startDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                startDateInput.classList.add('is-valid');
+            }
+
+            if (!endDateInput.value) {
+                endDateInput.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                if (startDateInput.value && endDateInput.value && new Date(endDateInput.value) < new Date(startDateInput.value)) {
+                    endDateInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    endDateInput.classList.add('is-valid');
+                }
+            }
+        }
+        return isValid;
+    }
+
+    async function generateReport() {
+        if (!validateForm()) {
+            return;
+        }
+
+        const generateBtn = document.querySelector('.btn-primary');
+        const originalText = generateBtn.innerHTML;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        generateBtn.disabled = true;
+
+        const reportType = document.getElementById('reportType').value;
+        const patientId = $('#selectPatient').val();
+
+        const alldate = document.querySelector('input[name="dateFilter"]:checked').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        const requestData = {
+            report_type: reportType,
+            patient_id: patientId || null,
+            alldate: alldate,
+            start_date: startDate || null,
+            end_date: endDate || null,
+        };
+
+        try {
+            const response = await fetch('{% url "generate_activity_report" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify(requestData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unknown error occurred');
+            }
+
+            document.getElementById('singleReportContainer').style.display = 'none';
+            document.getElementById('reportDataTable').innerHTML = '';
+            document.getElementById('combinedReportsDisplayArea').innerHTML = '';
+
+            if (reportType === 'all_combined_reports') {
+                displayCombinedReports(data.combined_reports);
+            } else {
+                displaySingleReport(reportType, data.headers, data.data, data.title);
+                document.getElementById('successMessage').textContent = `${data.title} report generated successfully!`;
+                document.getElementById('successDetails').textContent = `${data.count} records found.`;
+            }
+
+            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            document.getElementById('errorMessage').textContent = error.message;
+            const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+            errorModal.show();
+        } finally {
+            generateBtn.innerHTML = originalText;
+            generateBtn.disabled = false;
+        }
+    }
+
+    function displaySingleReport(reportType, headers, data, title) {
+        const reportTableTitle = document.getElementById('reportTableTitle');
+        const reportDataTable = document.getElementById('reportDataTable');
+        const reportTableFooter = document.getElementById('reportTableFooter');
+        const recordCount = document.getElementById('recordCount');
+
+        reportTableTitle.textContent = title || formatReportTypeTitle(reportType);
+
+        let thead = '<thead class="table-dark"><tr>';
+        headers.forEach(header => {
+            thead += `<th>${header}</th>`;
+        });
+        thead += '</tr></thead>';
+
+        let tbody = '<tbody>';
+        if (data && data.length > 0) {
+            data.forEach(row => {
+                tbody += '<tr>';
+                headers.forEach(header => {
+                    const key = formatHeaderToKey(header);
+                    let value = row[key];
+
+                    // Specific handling for referral_file if needed (similar to lab_result_files)
+                    if (reportType === 'referrals' && key === 'referral_file' && value && value !== '#') {
+                        value = `<a href="${value}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-download me-1"></i> Download</a>`;
+                    } else if (value === null || value === undefined) {
+                        value = 'N/A';
+                    } else if (typeof value === 'boolean') {
+                        value = value ? 'Yes' : 'No';
+                    } else if (typeof value === 'number') {
+                        value = value.toString();
+                    }
+
+                    tbody += `<td>${value}</td>`;
+                });
+                tbody += '</tr>';
+            });
+        } else {
+            tbody += `<tr><td colspan="${headers.length}" class="text-center text-muted">No data found</td></tr>`;
+        }
+        tbody += '</tbody>';
+
+        reportDataTable.innerHTML = thead + tbody;
+        document.getElementById('singleReportContainer').style.display = 'block';
+
+        recordCount.textContent = `Total Records: ${data ? data.length : 0}`;
+        if (data && data.length > 0) {
+            reportTableFooter.style.display = 'block';
+        } else {
+            reportTableFooter.style.display = 'none';
+        }
+    }
+
+    function displayCombinedReports(combinedReportsData) {
+        const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
+        combinedReportsDisplayArea.innerHTML = '';
+
+        let totalReportsCount = 0;
+        for (const reportTypeKey in combinedReportsData) {
+            const report = combinedReportsData[reportTypeKey];
+            const headers = report.headers;
+            const data = report.data;
+
+            if (data && data.length > 0) {
+                totalReportsCount++;
+                const cardHtml = `
+                <div class="col-12 mb-4">
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">${report.title || formatReportTypeTitle(reportTypeKey)}</h3>
+                            <div class="card-tools">
+                                <span class="badge bg-primary me-2">${report.count || data.length} records</span>
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <button type="button" class="btn btn-tool" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
+                                    <i class="fas fa-file-excel"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            ${headers.map(header => `<th>${header}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.map(row => `
+                                            <tr>
+                                                ${headers.map(header => {
+                    const key = formatHeaderToKey(header);
+                    let value = row[key];
+
+                    // Specific handling for referral_file if needed (similar to lab_result_files)
+                    if (reportTypeKey === 'referrals' && key === 'referral_file' && value && value !== '#') {
+                        value = `<a href="${value}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-download me-1"></i> Download</a>`;
+                    } else if (value === null || value === undefined) {
+                        value = 'N/A';
+                    } else if (typeof value === 'boolean') {
+                        value = value ? 'Yes' : 'No';
+                    }
+                    return `<td>${value}</td>`;
+                }).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-success btn-sm" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
+                                <i class="fas fa-file-excel me-1"></i> Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+                combinedReportsDisplayArea.insertAdjacentHTML('beforeend', cardHtml);
+            }
+        }
+        document.getElementById('successMessage').textContent = 'Combined reports generated successfully!';
+        document.getElementById('successDetails').textContent = `${totalReportsCount} report sections generated.`;
+    }
+
+    function formatReportTypeTitle(reportTypeKey) {
+        return reportTypeKey.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()).trim();
+    }
+
+    function formatHeaderToKey(header) {
+        return header.toLowerCase().replace(/\s+/g, '_').replace(/[^\w_]/g, '');
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function exportToExcel() {
+        const table = document.getElementById('reportDataTable');
+        const title = document.getElementById('reportTableTitle').textContent;
+        const wb = XLSX.utils.table_to_book(table);
+        const cleanFilename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        XLSX.writeFile(wb, `${cleanFilename}_activity_report.xlsx`);
+    }
+
+    function exportCombinedToExcel(filename, button) {
+        const table = button.closest('.card').querySelector('table');
+        if (table) {
+            const wb = XLSX.utils.table_to_book(table);
+            const cleanFilename = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            XLSX.writeFile(wb, `${cleanFilename}_activity_report.xlsx`);
+        }
+    }
+</script>
 {% endblock %}
