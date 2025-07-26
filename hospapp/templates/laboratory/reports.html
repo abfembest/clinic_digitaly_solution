@@ -129,7 +129,7 @@
                                 <i class="fas fa-file-excel"></i> Export
                             </button>
                         </div>
-<<<<<<< HEAD
+
                         <h4 class="mb-2 text-dark">Laboratory Reports Dashboard</h4>
                         <p class="text-muted mb-3">
                             Total Patients: {{ total_patients|default:0 }} |
@@ -140,8 +140,7 @@
                             <i class="fas fa-chart-line me-2"></i>
                             Generate Lab Reports
                         </button>
-=======
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -162,7 +161,7 @@
         </div>
     </div>
 
-<<<<<<< HEAD
+
     <!-- Reports Modal -->
     <div class="modal fade" id="reportsModal" tabindex="-1" aria-labelledby="reportsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -309,8 +308,7 @@
     </section>
 
     <!-- Success Modal -->
-=======
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
     <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -360,18 +358,18 @@
     </div>
 </div>
 
-<<<<<<< HEAD
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-=======
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
 
 <script>
     $(document).ready(function () {
@@ -387,9 +385,9 @@
             // minimumResultsForSearch: Infinity // Add this if you don't want a search box for single selects
         });
 
-<<<<<<< HEAD
+
         // Show/hide patient selector based on report type
-=======
+
         // For reportType: Apply specific placeholder and allowClear
         $('#reportType').select2({
             theme: 'bootstrap4',
@@ -399,7 +397,7 @@
         });
 
 
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
         $('#reportType').change(function () {
             const selectedType = $(this).val();
             const patientDiv = $('#patientSelectDiv');
@@ -569,14 +567,14 @@
         const reportTableFooter = document.getElementById('reportTableFooter');
         const recordCount = document.getElementById('recordCount');
 
-<<<<<<< HEAD
+
         reportTableTitle.textContent = formatReportTypeTitle(reportType);
 
         // Build table header
-=======
+
         reportTableTitle.textContent = title || formatReportTypeTitle(reportType);
 
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
         let thead = '<thead class="table-dark"><tr>';
         headers.forEach(header => {
             thead += `<th>${header}</th>`;
@@ -591,9 +589,9 @@
                     const key = formatHeaderToKey(header);
                     let value = row[key];
 
-<<<<<<< HEAD
+
                     if (value === null || value === undefined) {
-=======
+
                     if (reportType === 'lab_result_files' && key === 'action') {
                         // For 'Action' column in Lab Result Files, create a download link
                         const fileUrl = row['file_url']; // Access the file_url
@@ -603,7 +601,7 @@
                             value = 'N/A';
                         }
                     } else if (value === null || value === undefined) {
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
                         value = 'N/A';
                     } else if (typeof value === 'boolean') {
                         value = value ? 'Yes' : 'No';
@@ -623,10 +621,9 @@
         reportDataTable.innerHTML = thead + tbody;
         document.getElementById('singleReportContainer').style.display = 'block';
 
-<<<<<<< HEAD
+
         // Update record count and show footer
-=======
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
         recordCount.textContent = `Total Records: ${data ? data.length : 0}`;
         if (data && data.length > 0) {
             reportTableFooter.style.display = 'block';
@@ -648,7 +645,7 @@
             if (data && data.length > 0) {
                 totalReportsCount++;
                 const cardHtml = `
-<<<<<<< HEAD
+
                     <div class="col-12 mb-4">
                         <div class="card card-info">
                             <div class="card-header">
@@ -693,7 +690,7 @@
                             <div class="card-footer text-center">
                                 <button class="btn btn-success btn-sm mt-2" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
                                     <i class="fas fa-file-excel me-1"></i> Export to Excel
-=======
+
                 <div class="col-12 mb-4">
                     <div class="card card-info">
                         <div class="card-header">
@@ -705,7 +702,7 @@
                                 </button>
                                 <button type="button" class="btn btn-tool" onclick="exportCombinedToExcel('${report.title || formatReportTypeTitle(reportTypeKey)}', this)">
                                     <i class="fas fa-file-excel"></i>
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
+
                                 </button>
                             </div>
                         </div>
@@ -803,10 +800,5 @@
         }
     }
 </script>
-<<<<<<< HEAD
 
-
-
-=======
->>>>>>> 1719081b4a275ceef71eef430840d712216d5849
 {% endblock %}
