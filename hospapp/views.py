@@ -4329,33 +4329,279 @@ def register_patient(request):
 
 @login_required(login_url='home')
 def receptionist_activity_report(request):
-    user = request.user
-    
-    patients_registered = Patient.objects.filter(registered_by=user).order_by('-date_registered')
-    
-    admissions_made = Admission.objects.filter(admitted_by=user).order_by('-admission_date')
-
-    appointments_scheduled = Appointment.objects.filter(patient__registered_by=user).order_by('-scheduled_time')
-    
-    referrals_made = Referral.objects.filter(patient__registered_by=user).order_by('-created_at')
-
-    # Aggregated data
-    total_patients_registered = patients_registered.count()
-    total_admissions_made = admissions_made.count()
-    total_appointments_scheduled = appointments_scheduled.count()
-    total_referrals_made = referrals_made.count()
-
+    """
+    Renders the activity report page for receptionists.
+    Passes a list of all patients to populate the patient filter dropdown.
+    """
+    # Fetch all patients to populate the dropdown filter
+    patients = Patient.objects.all().order_by('full_name')
     context = {
-        'patients_registered': patients_registered,
-        'admissions_made': admissions_made,
-        'appointments_scheduled': appointments_scheduled,
-        'referrals_made': referrals_made,
-        'total_patients_registered': total_patients_registered,
-        'total_admissions_made': total_admissions_made,
-        'total_appointments_scheduled': total_appointments_scheduled,
-        'total_referrals_made': total_referrals_made,
+        'patients': patients,
     }
     return render(request, 'receptionist/activity_report.html', context)
+
+
+@require_POST
+@login_required(login_url='home')
+def generate_activity_report(request):
+    """
+    Generates activity reports based on AJAX requests.
+    """
+    try:
+        data = json.loads(request.body)
+        report_type = data.get('report_type')
+        patient_id = data.get('patient_id')
+        alldate_filter = data.get('alldate')
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+
+        # Convert patient_id to int if it's not None or empty
+        patient_id = int(patient_id) if patient_id else None
+
+        # Helper function to get date range
+        def _get_date_range(filter_type, start_str, end_str):
+            today = timezone.localdate()
+            if filter_type == 'today':
+                return today, today
+            elif filter_type == 'week':
+                start_of_week = today - timedelta(days=today.weekday())
+                end_of_week = start_of_week + timedelta(days=6)
+                return start_of_week, end_of_week
+            elif filter_type == 'month':
+                start_of_month = today.replace(day=1)
+                # Calculate end of month correctly
+                next_month = start_of_month.replace(day=28) + timedelta(days=4)
+                end_of_month = next_month - timedelta(days=next_month.day)
+                return start_of_month, end_of_month
+            elif filter_type == 'range' and start_str and end_str:
+                return datetime.strptime(start_str, '%Y-%m-%d').date(), datetime.strptime(end_str, '%Y-%m-%d').date()
+            return None, None
+
+        start_date, end_date = _get_date_range(alldate_filter, start_date_str, end_date_str)
+
+        # --- Report Data Fetching Functions ---
+
+        def _serialize_patient(patient):
+            return {
+                'patient_id': patient.patient_id,
+                'full_name': patient.full_name,
+                'gender': patient.gender,
+                'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
+                'phone': patient.phone,
+                'email': patient.email or 'N/A',
+                'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+                'registered_by': patient.registered_by.get_full_name() if patient.registered_by else 'N/A',
+            }
+
+        def _get_patients_data(patient_id, start_date, end_date):
+            patients_queryset = Patient.objects.all()
+            if patient_id:
+                patients_queryset = patients_queryset.filter(id=patient_id)
+            if start_date and end_date:
+                patients_queryset = patients_queryset.filter(date_registered__date__range=[start_date, end_date])
+
+            data = [_serialize_patient(p) for p in patients_queryset.order_by('-date_registered')]
+            headers = ['Patient ID', 'Full Name', 'Gender', 'Date of Birth', 'Phone', 'Email', 'Date Registered', 'Registered By']
+            return headers, data, "Patients Registered Report"
+
+        def _serialize_appointment(appointment):
+            return {
+                'patient_name': appointment.patient.full_name,
+                'patient_id': appointment.patient.patient_id,
+                'department': appointment.department.name,
+                'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
+                'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'N/A',
+            }
+
+        def _get_appointments_data(patient_id, start_date, end_date):
+            appointments_queryset = Appointment.objects.all()
+            if patient_id:
+                appointments_queryset = appointments_queryset.filter(patient_id=patient_id)
+            if start_date and end_date:
+                appointments_queryset = appointments_queryset.filter(scheduled_time__date__range=[start_date, end_date])
+
+            data = [_serialize_appointment(a) for a in appointments_queryset.order_by('-scheduled_time')]
+            headers = ['Patient Name', 'Patient ID', 'Department', 'Scheduled Time', 'Scheduled By']
+            return headers, data, "Appointments Scheduled Report"
+
+        def _serialize_admission(admission):
+            return {
+                'patient_name': admission.patient.full_name,
+                'patient_id': admission.patient.patient_id,
+                'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
+                'admission_reason': admission.admission_reason or 'N/A',
+                'status': admission.status,
+                'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'N/A',
+                'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else 'N/A',
+            }
+
+        def _get_admissions_data(patient_id, start_date, end_date):
+            admissions_queryset = Admission.objects.all()
+            if patient_id:
+                admissions_queryset = admissions_queryset.filter(patient_id=patient_id)
+            if start_date and end_date:
+                admissions_queryset = admissions_queryset.filter(admission_date__range=[start_date, end_date])
+
+            data = [_serialize_admission(adm) for adm in admissions_queryset.order_by('-admission_date')]
+            headers = ['Patient Name', 'Patient ID', 'Admission Date', 'Reason', 'Status', 'Admitted By', 'Discharge Date']
+            return headers, data, "Admissions Report"
+
+        def _serialize_referral(referral):
+            return {
+                'patient_name': referral.patient.full_name,
+                'patient_id': referral.patient.patient_id,
+                'department': referral.department.name if referral.department else 'N/A',
+                'notes': referral.notes or 'N/A',
+                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),
+                'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'N/A',
+            }
+
+        def _get_referrals_data(patient_id, start_date, end_date):
+            referrals_queryset = Referral.objects.all()
+            if patient_id:
+                referrals_queryset = referrals_queryset.filter(patient_id=patient_id)
+            if start_date and end_date:
+                referrals_queryset = referrals_queryset.filter(created_at__date__range=[start_date, end_date])
+
+            data = [_serialize_referral(ref) for ref in referrals_queryset.order_by('-created_at')]
+            headers = ['Patient Name', 'Patient ID', 'Department', 'Referral Note', 'Created At', 'Referred By']
+            return headers, data, "Department Referrals Report"
+
+
+        def _serialize_bill(bill):
+            return {
+                'bill_number': bill.bill_number,
+                'patient_name': bill.patient.full_name,
+                'patient_id': bill.patient.patient_id,
+                'total_amount': float(bill.total_amount),
+                'discount_amount': float(bill.discount_amount),
+                'final_amount': float(bill.final_amount),
+                'amount_paid': float(bill.amount_paid()),
+                'outstanding_amount': float(bill.outstanding_amount()),
+                'status': bill.status,
+                'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': bill.created_by.get_full_name() if bill.created_by else 'N/A',
+            }
+
+        def _get_bills_data(patient_id, start_date, end_date):
+            bills_queryset = PatientBill.objects.all()
+            if patient_id:
+                bills_queryset = bills_queryset.filter(patient_id=patient_id)
+            if start_date and end_date:
+                bills_queryset = bills_queryset.filter(created_at__date__range=[start_date, end_date])
+
+            data = [_serialize_bill(b) for b in bills_queryset.order_by('-created_at')]
+            headers = ['Bill Number', 'Patient Name', 'Patient ID', 'Total Amount', 'Discount', 'Final Amount', 'Amount Paid', 'Outstanding', 'Status', 'Created At', 'Created By']
+            return headers, data, "Patient Bills Report"
+
+        def _serialize_payment(payment):
+            return {
+                'payment_id': payment.id, # Using ID as a unique identifier for payment
+                'patient_name': payment.patient.full_name,
+                'patient_id': payment.patient.patient_id,
+                'amount': float(payment.amount),
+                'payment_method': payment.payment_method,
+                'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
+                'status': payment.status,
+                'bill_number': payment.bill.bill_number if payment.bill else 'N/A',
+                'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'N/A',
+            }
+
+        def _get_payments_data(patient_id, start_date, end_date):
+            payments_queryset = Payment.objects.all()
+            if patient_id:
+                payments_queryset = payments_queryset.filter(patient_id=patient_id)
+            if start_date and end_date:
+                payments_queryset = payments_queryset.filter(payment_date__date__range=[start_date, end_date])
+
+            data = [_serialize_payment(p) for p in payments_queryset.order_by('-payment_date')]
+            headers = ['Payment ID', 'Patient Name', 'Patient ID', 'Amount', 'Method', 'Payment Date', 'Status', 'Bill Number', 'Processed By']
+            return headers, data, "Patient Payments Report"
+
+        def _serialize_attendance(attendance):
+            return {
+                'staff_name': attendance.staff.get_full_name() or attendance.staff.username,
+                'date': attendance.date.strftime('%Y-%m-%d %H:%M'),
+                'status': attendance.status,
+            }
+
+        def _get_staff_attendance_data(patient_id, start_date, end_date): # patient_id is not used here
+            attendance_queryset = Attendance.objects.all()
+            if start_date and end_date:
+                attendance_queryset = attendance_queryset.filter(date__date__range=[start_date, end_date])
+
+            data = [_serialize_attendance(att) for att in attendance_queryset.order_by('-date')]
+            headers = ['Staff Name', 'Date', 'Status']
+            return headers, data, "Staff Attendance Report"
+
+        def _serialize_staff_transition(transition):
+            return {
+                'full_name': transition.full_name,
+                'transition_type': transition.transition_type,
+                'date': transition.date.strftime('%Y-%m-%d'),
+                'notes': transition.notes or 'N/A',
+                'created_at': transition.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': transition.created_by.get_full_name() if transition.created_by else 'N/A',
+            }
+
+        def _get_staff_onboarding_offboarding_data(patient_id, start_date, end_date): # patient_id is not used here
+            transitions_queryset = StaffTransition.objects.all()
+            if start_date and end_date:
+                transitions_queryset = transitions_queryset.filter(date__range=[start_date, end_date])
+
+            data = [_serialize_staff_transition(t) for t in transitions_queryset.order_by('-date')]
+            headers = ['Full Name', 'Transition Type', 'Date', 'Notes', 'Created At', 'Created By']
+            return headers, data, "Staff Onboarding/Offboarding Report"
+
+
+        # Map report types to their respective data fetching functions
+        report_handlers = {
+            'patients': _get_patients_data,
+            'appointments': _get_appointments_data,
+            'admissions': _get_admissions_data,
+            'referrals': _get_referrals_data, # Added handler for referrals
+            'bills': _get_bills_data,
+            'payments': _get_payments_data,
+            'staff_attendance': _get_staff_attendance_data,
+            'staff_onboarding_offboarding': _get_staff_onboarding_offboarding_data,
+        }
+
+        if report_type == 'all_combined_reports':
+            combined_reports = {}
+            # Define the order and subset of reports to include in combined view
+            combined_report_types = [
+                'patients', 'appointments', 'admissions', 'referrals', 'bills', 'payments',
+                'staff_attendance', 'staff_onboarding_offboarding'
+            ]
+            for r_type in combined_report_types:
+                handler = report_handlers.get(r_type)
+                if handler:
+                    headers, data, title = handler(patient_id, start_date, end_date)
+                    if data: # Only include reports with data
+                        combined_reports[r_type] = {
+                            'headers': headers,
+                            'data': data,
+                            'title': title,
+                            'count': len(data)
+                        }
+            return JsonResponse({'combined_reports': combined_reports})
+        elif report_type in report_handlers:
+            headers, data, title = report_handlers[report_type](patient_id, start_date, end_date)
+            return JsonResponse({
+                'headers': headers,
+                'data': data,
+                'title': title,
+                'count': len(data)
+            })
+        else:
+            return JsonResponse({'error': 'Invalid report type'}, status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error generating activity report: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def register_p(request):

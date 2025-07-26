@@ -115,6 +115,7 @@ urlpatterns = [
     path('r/home', views.receptionist, name='receptionist'),
     path('r/new_patient', views.register_patient, name='register_patient'),
     path('r/reports/', views.receptionist_activity_report, name='receptionist_activity_report'),
+    path('generate-activity-report/', views.generate_activity_report, name='generate_activity_report'),
 
     path('receptionist/register/submit', views.register_p, name='register_p'),
     path('receptionist/admit', views.admit_patient, name='admit_patient'),
