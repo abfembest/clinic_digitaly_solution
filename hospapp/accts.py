@@ -1041,107 +1041,225 @@ def financial_reports(request):
 
     return render(request, 'accounts/financial_reports.html', context)
 
-def acct_report(request):
+@login_required(login_url='home') # Adjust login_url if accounting user has a different home
+def accounting_activity_report(request):
     """
-    Generate comprehensive activity report showing all financial activities
-    in the system for account users.
+    Renders the accounting report page.
+    Passes a list of all patients to populate the patient filter dropdown.
     """
-    user = request.user
-    
-    # Verify user has account role
-    try:
-        staff = Staff.objects.get(user=user)
-        if staff.role != 'account':
-            return render(request, 'error.html', {
-                'message': 'Access denied. This report is only for account users.'
-            })
-    except Staff.DoesNotExist:
-        return render(request, 'error.html', {
-            'message': 'Staff profile not found.'
-        })
-    
-    # Get date range for filtering (optional - if you want to add filters later)
-    from_date = request.GET.get('from_date')
-    to_date = request.GET.get('to_date')
-    
-    # For now, let's get ALL data (remove date filtering to see if data appears)
-    # You can add date filtering back later once data is showing
-    
-    # ==== GET ALL EXPENSES ====
-    all_expenses = Expense.objects.all().order_by('-created_at')
-    
-    # ==== GET ALL BILLS ====
-    all_bills = PatientBill.objects.all().order_by('-created_at')
-    
-    # ==== GET ALL PAYMENTS ====
-    all_payments = Payment.objects.all().order_by('-payment_date')
-    
-    # ==== GET BUDGET ACTIVITIES ====
-    budget_activities = Budget.objects.all().order_by('-created_at')
-    
-    # ==== GET REVENUE ENTRIES ====
-    # You might need to adjust this based on your actual revenue model
-    # For now, I'll assume you might track revenue separately or through payments
-    revenue_entries = []  # Add your revenue model here if you have one
-    
-    # ==== CALCULATE SUMMARY STATISTICS ====
-    
-    # Total Revenue (from completed payments)
-    total_revenue = all_payments.filter(
-        status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
-    # Total Expenses (approved expenses)
-    total_expenses = all_expenses.filter(
-        status='approved'
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
-    # Count pending items (expenses + bills)
-    pending_expenses = all_expenses.filter(status='pending').count()
-    pending_bills = all_bills.filter(status='pending').count()
-    pending_items = pending_expenses + pending_bills
-    
-    # Total activities count
-    total_activities = (
-        all_expenses.count() + 
-        all_bills.count() + 
-        all_payments.count() + 
-        budget_activities.count() + 
-        len(revenue_entries)
-    )
-    
-    # Debug: Print counts to see what data you have
-    print(f"Debug - Expenses: {all_expenses.count()}")
-    print(f"Debug - Bills: {all_bills.count()}")
-    print(f"Debug - Payments: {all_payments.count()}")
-    print(f"Debug - Budget Activities: {budget_activities.count()}")
-    print(f"Debug - Total Activities: {total_activities}")
-    
+    # Fetch all patients to populate the dropdown filter (can be filtered if only active patients are relevant)
+    patients = Patient.objects.all().order_by('full_name')
     context = {
-        'staff': staff,
-        
-        # Data for the template (matching template variable names)
-        'all_expenses': all_expenses,
-        'all_bills': all_bills,
-        'all_payments': all_payments,
-        'budget_activities': budget_activities,
-        'revenue_entries': revenue_entries,
-        
-        # Summary statistics (matching template variable names)
-        'total_revenue': total_revenue,
-        'total_expenses': total_expenses,
-        'pending_items': pending_items,
-        'total_activities': total_activities,
-        
-        # Date range (if needed later)
-        'from_date': from_date,
-        'to_date': to_date,
-        
-        # Report metadata
-        'report_generated_at': timezone.now(),
+        'patients': patients,
     }
-    
     return render(request, 'accounts/reports.html', context)
+
+
+# @require_POST # Uncomment if you want to enforce POST requests
+@login_required(login_url='home') # Adjust login_url
+def generate_accounting_report(request):
+    """
+    Generates accounting reports based on AJAX requests.
+    This function handles requests for Patient Bills and Patient Payments.
+    Future enhancements could include reports for:
+    - Service charges (if a Service model with cost is available)
+    - Inventory movements/costs
+    - Payroll records
+    - Supplier payments
+    """
+    try:
+        data = json.loads(request.body)
+        report_type = data.get('report_type')
+        patient_id = data.get('patient_id')
+        alldate_filter = data.get('alldate')
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+
+        # Convert patient_id to int if it's not None or empty
+        patient_id = int(patient_id) if patient_id else None
+
+        # Helper function to get date range
+        def _get_date_range(filter_type, start_str, end_str):
+            today = timezone.localdate()
+            if filter_type == 'today':
+                return today, today
+            elif filter_type == 'week':
+                start_of_week = today - timedelta(days=today.weekday())
+                end_of_week = start_of_week + timedelta(days=6)
+                return start_of_week, end_of_week
+            elif filter_type == 'month':
+                start_of_month = today.replace(day=1)
+                # Calculate end of month robustly
+                next_month = start_of_month.replace(day=28) + timedelta(days=4)
+                end_of_month = next_month - timedelta(days=next_month.day)
+                return start_of_month, end_of_month
+            elif filter_type == 'range' and start_str and end_str:
+                return datetime.strptime(start_str, '%Y-%m-%d').date(), datetime.strptime(end_str, '%Y-%m-%d').date()
+            return None, None
+
+        start_date, end_date = _get_date_range(alldate_filter, start_date_str, end_date_str)
+
+        # --- Report Data Fetching Functions ---
+
+        def _serialize_bill(bill):
+            """Serializes a PatientBill object into a dictionary."""
+            # Assumes amount_paid() and outstanding_amount() are methods/properties on the PatientBill model.
+            return {
+                'bill_number': bill.bill_number,
+                'patient_name': bill.patient.full_name,
+                'patient_id_display': bill.patient.patient_id, # Use a different key to avoid clash with patient_id used for filtering
+                'total_amount': float(bill.total_amount),
+                'discount_amount': float(bill.discount_amount),
+                'final_amount': float(bill.final_amount),
+                'amount_paid': float(bill.amount_paid()),
+                'outstanding_amount': float(bill.outstanding_amount()),
+                'status': bill.status,
+                'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
+                'created_by': bill.created_by.get_full_name() if bill.created_by else 'N/A',
+            }
+
+        def _get_bills_data(patient_id_filter, start_date_filter, end_date_filter):
+            """Fetches and serializes PatientBill data."""
+            bills_queryset = PatientBill.objects.all()
+            if patient_id_filter:
+                bills_queryset = bills_queryset.filter(patient_id=patient_id_filter)
+            if start_date_filter and end_date_filter:
+                # Ensure the end date includes the entire day
+                adjusted_end_date = end_date_filter + timedelta(days=1)
+                bills_queryset = bills_queryset.filter(created_at__date__gte=start_date_filter, created_at__date__lt=adjusted_end_date)
+
+            data = [_serialize_bill(b) for b in bills_queryset.order_by('-created_at')]
+            headers = [
+                {'title': 'Bill Number', 'data': 'bill_number'},
+                {'title': 'Patient Name', 'data': 'patient_name'},
+                {'title': 'Patient ID', 'data': 'patient_id_display'}, # Use display key
+                {'title': 'Total Amount (₦)', 'data': 'total_amount'},
+                {'title': 'Discount (₦)', 'data': 'discount_amount'},
+                {'title': 'Final Amount (₦)', 'data': 'final_amount'},
+                {'title': 'Amount Paid (₦)', 'data': 'amount_paid'},
+                {'title': 'Outstanding (₦)', 'data': 'outstanding_amount'},
+                {'title': 'Status', 'data': 'status'},
+                {'title': 'Created At', 'data': 'created_at'},
+                {'title': 'Created By', 'data': 'created_by'},
+            ]
+            return headers, data, "Patient Bills Report"
+
+        def _serialize_payment(payment):
+            """Serializes a Payment object into a dictionary."""
+            return {
+                'payment_id': payment.id,
+                'patient_name': payment.patient.full_name,
+                'patient_id_display': payment.patient.patient_id, # Use a different key
+                'amount': float(payment.amount),
+                'payment_method': payment.payment_method,
+                'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
+                'status': payment.status,
+                'bill_number': payment.bill.bill_number if payment.bill else 'N/A',
+                'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'N/A',
+            }
+
+        def _get_payments_data(patient_id_filter, start_date_filter, end_date_filter):
+            """Fetches and serializes Payment data."""
+            payments_queryset = Payment.objects.all()
+            if patient_id_filter:
+                payments_queryset = payments_queryset.filter(patient_id=patient_id_filter)
+            if start_date_filter and end_date_filter:
+                # Ensure the end date includes the entire day
+                adjusted_end_date = end_date_filter + timedelta(days=1)
+                payments_queryset = payments_queryset.filter(payment_date__date__gte=start_date_filter, payment_date__date__lt=adjusted_end_date)
+
+            data = [_serialize_payment(p) for p in payments_queryset.order_by('-payment_date')]
+            headers = [
+                {'title': 'Payment ID', 'data': 'payment_id'},
+                {'title': 'Patient Name', 'data': 'patient_name'},
+                {'title': 'Patient ID', 'data': 'patient_id_display'}, # Use display key
+                {'title': 'Amount (₦)', 'data': 'amount'},
+                {'title': 'Method', 'data': 'payment_method'},
+                {'title': 'Payment Date', 'data': 'payment_date'},
+                {'title': 'Status', 'data': 'status'},
+                {'title': 'Bill Number', 'data': 'bill_number'},
+                {'title': 'Processed By', 'data': 'processed_by'},
+            ]
+            return headers, data, "Patient Payments Report"
+
+
+        # Map report types to their respective data fetching functions
+        report_handlers = {
+            'bills': _get_bills_data,
+            'payments': _get_payments_data,
+            # Add more report types here if needed, e.g.:
+            # 'services': _get_services_data,
+            # 'inventory_costs': _get_inventory_costs_data,
+        }
+
+        if report_type == 'all_combined_reports':
+            combined_reports = {}
+            # Only include financial reports in combined view
+            # You can add more report types here if you implement their fetching functions
+            combined_report_types = ['bills', 'payments']
+            total_bills_count = 0
+            total_payments_count = 0
+            total_outstanding_amount = 0.0
+
+            for r_type in combined_report_types:
+                handler = report_handlers.get(r_type)
+                if handler:
+                    headers, data, title = handler(patient_id, start_date, end_date)
+                    if data: # Only include reports with data
+                        combined_reports[r_type] = {
+                            'headers': headers,
+                            'data': data,
+                            'title': title,
+                            'count': len(data)
+                        }
+                        if r_type == 'bills':
+                            total_bills_count += len(data)
+                            for bill in data:
+                                total_outstanding_amount += float(bill.get('outstanding_amount', 0))
+                        elif r_type == 'payments':
+                            total_payments_count += len(data)
+
+            return JsonResponse({
+                'combined_reports': combined_reports,
+                'summary_stats': {
+                    'total_bills_count': total_bills_count,
+                    'total_payments_count': total_payments_count,
+                    'total_outstanding_amount': total_outstanding_amount,
+                }
+            })
+        elif report_type in report_handlers:
+            headers, data, title = report_handlers[report_type](patient_id, start_date, end_date)
+            # Calculate summary for single reports
+            single_report_summary = {
+                'total_bills_count': 0,
+                'total_payments_count': 0,
+                'total_outstanding_amount': 0.0,
+            }
+            if report_type == 'bills':
+                single_report_summary['total_bills_count'] = len(data)
+                for bill in data:
+                    single_report_summary['total_outstanding_amount'] += float(bill.get('outstanding_amount', 0))
+            elif report_type == 'payments':
+                single_report_summary['total_payments_count'] = len(data)
+
+            return JsonResponse({
+                'headers': headers,
+                'data': data,
+                'title': title,
+                'count': len(data),
+                'summary_stats': single_report_summary, # Include summary for single reports
+            })
+        else:
+            return JsonResponse({'error': 'Invalid report type'}, status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Patient not found'}, status=404)
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error generating accounting report: {e}")
+        return JsonResponse({'error': f'An internal error occurred: {str(e)}'}, status=500)
 
 @login_required
 def budget_planning(request):

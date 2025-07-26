@@ -91,7 +91,8 @@ urlpatterns = [
     path('budget-analytics', accts.budget_analytics, name='budget_analytics'),
     path('budget/delete/<int:budget_id>', accts.delete_budget, name='delete_budget'),
     path('export_budget_data', accts.export_budget_data, name='export_budget_data'),
-    path('a/reports', accts.acct_report, name='acct_report'),
+    path('a/reports', accts.accounting_activity_report, name='acct_report'),
+    path('generate-activity-report/', accts.generate_accounting_report, name='generate_accounting_report'),
 
     ########################### END ACCTS URLS ####################################
 
