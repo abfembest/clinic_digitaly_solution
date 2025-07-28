@@ -6034,498 +6034,391 @@ def export_users_pdf_view(request):
     return HttpResponse(buffer, content_type='application/pdf')
 
 @login_required(login_url='home')
-def doctor_reports(request):
+def department_reports_view(request):
     """
-    Renders the Doctor's Reports Dashboard with comprehensive patient activity data,
-    graphical representations, and export options.
+    Renders the main admin department reports page.
+    No specific user role check beyond being logged in.
     """
-    # Ensure only 'doctor' or 'admin' role can access this dashboard
-    if not hasattr(request.user, 'staff') or request.user.staff.role not in ['doctor', 'admin']:
-        messages.error(request, "Access denied. You do not have permission to view this page.")
-        return redirect('home')
+    departments = Department.objects.all().order_by('name')
 
-    all_patients = Patient.objects.all().order_by('full_name')
-
-    # Get filter parameters from GET request
-    selected_patient_id = request.GET.get('patient_id')
-    date_from_param = request.GET.get('date_from')
-    date_to_param = request.GET.get('date_to')
-    export_type = request.GET.get('export_type') # 'csv', 'pdf'
-
-    current_patient = None
-    if selected_patient_id:
-        try:
-            current_patient = get_object_or_404(Patient, id=selected_patient_id)
-        except Exception as e:
-            messages.error(request, f"Selected patient not found: {e}")
-            current_patient = None
-            selected_patient_id = None # Reset if patient not found
-
-    # If no patient is selected, no detailed data is fetched beyond initial overview
-    if not current_patient:
-        context = {
-            'all_patients': all_patients,
-            'selected_patient': None,
-            'date_from': date_from_param,
-            'date_to': date_to_param,
-            # Initialize empty lists for charts/tables if no patient selected
-            'consultations': [], 'prescriptions': [], 'vitals': [], 'lab_test_groups': [],
-            'nursing_notes': [], 'admissions': [], 'care_plans': [], 'referrals': [],
-            'appointments': [], 'bills': [], 'payments': [], 'handover_logs': [],
-            'summary': {}, # Empty summary
-            # Chart data will also be empty if no patient
-            'consultation_labels_json': json.dumps([]), 'consultation_data_json': json.dumps([]),
-            'prescription_labels_json': json.dumps([]), 'prescription_data_json': json.dumps([]),
-            'vital_bp_labels_json': json.dumps([]), 'vital_sys_data_json': json.dumps([]), 'vital_dia_data_json': json.dumps([]),
-            'lab_status_labels_json': json.dumps([]), 'lab_status_data_json': json.dumps([]),
-            'top_meds_labels_json': json.dumps([]), 'top_meds_data_json': json.dumps([]),
-        }
-        return render(request, 'hms_admin/doctor_reports.html', context)
-
-
-    # --- Fetch Data for Selected Patient and Date Range ---
+    # --- Calculate New Patients for the Month (for the progress bar) ---
+    today = timezone.now()
+    first_day_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # 1. BASIC PATIENT INFO
-    # Calculate age properly
-    today = date.today()
-    age = today.year - current_patient.date_of_birth.year - ((today.month, today.day) < (current_patient.date_of_birth.month, current_patient.date_of_birth.day))
+    # Get the last day of the current month
+    # This is a common way to get the last day: go to the first day of the next month, then subtract a microsecond.
+    if today.month == 12:
+        last_day_of_month = today.replace(year=today.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+    else:
+        last_day_of_month = today.replace(month=today.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
 
-    # Handle patient photo
-    photo_url = ''
-    if current_patient.photo and hasattr(current_patient.photo, 'url'):
-        try:
-            if default_storage.exists(current_patient.photo.name):
-                photo_url = current_patient.photo.url
-        except Exception as e:
-            logger.warning(f"Error accessing patient photo for patient {current_patient.id}: {e}")
-            pass
+    new_patients_this_month = Patient.objects.filter(
+        date_registered__range=[first_day_of_month, last_day_of_month]
+    ).count()
 
-    patient_data_for_display = {
-        'id': current_patient.id,
-        'full_name': current_patient.full_name,
-        'gender': current_patient.gender,
-        'date_of_birth': current_patient.date_of_birth.strftime('%Y-%m-%d'),
-        'age': age,
-        'blood_group': current_patient.blood_group,
-        'phone': current_patient.phone,
-        'email': current_patient.email or 'N/A',
-        'address': current_patient.address,
-        'marital_status': current_patient.marital_status,
-        'nationality': current_patient.nationality,
-        'state_of_origin': current_patient.state_of_origin or 'N/A',
-        'id_type': current_patient.id_type or 'N/A',
-        'id_number': current_patient.id_number or 'N/A',
-        'status': current_patient.get_status_display(), # Use get_status_display
-        'is_inpatient': current_patient.is_inpatient,
-        'date_registered': current_patient.date_registered.strftime('%Y-%m-%d %H:%M'),
-        'photo_url': photo_url,
-        'next_of_kin_name': current_patient.next_of_kin_name,
-        'next_of_kin_phone': current_patient.next_of_kin_phone,
-        'next_of_kin_relationship': current_patient.next_of_kin_relationship or 'N/A',
-        'next_of_kin_email': current_patient.next_of_kin_email or 'N/A',
-        'next_of_kin_address': current_patient.next_of_kin_address or 'N/A',
-        'diagnosis': current_patient.diagnosis or 'N/A',
-        'medication': current_patient.medication or 'N/A',
-        'notes': current_patient.notes or 'N/A',
-        'referred_by': current_patient.referred_by or 'N/A',
+    # Define a target for new patients. This can be hardcoded or fetched from settings/another model.
+    # Ensure it's not zero to prevent division by zero in the template.
+    new_patients_target = 100 # Example target
+
+    # Calculate progress percentage, handle division by zero
+    progress_percentage = 0
+    if new_patients_target > 0:
+        progress_percentage = min(100, (new_patients_this_month / new_patients_target) * 100) # Cap at 100%
+
+    context = {
+        'departments': departments,
+        'new_patients_this_month': new_patients_this_month,
+        'new_patients_target': new_patients_target,
+        'new_patients_progress_percentage': round(progress_percentage, 2), # Round for display
     }
+    return render(request, 'hms_admin/doctor_reports.html', context) # Make sure this matches your template path
 
-    # Apply date filters to all relevant querysets
-    # Consultations
-    consultations_qs = apply_date_filter(
-        current_patient.consultations.select_related('doctor', 'admission').order_by('-created_at'),
-        date_from_param, date_to_param, 'created_at'
-    )
-    consultations = []
-    for c in consultations_qs:
-        consultations.append({
-            'date': c.created_at.strftime('%Y-%m-%d %H:%M'),
-            'doctor': c.doctor.get_full_name() if c.doctor else 'Unknown',
-            'symptoms': c.symptoms,
-            'diagnosis_summary': c.diagnosis_summary,
-            'advice': c.advice,
-        })
+@login_required(login_url='home')
+@require_http_methods(["GET"])
+def get_department_report_types(request):
+    """
+    AJAX endpoint to fetch report types.
+    No specific user role check beyond being logged in.
+    """
+    department_id = request.GET.get('department_id')
+    report_types = []
 
-    # Prescriptions
-    prescriptions_qs = apply_date_filter(
-        current_patient.prescriptions.select_related('prescribed_by').order_by('-created_at'),
-        date_from_param, date_to_param, 'created_at'
-    )
-    prescriptions = []
-    for p in prescriptions_qs:
-        prescriptions.append({
-            'date': p.created_at.strftime('%Y-%m-%d %H:%M'),
-            'medication': p.medication,
-            'instructions': p.instructions,
-            'start_date': p.start_date.strftime('%Y-%m-%d'),
-            'prescribed_by': p.prescribed_by.get_full_name() if p.prescribed_by else 'Unknown',
-        })
-    
-    # Vitals
-    vitals_qs = apply_date_filter(
-        Vitals.objects.filter(patient=current_patient).order_by('recorded_at'), # Order by oldest to newest for trend charts
-        date_from_param, date_to_param, 'recorded_at'
-    )
-    vitals = []
-    for v in vitals_qs:
-        vitals.append({
-            'recorded_at': v.recorded_at.strftime('%Y-%m-%d %H:%M'),
-            'temperature': v.temperature,
-            'blood_pressure': v.blood_pressure,
-            'pulse': v.pulse,
-            'respiratory_rate': v.respiratory_rate,
-            'weight': v.weight,
-            'height': v.height,
-            'bmi': v.bmi,
-            'recorded_by': v.recorded_by,
-            'notes': v.notes or ''
-        })
+    if department_id:
+        try:
+            department = Department.objects.get(id=department_id)
+            dept_name = department.name.lower()
 
-    # Lab Tests & Results (Grouped by test_request_id UUID)
-    lab_tests_qs = apply_date_filter(
-        current_patient.lab_tests.select_related('category', 'performed_by', 'requested_by', 'recorded_by').order_by('-requested_at'),
-        date_from_param, date_to_param, 'requested_at'
-    )
+            if 'doctor' in dept_name or 'medical' in dept_name:
+                report_types.extend([
+                    {'value': 'doctor_consultations', 'label': 'Doctor Consultations'},
+                    {'value': 'doctor_prescriptions', 'label': 'Doctor Prescriptions'},
+                    {'value': 'doctor_referrals_sent', 'label': 'Referrals Sent by Doctors'},
+                    {'value': 'doctor_patient_diagnoses', 'label': 'Patient Diagnoses'},
+                ])
+            elif 'reception' in dept_name:
+                report_types.extend([
+                    {'value': 'receptionist_patient_registrations', 'label': 'Patient Registrations'},
+                    {'value': 'receptionist_appointments_scheduled', 'label': 'Appointments Scheduled'},
+                    {'value': 'receptionist_patient_admissions_initiated', 'label': 'Patient Admissions Initiated'},
+                ])
+            elif 'nursing' in dept_name:
+                report_types.extend([
+                    {'value': 'nursing_notes_summary', 'label': 'Nursing Notes Summary'},
+                    {'value': 'nursing_vitals_recorded', 'label': 'Vitals Recorded Overview'},
+                    {'value': 'nursing_care_plans_overview', 'label': 'Care Plans Overview'},
+                ])
+            elif 'lab' in dept_name:
+                report_types.extend([
+                    {'value': 'lab_all_tests', 'label': 'All Lab Tests'},
+                    {'value': 'lab_pending_tests', 'label': 'Pending Lab Tests'},
+                    {'value': 'lab_completed_tests', 'label': 'Completed Lab Tests'},
+                    {'value': 'lab_test_categories_stats', 'label': 'Test Categories Statistics'},
+                ])
+            elif 'pharmacy' in dept_name:
+                report_types.extend([
+                    {'value': 'pharmacy_prescriptions_filled', 'label': 'Prescriptions Filled'},
+                    {'value': 'pharmacy_inventory_levels', 'label': 'Medication Inventory Levels'},
+                    {'value': 'pharmacy_dispensing_trends', 'label': 'Dispensing Trends'},
+                ])
+            elif 'account' in dept_name or 'finance' in dept_name:
+                 report_types.extend([
+                    {'value': 'accounts_daily_transactions', 'label': 'Daily Transactions'},
+                    {'value': 'accounts_invoices_generated', 'label': 'Invoices Generated'},
+                    {'value': 'accounts_payments_received', 'label': 'Payments Received'},
+                    {'value': 'accounts_outstanding_bills', 'label': 'Outstanding Bills'},
+                    {'value': 'accounts_expenses', 'label': 'Hospital Expenses'},
+                 ])
+            elif 'hr' in dept_name or 'human resources' in dept_name:
+                 report_types.extend([
+                    {'value': 'hr_staff_list', 'label': 'Staff List'},
+                    {'value': 'hr_staff_attendance', 'label': 'Staff Attendance'},
+                    {'value': 'hr_staff_performance', 'label': 'Staff Performance Records'},
+                 ])
+            
+            report_types.append({'value': 'department_staff_activity', 'label': f'{department.name} Staff Activity'})
+            report_types.append({'value': 'department_patient_overview', 'label': f'{department.name} Patient Overview'})
 
-    grouped_lab_tests = defaultdict(list)
-    for test in lab_tests_qs:
-        grouped_lab_tests[test.test_request_id].append(test)
+        except Department.DoesNotExist:
+            logger.warning(f"Department with ID {department_id} not found.")
+        except Exception as e:
+            logger.error(f"Error fetching report types for department {department_id}: {e}")
 
-    lab_test_groups = []
-    for request_id, tests_in_group in grouped_lab_tests.items():
-        first_test = tests_in_group[0]
+    return JsonResponse({'report_types': report_types})
 
-        doctor_comment_data = None
-        if first_test.doctor_comments:
-            try:
-                comment = DoctorComments.objects.get(id=first_test.doctor_comments)
-                doctor_comment_data = {
-                    "id": comment.id,
-                    "comment": comment.comments,
-                    "doctor_name": comment.doctor_name,
-                    "date": comment.date.strftime('%Y-%m-%d %H:%M')
-                }
-            except DoctorComments.DoesNotExist:
-                pass
+@login_required(login_url='home')
+@require_http_methods(["POST"])
+def generate_department_report(request):
+    """
+    AJAX endpoint to generate reports.
+    No specific user role check beyond being logged in.
+    """
+    department_id = request.POST.get('department_id')
+    report_type = request.POST.get('report_type')
+    date_filter_option = request.POST.get('date_filter')
+    start_date_str = request.POST.get('start_date')
+    end_date_str = request.POST.get('end_date')
 
-        lab_file_data = None
-        if first_test.labresulttestid:
-            try:
-                lab_file = LabResultFile.objects.select_related('uploaded_by').get(id=first_test.labresulttestid)
-                file_url = ''
-                file_name = ''
-                if lab_file.result_file and hasattr(lab_file.result_file, 'url'):
-                    try:
-                        if default_storage.exists(lab_file.result_file.name):
-                            file_url = lab_file.result_file.url
-                            file_name = lab_file.result_file.name.split('/')[-1]
-                    except Exception as e:
-                        logger.warning(f"Error accessing lab result file {lab_file.id}: {e}")
-                        pass
-                
-                lab_file_data = {
-                    "id": lab_file.id,
-                    "file_url": file_url,
-                    "file_name": file_name,
-                    "uploaded_at": lab_file.uploaded_at.strftime('%Y-%m-%d %H:%M'),
-                    "uploaded_by": lab_file.uploaded_by.get_full_name() if lab_file.uploaded_by else 'Unknown'
-                }
-            except LabResultFile.DoesNotExist:
-                pass
+    start_date, end_date = None, None
+    try:
+        if date_filter_option == 'range':
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        elif date_filter_option == 'today':
+            start_date = datetime.today().date()
+            end_date = datetime.today().date()
+        elif date_filter_option == 'week':
+            today = datetime.today().date()
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif date_filter_option == 'month':
+            today = datetime.today().date()
+            start_date = today.replace(day=1)
+            next_month = start_date.replace(day=28) + timedelta(days=4)
+            end_date = next_month - timedelta(days=next_month.day)
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error parsing date parameters: {e}")
+        return JsonResponse({'success': False, 'message': 'Invalid date range provided.'})
+
+    try:
+        department = Department.objects.get(id=department_id)
+    except Department.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Department not found.'})
+
+    report_data = []
+    html_table = ""
+    record_count = 0
+    report_title = f"{department.name} - {report_type.replace('_', ' ').title()} Report"
+
+    if report_type == 'department_staff_activity':
+        staff_in_department = Staff.objects.filter(department=department)
+        staff_activity = []
+        for staff_member in staff_in_department:
+            consult_count = Consultation.objects.filter(doctor=staff_member)
+            prescribe_count = Prescription.objects.filter(prescribed_by=staff_member)
+            admit_count = Admission.objects.filter(admitted_by=staff_member)
+            
+            if start_date and end_date:
+                consult_count = consult_count.filter(created_at__date__range=[start_date, end_date])
+                prescribe_count = prescribe_count.filter(created_at__date__range=[start_date, end_date])
+                admit_count = admit_count.filter(admission_date__range=[start_date, end_date])
+
+            staff_activity.append({
+                'staff_name': staff_member.get_full_name(),
+                'role': staff_member.role,
+                'consultations_count': consult_count.count(),
+                'prescriptions_count': prescribe_count.count(),
+                'admissions_initiated_count': admit_count.count(),
+            })
+
+        report_data = staff_activity
+        record_count = len(report_data)
+
+        if record_count > 0:
+            html_table = """
+            <table class='table table-sm table-hover table-striped'>
+                <thead>
+                    <tr>
+                        <th>Staff Name</th>
+                        <th>Role</th>
+                        <th>Consultations</th>
+                        <th>Prescriptions</th>
+                        <th>Admissions Initiated</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for item in report_data:
+                html_table += f"""
+                <tr>
+                    <td>{item['staff_name']}</td>
+                    <td>{item['role']}</td>
+                    <td>{item['consultations_count']}</td>
+                    <td>{item['prescriptions_count']}</td>
+                    <td>{item['admissions_initiated_count']}</td>
+                </tr>
+                """
+            html_table += "</tbody></table>"
+        else:
+            html_table = "<p class='text-center text-muted'>No staff activity found for this department in the selected period.</p>"
+
+    elif report_type == 'doctor_consultations' and ('doctor' in department.name.lower() or 'medical' in department.name.lower()):
+        consultations_qs = Consultation.objects.filter(doctor__staff__department=department).select_related('patient', 'doctor')
+        if start_date and end_date:
+            consultations_qs = consultations_qs.filter(created_at__date__range=[start_date, end_date])
+
+        consultations_data = []
+        for c in consultations_qs.order_by('-created_at'):
+            consultations_data.append({
+                'date': c.created_at.strftime('%Y-%m-%d %H:%M'),
+                'doctor_name': c.doctor.get_full_name() if c.doctor else 'N/A',
+                'patient_name': c.patient.full_name if c.patient else 'N/A',
+                'symptoms': c.symptoms,
+                'diagnosis_summary': c.diagnosis_summary,
+                'advice': c.advice,
+            })
+        report_data = consultations_data
+        record_count = len(report_data)
+
+        if record_count > 0:
+            html_table = """
+            <table class='table table-sm table-hover table-striped'>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Doctor</th>
+                        <th>Patient</th>
+                        <th>Symptoms</th>
+                        <th>Diagnosis Summary</th>
+                        <th>Advice</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for item in report_data:
+                html_table += f"""
+                <tr>
+                    <td>{item['date']}</td>
+                    <td>{item['doctor_name']}</td>
+                    <td>{item['patient_name']}</td>
+                    <td>{item['symptoms']}</td>
+                    <td>{item['diagnosis_summary']}</td>
+                    <td>{item['advice']}</td>
+                </tr>
+                """
+            html_table += "</tbody></table>"
+        else:
+            html_table = "<p class='text-center text-muted'>No consultations found for this department in the selected period.</p>"
+
+    elif report_type == 'lab_all_tests' and 'lab' in department.name.lower():
+        lab_tests_qs = LabTest.objects.filter(
+            Q(requested_by__staff__department=department) | Q(performed_by__staff__department=department)
+        ).select_related('patient', 'category', 'requested_by', 'performed_by', 'recorded_by')
+
+        if start_date and end_date:
+            lab_tests_qs = lab_tests_qs.filter(requested_at__date__range=[start_date, end_date])
 
         tests_data = []
-        for test in tests_in_group:
+        for test in lab_tests_qs.order_by('-requested_at'):
             tests_data.append({
-                'id': test.id,
+                'requested_at': test.requested_at.strftime('%Y-%m-%d %H:%M'),
+                'patient_name': test.patient.full_name if test.patient else 'N/A',
                 'test_name': test.test_name,
                 'category': test.category.name if test.category else 'N/A',
                 'status': test.get_status_display(),
-                'status_code': test.status,
                 'result_value': test.result_value or 'N/A',
                 'normal_range': test.normal_range or 'N/A',
-                'notes': test.notes or 'N/A',
-                'instructions': test.instructions or 'N/A',
-                'doctor_name': test.doctor_name or 'N/A',
-                'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
                 'requested_by': test.requested_by.get_full_name() if test.requested_by else 'N/A',
-                'recorded_by': test.recorded_by.get_full_name() if test.recorded_by else 'N/A',
+                'performed_by': test.performed_by.get_full_name() if test.performed_by else 'N/A',
                 'date_performed': test.date_performed.strftime('%Y-%m-%d %H:%M') if test.date_performed else 'N/A',
-                'submitted_on': test.submitted_on.strftime('%Y-%m-%d'),
-                'testcompleted': test.testcompleted,
             })
-        tests_data.sort(key=lambda x: x['test_name']) # Sort individual tests within a group
+        report_data = tests_data
+        record_count = len(report_data)
 
-        group_statuses = [test.status for test in tests_in_group]
-        if all(s == 'completed' for s in group_statuses):
-            group_status = 'completed'
-        elif any(s == 'in_progress' for s in group_statuses):
-            group_status = 'in_progress'
-        elif any(s == 'cancelled' for s in group_statuses):
-            group_status = 'cancelled'
+        if record_count > 0:
+            html_table = """
+            <table class='table table-sm table-hover table-striped'>
+                <thead>
+                    <tr>
+                        <th>Requested At</th>
+                        <th>Patient</th>
+                        <th>Test Name</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Result Value</th>
+                        <th>Normal Range</th>
+                        <th>Requested By</th>
+                        <th>Performed By</th>
+                        <th>Date Performed</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for item in report_data:
+                html_table += f"""
+                <tr>
+                    <td>{item['requested_at']}</td>
+                    <td>{item['patient_name']}</td>
+                    <td>{item['test_name']}</td>
+                    <td>{item['category']}</td>
+                    <td>{item['status']}</td>
+                    <td>{item['result_value']}</td>
+                    <td>{item['normal_range']}</td>
+                    <td>{item['requested_by']}</td>
+                    <td>{item['performed_by']}</td>
+                    <td>{item['date_performed']}</td>
+                </tr>
+                """
+            html_table += "</tbody></table>"
         else:
-            group_status = 'pending'
-
-        lab_test_groups.append({
-            "request_id": str(request_id),
-            "requested_at": first_test.requested_at.strftime('%Y-%m-%d %H:%M'),
-            "submitted_on": first_test.submitted_on.strftime('%Y-%m-%d'),
-            "doctor_name": first_test.doctor_name or 'N/A',
-            "requested_by": first_test.requested_by.get_full_name() if first_test.requested_by else 'N/A',
-            "group_status": group_status,
-            "tests_count": len(tests_in_group),
-            "completed_tests_count": len([t for t in tests_in_group if t.status == 'completed']),
-            "pending_tests_count": len([t for t in tests_in_group if t.status == 'pending']),
-            "doctor_comment": doctor_comment_data,
-            "result_file": lab_file_data,
-            "tests": tests_data
-        })
-    lab_test_groups.sort(key=lambda x: x['requested_at'], reverse=True) # Sort groups by requested time
-
-    # Nursing Notes
-    nursing_notes_qs = apply_date_filter(
-        current_patient.nursing_notes.order_by('-note_datetime'),
-        date_from_param, date_to_param, 'note_datetime'
-    )
-    nursing_notes = []
-    for n in nursing_notes_qs:
-        nursing_notes.append({
-            'date': n.note_datetime.strftime('%Y-%m-%d %H:%M'),
-            'nurse': n.nurse,
-            'note_type': n.get_note_type_display(),
-            'notes': n.notes,
-            'patient_status': n.patient_status or 'N/A',
-            'follow_up': n.follow_up or 'N/A',
-        })
-
-    # Admissions
-    admissions_qs = apply_date_filter(
-        Admission.objects.filter(patient=current_patient).order_by('-admission_date'),
-        date_from_param, date_to_param, 'admission_date', is_datetime_field=False
-    )
-    admissions = []
-    for a in admissions_qs:
-        admissions.append({
-            'admission_date': a.admission_date.strftime('%Y-%m-%d'),
-            'doctor_assigned': a.doctor_assigned,
-            'status': a.get_status_display(),
-            'discharge_date': a.discharge_date.strftime('%Y-%m-%d') if a.discharge_date else 'N/A',
-            'discharge_notes': a.discharge_notes or 'N/A',
-            'admitted_by': a.admitted_by or 'N/A',
-        })
-
-    # Care Plans
-    care_plans_qs = apply_date_filter(
-        CarePlan.objects.filter(patient=current_patient).select_related('created_by').order_by('-created_at'),
-        date_from_param, date_to_param, 'created_at'
-    )
-    care_plans = []
-    for cp in care_plans_qs:
-        care_plans.append({
-            'created_at': cp.created_at.strftime('%Y-%m-%d %H:%M'),
-            'created_by': cp.created_by.get_full_name() if cp.created_by else 'Unknown',
-            'clinical_findings': cp.clinical_findings,
-            'plan_of_care': cp.plan_of_care,
-        })
-
-    # Referrals
-    referrals_qs = Referral.objects.filter(patient=current_patient).select_related('department').order_by('-id') # Assuming 'id' can order them, or add a created_at field
-    referrals = []
-    for r in referrals_qs:
-        referrals.append({
-            'department': r.department.name,
-            'notes': r.notes,
-        })
-
-    # Appointments
-    appointments_qs = apply_date_filter(
-        Appointment.objects.filter(patient=current_patient).select_related('department').order_by('-scheduled_time'),
-        date_from_param, date_to_param, 'scheduled_time'
-    )
-    appointments = []
-    for appt in appointments_qs:
-        appointments.append({
-            'scheduled_time': appt.scheduled_time.strftime('%Y-%m-%d %H:%M'),
-            'department': appt.department.name,
-        })
-
-    # Bills
-    bills_qs = apply_date_filter(
-        current_patient.bills.prefetch_related('items__service_type').order_by('-created_at'),
-        date_from_param, date_to_param, 'created_at'
-    )
-    bills = []
-    for b in bills_qs:
-        bill_items = []
-        for item in b.items.all():
-            bill_items.append({
-                'description': item.description,
-                'service_type': item.service_type.name,
-                'quantity': item.quantity,
-                'unit_price': float(item.unit_price),
-                'total_price': float(item.total_price),
-            })
-        bills.append({
-            'bill_number': b.bill_number,
-            'created_at': b.created_at.strftime('%Y-%m-%d %H:%M'),
-            'total_amount': float(b.total_amount),
-            'discount_amount': float(b.discount_amount),
-            'final_amount': float(b.final_amount),
-            'amount_paid': float(b.amount_paid()),
-            'outstanding_amount': float(b.outstanding_amount()),
-            'status': b.get_status_display(),
-            'notes': b.notes or 'N/A',
-            'items': bill_items,
-        })
-
-    # Payments
-    payments_qs = apply_date_filter(
-        current_patient.payments.select_related('processed_by', 'bill').order_by('-payment_date'),
-        date_from_param, date_to_param, 'payment_date'
-    )
-    payments = []
-    for pay in payments_qs:
-        payments.append({
-            'amount': float(pay.amount),
-            'payment_date': pay.payment_date.strftime('%Y-%m-%d %H:%M'),
-            'payment_method': pay.get_payment_method_display(),
-            'payment_reference': pay.payment_reference or 'N/A',
-            'status': pay.get_status_display(),
-            'processed_by': pay.processed_by.get_full_name() if pay.processed_by else 'Unknown',
-            'bill_number': pay.bill.bill_number if pay.bill else 'N/A',
-        })
+            html_table = "<p class='text-center text-muted'>No lab tests found for this department in the selected period.</p>"
     
-    # Handover Logs
-    handover_logs_qs = apply_date_filter(
-        HandoverLog.objects.filter(patient=current_patient).select_related('author').order_by('-timestamp'),
-        date_from_param, date_to_param, 'timestamp'
-    )
-    handover_logs = []
-    for hl in handover_logs_qs:
-        handover_logs.append({
-            'timestamp': hl.timestamp.strftime('%Y-%m-%d %H:%M'),
-            'author': hl.author.get_full_name() if hl.author else 'Unknown',
-            'notes': hl.notes,
-        })
-
-
-    # --- Prepare Data for Charts ---
-    
-    # Consultation Frequency (Last 12 months)
-    consultation_labels = []
-    consultation_data = []
-    for i in range(11, -1, -1): # From 11 months ago to current month
-        month_start = (timezone.now() - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        month_end = (month_start + timedelta(days=32)).replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(microseconds=1)
+    elif report_type == 'receptionist_patient_registrations' and 'reception' in department.name.lower():
+        patient_registrations_qs = Patient.objects.filter(
+            registered_by__staff__department=department
+        ).select_related('registered_by__staff')
         
-        count = Consultation.objects.filter(
-            patient=current_patient,
-            created_at__range=[month_start, month_end]
-        ).count()
-        consultation_labels.append(month_start.strftime('%b %Y'))
-        consultation_data.append(count)
+        if start_date and end_date:
+            patient_registrations_qs = patient_registrations_qs.filter(date_registered__date__range=[start_date, end_date])
 
-    # Top 5 Prescribed Medications (overall for this patient)
-    top_medications = Prescription.objects.filter(patient=current_patient)\
-                                        .values('medication')\
-                                        .annotate(count=Count('medication'))\
-                                        .order_by('-count')[:5]
-    top_meds_labels = [m['medication'] for m in top_medications]
-    top_meds_data = [m['count'] for m in top_medications]
+        registrations_data = []
+        for patient in patient_registrations_qs.order_by('-date_registered'):
+            registrations_data.append({
+                'registration_date': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
+                'patient_name': patient.full_name,
+                'patient_id': patient.patient_id,
+                'registered_by': patient.registered_by.get_full_name() if patient.registered_by else 'N/A',
+                'gender': patient.gender,
+                'age': (date.today().year - patient.date_of_birth.year - ((date.today().month, date.today().day) < (patient.date_of_birth.month, patient.date_of_birth.day))),
+                'phone': patient.phone,
+            })
+        report_data = registrations_data
+        record_count = len(report_data)
 
-    # Lab Test Status Distribution (for current patient within filtered range)
-    lab_status_counts = LabTest.objects.filter(patient=current_patient)\
-                                    .values('status')\
-                                    .annotate(count=Count('status'))\
-                                    .order_by('status')
-    lab_status_labels = [s['status'] for s in lab_status_counts]
-    lab_status_data = [s['count'] for s in lab_status_counts]
+        if record_count > 0:
+            html_table = """
+            <table class='table table-sm table-hover table-striped'>
+                <thead>
+                    <tr>
+                        <th>Registration Date</th>
+                        <th>Patient Name</th>
+                        <th>Patient ID</th>
+                        <th>Registered By</th>
+                        <th>Gender</th>
+                        <th>Age</th>
+                        <th>Phone</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for item in report_data:
+                html_table += f"""
+                <tr>
+                    <td>{item['registration_date']}</td>
+                    <td>{item['patient_name']}</td>
+                    <td>{item['patient_id']}</td>
+                    <td>{item['registered_by']}</td>
+                    <td>{item['gender']}</td>
+                    <td>{item['age']}</td>
+                    <td>{item['phone']}</td>
+                </tr>
+                """
+            html_table += "</tbody></table>"
+        else:
+            html_table = "<p class='text-center text-muted'>No patient registrations found for this department in the selected period.</p>"
 
-    # Vitals Trends (Blood Pressure, Temperature over time) - limited to last N records for clarity
-    vitals_bp_labels = [v.recorded_at.strftime('%m-%d %H:%M') for v in vitals_qs[:20]] # Last 20 vitals
-    vitals_sys_data = [int(v.blood_pressure.split('/')[0]) if v.blood_pressure and '/' in v.blood_pressure else None for v in vitals_qs[:20]]
-    vitals_dia_data = [int(v.blood_pressure.split('/')[1]) if v.blood_pressure and '/' in v.blood_pressure else None for v in vitals_qs[:20]]
-    vitals_temp_data = [v.temperature for v in vitals_qs[:20]]
+    else:
+        html_table = "<p class='text-center text-muted'>Report type not yet implemented or no data found for this selection.</p>"
+        record_count = 0
+        report_data = []
 
-    # Ensure no None values for charts, convert to 0 or filter
-    vitals_sys_data = [x if x is not None else 0 for x in vitals_sys_data]
-    vitals_dia_data = [x if x is not None else 0 for x in vitals_dia_data]
-    vitals_temp_data = [x if x is not None else 0 for x in vitals_temp_data]
-
-
-    # --- Prepare Summary Statistics ---
-    summary = {
-        'total_consultations': len(consultations),
-        'total_prescriptions': len(prescriptions),
-        'total_vitals': len(vitals),
-        'total_lab_test_groups': len(lab_test_groups),
-        'total_individual_lab_tests': sum(len(group['tests']) for group in lab_test_groups),
-        'pending_lab_test_groups': len([g for g in lab_test_groups if g['group_status'] in ['pending', 'in_progress']]),
-        'completed_lab_test_groups': len([g for g in lab_test_groups if g['group_status'] == 'completed']),
-        'total_nursing_notes': len(nursing_notes),
-        'total_admissions': len(admissions),
-        'current_admission': any(a['status'] == 'Admitted' for a in admissions),
-        'total_bills': len(bills),
-        'outstanding_bills_count': len([b for b in bills if b['outstanding_amount'] > 0]),
-        'total_payments': len(payments),
-        'total_referrals': len(referrals),
-        'total_appointments': len(appointments),
-        'total_care_plans': len(care_plans),
-        'total_handover_logs': len(handover_logs),
-        'total_amount_billed': sum(b['final_amount'] for b in bills),
-        'total_amount_paid': sum(p['amount'] for p in payments),
-    }
-
-
-    # --- Handle Exports ---
-    if export_type == 'csv':
-        return _export_doctor_report_csv(
-            patient_data_for_display, consultations, prescriptions, vitals,
-            lab_test_groups, nursing_notes, admissions, care_plans,
-            referrals, appointments, bills, payments, handover_logs, summary
-        )
-    elif export_type == 'pdf':
-        return _export_doctor_report_pdf(
-            patient_data_for_display, consultations, prescriptions, vitals,
-            lab_test_groups, nursing_notes, admissions, care_plans,
-            referrals, appointments, bills, payments, handover_logs, summary
-        )
-
-    # --- Render Page ---
-    context = {
-        'all_patients': all_patients,
-        'selected_patient': patient_data_for_display,
-        'date_from': date_from_param,
-        'date_to': date_to_param,
-
-        # Detailed Data for Tables
-        'consultations': consultations,
-        'prescriptions': prescriptions,
-        'vitals': vitals, # Ordered by oldest to newest for charts
-        'lab_test_groups': lab_test_groups, # Grouped Lab Tests
-        'nursing_notes': nursing_notes,
-        'admissions': admissions,
-        'care_plans': care_plans,
-        'referrals': referrals,
-        'appointments': appointments,
-        'bills': bills,
-        'payments': payments,
-        'handover_logs': handover_logs,
-        'summary': summary,
-
-        # Chart Data (JSON serialized)
-        'consultation_labels_json': json.dumps(consultation_labels),
-        'consultation_data_json': json.dumps(consultation_data),
-        'top_meds_labels_json': json.dumps(top_meds_labels),
-        'top_meds_data_json': json.dumps(top_meds_data),
-        'lab_status_labels_json': json.dumps(lab_status_labels),
-        'lab_status_data_json': json.dumps(lab_status_data),
-        'vital_bp_labels_json': json.dumps(vitals_bp_labels),
-        'vital_sys_data_json': json.dumps(vitals_sys_data),
-        'vital_dia_data_json': json.dumps(vitals_dia_data),
-        'vital_temp_data_json': json.dumps(vitals_temp_data),
-    }
-
-    return render(request, 'hms_admin/doctor_reports.html', context)
+    return JsonResponse({
+        'success': True,
+        'html_table': html_table,
+        'record_count': record_count,
+        'report_data': report_data,
+        'title': report_title,
+        'message': 'Report generated successfully.'
+    })
 
 # --- Export Helper Functions ---
 

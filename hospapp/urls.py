@@ -184,7 +184,13 @@ urlpatterns = [
     # Add user endpoint (no user_id needed)
     path('user/add/', views.add_user_endpoint, name='add_user'),
 
-    path('ad/doctor_report', views.doctor_reports, name='doctor_reports'),
+    path('reports/departments/', views.department_reports_view, name='doctor_reports'),
+
+    # AJAX endpoint to fetch report types for a selected department
+    path('ajax/get_department_report_types/', views.get_department_report_types, name='get_department_report_types'),
+
+    # AJAX endpoint to generate the actual department report
+    path('ajax/generate_department_report/', views.generate_department_report, name='generate_department_report'),
     path('ad/receptionist_report', views.receptionist_reports, name='receptionist_reports'),
     
     path('admin/users/export/csv/', views.export_users_csv_view, name='export_users_csv'),
