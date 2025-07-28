@@ -1,410 +1,346 @@
-{% extends "hms_admin/base.html" %}
+{% extends "hms_admin/base.html" %} {# Or {% extends "hms_admin" %} if you have a specific hms_admin base template #}
 {% load static %}
-{% load custom_filters %}
 
-{% block title %}HMS | Doctor Reports{% endblock %}
+{% block title %}HMS | Admin Department Reports{% endblock %}
 
 {% block content %}
-
-<!-- Content Header (Page header) -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
             <div class="col-sm-6">
-                <h1 class="m-0 text-dark">Doctor's Reports</h1>
-            </div><!-- /.col -->
+                <h1 class="m-0">Departmental Reports (Admin)</h1>
+            </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
                     <li class="breadcrumb-item"><a href="{% url 'hms_admin' %}">Home</a></li>
-                    <li class="breadcrumb-item active">Doctor Reports</li>
+                    <li class="breadcrumb-item active">Departmental Reports</li>
                 </ol>
             </div>
-        </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
+        </div>
+    </div>
 </div>
-<!-- /.content-header -->
 
-<!-- Main content -->
-<section class="content">
+<div class="generate-reports-page">
     <div class="container-fluid">
-
-        <!-- Patient and Date Filter Card -->
-        <div class="card card-primary card-outline">
-            <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter Reports</h3>
-            </div>
-            <form id="filterForm" method="GET" action="{% url 'doctor_reports' %}">
-                <div class="card-body row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="patient_id">Select Patient:</label>
-                            <select class="form-control select2" id="patient_id" name="patient_id" style="width: 100%;">
-                                <option value="">--- Select a Patient ---</option>
-                                {% for patient in all_patients %}
-                                <option value="{{ patient.id }}" {% if selected_patient.id == patient.id|stringformat:"i" %}selected{% endif %}>
-                                    {{ patient.full_name }} (ID: {{ patient.id }})
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-bar me-1"></i>
+                            Generate Department Reports
+                        </h3>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="date_from">Date From:</label>
-                            <div class="input-group date" id="date_from_picker" data-target-input="nearest">
-                                <input type="date" class="form-control datetimepicker-input" data-target="#date_from_picker" name="date_from" id="date_from" value="{{ date_from|default:'' }}" placeholder="YYYY-MM-DD"/>
-                                <div class="input-group-append" data-target="#date_from_picker" data-toggle="datetimepicker">
-                                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="date_to">Date To:</label>
-                            <div class="input-group date" id="date_to_picker" data-target-input="nearest">
-                                <input type="date" class="form-control datetimepicker-input" data-target="#date_to_picker" name="date_to" id="date_to" value="{{ date_to|default:'' }}" placeholder="YYYY-MM-DD"/>
-                                <div class="input-group-append" data-target="#date_to_picker" data-toggle="datetimepicker">
-                                    <div class="input-group-text"><i class="fa fa-calendar"></i></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer d-flex justify-content-end">
-                    <button type="submit" class="btn btn-primary mr-2"><i class="fas fa-search mr-1"></i> Apply Filters</button>
-                    <button type="button" class="btn btn-secondary mr-2" id="exportCsvBtn"><i class="fas fa-file-csv mr-1"></i> Export CSV</button>
-                    <button type="button" class="btn btn-secondary mr-2" id="exportPdfBtn"><i class="fas fa-file-pdf mr-1"></i> Export PDF</button>
-                    <button type="button" class="btn btn-info" onclick="window.print();"><i class="fas fa-print mr-1"></i> Print Page</button>
-                </div>
-            </form>
-        </div>
-        <!-- /.card (Filter) -->
+                    <div class="card-body">
+                        <form id="departmentReportForm" novalidate>
+                            {% csrf_token %} {# Required for AJAX POST requests #}
 
-        {% if selected_patient %}
-        <div id="report-content">
-            <!-- Patient Overview Card -->
-            <div class="card card-dark card-outline">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-user mr-1"></i> Patient Overview: {{ selected_patient.full_name }}</h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-2 text-center">
-                            <img src="{% if selected_patient.photo_url %}{{ selected_patient.photo_url }}{% else %}{% static 'dist/img/default-avatar.png' %}{% endif %}"
-                                 alt="Patient Photo" class="img-circle img-fluid" style="width: 100px; height: 100px; object-fit: cover;">
-                            <h5 class="mt-2">{{ selected_patient.full_name }}</h5>
-                            <p class="text-muted text-sm">{{ selected_patient.status }}</p>
-                        </div>
-                        <div class="col-md-5">
-                            <strong><i class="fas fa-venus-mars mr-1"></i> Gender:</strong> {{ selected_patient.gender }}<br>
-                            <strong><i class="fas fa-birthday-cake mr-1"></i> Age:</strong> {{ selected_patient.age }}<br>
-                            <strong><i class="fas fa-tint mr-1"></i> Blood Group:</strong> {{ selected_patient.blood_group }}<br>
-                            <strong><i class="fas fa-phone mr-1"></i> Phone:</strong> {{ selected_patient.phone }}<br>
-                            <strong><i class="fas fa-envelope mr-1"></i> Email:</strong> {{ selected_patient.email }}<br>
-                        </div>
-                        <div class="col-md-5">
-                            <strong><i class="fas fa-map-marker-alt mr-1"></i> Address:</strong> {{ selected_patient.address }}<br>
-                            <strong><i class="fas fa-ring mr-1"></i> Marital Status:</strong> {{ selected_patient.marital_status }}<br>
-                            <strong><i class="fas fa-globe mr-1"></i> Nationality:</strong> {{ selected_patient.nationality }}<br>
-                            <strong><i class="fas fa-notes-medical mr-1"></i> Current Diagnosis:</strong> {{ selected_patient.diagnosis }}<br>
-                            <strong><i class="fas fa-pills mr-1"></i> Current Medication:</strong> {{ selected_patient.medication }}<br>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Comprehensive Patient Activity Table -->
-            <div class="card card-secondary card-outline">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-list-alt mr-1"></i> Complete Patient Activity Record</h3>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover" id="patientActivityTable">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>Date/Time</th>
-                                    <th>Activity Type</th>
-                                    <th>Staff Member</th>
-                                    <th>Details</th>
-                                    <th>Status</th>
-                                    <th>Additional Info</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Consultations -->
-                                {% for c in consultations %}
-                                <tr>
-                                    <td>{{ c.date }}</td>
-                                    <td><span class="badge badge-info">Consultation</span></td>
-                                    <td>{{ c.doctor }}</td>
-                                    <td>
-                                        <strong>Symptoms:</strong> {{ c.symptoms }}<br>
-                                        <strong>Diagnosis:</strong> {{ c.diagnosis_summary }}
-                                    </td>
-                                    <td><span class="badge badge-success">Completed</span></td>
-                                    <td>{{ c.advice }}</td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Prescriptions -->
-                                {% for p in prescriptions %}
-                                <tr>
-                                    <td>{{ p.date }}</td>
-                                    <td><span class="badge badge-primary">Prescription</span></td>
-                                    <td>{{ p.prescribed_by }}</td>
-                                    <td>
-                                        <strong>Medication:</strong> {{ p.medication }}<br>
-                                        <strong>Instructions:</strong> {{ p.instructions }}
-                                    </td>
-                                    <td><span class="badge badge-success">Active</span></td>
-                                    <td>Start Date: {{ p.start_date }}</td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Vitals -->
-                                {% for v in vitals %}
-                                <tr>
-                                    <td>{{ v.recorded_at }}</td>
-                                    <td><span class="badge badge-warning">Vitals</span></td>
-                                    <td>{{ v.recorded_by }}</td>
-                                    <td>
-                                        <strong>Temp:</strong> {{ v.temperature|default:'N/A' }}°C |
-                                        <strong>BP:</strong> {{ v.blood_pressure|default:'N/A' }} |
-                                        <strong>Pulse:</strong> {{ v.pulse|default:'N/A' }}bpm |
-                                        <strong>RR:</strong> {{ v.respiratory_rate|default:'N/A' }}bpm
-                                    </td>
-                                    <td><span class="badge badge-success">Recorded</span></td>
-                                    <td>
-                                        Weight: {{ v.weight|default:'N/A' }}kg | 
-                                        Height: {{ v.height|default:'N/A' }}cm | 
-                                        BMI: {{ v.bmi|default:'N/A' }}
-                                        {% if v.notes %}<br>Notes: {{ v.notes }}{% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Lab Tests -->
-                                {% for group in lab_test_groups %}
-                                    {% for test in group.tests %}
-                                    <tr>
-                                        <td>{{ group.requested_at }}</td>
-                                        <td><span class="badge badge-secondary">Lab Test</span></td>
-                                        <td>{{ group.requested_by }}</td>
-                                        <td>
-                                            <strong>Test:</strong> {{ test.test_name }} ({{ test.category }})<br>
-                                            <strong>Result:</strong> {{ test.result_value|default:'Pending' }}
-                                        </td>
-                                        <td><span class="badge badge-{{ test.status_code }}">{{ test.status }}</span></td>
-                                        <td>
-                                            Normal Range: {{ test.normal_range|default:'N/A' }}
-                                            {% if test.date_performed %}<br>Performed: {{ test.date_performed }}{% endif %}
-                                            {% if test.performed_by %}<br>By: {{ test.performed_by }}{% endif %}
-                                        </td>
-                                    </tr>
+                            <div class="mb-3">
+                                <label for="selectDepartment" class="form-label">Select Department <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-control select2bs4" id="selectDepartment" name="department_id"
+                                    style="width: 100%;" required>
+                                    <option value="" disabled selected>Select a department...</option>
+                                    {% for department in departments %}
+                                    <option value="{{ department.id }}">{{ department.name }}</option>
                                     {% endfor %}
-                                {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">Please select a department.</div>
+                            </div>
 
-                                <!-- Nursing Notes -->
-                                {% for n in nursing_notes %}
-                                <tr>
-                                    <td>{{ n.date }}</td>
-                                    <td><span class="badge badge-light">Nursing Note</span></td>
-                                    <td>{{ n.nurse }}</td>
-                                    <td>
-                                        <strong>Type:</strong> {{ n.note_type }}<br>
-                                        <strong>Notes:</strong> {{ n.notes }}
-                                    </td>
-                                    <td><span class="badge badge-info">{{ n.patient_status }}</span></td>
-                                    <td>{{ n.follow_up|default:'No follow-up required' }}</td>
-                                </tr>
-                                {% endfor %}
+                            <div class="mb-3">
+                                <label for="reportType" class="form-label">Report Type <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-control select2bs4" id="reportType" name="report_type" required
+                                    style="width: 100%;" disabled>
+                                    <option value="" disabled selected>Select report type...</option>
+                                    {# Options will be dynamically loaded via JavaScript #}
+                                </select>
+                                <div class="invalid-feedback">Please select a report type.</div>
+                            </div>
 
-                                <!-- IVF Type (previously Admissions) -->
-                                {% for a in admissions %}
-                                <tr>
-                                    <td>{{ a.admission_date }}</td>
-                                    <td><span class="badge badge-danger">IVF Treatment</span></td>
-                                    <td>{{ a.admitted_by }}</td>
-                                    <td>
-                                        <strong>Doctor Assigned:</strong> {{ a.doctor_assigned }}<br>
-                                        <strong>Treatment Type:</strong> IVF Protocol
-                                    </td>
-                                    <td><span class="badge badge-{{ a.status }}">{{ a.status }}</span></td>
-                                    <td>
-                                        {% if a.discharge_date %}End Date: {{ a.discharge_date }}<br>{% endif %}
-                                        {% if a.discharge_notes %}Notes: {{ a.discharge_notes }}{% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                            <div class="mb-3">
+                                <label class="form-label">Date Filter</label>
+                                <div class="d-flex flex-wrap">
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="allDates"
+                                            value="" checked>
+                                        <label class="form-check-label" for="allDates">All Dates</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="dateRange"
+                                            value="range">
+                                        <label class="form-check-label" for="dateRange">Date Range</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="todayFilter"
+                                            value="today">
+                                        <label class="form-check-label" for="todayFilter">Today</label>
+                                    </div>
+                                    <div class="form-check form-check-inline me-3">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="weekFilter"
+                                            value="week">
+                                        <label class="form-check-label" for="weekFilter">This Week</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="dateFilter" id="monthFilter"
+                                            value="month">
+                                        <label class="form-check-label" for="monthFilter">This Month</label>
+                                    </div>
+                                </div>
+                            </div>
 
-                                <!-- Care Plans -->
-                                {% for cp in care_plans %}
-                                <tr>
-                                    <td>{{ cp.created_at }}</td>
-                                    <td><span class="badge badge-success">Care Plan</span></td>
-                                    <td>{{ cp.created_by }}</td>
-                                    <td>
-                                        <strong>Clinical Findings:</strong> {{ cp.clinical_findings }}<br>
-                                        <strong>Plan of Care:</strong> {{ cp.plan_of_care }}
-                                    </td>
-                                    <td><span class="badge badge-primary">Active</span></td>
-                                    <td>Comprehensive care plan established</td>
-                                </tr>
-                                {% endfor %}
+                            <div id="dateFields" class="date-fields mb-3" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="startDate" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="startDate" name="start_date" disabled>
+                                        <div class="invalid-feedback">Select start date.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="endDate" class="form-label">End Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="endDate" name="end_date" disabled>
+                                        <div class="invalid-feedback">Select valid end date.</div>
+                                    </div>
+                                </div>
+                            </div>
 
-                                <!-- Referrals -->
-                                {% for r in referrals %}
-                                <tr>
-                                    <td>{{ r.date|default:'N/A' }}</td>
-                                    <td><span class="badge badge-info">Referral</span></td>
-                                    <td>{{ r.referring_doctor|default:'N/A' }}</td>
-                                    <td>
-                                        <strong>Department:</strong> {{ r.department }}<br>
-                                        <strong>Notes:</strong> {{ r.notes }}
-                                    </td>
-                                    <td><span class="badge badge-warning">Pending</span></td>
-                                    <td>Inter-department referral</td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Appointments -->
-                                {% for appt in appointments %}
-                                <tr>
-                                    <td>{{ appt.scheduled_time }}</td>
-                                    <td><span class="badge badge-primary">Appointment</span></td>
-                                    <td>{{ appt.scheduled_by|default:'System' }}</td>
-                                    <td>
-                                        <strong>Department:</strong> {{ appt.department }}<br>
-                                        <strong>Type:</strong> {{ appt.appointment_type|default:'Consultation' }}
-                                    </td>
-                                    <td><span class="badge badge-info">Scheduled</span></td>
-                                    <td>{{ appt.notes|default:'Regular appointment' }}</td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Bills -->
-                                {% for bill in bills %}
-                                <tr>
-                                    <td>{{ bill.created_at }}</td>
-                                    <td><span class="badge badge-warning">Bill</span></td>
-                                    <td>{{ bill.created_by|default:'Billing Dept' }}</td>
-                                    <td>
-                                        <strong>Bill #:</strong> {{ bill.bill_number }}<br>
-                                        <strong>Amount:</strong> ₦{{ bill.final_amount|floatformat:2 }}
-                                    </td>
-                                    <td><span class="badge badge-{{ bill.status_code }}">{{ bill.status }}</span></td>
-                                    <td>
-                                        Paid: ₦{{ bill.amount_paid|floatformat:2 }} | 
-                                        Outstanding: ₦{{ bill.outstanding_amount|floatformat:2 }}
-                                        {% if bill.notes %}<br>{{ bill.notes }}{% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Payments -->
-                                {% for pay in payments %}
-                                <tr>
-                                    <td>{{ pay.payment_date }}</td>
-                                    <td><span class="badge badge-success">Payment</span></td>
-                                    <td>{{ pay.processed_by }}</td>
-                                    <td>
-                                        <strong>Amount:</strong> ₦{{ pay.amount|floatformat:2 }}<br>
-                                        <strong>Method:</strong> {{ pay.payment_method }}
-                                    </td>
-                                    <td><span class="badge badge-{{ pay.status_code }}">{{ pay.status }}</span></td>
-                                    <td>
-                                        Reference: {{ pay.payment_reference }}<br>
-                                        Bill #: {{ pay.bill_number }}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-
-                                <!-- Handover Logs -->
-                                {% for hl in handover_logs %}
-                                <tr>
-                                    <td>{{ hl.timestamp }}</td>
-                                    <td><span class="badge badge-dark">Handover</span></td>
-                                    <td>{{ hl.author }}</td>
-                                    <td>
-                                        <strong>Handover Notes:</strong> {{ hl.notes }}
-                                    </td>
-                                    <td><span class="badge badge-info">Completed</span></td>
-                                    <td>Shift handover documentation</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                            <button type="submit" class="btn btn-primary btn-block mt-3">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Generate Report
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
-        </div>
-        {% else %}
-        <div class="alert alert-info text-center mt-4">
-            <i class="fas fa-info-circle mr-2"></i> Please select a patient from the dropdown above to view their comprehensive reports.
-        </div>
-        {% endif %}
 
-    </div><!--/. container-fluid -->
-</section>
-<!-- /.content -->
+            <div class="col-lg-8">
+                <div id="reportDisplayArea" class="card card-info" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title" id="reportResultTitle">Generated Report</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button type="button" class="btn btn-tool" id="exportExcelBtn" style="display: none;">
+                                <i class="fas fa-file-excel"></i> Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0" id="reportTableBody">
+                        {# Report data will be loaded here #}
+                    </div>
+                    <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
+                        <span class="text-muted" id="recordCount">Total Records: 0</span>
+                    </div>
+                </div>
+                <div id="noReportMessage" class="alert alert-info text-center" role="alert">
+                    <i class="fas fa-info-circle"></i> Select a department and report type, then click 'Generate Report'.
+                </div>
+            </div>
+        </div>
+    </div>
 
+    {# Success and Error Modals (Copied from reports.html) #}
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Report Generated Successfully
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-file-download fa-4x text-success"></i>
+                    </div>
+                    <h5 id="successMessage">Your report is ready!</h5>
+                    <p class="text-muted" id="successDetails">The report has been generated and displayed below.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error Generating Report
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-triangle fa-4x text-danger"></i>
+                    </div>
+                    <h5>An error occurred</h5>
+                    <p class="text-muted" id="errorMessage">Please try again or contact support.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Select2 -->
-<script src="{% static 'plugins/select2/js/select2.full.min.js' %}"></script>
-<!-- DataTables -->
-<script src="{% static 'plugins/datatables/jquery.dataTables.min.js' %}"></script>
-<script src="{% static 'plugins/datatables-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
-
 <script>
-    $(document).ready(function () {
-        // Initialize Select2 for patient dropdown
-        $('.select2').select2({
-            placeholder: "Select a patient",
-            allowClear: true
-        });
+$(document).ready(function() {
+    // Initialize Select2 for department and report type dropdowns
+    $('#selectDepartment').select2({
+        theme: 'bootstrap4'
+    });
+    $('#reportType').select2({
+        theme: 'bootstrap4'
+    });
 
-        // Initialize DataTable with enhanced features
-        $('#patientActivityTable').DataTable({
-            "responsive": true,
-            "lengthChange": true,
-            "autoWidth": false,
-            "pageLength": 25,
-            "order": [[ 0, "desc" ]], // Sort by date descending
-            "columnDefs": [
-                { "width": "15%", "targets": 0 }, // Date column
-                { "width": "12%", "targets": 1 }, // Activity Type
-                { "width": "15%", "targets": 2 }, // Staff Member
-                { "width": "30%", "targets": 3 }, // Details
-                { "width": "10%", "targets": 4 }, // Status
-                { "width": "18%", "targets": 5 }  // Additional Info
-            ],
-            "language": {
-                "search": "Search activities:",
-                "lengthMenu": "Show _MENU_ activities per page",
-                "info": "Showing _START_ to _END_ of _TOTAL_ activities",
-                "infoEmpty": "No activities found",
-                "infoFiltered": "(filtered from _MAX_ total activities)"
+    // Event listener for Department selection change
+    $('#selectDepartment').on('change', function() {
+        var departmentId = $(this).val();
+        var reportTypeSelect = $('#reportType');
+        var generateReportBtn = $('button[type="submit"]');
+
+        // Disable report type dropdown and generate button initially
+        reportTypeSelect.prop('disabled', true).val('').trigger('change'); // Clear and disable
+        generateReportBtn.prop('disabled', true);
+        $('#dateFields').hide(); // Hide date fields when department changes
+        $('#startDate').prop('disabled', true);
+        $('#endDate').prop('disabled', true);
+        $('input[name="dateFilter"][value=""]').prop('checked', true); // Reset date filter to All Dates
+
+        if (departmentId) {
+            // Make AJAX call to get report types
+            $.ajax({
+                url: '{% url "get_department_report_types" %}', // Ensure this URL is correct
+                data: {
+                    'department_id': departmentId
+                },
+                dataType: 'json',
+                success: function(data) {
+                    reportTypeSelect.empty(); // Clear existing options
+                    reportTypeSelect.append('<option value="" disabled selected>Select report type...</option>');
+                    $.each(data.report_types, function(key, value) {
+                        reportTypeSelect.append('<option value="' + value.value + '">' + value.label + '</option>');
+                    });
+                    reportTypeSelect.prop('disabled', false); // Enable the dropdown
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching report types:", error);
+                    reportTypeSelect.empty().append('<option value="" disabled selected>Error loading types...</option>');
+                    reportTypeSelect.prop('disabled', true);
+                    alert('Error loading report types. Please try again.');
+                }
+            });
+        }
+    });
+
+    // Event listener for Report Type selection change
+    $('#reportType').on('change', function() {
+        // Enable the generate report button once a report type is selected
+        if ($(this).val()) {
+            $('button[type="submit"]').prop('disabled', false);
+        } else {
+            $('button[type="submit"]').prop('disabled', true);
+        }
+    });
+
+    // Event listener for Date Filter radio buttons
+    $('input[name="dateFilter"]').on('change', function() {
+        if ($(this).val() === 'range') {
+            $('#dateFields').slideDown();
+            $('#startDate').prop('disabled', false).attr('required', true);
+            $('#endDate').prop('disabled', false).attr('required', true);
+        } else {
+            $('#dateFields').slideUp();
+            $('#startDate').prop('disabled', true).removeAttr('required');
+            $('#endDate').prop('disabled', true).removeAttr('required');
+        }
+    });
+
+    // Handle form submission for generating the report
+    $('#departmentReportForm').on('submit', function(e) {
+        e.preventDefault(); // Prevent default form submission
+
+        var form = $(this);
+        if (!form[0].checkValidity()) {
+            form.addClass('was-validated');
+            return;
+        }
+
+        var departmentId = $('#selectDepartment').val();
+        var reportType = $('#reportType').val();
+        var dateFilter = $('input[name="dateFilter"]:checked').val();
+        var startDate = $('#startDate').val();
+        var endDate = $('#endDate').val();
+        var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+        // Show loading indicator
+        Swal.fire({
+            title: 'Generating Report...',
+            html: 'Please wait while your report is being prepared.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
             }
         });
 
-        // Export Button Handlers
-        $('#exportCsvBtn').on('click', function() {
-            const form = $('#filterForm');
-            form.append('<input type="hidden" name="export_type" value="csv" />');
-            form.submit();
-            form.find('input[name="export_type"]').remove();
-        });
+        $.ajax({
+            url: '{% url "generate_department_report" %}', // Ensure this URL is correct
+            type: 'POST',
+            data: {
+                'department_id': departmentId,
+                'report_type': reportType,
+                'date_filter': dateFilter,
+                'start_date': startDate,
+                'end_date': endDate,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            success: function(response) {
+                Swal.close(); // Close loading spinner
+                if (response.success) {
+                    $('#reportResultTitle').text(response.title);
+                    $('#reportTableBody').html(response.html_table);
+                    $('#recordCount').text('Total Records: ' + response.record_count);
+                    $('#reportTableFooter').show();
+                    $('#reportDisplayArea').show();
+                    $('#noReportMessage').hide();
 
-        $('#exportPdfBtn').on('click', function() {
-            const form = $('#filterForm');
-            form.append('<input type="hidden" name="export_type" value="pdf" />');
-            form.submit();
-            form.find('input[name="export_type"]').remove();
+                    // Show success modal
+                    $('#successMessage').text(response.message);
+                    $('#successModal').modal('show');
+                } else {
+                    $('#reportDisplayArea').hide();
+                    $('#noReportMessage').html('<i class="fas fa-exclamation-circle"></i> ' + response.message).show();
+                    $('#errorMessage').text(response.message);
+                    $('#errorModal').modal('show');
+                }
+            },
+            error: function(xhr, status, error) {
+                Swal.close(); // Close loading spinner
+                console.error("Error generating report:", error);
+                $('#reportDisplayArea').hide();
+                $('#noReportMessage').html('<i class="fas fa-exclamation-triangle"></i> An unexpected error occurred. Please try again.').show();
+                $('#errorMessage').text('An unexpected error occurred while generating the report.');
+                $('#errorModal').modal('show');
+            }
         });
     });
+
+    // You might also need to handle the export Excel button if you have that functionality
+    $('#exportExcelBtn').on('click', function() {
+        // Implement Excel export logic here, e.g., make another AJAX call or navigate to a download URL
+        alert('Export to Excel functionality not yet implemented.');
+    });
+});
 </script>
 {% endblock %}
