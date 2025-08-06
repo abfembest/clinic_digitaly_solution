@@ -4843,38 +4843,112 @@ def refer_patient(request):
 
 #notification icon 
 
-
 def notification_data(request):
-    today = date.today()
+    """
+    Generates a list of notifications for the current staff user based on their role.
+    """
+    today = timezone.localdate()
     notifications = []
 
-    test_outstanding = LabTest.objects.filter(testcompleted=False).count()
-    if test_outstanding > 0:
-        notifications.append({
-            "title": "Test Outstanding",
-            "count": test_outstanding,
-            "url": "/tests/pending/"
-        })
+    # Get the current staff member and their role
+    try:
+        current_staff = Staff.objects.get(user=request.user)
+        user_role = current_staff.role.lower()
+    except Staff.DoesNotExist:
+        # Handle cases where the user is not a staff member
+        return JsonResponse({"notifications": notifications})
 
-    appointments_today = Appointment.objects.filter(scheduled_time=today).count()
-    if appointments_today > 0:
-        notifications.append({
-            "title": "Appointments Available",
-            "count": appointments_today,
-            "url": "/results/available/"
-        })
+    # Notifications for Nurses
+    if user_role == 'nurse':
+        
+        # 1. Appointments for Today in the nurse's department
+        appointments_today = Appointment.objects.filter(
+            scheduled_time__date=today,
+            department=current_staff.department
+        ).count()
+        if appointments_today > 0:
+            notifications.append({
+                "title": "Appointments Today",
+                "count": appointments_today,
+                "url": "/n/home"
+            })
 
-    test_results = LabTest.objects.filter(testcompleted=True).count()
-    if test_results > 0:
-        notifications.append({
-            "title": "Available Test Results",
-            "count": test_results,
-            "url": "/bookings/"
-        })
+        # 2. Patients needing Vital Signs recorded
+        # Identify admitted patients who haven't had vitals recorded today.
+        admitted_patients_with_vitals_today_ids = Vitals.objects.filter(
+            recorded_at__date=today
+        ).values_list('patient_id', flat=True)
+
+        patients_to_monitor_count = Admission.objects.filter(
+            status='Admitted'
+        ).exclude(
+            patient__id__in=admitted_patients_with_vitals_today_ids
+        ).count()
+        
+        if patients_to_monitor_count > 0:
+            notifications.append({
+                "title": "Vitals to Record",
+                "count": patients_to_monitor_count,
+                "url": "/n/vitals"
+            })
+            
+        # 3. New patient admissions today
+        new_admissions_today = Admission.objects.filter(
+            admitted_on=today,
+            status='Admitted'
+        ).count()
+        if new_admissions_today > 0:
+            notifications.append({
+                "title": "New Patients Admitted",
+                "count": new_admissions_today,
+                "url": "/n/home"
+            })
+
+    # The code can be extended here for other user roles (e.g., doctor, lab technician)
+    # elif user_role == 'doctor':
+    #     ...
+    # elif user_role == 'lab':
+    #     ...
 
     return JsonResponse({
         "notifications": notifications
     })
+
+
+
+# def notification_data(request):
+#     today = date.today()
+#     notifications = []
+
+#     test_outstanding = LabTest.objects.filter(testcompleted=False).count()
+#     if test_outstanding > 0:
+#         notifications.append({
+#             "title": "Test Outstanding",
+#             "count": test_outstanding,
+#             "url": "/tests/pending/"
+#         })
+
+#     appointments_today = Appointment.objects.filter(scheduled_time=today).count()
+#     if appointments_today > 0:
+#         notifications.append({
+#             "title": "Appointments Available",
+#             "count": appointments_today,
+#             "url": "/results/available/"
+#         })
+
+#     test_results = LabTest.objects.filter(testcompleted=True).count()
+#     if test_results > 0:
+#         notifications.append({
+#             "title": "Available Test Results",
+#             "count": test_results,
+#             "url": "/bookings/"
+#         })
+
+#     return JsonResponse({
+#         "notifications": notifications
+#     })
+
+
 
 
 """def notification_data(request):
