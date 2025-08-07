@@ -53,7 +53,7 @@ from django.http import HttpResponse # Ensure HttpResponse is imported
 from django.views.decorators.http import require_GET, require_POST
 import re
 from django.utils import timezone
-from .utils import check_nurse_role
+from .utils import check_nurse_role, check_admin_role, check_receiption_role, check_account_role,check_doctor_role,check_lab_role
 
 import logging
 
@@ -375,9 +375,10 @@ def record_vitals(request):
     referer = request.META.get('HTTP_REFERER', '/')
     return redirect(referer)
 
-@check_nurse_role
+
 @csrf_exempt
 @login_required(login_url='home')
+@check_nurse_role
 def admit_patient_nurse(request):
     referer = request.META.get('HTTP_REFERER', '/')
     if request.method == 'POST':
@@ -917,14 +918,17 @@ def generate_nurse_report(request):
 
 ''' ############################################################################################################################ End Nurses View ############################################################################################################################ '''
 
-''' ############################################################################################################################ Doctors View ############################################################################################################################ '''
+''' ############################################################################################################################ 
+        Doctors View
+   ############################################################################################################################ '''
 
 @login_required(login_url='home')
-@check_nurse_role
+@check_doctor_role
 def doctors(request):
     return render(request, 'doctors/index.html')
 
 @login_required(login_url='home')
+@check_doctor_role
 def doctor_consultation(request):
     """Main consultation page with patient list"""
     context = {
@@ -933,7 +937,7 @@ def doctor_consultation(request):
     return render(request, 'doctors/consultation.html', context)
 
 @login_required(login_url='home')
-@check_nurse_role
+@check_doctor_role
 def access_medical_records(request):
     view_type = request.GET.get('view')
     patients = Patient.objects.all()
@@ -954,7 +958,9 @@ def requesttest(request):
         'categories': categories,
         'patients': patients
     })
-@check_nurse_role
+
+
+@check_doctor_role
 def recomended_tests(request):
     if request.method == 'POST':
         test_id = request.POST.get('test_id')
@@ -1054,6 +1060,7 @@ def recomended_tests(request):
     return render(request, 'doctors/recomended_test.html', context)
 
 @login_required
+@check_doctor_role
 @require_http_methods(["GET", "POST"])
 def start_ivf(request):
     if request.method == 'GET':
@@ -1101,6 +1108,7 @@ def is_doctor(user):
     return hasattr(user, 'staff') and user.staff.role == 'doctor'
 
 @login_required
+@check_doctor_role
 # @user_passes_test(is_doctor, login_url='/access_denied/')  # Redirect if not a doctor
 def doctor_report(request):
     """
@@ -1119,6 +1127,7 @@ def doctor_report(request):
     return render(request, 'doctors/reports.html', context)
 
 @require_POST
+@check_doctor_role
 def generate_doctor_report_ajax(request):
     """
     Generates specific doctor activity reports based on AJAX requests.
@@ -1481,7 +1490,10 @@ def generate_doctor_report_ajax(request):
     except Exception as e:
         # Generic error handler for the view logic
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
 
+@login_required(login_url='home')
+@check_doctor_role
 def test_results(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
     
@@ -1520,6 +1532,7 @@ def test_results(request, patient_id):
 
 ###### Form Actions ######
 @login_required(login_url='home')
+@check_doctor_role
 @csrf_exempt
 def save_consultation(request):
     """Save consultation data"""
@@ -1555,6 +1568,8 @@ def save_consultation(request):
 
 
 @csrf_exempt
+@login_required(login_url='home')
+@check_doctor_role
 def patient_history_ajax(request, patient_id):
     """Return patient history as JSON for AJAX requests"""
     try:
@@ -1674,7 +1689,7 @@ def patient_history_ajax(request, patient_id):
 
 
 @login_required(login_url='home')
-@csrf_exempt
+@check_doctor_role
 def add_prescription(request):
     """Add prescription for a patient"""
     if request.method == 'POST':
@@ -1707,9 +1722,9 @@ def add_prescription(request):
     
     return redirect('doctor_consultation')
 
-
-@login_required(login_url='home')
 @csrf_exempt
+@login_required(login_url='home')
+@check_doctor_role
 def save_care_plan(request):
     """Save care plan for a patient"""
     if request.method == "POST":
@@ -1741,6 +1756,7 @@ def save_care_plan(request):
     return redirect('doctor_consultation')
 
 @login_required(login_url='home')
+@check_doctor_role
 @require_GET
 def get_patient_overview(request, patient_id):
     try:
@@ -1783,6 +1799,7 @@ def get_patient_overview(request, patient_id):
         return JsonResponse({'error': str(e)}, status=500)
     
 @login_required(login_url='home')
+@check_doctor_role
 def get_patient_monitor(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)
@@ -1863,7 +1880,8 @@ def get_patient_monitor(request, patient_id):
         return JsonResponse({"error": "Patient not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-    
+@login_required(login_url="home")
+@check_doctor_role
 def submit_test_selection(request):
     if request.method == 'POST':
         try:
@@ -1916,6 +1934,8 @@ def submit_test_selection(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required(login_url="home")
+@check_doctor_role
 def doc_test_comment(request, patient_id):
     if request.method == 'POST':
         comment_text = request.POST.get('doctor_comment', '')
@@ -1941,6 +1961,8 @@ def doc_test_comment(request, patient_id):
     # If GET request (optional, show test details or redirect)
     return redirect('recomended_tests')
 
+@login_required(login_url="home")
+@check_doctor_role
 def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_datetime_field=True):
     """
     Applies date range filtering to a queryset based on a specified date/datetime field.
@@ -1985,7 +2007,8 @@ def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_
 
     return queryset
 
-
+@login_required(login_url="home")
+@check_doctor_role
 def fetch_patient_activity(request):
     """
     Comprehensive AJAX view to fetch all patient medical records and activity
@@ -2460,7 +2483,8 @@ def fetch_patient_activity(request):
         logger.error(f"Error in fetch_patient_activity: {str(e)}", exc_info=True)
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
     
-@login_required
+@login_required(login_url="home")
+@check_doctor_role
 @require_http_methods(["POST"])
 def update_ivf_status(request):
     try:
@@ -2495,6 +2519,7 @@ def update_ivf_status(request):
 
 @login_required
 @require_http_methods(["GET"])
+@check_doctor_role
 def get_ivf_progress(request, record_id):
     ivf_record = get_object_or_404(IVFRecord, id=record_id)
     patient = ivf_record.patient
@@ -2592,6 +2617,7 @@ def get_ivf_progress(request, record_id):
 
 @login_required
 @require_http_methods(["POST"])
+@check_doctor_role
 def add_ivf_progress_comment(request):
     try:
         data = json.loads(request.body)
@@ -2614,11 +2640,16 @@ def add_ivf_progress_comment(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
     
-''' ############################################################################################################################ End Doctors View ############################################################################################################################ '''
+''' ############################################################################################################################ 
+                End of Doctors View 
+############################################################################################################################ '''
 
-''' ############################################################################################################################ Laboratory View ############################################################################################################################ '''
+''' ############################################################################################################################ 
+        Laboratory View
+############################################################################################################################ '''
 
 @login_required(login_url='home')
+@check_lab_role
 def laboratory(request):
     today = date.today()
     start_of_day = timezone.make_aware(datetime.combine(today, datetime.min.time()))
@@ -2737,6 +2768,7 @@ def laboratory(request):
     return render(request, 'laboratory/index.html', context)
 
 @login_required(login_url='home')
+@check_lab_role
 def lab_test_entry(request):
     lab_tests = LabTest.objects.select_related('patient', 'category').filter(
         status='pending'
@@ -2816,6 +2848,7 @@ def lab_test_entry(request):
     return render(request, 'laboratory/test_entry.html', context)
 
 @login_required(login_url='home')
+@check_lab_role
 def lab_internal_logs(request):
     lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'category').order_by('-requested_at')
 
@@ -2842,6 +2875,7 @@ def lab_internal_logs(request):
     return render(request, 'laboratory/logs.html', context)
 
 @login_required
+@check_lab_role
 @require_http_methods(["GET"])
 def lab_view_ivf_progress(request):
     context = {
@@ -2850,6 +2884,7 @@ def lab_view_ivf_progress(request):
     return render(request, 'laboratory/ivf_progress.html', context)
 
 @login_required(login_url='home')
+@check_lab_role
 def lab_activity_report(request):
     patients = Patient.objects.all().order_by('full_name')
     patients_data = [
@@ -2865,6 +2900,7 @@ def lab_activity_report(request):
 ##### Form Action #####
 
 @csrf_exempt
+@check_lab_role
 def get_patient_info(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)
@@ -2915,7 +2951,9 @@ def get_patient_info(request, patient_id):
     except Exception as e:
         logger.error(f"Error fetching patient info {patient_id}: {str(e)}")
         return JsonResponse({'error': 'An error occurred while fetching patient information'}, status=500)
-    
+
+@login_required(login_url='home')
+@check_lab_role    
 def test_details(request, patient_id):
     patient = get_object_or_404(Patient, id=patient_id)
 
@@ -2932,7 +2970,8 @@ def test_details(request, patient_id):
         'pending_tests': dict(grouped_tests),
         'patient': patient
     })
-
+@login_required(login_url='home')
+@check_lab_role
 def lab_log_detail_ajax(request):
     log_id = request.GET.get('log_id')
     if not log_id:
@@ -2960,6 +2999,8 @@ def lab_log_detail_ajax(request):
         return JsonResponse({"error": str(e)}, status=500)
     
 @csrf_exempt
+@login_required(login_url='home')
+@check_lab_role
 def submit_test_results(request, patient_id):
     if request.method == 'POST':
         patient = get_object_or_404(Patient, id=patient_id)
@@ -3012,6 +3053,7 @@ def submit_test_results(request, patient_id):
     return redirect('lab_test_entry')
 
 @login_required(login_url='home')
+@check_lab_role
 def generate_lab_report(request):
     """
     Generates lab-focused reports based on the selected report type, user (patient/lab technician),
@@ -3261,6 +3303,7 @@ def generate_lab_report(request):
     return JsonResponse({'error': 'Invalid request method.'}, status=400)
 
 @login_required(login_url='home')
+@check_lab_role
 def patient_tests_ajax(request, patient_id):
     """
     AJAX endpoint to fetch patient tests data
@@ -3344,6 +3387,7 @@ def patient_tests_ajax(request, patient_id):
 
 
 @login_required(login_url='home')
+@check_lab_role
 def get_category_subtests(request, category_id):
     """
     AJAX endpoint to fetch sub-tests for a category
@@ -3378,6 +3422,7 @@ def get_category_subtests(request, category_id):
 
 
 @login_required(login_url='home')
+@check_lab_role
 def create_test_with_subtests(request):
     """
     Create a new lab test with selected sub-tests
@@ -3433,6 +3478,7 @@ def create_test_with_subtests(request):
 
 
 @login_required(login_url='home')
+@check_lab_role
 def complete_test_with_results(request):
     """
     Complete a lab test with sub-test results
@@ -3479,6 +3525,8 @@ def complete_test_with_results(request):
     })
 
 @csrf_exempt
+@login_required(login_url='home')
+@check_lab_role
 def patient_search(request):
     query = request.GET.get('q', '').strip()
     lab_mode = request.GET.get('lab_mode') == '1'
@@ -3499,10 +3547,14 @@ def patient_search(request):
 
     return JsonResponse({'results': results})
     
-''' ############################################################################################################################ End Lab View ############################################################################################################################ '''
+''' ############################################################################################################################ 
+                End of Lab View 
+############################################################################################################################ '''
 
 
-''' ############################################################################################################################ HR View ############################################################################################################################ '''
+''' ############################################################################################################################ 
+                        HR View
+############################################################################################################################ '''
 
 @login_required(login_url='home')
 def hr(request):
