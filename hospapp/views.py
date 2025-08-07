@@ -2900,7 +2900,7 @@ def lab_activity_report(request):
 ##### Form Action #####
 
 @csrf_exempt
-@check_lab_role
+@check_receiption_role
 def get_patient_info(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)

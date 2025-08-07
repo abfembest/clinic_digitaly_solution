@@ -20,6 +20,49 @@
     </div><!-- /.container-fluid -->
 </div>
 <!-- /.content-header -->
+<style>
+    /* Scoped styling inside the form container */
+    .container.p-4.shadow-sm {
+        font-size: 0.9rem;
+    }
+
+        .container.p-4.shadow-sm .form-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .container.p-4.shadow-sm .form-control,
+        .container.p-4.shadow-sm .form-select {
+            padding: 0.375rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .container.p-4.shadow-sm textarea.form-control {
+            resize: vertical;
+        }
+
+        .container.p-4.shadow-sm .card {
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 0.5rem;
+            border: 1px solid #e5e5e5;
+        }
+
+        .container.p-4.shadow-sm .card-header {
+            background-color: #f8f9fa;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .container.p-4.shadow-sm .btn-lg {
+            font-size: 1rem;
+            padding: 0.6rem 1.25rem;
+        }
+</style>
+
+
+
+
+
 
 <section class="content">
     <div class="container p-4 shadow-sm">
@@ -45,8 +88,10 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="refer-tab" data-toggle="tab" href="#refer" role="tab">Department
-                        Referral</a>
+                    <a class="nav-link" id="refer-tab" data-toggle="tab" href="#refer" role="tab">
+                        Department
+                        Referral
+                    </a>
                 </li>
             </ul>
 
@@ -67,7 +112,7 @@
                                     <div class="form-group col-md-6">
                                         <label>Full Name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" placeholder="John Doe" required
-                                            name="full_name">
+                                               name="full_name">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>Date of Birth <span class="text-danger">*</span></label>
@@ -87,12 +132,12 @@
                                     <div class="form-group col-md-4">
                                         <label>Phone <span class="text-danger">*</span></label>
                                         <input type="tel" class="form-control" placeholder="+234..." required
-                                            name="phone">
+                                               name="phone">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>Email (optional)</label>
                                         <input type="email" class="form-control" placeholder="example@mail.com"
-                                            name="email">
+                                               name="email">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>Marital Status <span class="text-danger">*</span></label>
@@ -110,12 +155,12 @@
                                     <div class="form-group col-md-6">
                                         <label>Home Address <span class="text-danger">*</span></label>
                                         <textarea class="form-control" rows="2" placeholder="123 Street, City" required
-                                            name="address"></textarea>
+                                                  name="address"></textarea>
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>Nationality <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" placeholder="e.g. Nigerian"
-                                            name="nationality" required value="Nigeria">
+                                               name="nationality" required value="Nigeria">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>State of Origin</label>
@@ -136,7 +181,7 @@
                                     <div class="form-group col-md-4">
                                         <label>ID Number</label>
                                         <input type="text" class="form-control" placeholder="Enter ID number"
-                                            name="id_number">
+                                               name="id_number">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>Upload Photo</label>
@@ -162,7 +207,7 @@
                                     <div class="form-group col-md-8">
                                         <label>Referred By (if any)</label>
                                         <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
-                                            name="referred_by">
+                                               name="referred_by">
                                     </div>
                                 </div>
                             </div>
@@ -178,7 +223,7 @@
                                     <div class="form-group col-md-6">
                                         <label>Next of Kin Name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" placeholder="Next of Kin Full Name"
-                                            name="next_of_kin_name" required>
+                                               name="next_of_kin_name" required>
                                     </div>
                                     <div class="form-group col-md-6">
                                         <label>Relationship <span class="text-danger">*</span></label>
@@ -202,19 +247,19 @@
                                     <div class="form-group col-md-6">
                                         <label>Next of Kin Phone <span class="text-danger">*</span></label>
                                         <input type="tel" class="form-control" placeholder="+234..."
-                                            name="next_of_kin_phone" required>
+                                               name="next_of_kin_phone" required>
                                     </div>
                                     <div class="form-group col-md-6">
                                         <label>Next of Kin Email (optional)</label>
                                         <input type="email" class="form-control" placeholder="example@mail.com"
-                                            name="next_of_kin_email">
+                                               name="next_of_kin_email">
                                     </div>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Next of Kin Address</label>
                                     <textarea class="form-control" rows="2" placeholder="Next of Kin's home address"
-                                        name="next_of_kin_address"></textarea>
+                                              name="next_of_kin_address"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -228,7 +273,7 @@
                                 <div class="form-group">
                                     <label>Additional Notes</label>
                                     <textarea class="form-control" rows="3"
-                                        placeholder="Any other relevant information..." name="notes"></textarea>
+                                              placeholder="Any other relevant information..." name="notes"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -259,7 +304,7 @@
                         <div class="form-group">
                             <label>Reason for Admission <span class="text-danger">*</span></label>
                             <textarea name="admission_reason" class="form-control" rows="3" required
-                                placeholder="Describe the reason for admission"></textarea>
+                                      placeholder="Describe the reason for admission"></textarea>
                         </div>
 
                         <div class="form-group">
@@ -312,7 +357,7 @@
                                 </div>
                                 <div class="card-body text-center">
                                     <img id="patientPhotoDisplay" src="" alt="Patient Photo" class="img-thumbnail"
-                                        style="width: 150px; height: 150px; object-fit: cover; display: none;">
+                                         style="width: 150px; height: 150px; object-fit: cover; display: none;">
                                     <div id="noPhotoMessage" class="text-muted">
                                         <i class="fas fa-user-circle fa-5x"></i>
                                         <p class="mt-2">No photo available</p>
@@ -331,12 +376,12 @@
                                     <div class="form-group col-md-6">
                                         <label>Full Name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" placeholder="John Doe" required
-                                            name="full_name" id="fullNameField">
+                                               name="full_name" id="fullNameField">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>Date of Birth <span class="text-danger">*</span></label>
                                         <input type="date" class="form-control" required name="date_of_birth"
-                                            id="dobField">
+                                               id="dobField">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>Gender <span class="text-danger">*</span></label>
@@ -352,17 +397,17 @@
                                     <div class="form-group col-md-4">
                                         <label>Phone <span class="text-danger">*</span></label>
                                         <input type="tel" class="form-control" placeholder="+234..." required
-                                            name="phone" id="phoneField">
+                                               name="phone" id="phoneField">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>Email (optional)</label>
                                         <input type="email" class="form-control" placeholder="example@mail.com"
-                                            name="email" id="emailField">
+                                               name="email" id="emailField">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>Marital Status <span class="text-danger">*</span></label>
                                         <select class="form-control" name="marital_status" id="maritalStatusField"
-                                            required>
+                                                required>
                                             <option value="" disabled> -- Choose Marital Status --</option>
                                             <option value="Single">Single</option>
                                             <option value="Married">Married</option>
@@ -376,12 +421,12 @@
                                     <div class="form-group col-md-6">
                                         <label>Home Address <span class="text-danger">*</span></label>
                                         <textarea class="form-control" rows="2" placeholder="123 Street, City" required
-                                            name="address" id="addressField"></textarea>
+                                                  name="address" id="addressField"></textarea>
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>Nationality <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" placeholder="e.g. Nigerian"
-                                            name="nationality" id="nationalityField" required>
+                                               name="nationality" id="nationalityField" required>
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label>State of Origin</label>
@@ -402,7 +447,7 @@
                                     <div class="form-group col-md-4">
                                         <label>ID Number</label>
                                         <input type="text" class="form-control" placeholder="Enter ID number"
-                                            name="id_number" id="idNumberField">
+                                               name="id_number" id="idNumberField">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>Update Photo</label>
@@ -429,7 +474,7 @@
                                     <div class="form-group col-md-8">
                                         <label>Referred By (if any)</label>
                                         <input type="text" class="form-control" placeholder="Doctor, Hospital, or Self"
-                                            name="referred_by" id="referredByField">
+                                               name="referred_by" id="referredByField">
                                     </div>
                                 </div>
                             </div>
@@ -445,12 +490,12 @@
                                     <div class="form-group col-md-6">
                                         <label>Next of Kin Name <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" placeholder="Next of Kin Full Name"
-                                            name="next_of_kin_name" id="nextOfKinNameField" required>
+                                               name="next_of_kin_name" id="nextOfKinNameField" required>
                                     </div>
                                     <div class="form-group col-md-6">
                                         <label>Relationship <span class="text-danger">*</span></label>
                                         <select class="form-control" name="next_of_kin_relationship"
-                                            id="nextOfKinRelationshipField" required>
+                                                id="nextOfKinRelationshipField" required>
                                             <option value="">Choose relationship...</option>
                                             <option value="Spouse">Spouse</option>
                                             <option value="Father">Father</option>
@@ -470,19 +515,19 @@
                                     <div class="form-group col-md-6">
                                         <label>Next of Kin Phone <span class="text-danger">*</span></label>
                                         <input type="tel" class="form-control" placeholder="+234..."
-                                            name="next_of_kin_phone" id="nextOfKinPhoneField" required>
+                                               name="next_of_kin_phone" id="nextOfKinPhoneField" required>
                                     </div>
                                     <div class="form-group col-md-6">
                                         <label>Next of Kin Email (optional)</label>
                                         <input type="email" class="form-control" placeholder="example@mail.com"
-                                            name="next_of_kin_email" id="nextOfKinEmailField">
+                                               name="next_of_kin_email" id="nextOfKinEmailField">
                                     </div>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Next of Kin Address</label>
                                     <textarea class="form-control" rows="2" placeholder="Next of Kin's home address"
-                                        name="next_of_kin_address" id="nextOfKinAddressField"></textarea>
+                                              name="next_of_kin_address" id="nextOfKinAddressField"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -496,8 +541,8 @@
                                 <div class="form-group">
                                     <label>Additional Notes</label>
                                     <textarea class="form-control" rows="3"
-                                        placeholder="Any other relevant information..." name="notes"
-                                        id="notesField"></textarea>
+                                              placeholder="Any other relevant information..." name="notes"
+                                              id="notesField"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -518,7 +563,8 @@
                                 <select class="form-control" name="patient_id" required>
                                     <option value="" disabled selected>-- Select Patient --</option>
                                     {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }} - ID: {{ patient.id }}
+                                    <option value="{{ patient.id }}">
+                                        {{ patient.full_name }} - ID: {{ patient.id }}
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -568,7 +614,7 @@
                         <div class="form-group">
                             <label>Referral Note <span class="text-danger">*</span></label>
                             <textarea class="form-control" rows="3" name="notes" required
-                                placeholder="Enter reason for referral"></textarea>
+                                      placeholder="Enter reason for referral"></textarea>
                         </div>
                         <button type="submit" class="btn btn-danger btn-lg">
                             <i class="fas fa-exchange-alt"></i> Transfer Patient
@@ -581,164 +627,176 @@
 </section>
 
 <script>
-// Enhanced AJAX script for patient data fetching with better error handling
-document.getElementById('patientSelect').addEventListener('change', function () {
-    const patientId = this.value;
-    if (!patientId) {
-        clearForm();
-        return;
-    }
-
-    // Show loading state
-    const submitButton = document.querySelector('button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-    submitButton.disabled = true;
-
-    fetch(`/ajax/patient-info/${patientId}/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Patient data received:', data);
-
-            // Handle patient photo display
-            handlePhotoDisplay(data.photo);
-
-            // Populate all form fields
-            populateFormFields(data);
-
-            // Reset button state
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
-        })
-        .catch(error => {
-            console.error('Error fetching patient info:', error);
-            alert('Error loading patient information. Please try again.');
-            
-            // Reset button state
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
-            
+    // Enhanced AJAX script for patient data fetching with better error handling
+    document.getElementById('patientSelect').addEventListener('change', function () {
+        const patientId = this.value;
+        if (!patientId) {
             clearForm();
-        });
-});
-
-function handlePhotoDisplay(photoUrl) {
-    const photoDisplay = document.getElementById('patientPhotoDisplay');
-    const noPhotoMessage = document.getElementById('noPhotoMessage');
-
-    // Always reset the display first
-    photoDisplay.style.display = 'none';
-    noPhotoMessage.style.display = 'block';
-    noPhotoMessage.textContent = 'No photo available';
-
-    if (photoUrl && photoUrl !== '' && photoUrl !== null) {
-        // Show loading state
-        noPhotoMessage.textContent = 'Loading photo...';
-        
-        // Set up error handler BEFORE setting src
-        photoDisplay.onerror = function () {
-            console.log('Image failed to load:', photoUrl);
-            photoDisplay.style.display = 'none';
-            noPhotoMessage.style.display = 'block';
-            noPhotoMessage.textContent = 'Photo not available';
-        };
-
-        // Set up success handler
-        photoDisplay.onload = function () {
-            console.log('Image loaded successfully:', photoUrl);
-            photoDisplay.style.display = 'block';
-            noPhotoMessage.style.display = 'none';
-        };
-
-        // Clear any cached version and set new source
-        photoDisplay.src = '';
-        photoDisplay.src = photoUrl;
-    }
-}
-
-function populateFormFields(data) {
-    // Helper function to safely set input values
-    const setInputValue = (id, value) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.value = value || '';
+            return;
         }
-    };
 
-    // Helper function to set select values
-    const setSelectValue = (selectId, value) => {
-        const select = document.getElementById(selectId);
-        if (select && value) {
-            select.value = value;
-            // If value setting didn't work, try finding by text
-            if (select.value !== value) {
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].text === value || 
-                        select.options[i].value === value ||
-                        select.options[i].text.toLowerCase() === value.toLowerCase()) {
-                        select.selectedIndex = i;
-                        break;
+        // Show loading state
+        const submitButton = document.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+        submitButton.disabled = true;
+
+        fetch(`/ajax/patient-info/${patientId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Patient data received:', data);
+
+                // Handle patient photo display
+                handlePhotoDisplay(data.photo);
+
+                // Populate all form fields
+                populateFormFields(data);
+
+                // Reset button state
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error fetching patient info:', error);
+                alert('Error loading patient information. Please try again.');
+
+                // Reset button state
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+
+                clearForm();
+            });
+    });
+
+    function handlePhotoDisplay(photoUrl) {
+        const photoDisplay = document.getElementById('patientPhotoDisplay');
+        const noPhotoMessage = document.getElementById('noPhotoMessage');
+
+        // Always reset the display first
+        photoDisplay.style.display = 'none';
+        noPhotoMessage.style.display = 'block';
+        noPhotoMessage.textContent = 'No photo available';
+
+        if (photoUrl && photoUrl !== '' && photoUrl !== null) {
+            // Show loading state
+            noPhotoMessage.textContent = 'Loading photo...';
+
+            // Set up error handler BEFORE setting src
+            photoDisplay.onerror = function () {
+                console.log('Image failed to load:', photoUrl);
+                photoDisplay.style.display = 'none';
+                noPhotoMessage.style.display = 'block';
+                noPhotoMessage.textContent = 'Photo not available';
+            };
+
+            // Set up success handler
+            photoDisplay.onload = function () {
+                console.log('Image loaded successfully:', photoUrl);
+                photoDisplay.style.display = 'block';
+                noPhotoMessage.style.display = 'none';
+            };
+
+            // Clear any cached version and set new source
+            photoDisplay.src = '';
+            photoDisplay.src = photoUrl;
+        }
+    }
+
+    function populateFormFields(data) {
+        // Helper function to safely set input values
+        const setInputValue = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || '';
+            }
+        };
+
+        // Helper function to set select values
+        const setSelectValue = (selectId, value) => {
+            const select = document.getElementById(selectId);
+            if (select && value) {
+                select.value = value;
+                // If value setting didn't work, try finding by text
+                if (select.value !== value) {
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].text === value ||
+                            select.options[i].value === value ||
+                            select.options[i].text.toLowerCase() === value.toLowerCase()) {
+                            select.selectedIndex = i;
+                            break;
+                        }
                     }
                 }
+            } else if (select) {
+                select.selectedIndex = 0; // Reset to first option (usually "Choose...")
             }
-        } else if (select) {
-            select.selectedIndex = 0; // Reset to first option (usually "Choose...")
-        }
-    };
+        };
 
-    // Populate basic patient information
-    setInputValue('fullNameField', data.full_name);
-    setInputValue('dobField', data.date_of_birth);
-    setInputValue('phoneField', data.phone);
-    setInputValue('emailField', data.email);
-    setInputValue('addressField', data.address);
-    setInputValue('nationalityField', data.nationality);
-    setInputValue('stateField', data.state_of_origin);
-    setInputValue('idNumberField', data.id_number);
-    setInputValue('referredByField', data.referred_by);
+        // Populate basic patient information
+        setInputValue('fullNameField', data.full_name);
+        setInputValue('dobField', data.date_of_birth);
+        setInputValue('phoneField', data.phone);
+        setInputValue('emailField', data.email);
+        setInputValue('addressField', data.address);
+        setInputValue('nationalityField', data.nationality);
+        setInputValue('stateField', data.state_of_origin);
+        setInputValue('idNumberField', data.id_number);
+        setInputValue('referredByField', data.referred_by);
 
-    // Set select fields
-    setSelectValue('genderField', data.gender);
-    setSelectValue('maritalStatusField', data.marital_status);
-    setSelectValue('idTypeField', data.id_type);
-    setSelectValue('bloodGroupField', data.blood_group);
+        // Set select fields
+        setSelectValue('genderField', data.gender);
+        setSelectValue('maritalStatusField', data.marital_status);
+        setSelectValue('idTypeField', data.id_type);
+        setSelectValue('bloodGroupField', data.blood_group);
 
-    // Populate Next of Kin information
-    setInputValue('nextOfKinNameField', data.next_of_kin_name);
-    setInputValue('nextOfKinPhoneField', data.next_of_kin_phone);
-    setInputValue('nextOfKinEmailField', data.next_of_kin_email);
-    setInputValue('nextOfKinAddressField', data.next_of_kin_address);
-    setSelectValue('nextOfKinRelationshipField', data.next_of_kin_relationship);
+        // Populate Next of Kin information
+        setInputValue('nextOfKinNameField', data.next_of_kin_name);
+        setInputValue('nextOfKinPhoneField', data.next_of_kin_phone);
+        setInputValue('nextOfKinEmailField', data.next_of_kin_email);
+        setInputValue('nextOfKinAddressField', data.next_of_kin_address);
+        setSelectValue('nextOfKinRelationshipField', data.next_of_kin_relationship);
 
-    // Additional notes
-    setInputValue('notesField', data.notes);
-}
+        // Additional notes
+        setInputValue('notesField', data.notes);
+    }
 
-function clearForm() {
-    // Clear all form fields
-    const inputs = document.querySelectorAll('#update input, #update textarea');
-    inputs.forEach(input => {
-        if (input.type !== 'file' && input.name !== 'patient_id') {
-            input.value = '';
-        }
-    });
+    function clearForm() {
+        // Clear all form fields
+        const inputs = document.querySelectorAll('#update input, #update textarea');
+        inputs.forEach(input => {
+            if (input.type !== 'file' && input.name !== 'patient_id') {
+                input.value = '';
+            }
+        });
 
-    const selects = document.querySelectorAll('#update select');
-    selects.forEach(select => {
-        if (select.name !== 'patient_id') {
-            select.selectedIndex = 0;
-        }
-    });
+        const selects = document.querySelectorAll('#update select');
+        selects.forEach(select => {
+            if (select.name !== 'patient_id') {
+                select.selectedIndex = 0;
+            }
+        });
 
-    // Reset photo display
-    document.getElementById('patientPhotoDisplay').style.display = 'none';
-    document.getElementById('noPhotoMessage').style.display = 'block';
-}
+        // Reset photo display
+        document.getElementById('patientPhotoDisplay').style.display = 'none';
+        document.getElementById('noPhotoMessage').style.display = 'block';
+    }
 </script>
+
+<script>
+    $(document).ready(function () {
+        $('.container.p-4.shadow-sm select').select2({
+            width: '100%',
+            minimumResultsForSearch: 5,
+            dropdownParent: $('.container.p-4.shadow-sm') // ensure dropdowns render correctly within container
+        });
+    });
+</script>
+
+
 
 {% endblock %}
