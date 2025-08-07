@@ -4963,7 +4963,7 @@ def notification_data(request):
             notifications.append({
                 "title": "New Patients Assigned",
                 "count": new_admissions_count,
-                "url": "/d/home"
+                "url": "consultations"
             })
             
         # 3. Completed Lab Test Results awaiting doctor's review
