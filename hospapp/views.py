@@ -44,9 +44,6 @@ from datetime import date, datetime, timedelta
 from django.db.models import Case, When, Value, IntegerField, F, Q, Count, Avg
 from calendar import monthrange
 
-
-import string
-import secrets
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
@@ -55,7 +52,8 @@ from django.db.models import Q
 from django.http import HttpResponse # Ensure HttpResponse is imported
 from django.views.decorators.http import require_GET, require_POST
 import re
-
+from django.utils import timezone
+from .utils import check_nurse_role
 
 import logging
 
@@ -146,171 +144,163 @@ def logout_view(request):
 
 ''' ############################################################################################################################ Nurses View ############################################################################################################################ '''
 
+
+@check_nurse_role
 @login_required(login_url='home')
 def nurses(request):
     user = request.user
     today = timezone.now().date()
-    try:
-        staff = Staff.objects.get(user=user)
-        print(staff.role)
-        if staff.role.lower() != 'nurse':
-            logout(request)
-            return redirect('home')
-    except Staff.DoesNotExist:
-        # No staff record found for user — log them out
-        logout(request)
-        return redirect('home')
-    else:
-        # ✅ Get nurse profile
-        nurse_profile = Staff.objects.filter(user=user, role='nurse').first()
+    # ✅ Get nurse profile
+    nurse_profile = Staff.objects.filter(user=user, role='nurse').first()
     
-        # ✅ Patient Statistics
-        active_patients = Patient.objects.filter(is_inpatient=True).count()
-        critical_patients = Patient.objects.filter(status='critical').count()
-        stable_patients = Patient.objects.filter(status='stable').count()
-        recovered_patients = Patient.objects.filter(status='recovered').count()
+    # ✅ Patient Statistics
+    active_patients = Patient.objects.filter(is_inpatient=True).count()
+    critical_patients = Patient.objects.filter(status='critical').count()
+    stable_patients = Patient.objects.filter(status='stable').count()
+    recovered_patients = Patient.objects.filter(status='recovered').count()
     
-        # ✅ Today's activities
-        todays_admissions = Admission.objects.filter(
-            admission_date=today,
-            status='Admitted'
-        ).count()
+    # ✅ Today's activities
+    todays_admissions = Admission.objects.filter(
+        admission_date=today,
+        status='Admitted'
+    ).count()
     
-        # ✅ Recent nursing notes (all nurses for overview, but highlight current nurse's notes)
-        recent_notes = NursingNote.objects.select_related('patient', 'nurse').order_by('-note_datetime')[:10]
+    # ✅ Recent nursing notes (all nurses for overview, but highlight current nurse's notes)
+    recent_notes = NursingNote.objects.select_related('patient', 'nurse').order_by('-note_datetime')[:10]
     
-        # ✅ My recent activities (nurse-specific)
-        my_recent_notes = NursingNote.objects.filter(
-            nurse=user
-        ).select_related('patient').order_by('-note_datetime')[:5]
+    # ✅ My recent activities (nurse-specific)
+    my_recent_notes = NursingNote.objects.filter(
+        nurse=user
+    ).select_related('patient').order_by('-note_datetime')[:5]
     
-        # ✅ Patients requiring follow-up (based on nursing notes)
-        patients_needing_followup = NursingNote.objects.filter(
-            follow_up__isnull=False
-        ).exclude(follow_up='').select_related('patient').order_by('-note_datetime')[:5]
+    # ✅ Patients requiring follow-up (based on nursing notes)
+    patients_needing_followup = NursingNote.objects.filter(
+        follow_up__isnull=False
+    ).exclude(follow_up='').select_related('patient').order_by('-note_datetime')[:5]
     
-        # ✅ Critical patients details for immediate attention
-        critical_patients_list = Patient.objects.filter(
-            status='critical',
-            is_inpatient=True
-        ).order_by('-date_registered')[:5]
+    # ✅ Critical patients details for immediate attention
+    critical_patients_list = Patient.objects.filter(
+        status='critical',
+        is_inpatient=True
+    ).order_by('-date_registered')[:5]
     
-        # ✅ Recent vitals recorded (last 24 hours)
-        recent_vitals = Vitals.objects.filter(
-            recorded_at__gte=timezone.now() - timedelta(hours=24)
-        ).select_related('patient', 'recorded_by').order_by('-recorded_at')[:8]
+    # ✅ Recent vitals recorded (last 24 hours)
+    recent_vitals = Vitals.objects.filter(
+        recorded_at__gte=timezone.now() - timedelta(hours=24)
+    ).select_related('patient', 'recorded_by').order_by('-recorded_at')[:8]
     
-        # ✅ Today's discharges
-        todays_discharges = Admission.objects.filter(
-            discharge_date=today,
-            status='Discharged'
-        ).count()
+    # ✅ Today's discharges
+    todays_discharges = Admission.objects.filter(
+        discharge_date=today,
+        status='Discharged'
+    ).count()
     
-        # ✅ Patients admitted today (detailed)
-        todays_new_admissions = Admission.objects.filter(
-            admission_date=today,
-            status='Admitted'
-        ).select_related('patient', 'admitted_by').order_by('-time')[:5]
+    # ✅ Patients admitted today (detailed)
+    todays_new_admissions = Admission.objects.filter(
+        admission_date=today,
+        status='Admitted'
+    ).select_related('patient', 'admitted_by').order_by('-time')[:5]
     
-        # ✅ My shift information
-        my_shift_today = ShiftAssignment.objects.filter(
-            staff=user,
-            date=today
-        ).first()
+    # ✅ My shift information
+    my_shift_today = ShiftAssignment.objects.filter(
+        staff=user,
+        date=today
+    ).first()
     
-        # ✅ Pending handovers (received by current nurse)
-        pending_handovers = HandoverLog.objects.filter(
-            recipient=user,
-            timestamp__date=today
-        ).select_related('patient', 'author').order_by('-timestamp')[:5]
+    # ✅ Pending handovers (received by current nurse)
+    pending_handovers = HandoverLog.objects.filter(
+        recipient=user,
+        timestamp__date=today
+    ).select_related('patient', 'author').order_by('-timestamp')[:5]
     
-        # ✅ Emergency alerts (recent)
-        recent_alerts = EmergencyAlert.objects.filter(
-            timestamp__gte=timezone.now() - timedelta(hours=24)
-        ).exclude(acknowledged_by=user).order_by('-timestamp')[:3]
+    # ✅ Emergency alerts (recent)
+    recent_alerts = EmergencyAlert.objects.filter(
+        timestamp__gte=timezone.now() - timedelta(hours=24)
+    ).exclude(acknowledged_by=user).order_by('-timestamp')[:3]
     
-        # ✅ Patients I've worked with recently (last 7 days)
-        my_recent_patients = Patient.objects.filter(
-            Q(nursing_notes__nurse=user) | 
-            Q(vitals__recorded_by=user)
+    # ✅ Patients I've worked with recently (last 7 days)
+    my_recent_patients = Patient.objects.filter(
+        Q(nursing_notes__nurse=user) | 
+        Q(vitals__recorded_by=user)
+    ).filter(
+        Q(nursing_notes__created_at__gte=timezone.now() - timedelta(days=7)) |
+        Q(vitals__recorded_at__gte=timezone.now() - timedelta(days=7))
+    ).distinct().order_by('-date_registered')[:10]
+    
+    # ✅ Statistics for current nurse
+    my_stats = {
+        'notes_today': NursingNote.objects.filter(
+            nurse=user,
+            created_at__date=today
+        ).count(),
+        'vitals_recorded_today': Vitals.objects.filter(
+            recorded_by=user,
+            recorded_at__date=today
+        ).count(),
+        'patients_cared_this_week': Patient.objects.filter(
+            Q(nursing_notes__nurse=user) | Q(vitals__recorded_by=user)
         ).filter(
             Q(nursing_notes__created_at__gte=timezone.now() - timedelta(days=7)) |
             Q(vitals__recorded_at__gte=timezone.now() - timedelta(days=7))
-        ).distinct().order_by('-date_registered')[:10]
+        ).distinct().count()
+    }
     
-        # ✅ Statistics for current nurse
-        my_stats = {
-            'notes_today': NursingNote.objects.filter(
-                nurse=user,
-                created_at__date=today
-            ).count(),
-            'vitals_recorded_today': Vitals.objects.filter(
-                recorded_by=user,
-                recorded_at__date=today
-            ).count(),
-            'patients_cared_this_week': Patient.objects.filter(
-                Q(nursing_notes__nurse=user) | Q(vitals__recorded_by=user)
-            ).filter(
-                Q(nursing_notes__created_at__gte=timezone.now() - timedelta(days=7)) |
-                Q(vitals__recorded_at__gte=timezone.now() - timedelta(days=7))
-            ).distinct().count()
-        }
-    
-        # ✅ Attendance status
-        my_attendance_today = Attendance.objects.filter(
-            staff=user,
-            date__date=today
-        ).first()
+    # ✅ Attendance status
+    my_attendance_today = Attendance.objects.filter(
+        staff=user,
+        date__date=today
+    ).first()
 
-        # ⭐ NEW: Get all active patients with their latest vital signs for status monitoring
-        # This query annotates each active patient with the timestamp of their most recent vital sign.
-        active_patients_details = Patient.objects.filter(is_inpatient=True).annotate(
-            last_vitals_recorded_at=Coalesce(Max('vitals__recorded_at'), None)
-        ).order_by('full_name')
+    # ⭐ NEW: Get all active patients with their latest vital signs for status monitoring
+    # This query annotates each active patient with the timestamp of their most recent vital sign.
+    active_patients_details = Patient.objects.filter(is_inpatient=True).annotate(
+        last_vitals_recorded_at=Coalesce(Max('vitals__recorded_at'), None)
+    ).order_by('full_name')
     
-        context = {
-            # Profile & Authentication
-            'nurse_profile': nurse_profile,
-            'user': user,
+    context = {
+        # Profile & Authentication
+        'nurse_profile': nurse_profile,
+        'user': user,
         
-            # Dashboard Statistics
-            'active_patients': active_patients,
-            'critical_patients': critical_patients,
-            'stable_patients': stable_patients,
-            'recovered_patients': recovered_patients,
-            'todays_admissions': todays_admissions,
-            'todays_discharges': todays_discharges,
+        # Dashboard Statistics
+        'active_patients': active_patients,
+        'critical_patients': critical_patients,
+        'stable_patients': stable_patients,
+        'recovered_patients': recovered_patients,
+        'todays_admissions': todays_admissions,
+        'todays_discharges': todays_discharges,
         
-            # Recent Activities
-            'recent_notes': recent_notes,
-            'my_recent_notes': my_recent_notes,
-            'recent_vitals': recent_vitals,
-            'todays_new_admissions': todays_new_admissions,
+        # Recent Activities
+        'recent_notes': recent_notes,
+        'my_recent_notes': my_recent_notes,
+        'recent_vitals': recent_vitals,
+        'todays_new_admissions': todays_new_admissions,
         
-            # Priority Items
-            'critical_patients_list': critical_patients_list,
-            'patients_needing_followup': patients_needing_followup,
-            'pending_handovers': pending_handovers,
-            'recent_alerts': recent_alerts,
+        # Priority Items
+        'critical_patients_list': critical_patients_list,
+        'patients_needing_followup': patients_needing_followup,
+        'pending_handovers': pending_handovers,
+        'recent_alerts': recent_alerts,
         
-            # Personal Work Data
-            'my_recent_patients': my_recent_patients,
-            'my_stats': my_stats,
-            'my_shift_today': my_shift_today,
-            'my_attendance_today': my_attendance_today,
+        # Personal Work Data
+        'my_recent_patients': my_recent_patients,
+        'my_stats': my_stats,
+        'my_shift_today': my_shift_today,
+        'my_attendance_today': my_attendance_today,
         
-            # Utility
-            'today': today,
-            'current_time': timezone.now(),
-            'patients': Patient.objects.all(), # Keep for generic patient lists in modals
-            'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
+        # Utility
+        'today': today,
+        'current_time': timezone.now(),
+        'patients': Patient.objects.all(), # Keep for generic patient lists in modals
+        'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
 
-            # ⭐ NEW: Data for patient status monitoring (excluding rooms)
-            'active_patients_details': active_patients_details,
-        }
+        # ⭐ NEW: Data for patient status monitoring (excluding rooms)
+        'active_patients_details': active_patients_details,
+    }
     
-        return render(request, 'nurses/index.html', context)
+    return render(request, 'nurses/index.html', context)
 
+@check_nurse_role
 @login_required(login_url='home')                          
 def vitals(request):
     context = {
@@ -318,6 +308,7 @@ def vitals(request):
     }
     return render(request, 'nurses/vital_signs.html', context)
 
+@check_nurse_role
 @login_required(login_url='home')
 def nursing_actions(request):
     context = {
@@ -329,6 +320,8 @@ def nursing_actions(request):
     }
     return render(request, 'nurses/nursing_actions.html', context)
 
+
+@check_nurse_role
 @login_required(login_url='home')
 def nurse_reports_dashboard(request):
     """
@@ -345,7 +338,8 @@ def nurse_reports_dashboard(request):
         'users': patients_data,
     }
     return render(request, 'nurses/reports.html', context)
-        
+ 
+@check_nurse_role
 @login_required
 @require_http_methods(["GET"])
 def nurse_view_ivf_progress(request):
@@ -356,6 +350,7 @@ def nurse_view_ivf_progress(request):
     return render(request, 'nurses/ivf_progress.html', context)
 
 ###### Form Actions ######
+@check_nurse_role
 @csrf_exempt
 def record_vitals(request):
     if request.method == 'POST':
@@ -380,6 +375,7 @@ def record_vitals(request):
     referer = request.META.get('HTTP_REFERER', '/')
     return redirect(referer)
 
+@check_nurse_role
 @csrf_exempt
 @login_required(login_url='home')
 def admit_patient_nurse(request):
@@ -435,6 +431,7 @@ def admit_patient_nurse(request):
     return redirect(referer)
 
 @csrf_exempt  # Optional in development, but use CSRF tokens in production
+@check_nurse_role
 @login_required(login_url='home')
 def discharge_patient(request):
     referer = request.META.get('HTTP_REFERER', '/')
@@ -486,6 +483,7 @@ def discharge_patient(request):
 
 
 @csrf_exempt
+@check_nurse_role
 @login_required(login_url='home')
 def update_patient_status(request):
     if request.method == 'POST':
@@ -523,35 +521,10 @@ def update_patient_status(request):
     return redirect('nursing_actions')
 
 
-# @csrf_exempt
-# @login_required(login_url='home')
-# def refer_patient(request):
-#     if request.method == 'POST':
-#         patient_id = request.POST.get('patient_id')
-#         department_id = request.POST.get('department') #
-#         notes = request.POST.get('notes') #
-#         priority = request.POST.get('priority') #
-        
-#         patient = get_object_or_404(Patient, id=patient_id)
-#         department = get_object_or_404(Department, id=department_id)
-
-#         # Prepend priority to notes since there's no dedicated field in the model
-#         referral_notes = f"PRIORITY: {priority.upper()}\n\n{notes}"
-
-#         Referral.objects.create(
-#             patient=patient,
-#             department=department,
-#             priority=priority, #
-#             notes=referral_notes #
-#         )
-
-#         messages.success(request, f"{patient.full_name} has been referred to {department.name}.")
-#         return redirect('nursing_actions')
-
-#     return redirect('nursing_actions')
 
 @csrf_exempt
 @login_required(login_url='home')
+@check_nurse_role
 def save_nursing_note(request):
     referer = request.META.get('HTTP_REFERER', '/')
     if request.method == 'POST':
@@ -583,6 +556,7 @@ def save_nursing_note(request):
 
 @csrf_exempt
 @login_required(login_url='home')
+@check_nurse_role
 def handover_log(request):
     if request.method == 'POST':
         patient_id = request.POST.get('patient_id')
@@ -621,6 +595,7 @@ def handover_log(request):
 
 @csrf_exempt
 @login_required(login_url='home')
+@check_nurse_role
 def get_patient_details(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)
@@ -661,6 +636,7 @@ def get_patient_details(request, patient_id):
         return JsonResponse({'error': 'Patient not found'}, status=404)
     
 @login_required(login_url='home')
+@check_nurse_role
 def generate_nurse_report(request):
     """
     Generates a report based on the selected report type, user (patient), and date range.
@@ -944,6 +920,7 @@ def generate_nurse_report(request):
 ''' ############################################################################################################################ Doctors View ############################################################################################################################ '''
 
 @login_required(login_url='home')
+@check_nurse_role
 def doctors(request):
     return render(request, 'doctors/index.html')
 
@@ -956,6 +933,7 @@ def doctor_consultation(request):
     return render(request, 'doctors/consultation.html', context)
 
 @login_required(login_url='home')
+@check_nurse_role
 def access_medical_records(request):
     view_type = request.GET.get('view')
     patients = Patient.objects.all()
@@ -976,7 +954,7 @@ def requesttest(request):
         'categories': categories,
         'patients': patients
     })
-
+@check_nurse_role
 def recomended_tests(request):
     if request.method == 'POST':
         test_id = request.POST.get('test_id')
