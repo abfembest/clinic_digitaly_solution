@@ -210,7 +210,7 @@
                     <div class="menu-icon pending">
                         <i class="bi bi-flask"></i>
                     </div>
-                    <div class="menu-title">New Test Entry</div>
+                    <div class="menu-title">Pending tests</div>
                     <div class="menu-subtitle">Initiate a new IVF test request and patient details</div>
                 </div>
             </div>
@@ -229,9 +229,9 @@
 
         <div class="quick-actions">
             <h5 class="mb-3">Quick Actions</h5>
-            <a href="{% url lab_test_entry_url %}" class="btn action-btn"><i class="bi bi-plus-circle me-2"></i>New Test Entry</a>
-            <a href="{% url pending_tests_url %}?status=pending" class="btn action-btn"><i class="bi bi-calendar-plus me-2"></i>View Pending</a>
-            <a href="{% url test_logs_url %}" class="btn action-btn"><i class="bi bi-printer me-2"></i>View All Test Logs</a>
+            <a href="{% url lab_test_entry_url %}" class="btn action-btn"><i class="bi bi-plus-circle me-2"></i>Pending tests</a>
+            <a href="{% url pending_tests_url %}?status=pending" class="btn action-btn"><i class="bi bi-calendar-plus me-2"></i>View test logs</a>
+            <a href="{% url 'lab_ivf_progress' %}" class="btn action-btn"><i class="bi bi-printer me-2"></i>View IVF Cycles</a>
             <a href="{% url logout_url %}" class="btn action-btn"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
         </div>
     </div>
@@ -466,44 +466,7 @@
             </section>
 
             <section class="col-lg-5 connectedSortable">
-                <div class="card bg-gradient-primary">
-                    <div class="card-header border-0">
-                        <h3 class="card-title">
-                            <i class="fas fa-bolt mr-1"></i>
-                            Quick Actions
-                        </h3>
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-primary btn-sm" data-card-widget="collapse" title="Collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <a href="{% url lab_test_entry_url %}" class="btn btn-light btn-lg btn-block">
-                                    <i class="fas fa-plus mr-2"></i>Enter New Test
-                                </a>
-                            </div>
-
-                            <div class="col-6">
-                                <a href="{% url test_logs_url %}" class="btn btn-outline-light btn-block">
-                                    <i class="fas fa-list mr-1"></i>View Logs
-                                </a>
-                            </div>
-                            <div class="col-6">
-                                <a href="{% url pending_tests_url %}?status=pending" class="btn btn-outline-light btn-block">
-                                    <i class="fas fa-clock mr-1"></i>View Pending
-                                </a>
-                            </div>
-                            <div class="col-12 mt-3">
-                                <a href="{% url logout_url %}" class="btn btn-danger btn-block">
-                                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                               
 
                 {% if awaiting_tests %}
                 <div class="card">
