@@ -38,7 +38,7 @@
                 <li class="nav-item">
                     <span class="nav-link text-muted">
                         <i class="fas fa-user mr-1"></i>
-                        {{ user.get_full_name|default:user.username }}
+                        {{ user.get_full_name }}
                     </span>
                 </li>
                 <li class="nav-item">
@@ -71,8 +71,8 @@
                         {% endif %}
                     </div>
                     <div class="info">
-                        <a href="#" class="d-block">{{ user.get_full_name|default:user.username }}</a>
-                        <small class="text-muted text-capitalize">{{ user.staff.role }}</small>
+                        <b class="d-block text-white">{{ user.get_full_name|default:user.username }}</b>
+                        
                     </div>
                 </div>
 
