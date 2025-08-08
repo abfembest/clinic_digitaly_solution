@@ -129,12 +129,6 @@
                         <h5 class="card-title">Reports and Data</h5>
                         <p class="card-text">Access comprehensive reports and analytical data for patient management. </p>
                     </div>
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-primary">{{ reports_available_count }} Reports Available</span>
-                            <span class="badge bg-success">{{ updated_today_count }} Updated Today</span>
-                        </div>
-                    </div>
                 </div>
                 <div class="card-footer py-3">
                     <a href="{% url 'doctor_report' %}" class="action-link">View Reports <i
@@ -142,6 +136,31 @@
                 </div>
             </div>
         </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-feature">
+                <div class="card-body d-flex flex-column justify-content-between py-4">
+                    <div>
+                        <div class="icon-container bg-appointments">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h5 class="card-title">Appointments</h5>
+                        <p class="card-text">View and manage your scheduled appointments with patients.</p>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-primary">{{ upcoming_appointments_count }} Upcoming</span>
+                            <span class="badge bg-success">{{ today_appointments_count }} Today</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer py-3">
+                    <a href="{ url 'appointments' %}" class="action-link">View Appointments <i
+                            class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+        
     </div> <div class="container py-5">
         <div class="card shadow-lg">
             <div class="card-body">
