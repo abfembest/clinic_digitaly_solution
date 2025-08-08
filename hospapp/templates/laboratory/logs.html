@@ -25,75 +25,6 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-12">
-        <!-- Filter Card -->
-        <div class="card card-outline card-info mb-3 collapsed-card">
-          <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-            <div class="card-tools">
-              <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                <i class="fas fa-plus"></i>
-              </button>
-            </div>
-          </div>
-          <div class="card-body" style="display: none;">
-            <form method="get">
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label>Date Range:</label>
-                    <div class="input-group">
-                      <div class="input-group-prepend">
-                        <span class="input-group-text">
-                          <i class="far fa-calendar-alt"></i>
-                        </span>
-                      </div>
-                      <input type="text" class="form-control float-right" id="date-range" name="date_range" placeholder="Select date range">
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label>Test Type:</label>
-                    <select class="form-control" name="test_type">
-                      <option value="">All Types</option>
-                      <option value="semen">Semen Analysis</option>
-                      <option value="blood">Blood Screening</option>
-                      <option value="hormone">Hormonal Assay</option>
-                      <option value="pregnancy">Pregnancy Test</option>
-                      <option value="infection">Infection Screening</option>
-                      <option value="combined">Combined Tests</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="form-group">
-                    <label>Status:</label>
-                    <select class="form-control" name="status">
-                      <option value="">All Status</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Pending">Pending</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-8">
-                  <div class="form-group">
-                    <label>Search Patient:</label>
-                    <input type="text" class="form-control" name="patient_search" placeholder="Enter patient name or ID">
-                  </div>
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                  <button type="submit" class="btn btn-primary btn-block">
-                    <i class="fas fa-search mr-2"></i>Apply Filters
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-        
-        <!-- Test Logs Card -->
         {% if lab_logs %}
         <div class="card">
           <div class="card-header bg-primary">
@@ -117,12 +48,51 @@
               </div>
             </div>
           </div>
-          <div class="card-body p-0">
+          <div class="card-body">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Date Range:</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text">
+                        <i class="far fa-calendar-alt"></i>
+                      </span>
+                    </div>
+                    <input type="text" class="form-control float-right" id="date-range-filter" placeholder="Select date range">
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Test Type:</label>
+                  <select class="form-control" id="test-type-filter">
+                    <option value="">All Types</option>
+                    {% for test_type in unique_test_types %}
+                      <option value="{{ test_type }}">{{ test_type }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Status:</label>
+                  <select class="form-control" id="status-filter">
+                    <option value="">All Status</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
             <div class="table-responsive">
-              <table class="table table-hover table-striped">
+              <table id="labLogsTable" class="table table-hover table-striped">
                 <thead class="thead-light">
                   <tr>
-                    <th>ID</th>
+                    <th>Patient ID</th>
                     <th>Date</th>
                     <th>Patient</th>
                     <th>Test Type</th>
@@ -135,7 +105,7 @@
                 <tbody>
                   {% for log in lab_logs %}
                   <tr>
-                    <td><span class="badge badge-secondary">{{ log.id }}</span></td>
+                    <td><span class="badge badge-secondary">{{ log.patient_id }}</span></td>
                     <td>{{ log.date|date:"M d, Y" }}</td>
                     <td>{{ log.patient_name }}</td>
                     <td>{{ log.test_type }}</td>
@@ -149,6 +119,8 @@
                       <span class="badge badge-pill 
                         {% if log.status == 'Completed' %}badge-success
                         {% elif log.status == 'Pending' %}badge-warning
+                        {% elif log.status == 'In Progress' %}badge-info
+                        {% elif log.status == 'Cancelled' %}badge-danger
                         {% else %}badge-secondary{% endif %}">
                         {{ log.status }}
                       </span>
@@ -158,7 +130,7 @@
                         <button type="button" class="btn btn-info btn-sm view-details-btn" 
                           data-toggle="modal" 
                           data-target="#logDetailsModal" 
-                          data-log-id="{{ log.id }}">
+                          data-test-request-id="{{ log.test_request_id }}">
                           <i class="fas fa-eye"></i> View
                         </button>
                         <button type="button" class="btn btn-primary btn-sm">
@@ -170,30 +142,6 @@
                   {% endfor %}
                 </tbody>
               </table>
-            </div>
-          </div>
-          <div class="card-footer">
-            <div class="row">
-              <div class="col-sm-12 col-md-5">
-                <div class="dataTables_info" role="status" aria-live="polite">
-                  Showing entries 1 to {{ lab_logs|length }} of {{ lab_logs|length }}
-                </div>
-              </div>
-              <div class="col-sm-12 col-md-7">
-                <div class="dataTables_paginate paging_simple_numbers">
-                  <ul class="pagination justify-content-end">
-                    <li class="paginate_button page-item previous disabled">
-                      <a href="#" class="page-link">Previous</a>
-                    </li>
-                    <li class="paginate_button page-item active">
-                      <a href="#" class="page-link">1</a>
-                    </li>
-                    <li class="paginate_button page-item next disabled">
-                      <a href="#" class="page-link">Next</a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -208,9 +156,8 @@
   </div>
 </section>
 
-<!-- Modal -->
 <div class="modal fade" id="logDetailsModal" tabindex="-1" role="dialog" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog modal-xl" role="document">
     <div class="modal-content">
       <div class="modal-header bg-info text-white">
         <h5 class="modal-title" id="logDetailsModalLabel">
@@ -228,7 +175,6 @@
           <p class="mt-3 text-muted">Loading test details...</p>
         </div>
         <div id="modal-content" style="display: none;">
-          <!-- Content will be loaded via AJAX -->
         </div>
       </div>
       <div class="modal-footer">
@@ -244,122 +190,166 @@
 </div>
 
 <script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
-
 <script>
   $(document).ready(function() {
-    // Initialize date range picker if available
-    if ($.fn.daterangepicker) {
-      $('#date-range').daterangepicker({
-        locale: {
-          format: 'MM/DD/YYYY'
+    // Initialize DataTable
+    var table = $('#labLogsTable').DataTable({
+      "responsive": true,
+      "lengthChange": false,
+      "autoWidth": false,
+      "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"],
+      "columnDefs": [
+        { "orderable": false, "targets": 7 } // Disable ordering on the "Actions" column
+      ]
+    });
+
+    table.buttons().container().appendTo('#labLogsTable_wrapper .col-md-6:eq(0)');
+
+    // Initialize date range picker
+    var dateRangeFilter = $('#date-range-filter').daterangepicker({
+      autoUpdateInput: false,
+      locale: {
+        cancelLabel: 'Clear'
+      }
+    });
+
+    dateRangeFilter.on('apply.daterangepicker', function(ev, picker) {
+      $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+      table.draw();
+    });
+
+    dateRangeFilter.on('cancel.daterangepicker', function(ev, picker) {
+      $(this).val('');
+      table.draw();
+    });
+
+    // Custom filtering functions
+    $.fn.dataTable.ext.search.push(
+      function(settings, data, dataIndex) {
+        // Date range filter (assuming date is in the second column, index 1)
+        var dateRange = $('#date-range-filter').val();
+        if (dateRange) {
+          var dateString = data[1]; 
+          var date = moment(dateString, 'MMM DD, YYYY'); 
+          var start = moment(dateRange.split(' - ')[0], 'MM/DD/YYYY');
+          var end = moment(dateRange.split(' - ')[1], 'MM/DD/YYYY');
+          if (date.isBefore(start) || date.isAfter(end)) {
+            return false;
+          }
         }
-      });
-    }
-    
+
+        // Test type filter (assuming test type is in the fourth column, index 3)
+        var testType = $('#test-type-filter').val();
+        if (testType && testType !== data[3].trim()) {
+          return false;
+        }
+
+        // Status filter (assuming status is in the seventh column, index 6)
+        var status = $('#status-filter').val();
+        if (status && status !== data[6].trim()) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+
+    // Apply filters on change
+    $('#test-type-filter, #status-filter').on('change', function() {
+      table.draw();
+    });
+
     // Modal detail loading
     $('#logDetailsModal').on('show.bs.modal', function(event) {
       var button = $(event.relatedTarget);
-      var logId = button.data('log-id');
+      var testRequestId = button.data('test-request-id');
       var modal = $(this);
       
       modal.find('#modal-loading').show();
       modal.find('#modal-content').hide();
       
       $.ajax({
-        url: "{% url 'lab_log_detail_ajax' %}", // Ensure this URL name is correct in your urls.py
-        data: { 'log_id': logId },
+        url: "{% url 'lab_log_detail_ajax' %}", // URL to fetch a group of tests
+        data: { 'test_request_id': testRequestId },
         dataType: 'json',
         success: function(data) {
           modal.find('#modal-loading').hide();
           
-          var contentHtml = `
-            <div class="card card-primary card-outline card-outline-tabs">
-              <div class="card-header p-0 border-bottom-0">
-                <ul class="nav nav-tabs" id="test-detail-tabs" role="tablist">
-                  <li class="nav-item">
-                    <a class="nav-link active" id="general-tab" data-toggle="pill" href="#general" role="tab" aria-controls="general" aria-selected="true">
-                      General Info
-                    </a>
+          var contentHtml = `<div class="card card-primary card-outline">
+            <div class="card-header">
+              <h3 class="card-title">Test Request Details for Patient: <strong>${data.patient_name}</strong></h3>
+              <div class="card-tools">
+                <span class="badge badge-info">${data.total_tests} Test(s)</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="mb-4">
+                <h4><i class="fas fa-info-circle mr-2"></i>General Information</h4>
+                <ul class="list-group list-group-unbordered mb-3">
+                  <li class="list-group-item">
+                    <b>Patient Name:</b> <span class="float-right">${data.patient_name}</span>
                   </li>
-                  <li class="nav-item">
-                    <a class="nav-link" id="results-tab" data-toggle="pill" href="#results" role="tab" aria-controls="results" aria-selected="false">
-                      Test Results
-                    </a>
+                  <li class="list-group-item">
+                    <b>Date Requested:</b> <span class="float-right">${moment(data.date_requested).format('MMMM Do, YYYY')}</span>
+                  </li>
+                  <li class="list-group-item">
+                    <b>Requesting Doctor:</b> <span class="float-right">${data.requesting_doctor || 'N/A'}</span>
+                  </li>
+                  <li class="list-group-item">
+                    <b>Total Tests:</b> <span class="float-right">${data.total_tests}</span>
+                  </li>
+                  <li class="list-group-item">
+                    <b>Category:</b> <span class="float-right">${data.tests[0].category || 'N/A'}</span>
+                  </li>
+                  <li class="list-group-item">
+                    <b>Performed By:</b> <span class="float-right">${data.tests[0].recorded_by || 'N/A'}</span>
                   </li>
                 </ul>
               </div>
-              <div class="card-body">
-                <div class="tab-content" id="test-detail-tabContent">
-                  <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
-                    <div class="row">
-                      <div class="col-md-6">
-                        <div class="info-box bg-light">
-                          <div class="info-box-content">
-                            <span class="info-box-text text-muted">Patient</span>
-                            <span class="info-box-number">${data.patient}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-6">
-                        <div class="info-box bg-light">
-                          <div class="info-box-content">
-                            <span class="info-box-text text-muted">Test Type</span>
-                            <span class="info-box-number">${data.test_type}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-md-6">
-                        <div class="info-box bg-light">
-                          <div class="info-box-content">
-                            <span class="info-box-text text-muted">Date Recorded</span>
-                            <span class="info-box-number">${data.date}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-md-6">
-                        <div class="info-box bg-light">
-                          <div class="info-box-content">
-                            <span class="info-box-text text-muted">Recorded By</span>
-                            <span class="info-box-number">${data.recorded_by}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col-12">
-                        <div class="callout callout-info">
-                          <h5>Notes</h5>
-                          <p>${data.notes || 'No additional notes provided.'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="tab-pane fade" id="results" role="tabpanel" aria-labelledby="results-tab">
-                    <div class="table-responsive">
-                      <table class="table table-bordered">
-                        <thead class="thead-light">
-                          <tr>
-                            <th>Parameter</th>
-                            <th>Result</th>
-                            <th>Normal Range</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>Main Result</td>
-                            <td>${data.result_value}</td>
-                            <td>${data.normal_range}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+              
+              <h4><i class="fas fa-flask mr-2"></i>Individual Test Results</h4>
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                  <thead>
+                    <tr>
+                      <th>Test Name</th>
+                      <th>Status</th>
+                      <th>Key Results</th>
+                      <th>Normal Range</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+                  
+          data.tests.forEach(function(test) {
+            var statusBadge = '';
+            if (test.status === 'Completed') {
+              statusBadge = `<span class="badge badge-success">${test.status}</span>`;
+            } else if (test.status === 'Pending') {
+              statusBadge = `<span class="badge badge-warning">${test.status}</span>`;
+            } else if (test.status === 'In Progress') {
+              statusBadge = `<span class="badge badge-info">${test.status}</span>`;
+            } else if (test.status === 'Cancelled') {
+              statusBadge = `<span class="badge badge-danger">${test.status}</span>`;
+            }
+
+            contentHtml += `
+                    <tr>
+                      <td>${test.test_name}</td>
+                      <td>${statusBadge}</td>
+                      <td>${test.key_results}</td>
+                      <td>${test.normal_range}</td>
+                      <td>${test.notes || 'N/A'}</td>
+                    </tr>`;
+          });
+
+          contentHtml += `
+                  </tbody>
+                </table>
               </div>
-            </div>`;
-          
+            </div>
+          </div>`;
+
           modal.find('#modal-content').html(contentHtml).fadeIn();
         },
         error: function(xhr, status, error) {

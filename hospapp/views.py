@@ -2852,6 +2852,9 @@ def lab_test_entry(request):
 def lab_internal_logs(request):
     lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'category').order_by('-requested_at')
 
+    # Get distinct test types for the filter dropdown
+    unique_test_types = LabTest.objects.exclude(category__isnull=True).order_by('category__name').values_list('category__name', flat=True).distinct()
+
     logs = []
     for test in lab_tests:
         key_results = test.result_value if test.result_value else "N/A"
@@ -2859,7 +2862,8 @@ def lab_internal_logs(request):
         display_status = test.status.capitalize() if test.status else "N/A"
 
         logs.append({
-            'id': test.id,
+            'patient_id': test.patient.patient_id, # Corrected to patient_id
+            'test_request_id': test.test_request_id, # Added test_request_id
             'date': test.date_performed.date() if test.date_performed else test.requested_at.date(),
             'patient_name': test.patient.full_name,
             'test_type': test.category.name if test.category else "Unknown Test Type",
@@ -2871,6 +2875,7 @@ def lab_internal_logs(request):
 
     context = {
         'lab_logs': logs,
+        'unique_test_types': unique_test_types,
     }
     return render(request, 'laboratory/logs.html', context)
 
@@ -2970,31 +2975,50 @@ def test_details(request, patient_id):
         'pending_tests': dict(grouped_tests),
         'patient': patient
     })
+
 @login_required(login_url='home')
 @check_lab_role
 def lab_log_detail_ajax(request):
-    log_id = request.GET.get('log_id')
-    if not log_id:
-        return JsonResponse({"error": "Missing log ID"}, status=400)
+    test_request_id = request.GET.get('test_request_id')
+    if not test_request_id:
+        return JsonResponse({"error": "Missing test request ID"}, status=400)
 
     try:
-        # Pre-fetch related objects for efficiency
-        lab_test = get_object_or_404(LabTest.objects.select_related('patient', 'recorded_by', 'category'), id=log_id)
+        # Fetch all LabTest objects with the same test_request_id
+        lab_tests = LabTest.objects.filter(
+            test_request_id=test_request_id
+        ).select_related(
+            'patient', 'recorded_by', 'category'
+        ).order_by('requested_at')
+        
+        if not lab_tests.exists():
+            return JsonResponse({"error": "No lab tests found for this request ID."}, status=404)
+
+        # Get the first test to retrieve common patient info
+        first_test = lab_tests.first()
+        patient_name = first_test.patient.full_name
+        
+        tests_data = []
+        for test in lab_tests:
+            tests_data.append({
+                'test_name': test.test_name,
+                'category': test.category.name if test.category else "N/A",
+                'date_performed': (test.date_performed or test.requested_at).strftime('%b %d, %Y %H:%M'),
+                'status': test.status.capitalize(),
+                'key_results': test.result_value if test.result_value else "N/A",
+                'normal_range': test.normal_range if test.normal_range else "N/A",
+                'notes': test.notes if test.notes else 'No additional notes provided.',
+                'recorded_by': test.recorded_by.get_full_name() if test.recorded_by else "N/A",
+            })
 
         data = {
-            'patient': lab_test.patient.full_name,
-            'test_type': lab_test.category.name if lab_test.category else "Unknown Test Type", # Corrected to category.name
-            'date': (lab_test.date_performed or lab_test.requested_at).strftime('%B %d, %Y'), # Use date_performed if exists, else requested_at
-            'recorded_by': lab_test.recorded_by.get_full_name() if lab_test.recorded_by else "Unknown",
-            'notes': lab_test.notes if lab_test.notes else 'No additional notes provided.', # Access notes directly
-            'result_value': lab_test.result_value if lab_test.result_value else "N/A", # General result value
-            'normal_range': lab_test.normal_range if lab_test.normal_range else "N/A", # Normal range
+            'patient_name': patient_name,
+            'total_tests': lab_tests.count(),
+            'tests': tests_data
         }
         
         return JsonResponse(data)
 
-    except LabTest.DoesNotExist:
-        return JsonResponse({"error": "Lab Test not found."}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
     
