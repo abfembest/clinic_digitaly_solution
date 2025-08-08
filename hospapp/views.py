@@ -196,7 +196,7 @@ def n_register_p(request):
         # Check for duplicates
         if Patient.objects.filter(full_name=full_name, date_of_birth=date_of_birth,email=mail).exists():
             messages.warning(request, "A patient with this name and date of birth already exists.")
-            return redirect('register_patient')
+            return redirect('n_register_patient')
 
         try:
             patient = Patient.objects.create(
