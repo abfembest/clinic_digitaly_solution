@@ -1,19 +1,15 @@
 {% extends "doctors/base.html" %}
 
 {% block title %}HMS | Doctor Home{% endblock %}
-<!-- Content Wrapper. Contains page content -->
 {% block content %}
 
-
-<!-- NEW dashboard items-->
 {% include 'dashboardstyle.css' %}
 
 <div class="container py-5">
-    <!-- Dashboard Header -->
     <div class="dashboard-header mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1 class="mb-0">Doctor's Dashboard: {%for data1 in context%} {{data1}} {%endfor%}</h1>
+                <h1 class="mb-0">Doctor's Dashboard</h1>
                 <p class="mb-0 opacity-75">Fertility Clinic Management System</p>
             </div>
             <div class="text-end">
@@ -24,9 +20,7 @@
     </div>
 
 
-    <!-- Feature Cards with Corrected URLs -->
     <div class="row g-4">
-        <!-- Patient Notes Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
@@ -40,8 +34,8 @@
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-info">12 New Results</span>
-                            <span class="badge bg-warning text-dark">3 Pending Reviews</span>
+                            <span class="badge bg-info">{{ new_results_count }} New Results</span>
+                            <span class="badge bg-warning text-dark">{{ pending_reviews_count }} Pending Reviews</span>
                         </div>
                     </div>
                 </div>
@@ -52,7 +46,6 @@
             </div>
         </div>
 
-        <!-- Patient Consultation Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
@@ -66,8 +59,8 @@
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-primary">8 Waiting Assessment</span>
-                            <span class="badge bg-success">4 Completed Today</span>
+                            <span class="badge bg-primary">{{ waiting_assessment_count }} Waiting Assessment</span>
+                            <span class="badge bg-success">{{ completed_today_count }} Completed Today</span>
                         </div>
                     </div>
                 </div>
@@ -78,7 +71,6 @@
             </div>
         </div>
 
-        <!-- Request Test Card -->
         <div class="col-md-4 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
@@ -91,8 +83,8 @@
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-warning text-dark">5 Pending Requests</span>
-                            <span class="badge bg-success">10 Tests Requested</span>
+                            <span class="badge bg-warning text-dark">{{ pending_requests_count }} Pending Requests</span>
+                            <span class="badge bg-success">{{ total_tests_requested_count }} Tests Requested</span>
                         </div>
                     </div>
                 </div>
@@ -103,7 +95,6 @@
             </div>
         </div>
 
-        <!-- Recommended Tests Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
@@ -116,8 +107,8 @@
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-secondary">7 Recommendations</span>
-                            <span class="badge bg-info">15 Results Available</span>
+                            <span class="badge bg-secondary">{{ recommendations_count }} Recommendations</span>
+                            <span class="badge bg-info">{{ available_results_count }} Results Available</span>
                         </div>
                     </div>
                 </div>
@@ -128,33 +119,6 @@
             </div>
         </div>
 
-        <!-- Treatment Monitoring Card -->
-        {% comment %} <div class="col-md-6 col-lg-4">
-            <div class="card card-feature">
-                <div class="card-body d-flex flex-column justify-content-between py-4">
-                    <div>
-                        <div class="icon-container bg-monitor">
-                            <i class="bi bi-graph-up"></i>
-                        </div>
-                        <h5 class="card-title">Treatment Monitoring</h5>
-                        <p class="card-text">Monitor ongoing treatments and IVF cycles with comprehensive tracking
-                            tools.</p>
-                    </div>
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-primary">9 Active IVF Cycles</span>
-                            <span class="badge bg-danger">2 Need Attention</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer py-3">
-                    <a href="{% url 'monitoring' %}" class="action-link">View Treatment Progress <i
-                            class="bi bi-arrow-right"></i></a>
-                </div>
-            </div>
-        </div> {% endcomment %}
-
-        <!-- Reports and Data Card -->
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
                 <div class="card-body d-flex flex-column justify-content-between py-4">
@@ -163,26 +127,22 @@
                             <i class="bi bi-bar-chart"></i>
                         </div>
                         <h5 class="card-title">Reports and Data</h5>
-                        <p class="card-text">Access comprehensive reports and analytical data for patient management.
-                        </p>
+                        <p class="card-text">Access comprehensive reports and analytical data for patient management. </p>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-primary">15 Reports Available</span>
-                            <span class="badge bg-success">Updated Today</span>
+                            <span class="badge bg-primary">{{ reports_available_count }} Reports Available</span>
+                            <span class="badge bg-success">{{ updated_today_count }} Updated Today</span>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer py-3">
-                    <a href="#" class="action-link">View Reports <i class="bi bi-arrow-right"></i></a>
+                    <a href="{% url 'doctor_report' %}" class="action-link">View Reports <i
+                            class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!--Statistical Graphy-->
-
-    <div class="container py-5">
+    </div> <div class="container py-5">
         <div class="card shadow-lg">
             <div class="card-body">
                 <h4 class="text-center">Activities Chart</h4>
@@ -195,8 +155,6 @@
                             </div>
                         </div>
                     </div>
-
-
                     <div class="col-md-6">
                         <div class="card shadow-sm">
                             <div class="card-body">
@@ -205,169 +163,69 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
     </div>
-
-    <!--Statistical Graphy Ends -->
-    <!-- Recent Activity Section -->
-    <div class="card">
-        <div class="card-body">
-            <div class="card-header card-info">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h3>Recent Activity</h3>
-                    <button class="btn btn-outline-primary btn-sm">View All</button>
-                </div>
-            </div>
-
-            <div class="list-group list-group-flush">
-                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-person-check fs-4 me-3 text-success"></i>
-                        <div>
-                            <p class="mb-0 fw-medium">Emily Parker - Consultation Completed</p>
-                            <small class="text-muted">Fertility assessment and treatment plan created</small>
-                        </div>
-                    </div>
-                    <small class="text-muted">10:30 AM</small>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-file-earmark-text fs-4 me-3 text-primary"></i>
-                        <div>
-                            <p class="mb-0 fw-medium">Lab Results Received - Mark Johnson</p>
-                            <small class="text-muted">Hormone profile and sperm analysis completed</small>
-                        </div>
-                    </div>
-                    <small class="text-muted">9:15 AM</small>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-calendar-check fs-4 me-3 text-warning"></i>
-                        <div>
-                            <p class="mb-0 fw-medium">IVF Cycle Monitoring - Sarah Williams</p>
-                            <small class="text-muted">Day 8 follicle scan performed</small>
-                        </div>
-                    </div>
-                    <small class="text-muted">Yesterday</small>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-prescription fs-4 me-3 text-danger"></i>
-                        <div>
-                            <p class="mb-0 fw-medium">Prescription Updated - Michael Davis</p>
-                            <small class="text-muted">Clomiphene dosage adjusted based on response</small>
-                        </div>
-                    </div>
-                    <small class="text-muted">Yesterday</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            fetch('chart')
-                .then(response => response.json())
-                .then(data => {
-                    // Test Requested Chart
-                    const ctx1 = document.getElementById('requestedtest').getContext('2d');
-                    new Chart(ctx1, {
-                        type: 'bar',
-                        data: {
-                            labels: data.requested.labels,
-                            datasets: [{
-                                label: 'Requested Tests',
-                                data: data.requested.counts,
-                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                                borderColor: 'rgba(54, 162, 235, 1)',
-                                borderWidth: 1,
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true,
-                            aspectRatio: 2,
-                            plugins: {
-                                legend: {
-                                    position: 'top'
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Daily Test Requests',
-                                    font: { size: 18 }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Number of Tests'
-                                    }
-                                },
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Date'
-                                    }
-                                }
-                            }
-                        }
-                    });
+    // Data from Django context
+    const admissionsData = {{ admissions_data|safe }};
+    const testsCompletedData = {{ tests_completed_data|safe }};
 
-                    // Completed Tests Chart
-                    const ctx2 = document.getElementById('completedChart').getContext('2d');
-                    new Chart(ctx2, {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.completed.labels,
-                            datasets: [{
-                                label: 'Completed Tests',
-                                data: data.completed.counts,
-                                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1,
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true,
-                            aspectRatio: 2,
-                            plugins: {
-                                legend: {
-                                    position: 'top'
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Daily Test Completions',
-                                    font: { size: 18 }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Number of Tests'
-                                    }
-                                },
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Date'
-                                    }
-                                }
-                            }
-                        }
-                    });
-                });
+    // Prepare labels and data for the charts
+    const admissionsLabels = admissionsData.map(item => item.admitted_on);
+    const admissionsCounts = admissionsData.map(item => item.count);
+
+    const testsLabels = testsCompletedData.map(item => item.date_performed__date);
+    const testsCounts = testsCompletedData.map(item => item.count);
+    
+    // Create the charts using Chart.js
+    document.addEventListener('DOMContentLoaded', function() {
+        // Patient Admissions Chart
+        const admissionsCtx = document.getElementById('requestedtest').getContext('2d');
+        const admissionsChart = new Chart(admissionsCtx, {
+            type: 'bar',
+            data: {
+                labels: admissionsLabels,
+                datasets: [{
+                    label: '# of Admissions',
+                    data: admissionsCounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
         });
+        
+        // Tests Completed Chart
+        const completedCtx = document.getElementById('completedChart').getContext('2d');
+        const completedChart = new Chart(completedCtx, {
+            type: 'line',
+            data: {
+                labels: testsLabels,
+                datasets: [{
+                    label: '# of Tests Completed',
+                    data: testsCounts,
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
     </script>
-    {% endblock %}
+{% endblock %}

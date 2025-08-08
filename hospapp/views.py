@@ -925,7 +925,58 @@ def generate_nurse_report(request):
 @login_required(login_url='home')
 @check_doctor_role
 def doctors(request):
-    return render(request, 'doctors/index.html')
+    # Get today's date
+    today = timezone.now().date()
+    seven_days_ago = today - timedelta(days=7)
+
+    # 1. Patient Records and Test Requests
+    pending_reviews_count = LabTest.objects.filter(status='pending').count()
+    new_results_count = LabTest.objects.filter(status='completed', date_performed__date=today).count()
+    
+    # 2. Patient Consultations
+    waiting_assessment_count = Consultation.objects.filter(created_at__date=today).count()
+    completed_today_count = Consultation.objects.filter(created_at__date=today).count()
+    
+    # 3. Request Test (Pending Requests & Tests Requested)
+    pending_requests_count = LabTest.objects.filter(status='pending').count()
+    total_tests_requested_count = LabTest.objects.count()
+    
+    # 4. Recommended Tests
+    recommendations_count = LabTest.objects.filter(status='pending').count()
+    available_results_count = LabTest.objects.filter(status='completed').count()
+
+    # 5. Reports & Data
+    reports_available_count = LabResultFile.objects.count()
+    updated_today_count = LabResultFile.objects.filter(uploaded_at__date=today).count()
+
+    # 6. Chart Data (Last 7 Days)
+    admissions_last_7_days = Admission.objects.filter(admitted_on__gte=seven_days_ago) \
+                                             .values('admitted_on') \
+                                             .annotate(count=Count('id')) \
+                                             .order_by('admitted_on')
+    
+    tests_completed_last_7_days = LabTest.objects.filter(status='completed', date_performed__date__gte=seven_days_ago) \
+                                             .values('date_performed__date') \
+                                             .annotate(count=Count('id')) \
+                                             .order_by('date_performed__date')
+
+    # Prepare context dictionary to pass to the template
+    context = {
+        'new_results_count': new_results_count,
+        'pending_reviews_count': pending_reviews_count,
+        'waiting_assessment_count': waiting_assessment_count,
+        'completed_today_count': completed_today_count,
+        'pending_requests_count': pending_requests_count,
+        'total_tests_requested_count': total_tests_requested_count,
+        'recommendations_count': recommendations_count,
+        'available_results_count': available_results_count,
+        'reports_available_count': reports_available_count,
+        'updated_today_count': updated_today_count,
+        'admissions_data': list(admissions_last_7_days),
+        'tests_completed_data': list(tests_completed_last_7_days),
+    }
+
+    return render(request, 'doctors/index.html', context)
 
 @login_required(login_url='home')
 @check_doctor_role
