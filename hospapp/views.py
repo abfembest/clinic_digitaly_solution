@@ -1078,12 +1078,21 @@ def doctors(request):
     today = timezone.now().date()
     seven_days_ago = today - timedelta(days=7)
 
+    # Get the current doctor's staff object and department
+    staff_profile = Staff.objects.get(user=request.user)
+    doctor_department = staff_profile.department
+
     # 1. Patient Records and Test Requests
     pending_reviews_count = LabTest.objects.filter(status='pending').count()
     new_results_count = LabTest.objects.filter(status='completed', date_performed__date=today).count()
     
     # 2. Patient Consultations
-    waiting_assessment_count = Consultation.objects.filter(created_at__date=today).count()
+    admitted_patients = Admission.objects.filter(status='Admitted').values_list('patient_id', flat=True)
+    waiting_assessment_count = Patient.objects.filter(
+        id__in=admitted_patients
+    ).exclude(
+        consultations__isnull=False
+    ).count()
     completed_today_count = Consultation.objects.filter(created_at__date=today).count()
     
     # 3. Request Test (Pending Requests & Tests Requested)
@@ -1097,8 +1106,19 @@ def doctors(request):
     # 5. Reports & Data
     reports_available_count = LabResultFile.objects.count()
     updated_today_count = LabResultFile.objects.filter(uploaded_at__date=today).count()
-
-    # 6. Chart Data (Last 7 Days)
+    
+    # 6. Appointments Data
+    # Fetch all upcoming appointments for the doctor's department, ordered by scheduled time
+    upcoming_appointments = Appointment.objects.filter(
+        department=doctor_department, 
+        scheduled_time__date__gte=today
+    ).order_by('scheduled_time')
+    
+    upcoming_appointments_count = upcoming_appointments.count()
+    today_appointments = upcoming_appointments.filter(scheduled_time__date=today)
+    today_appointments_count = today_appointments.count()
+    
+    # 7. Chart Data (Last 7 Days)
     admissions_last_7_days = Admission.objects.filter(admitted_on__gte=seven_days_ago) \
                                              .values('admitted_on') \
                                              .annotate(count=Count('id')) \
@@ -1123,6 +1143,9 @@ def doctors(request):
         'updated_today_count': updated_today_count,
         'admissions_data': list(admissions_last_7_days),
         'tests_completed_data': list(tests_completed_last_7_days),
+        'upcoming_appointments_count': upcoming_appointments_count,
+        'today_appointments_count': today_appointments_count,
+        'upcoming_appointments': upcoming_appointments, # Pass the full queryset
     }
 
     return render(request, 'doctors/index.html', context)
