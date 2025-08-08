@@ -925,7 +925,58 @@ def generate_nurse_report(request):
 @login_required(login_url='home')
 @check_doctor_role
 def doctors(request):
-    return render(request, 'doctors/index.html')
+    # Get today's date
+    today = timezone.now().date()
+    seven_days_ago = today - timedelta(days=7)
+
+    # 1. Patient Records and Test Requests
+    pending_reviews_count = LabTest.objects.filter(status='pending').count()
+    new_results_count = LabTest.objects.filter(status='completed', date_performed__date=today).count()
+    
+    # 2. Patient Consultations
+    waiting_assessment_count = Consultation.objects.filter(created_at__date=today).count()
+    completed_today_count = Consultation.objects.filter(created_at__date=today).count()
+    
+    # 3. Request Test (Pending Requests & Tests Requested)
+    pending_requests_count = LabTest.objects.filter(status='pending').count()
+    total_tests_requested_count = LabTest.objects.count()
+    
+    # 4. Recommended Tests
+    recommendations_count = LabTest.objects.filter(status='pending').count()
+    available_results_count = LabTest.objects.filter(status='completed').count()
+
+    # 5. Reports & Data
+    reports_available_count = LabResultFile.objects.count()
+    updated_today_count = LabResultFile.objects.filter(uploaded_at__date=today).count()
+
+    # 6. Chart Data (Last 7 Days)
+    admissions_last_7_days = Admission.objects.filter(admitted_on__gte=seven_days_ago) \
+                                             .values('admitted_on') \
+                                             .annotate(count=Count('id')) \
+                                             .order_by('admitted_on')
+    
+    tests_completed_last_7_days = LabTest.objects.filter(status='completed', date_performed__date__gte=seven_days_ago) \
+                                             .values('date_performed__date') \
+                                             .annotate(count=Count('id')) \
+                                             .order_by('date_performed__date')
+
+    # Prepare context dictionary to pass to the template
+    context = {
+        'new_results_count': new_results_count,
+        'pending_reviews_count': pending_reviews_count,
+        'waiting_assessment_count': waiting_assessment_count,
+        'completed_today_count': completed_today_count,
+        'pending_requests_count': pending_requests_count,
+        'total_tests_requested_count': total_tests_requested_count,
+        'recommendations_count': recommendations_count,
+        'available_results_count': available_results_count,
+        'reports_available_count': reports_available_count,
+        'updated_today_count': updated_today_count,
+        'admissions_data': list(admissions_last_7_days),
+        'tests_completed_data': list(tests_completed_last_7_days),
+    }
+
+    return render(request, 'doctors/index.html', context)
 
 @login_required(login_url='home')
 @check_doctor_role
@@ -2658,31 +2709,33 @@ def laboratory(request):
     start_of_day = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     end_of_day = timezone.make_aware(datetime.combine(today, datetime.max.time()))
 
-    user_filter = Q(requested_by=request.user) | Q(performed_by=request.user)
-
+    # Calculate counts for the entire laboratory, not just the current user
     test_today = LabTest.objects.filter(
-        user_filter,
         date_performed__range=(start_of_day, end_of_day),
         status='completed'
     ).count()
 
-    pending_count = LabTest.objects.filter(user_filter, status='pending').count()
-    completed_count = LabTest.objects.filter(user_filter, status='completed').count()
-    in_progress_count = LabTest.objects.filter(user_filter, status='in_progress').count()
+    pending_count = LabTest.objects.filter(status='pending').count()
+    completed_count = LabTest.objects.filter(status='completed').count()
+    in_progress_count = LabTest.objects.filter(status='in_progress').count()
 
     total_patients_count = Patient.objects.count()
     uploaded_results_count = LabResultFile.objects.count()
-
-    # Data for Today's Test Status Table (Latest 5 tests requested today) - Filtered by user
+    
+    # All other queries below should still be filtered by user, as they are for personalized data.
+    # We will keep the 'user_filter' for those.
+    user_filter = Q(requested_by=request.user) | Q(performed_by=request.user)
+    
+    # Data for Today's Test Status Table (Latest 5 tests requested today)
     today_tests_details = LabTest.objects.filter(
-        user_filter, # Apply user filter
+        user_filter, 
         requested_at__range=(start_of_day, end_of_day)
     ).select_related('patient', 'category').order_by('-requested_at')[:5]
 
-    # Data for Awaiting Tests (Pending Tests List) - Filtered by user
-    awaiting_tests = LabTest.objects.filter(user_filter, status='pending').select_related('patient', 'category').order_by('-requested_at')[:8]
+    # Data for Awaiting Tests (Pending Tests List)
+    awaiting_tests = LabTest.objects.filter(status='pending').select_related('patient', 'category').order_by('-requested_at')[:8]
 
-    # Data for Weekly Lab Activity Chart (Last 7 days) - Filtered by user
+    # Data for Weekly Lab Activity Chart (Last 7 days)
     weekly_labels = []
     weekly_tests_data_total = [0] * 7
     weekly_tests_data_completed = [0] * 7
@@ -2695,11 +2748,10 @@ def laboratory(request):
         day_end = timezone.make_aware(datetime.combine(day, datetime.max.time()))
 
         total_on_day = LabTest.objects.filter(
-            user_filter, # Apply user filter
             date_performed__range=(day_start, day_end)
         ).count()
+        
         completed_on_day = LabTest.objects.filter(
-            user_filter, # Apply user filter
             status='completed',
             date_performed__range=(day_start, day_end)
         ).count()
@@ -2707,11 +2759,12 @@ def laboratory(request):
         weekly_tests_data_total[i] = total_on_day
         weekly_tests_data_completed[i] = completed_on_day
 
-    # Recent Activity (Timeline) - Filtered by user
+    # Recent Activity (Timeline)
     recent_activities = []
     recent_lab_tests = LabTest.objects.filter(user_filter).select_related('patient').order_by('-requested_at')[:5]
 
     for test in recent_lab_tests:
+        # The logic for populating recent activities remains the same
         icon_class = ''
         bg_color = ''
         header_text = ''
@@ -2742,7 +2795,7 @@ def laboratory(request):
             'body': body_text,
             'link': link_url
         })
-
+    
     recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
 
     context = {
@@ -2750,8 +2803,8 @@ def laboratory(request):
         'pending_count': pending_count,
         'completed_count': completed_count,
         'in_progress_count': in_progress_count,
-        'total_patients_count': total_patients_count, # Kept global
-        'uploaded_results_count': uploaded_results_count, # Kept global
+        'total_patients_count': total_patients_count,
+        'uploaded_results_count': uploaded_results_count,
 
         'today_tests_details': today_tests_details,
         'awaiting_tests': awaiting_tests,
