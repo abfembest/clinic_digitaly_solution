@@ -237,39 +237,6 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-<script>
-    function handleMenuClick(section, url) {
-        event.currentTarget.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-            event.currentTarget.style.transform = 'translateY(-5px)';
-        }, 150);
-
-        console.log(`Navigating to: ${section} at ${url}`);
-        window.location.href = url;
-    }
-
-    document.querySelectorAll('.menu-card').forEach(card => {
-        card.addEventListener('mouseenter', function () {
-            this.style.transform = 'translateY(-5px)';
-        });
-
-        card.addEventListener('mouseleave', function () {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-
-    function updateStats() {
-        const badges = document.querySelectorAll('.stats-badge');
-        badges.forEach(badge => {
-            badge.style.animation = 'pulse 0.5s ease-in-out';
-            setTimeout(() => badge.style.animation = '', 500);
-        });
-    }
-
-    setInterval(updateStats, 30000);
-</script>
-
 
 <section class="content">
     <div class="container-fluid">
@@ -289,16 +256,20 @@
                         </div>
                     </div>
                     <div class="card-body p-0">
+                        {% regroup awaiting_tests by patient.full_name as patient_list %}
                         <ul class="list-group list-group-flush">
-                            {% for test in awaiting_tests %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ test.patient.full_name }}</strong>
-                                    <br>
-                                    <small class="text-muted">{{ test.test_name }} ({{ test.category.name }})</small>
-                                </div>
-                                <span class="badge bg-warning rounded-pill">{{ test.requested_at|date:"M d, H:i" }}</span>
-                            </li>
+                            {% for patient in patient_list %}
+                                <li class="list-group-item list-group-item-info">
+                                    <strong>{{ patient.grouper }}</strong>
+                                </li>
+                                {% for test in patient.list %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="text-muted">{{ test.test_name }} ({{ test.category.name }})</small>
+                                    </div>
+                                    <span class="badge bg-warning rounded-pill">{{ test.requested_at|date:"M d, H:i" }}</span>
+                                </li>
+                                {% endfor %}
                             {% endfor %}
                             {% if not awaiting_tests %}
                             <li class="list-group-item text-center text-muted">No tests currently awaiting processing.</li>
@@ -308,34 +279,6 @@
                 </div>
                 {% endif %}
                 
-                <div class="card bg-gradient-success">
-                    <div class="card-header border-0">
-                        <h3 class="card-title">
-                            <i class="far fa-calendar-alt"></i>
-                            Calendar
-                        </h3>
-                        <div class="card-tools">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown" data-offset="-52">
-                                    <i class="fas fa-bars"></i>
-                                </button>
-                                <div class="dropdown-menu" role="menu">
-                                    <a href="#" class="dropdown-item">Add new event</a>
-                                    <a href="#" class="dropdown-item">Clear events</a>
-                                    <div class="dropdown-divider"></div>
-                                    <a href="#" class="dropdown-item">View calendar</a>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-success btn-sm" data-card-widget="collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body pt-0">
-                        <div id="calendar" style="width: 100%"></div>
-                    </div>
-                </div>
-
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">Recent Activity</h3>
@@ -528,6 +471,39 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    function handleMenuClick(section, url) {
+        event.currentTarget.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            event.currentTarget.style.transform = 'translateY(-5px)';
+        }, 150);
+
+        console.log(`Navigating to: ${section} at ${url}`);
+        window.location.href = url;
+    }
+
+    document.querySelectorAll('.menu-card').forEach(card => {
+        card.addEventListener('mouseenter', function () {
+            this.style.transform = 'translateY(-5px)';
+        });
+
+        card.addEventListener('mouseleave', function () {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    function updateStats() {
+        const badges = document.querySelectorAll('.stats-badge');
+        badges.forEach(badge => {
+            badge.style.animation = 'pulse 0.5s ease-in-out';
+            setTimeout(() => badge.style.animation = '', 500);
+        });
+    }
+
+    setInterval(updateStats, 30000);
+</script>
+
 
 <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
 <script src="{% static 'plugins/jquery-ui/jquery-ui.min.js' %}"></script>
@@ -633,11 +609,6 @@ $(function () {
     }
   })
 
-  $('#calendar').datetimepicker({
-    format: 'L',
-    inline: true
-  })
-
     // JavaScript for modal population
     $('#testDetailsModal').on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget); // Button that triggered the modal
@@ -671,6 +642,5 @@ function refreshTestStatus() {
   })
 }
 </script>
-
 
 {% endblock %}
