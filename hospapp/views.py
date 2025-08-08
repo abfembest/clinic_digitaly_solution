@@ -936,6 +936,7 @@ def doctor_consultation(request):
     }
     return render(request, 'doctors/consultation.html', context)
 
+
 @login_required(login_url='home')
 @check_doctor_role
 def access_medical_records(request):
@@ -1132,7 +1133,9 @@ def generate_doctor_report_ajax(request):
     """
     Generates specific doctor activity reports based on AJAX requests.
     """
+    
     user = request.user
+    print(user)
     try:
         staff = Staff.objects.get(user=user)
         if staff.role != 'doctor':
@@ -1961,8 +1964,7 @@ def doc_test_comment(request, patient_id):
     # If GET request (optional, show test details or redirect)
     return redirect('recomended_tests')
 
-@login_required(login_url="home")
-@check_doctor_role
+
 def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_datetime_field=True):
     """
     Applies date range filtering to a queryset based on a specified date/datetime field.
@@ -2006,6 +2008,7 @@ def apply_date_filter(queryset, date_from_str, date_to_str, date_field_name, is_
             queryset = queryset.filter(**{f"{date_field_name}__lte": parsed_date_to})
 
     return queryset
+
 
 @login_required(login_url="home")
 @check_doctor_role

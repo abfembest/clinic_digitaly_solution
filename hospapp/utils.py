@@ -32,6 +32,7 @@ def check_doctor_role(view_func):
     def _wrapped_view(request, *args, **kwargs):
         try:
             staff = Staff.objects.get(user=request.user)
+            print(staff)
             if staff.role.lower() != 'doctor':
                 logout(request)
                 return redirect('home')
@@ -44,7 +45,7 @@ def check_doctor_role(view_func):
 
 
 #===================================
-#       ROLE DOCTOR
+#       ROLE LAB
 #===================================
 
 def check_lab_role(view_func):

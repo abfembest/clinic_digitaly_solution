@@ -6,7 +6,7 @@
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
        <script>
-                        //< !-- VITAL SIGNS FORM JS AND jQuery -->
+                        /*< !-- VITAL SIGNS FORM JS AND jQuery -->*
                     $(document).ready(function () {
                         // Initialize Select2 on the patient selection dropdown
                         $('.vitals-form-container #patient_id').select2({
