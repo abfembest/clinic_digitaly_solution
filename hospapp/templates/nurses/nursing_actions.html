@@ -20,313 +20,304 @@
     </div>
 </div>
 
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #3498db;
+        --primary-dark: #2980b9;
+        --secondary-color: #95a5a6;
+        --success-color: #27ae60;
+        --warning-color: #f39c12;
+        --danger-color: #e74c3c;
+        --info-color: #17a2b8;
+        --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        --border-radius: 8px;
+    }
 
+    body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+    }
 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #3498db;
-            --primary-dark: #2980b9;
-            --secondary-color: #95a5a6;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --info-color: #17a2b8;
-            --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            --border-radius: 8px;
-        }
+    .content {
+        padding: 15px;
+        max-height: 100vh;
+        overflow: hidden;
+    }
 
-        body {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
+    .container-fluid {
+        padding: 0 15px;
+    }
+
+    /* Compact Cards */
+    .card {
+        box-shadow: var(--card-shadow);
+        border: none;
+        border-radius: var(--border-radius);
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+        padding: 12px 20px;
+        border: none;
+    }
+
+    .card-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+
+    /* Compact Master Patient Selection */
+    .patient-selection {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .patient-selection .card-header {
+        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+        margin: -15px -15px 15px -15px;
+        padding: 12px 20px;
+    }
+
+    /* Compact Form Controls */
+    .form-control {
+        border-radius: 6px;
+        border: 2px solid #e9ecef;
+        padding: 8px 12px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 6px;
+        font-size: 13px;
+    }
+
+    /* Info Box Styling */
+    .info-box {
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        border: none;
+    }
+
+    .info-box-icon {
+        border-radius: var(--border-radius) 0 0 var(--border-radius);
+    }
+
+    /* Compact Tabs */
+    .nav-tabs {
+        border: none;
+        background: #f8f9fa;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        padding: 5px;
+    }
+
+    .nav-tabs .nav-item {
+        margin: 0 2px;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #6c757d;
+        transition: all 0.3s ease;
+    }
+
+    .nav-tabs .nav-link:hover {
+        background: rgba(52, 152, 219, 0.1);
+        color: var(--primary-color);
+    }
+
+    .nav-tabs .nav-link.active {
+        background: var(--primary-color);
+        color: white;
+        box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+    }
+
+    .tab-content {
+        padding: 20px;
+        background: white;
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        min-height: 400px;
+        max-height: 450px;
+        overflow-y: auto;
+    }
+
+    /* Compact Buttons */
+    .btn {
+        border-radius: 6px;
+        font-weight: 600;
+        padding: 10px 20px;
+        border: none;
+        transition: all 0.3s ease;
+        font-size: 14px;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #27ae60 0%, #219a52 100%);
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    }
+
+    .btn-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    }
+
+    /* Compact Alerts */
+    .alert {
+        border: none;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 13px;
+        margin-bottom: 15px;
+    }
+
+    .alert-info {
+        background: linear-gradient(135deg, rgba(23, 162, 184, 0.1) 0%, rgba(23, 162, 184, 0.05) 100%);
+        border-left: 4px solid var(--info-color);
+    }
+
+    .alert-warning {
+        background: linear-gradient(135deg, rgba(243, 156, 18, 0.1) 0%, rgba(243, 156, 18, 0.05) 100%);
+        border-left: 4px solid var(--warning-color);
+    }
+
+    /* Right Column Styling */
+    .patient-overview {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+    }
+
+    .patient-overview .card-header {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    }
+
+    .patient-overview .card-body {
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+    }
+
+    /* Compact Row Spacing */
+    .row {
+        margin: 0 -7.5px;
+    }
+
+    .row>[class*="col-"] {
+        padding: 0 7.5px;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 991.98px) {
+        .patient-overview {
+            position: static;
+            max-height: none;
+            margin-top: 20px;
         }
 
         .content {
-            padding: 15px;
-            max-height: 100vh;
-            overflow: hidden;
+            padding: 10px;
         }
-
-        .container-fluid {
-            padding: 0 15px;
-        }
-
-        /* Compact Cards */
-        .card {
-            box-shadow: var(--card-shadow);
-            border: none;
-            border-radius: var(--border-radius);
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-
-            .card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            }
-
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: white;
-            border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
-            padding: 12px 20px;
-            border: none;
-        }
-
-        .card-title {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        /* Compact Master Patient Selection */
-        .patient-selection {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: var(--card-shadow);
-        }
-
-            .patient-selection .card-header {
-                background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-                margin: -15px -15px 15px -15px;
-                padding: 12px 20px;
-            }
-
-        /* Compact Form Controls */
-        .form-control {
-            border-radius: 6px;
-            border: 2px solid #e9ecef;
-            padding: 8px 12px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-            .form-control:focus {
-                border-color: var(--primary-color);
-                box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-            }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-            .form-group label {
-                font-weight: 600;
-                color: #495057;
-                margin-bottom: 6px;
-                font-size: 13px;
-            }
-
-        /* Info Box Styling */
-        .info-box {
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
-            border: none;
-        }
-
-        .info-box-icon {
-            border-radius: var(--border-radius) 0 0 var(--border-radius);
-        }
-
-        /* Compact Tabs */
-        .nav-tabs {
-            border: none;
-            background: #f8f9fa;
-            border-radius: var(--border-radius) var(--border-radius) 0 0;
-            padding: 5px;
-        }
-
-            .nav-tabs .nav-item {
-                margin: 0 2px;
-            }
-
-            .nav-tabs .nav-link {
-                border: none;
-                border-radius: 6px;
-                padding: 8px 12px;
-                font-size: 13px;
-                font-weight: 600;
-                color: #6c757d;
-                transition: all 0.3s ease;
-            }
-
-                .nav-tabs .nav-link:hover {
-                    background: rgba(52, 152, 219, 0.1);
-                    color: var(--primary-color);
-                }
-
-                .nav-tabs .nav-link.active {
-                    background: var(--primary-color);
-                    color: white;
-                    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
-                }
 
         .tab-content {
-            padding: 20px;
-            background: white;
-            border-radius: 0 0 var(--border-radius) var(--border-radius);
-            min-height: 400px;
-            max-height: 450px;
-            overflow-y: auto;
+            max-height: none;
         }
+    }
 
-        /* Compact Buttons */
-        .btn {
-            border-radius: 6px;
-            font-weight: 600;
-            padding: 10px 20px;
-            border: none;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
+    /* Animation for smooth transitions */
+    .fade {
+        transition: opacity 0.3s ease-in-out;
+    }
 
-            .btn:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            }
+    /* Compact textarea */
+    textarea.form-control {
+        resize: vertical;
+        min-height: 80px;
+    }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #27ae60 0%, #219a52 100%);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        }
-
-        /* Compact Alerts */
-        .alert {
-            border: none;
-            border-radius: 6px;
-            padding: 12px 16px;
-            font-size: 13px;
-            margin-bottom: 15px;
-        }
-
-        .alert-info {
-            background: linear-gradient(135deg, rgba(23, 162, 184, 0.1) 0%, rgba(23, 162, 184, 0.05) 100%);
-            border-left: 4px solid var(--info-color);
-        }
-
-        .alert-warning {
-            background: linear-gradient(135deg, rgba(243, 156, 18, 0.1) 0%, rgba(243, 156, 18, 0.05) 100%);
-            border-left: 4px solid var(--warning-color);
-        }
-
-        /* Right Column Styling */
-        .patient-overview {
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--card-shadow);
-            position: sticky;
-            top: 20px;
-            max-height: calc(100vh - 40px);
-        }
-
-            .patient-overview .card-header {
-                background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-            }
-
-            .patient-overview .card-body {
-                max-height: calc(100vh - 150px);
-                overflow-y: auto;
-            }
-
-        /* Compact Row Spacing */
-        .row {
-            margin: 0 -7.5px;
-        }
-
-            .row > [class*="col-"] {
-                padding: 0 7.5px;
-            }
-
-        /* Scrollbar Styling */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-        }
-
-            ::-webkit-scrollbar-thumb:hover {
-                background: #a8a8a8;
-            }
-
-        /* Responsive adjustments */
-        @media (max-width: 991.98px) {
-            .patient-overview {
-                position: static;
-                max-height: none;
-                margin-top: 20px;
-            }
-
-            .content {
-                padding: 10px;
-            }
-
-            .tab-content {
-                max-height: none;
-            }
-        }
-
-        /* Animation for smooth transitions */
-        .fade {
-            transition: opacity 0.3s ease-in-out;
-        }
-
-        /* Compact textarea */
-        textarea.form-control {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        /* Icon spacing */
-        .fas, .fab, .far {
-            margin-right: 6px;
-        }
-    </style>
-
-
-   
-
-
-
-    
-
+    /* Icon spacing */
+    .fas,
+    .fab,
+    .far {
+        margin-right: 6px;
+    }
+</style>
 
 <section class="content">
     <div class="container-fluid">
-        <!-- Master Patient Selection Card -->
-        <div class="row mb-3">
-            <div class="col-12">
+        <div class="row">
+            <div class="col-lg-3">
                 <div class="card card-primary card-outline">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -335,337 +326,340 @@
                         </h3>
                     </div>
                     <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <div class="form-group mb-0">
-                                    <label for="master-patient-select">Select Patient for All Actions:</label>
-                                    <select class="form-control" id="master-patient-select">
-                                        <option value="">-- Choose Patient --</option>
-                                        {% for patient in patients %}
-                                        <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-box bg-light" id="selected-patient-info" style="display: none;">
-                                    <span class="info-box-icon bg-primary"><i class="fas fa-user"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Selected Patient</span>
-                                        <span class="info-box-number" id="selected-patient-name">-</span>
+                        <div class="form-group mb-3">
+                            <label for="master-patient-select">Select Patient:</label>
+                            <select class="form-control" id="master-patient-select">
+                                <option value="">-- Choose Patient --</option>
+                                {% for patient in patients %}
+                                <option value="{{ patient.id }}">{{ patient.full_name }} - {{ patient.patient_id }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div id="selected-patient-info" style="display: none;">
+                            <div class="d-flex align-items-center mb-2">
+                                <div id="patient-photo-container">
+                                    <div class="bg-secondary img-circle d-inline-flex align-items-center justify-content-center"
+                                        style="width: 40px; height: 40px;">
+                                        <i class="fas fa-user fa-lg text-white"></i>
                                     </div>
+                                </div>
+                                <div class="ml-3">
+                                    <h6 class="m-0" id="selected-patient-name">-</h6>
+                                    <span class="badge" id="selected-patient-status">-</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row">
-            <!-- Left Column: Tabs -->
-            <div class="col-lg-7">
-                <div class="card card-primary card-outline card-outline-tabs">
-                    <div class="card-header p-0 border-bottom-0">
-                        <ul class="nav nav-tabs" id="nursingTabs" role="tablist">
-                            <li class="nav-item">
-                                <a class="nav-link active" id="admit-tab" data-toggle="tab" href="#admit" role="tab">
-                                    <i class="fas fa-plus-circle"></i> Admit
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="discharge-tab" data-toggle="tab" href="#discharge" role="tab">
-                                    <i class="fas fa-sign-out-alt"></i> Discharge
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="monitor-tab" data-toggle="tab" href="#monitor" role="tab">
-                                    <i class="fas fa-heartbeat"></i> Monitor
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="referral-tab" data-toggle="tab" href="#referral" role="tab">
-                                    <i class="fas fa-share"></i> Referral
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="nursing-note-tab" data-toggle="tab" href="#nursing_note" role="tab">
-                                    <i class="fas fa-sticky-note"></i> Notes
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" id="handover-tab" data-toggle="tab" href="#handover" role="tab">
-                                    <i class="fas fa-exchange-alt"></i> Handover
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="card-body">
-                        <div class="tab-content" id="nursingTabsContent">
-
-                            <!-- 1. Admit Tab -->
-                            <div class="tab-pane fade show active" id="admit" role="tabpanel">
-                                <div class="alert alert-info" id="admit-alert" style="display: none;">
-                                    <i class="icon fas fa-info"></i>
-                                    Please select a patient above to proceed with admission.
-                                </div>
-                                <form method="POST" action="{% url 'admit_patient_nurse' %}" id="admit-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="patient_id" id="admit-patient-id">
-                                    <div class="row">
-                                        <div class="col-sm-12">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-user-md"></i> Assign Doctor</label>
-                                                <select name="doctor" class="form-control" required>
-                                                    <option disabled selected>-- Select Doctor --</option>
-                                                    {% for doctor in doctors %}
-                                                    <option value="{{ doctor.user.id }}">{{ doctor.user.get_full_name }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fas fa-clipboard-list"></i> Reason for Admission</label>
-                                        <textarea name="admission_reason" class="form-control" rows="4" required placeholder="Enter detailed reason for admission..."></textarea>
-                                    </div>
-                                    <div class="form-group text-center">
-                                        <button class="btn btn-primary btn-lg" type="submit" id="admit-btn">
-                                            <i class="fas fa-plus-circle"></i> Admit Patient
-                                        </button>
-                                    </div>
-                                </form>
+            <div class="col-lg-9">
+                <div class="row">
+                    <div class="col-lg-7">
+                        <div class="card card-primary card-outline card-outline-tabs">
+                            <div class="card-header p-0 border-bottom-0">
+                                <ul class="nav nav-tabs" id="nursingTabs" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="admit-tab" data-toggle="tab" href="#admit" role="tab">
+                                            <i class="fas fa-plus-circle"></i> Admit
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="discharge-tab" data-toggle="tab" href="#discharge" role="tab">
+                                            <i class="fas fa-sign-out-alt"></i> Discharge
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="monitor-tab" data-toggle="tab" href="#monitor" role="tab">
+                                            <i class="fas fa-heartbeat"></i> Monitor
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="referral-tab" data-toggle="tab" href="#referral" role="tab">
+                                            <i class="fas fa-share"></i> Referral
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="nursing-note-tab" data-toggle="tab" href="#nursing_note" role="tab">
+                                            <i class="fas fa-sticky-note"></i> Notes
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="handover-tab" data-toggle="tab" href="#handover" role="tab">
+                                            <i class="fas fa-exchange-alt"></i> Handover
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
-
-                            <!-- 2. Discharge Tab -->
-                            <div class="tab-pane fade" id="discharge" role="tabpanel">
-                                <div class="alert alert-warning" id="discharge-alert" style="display: none;">
-                                    <i class="icon fas fa-exclamation-triangle"></i>
-                                    Please select an admitted patient to proceed with discharge.
+                            <div class="card-body">
+                                <div class="tab-content" id="nursingTabsContent">
+                                    <div class="tab-pane fade show active" id="admit" role="tabpanel">
+                                        <div class="alert alert-info" id="admit-alert" style="display: none;">
+                                            <i class="icon fas fa-info"></i>
+                                            Please select a patient above to proceed with admission.
+                                        </div>
+                                        <form method="POST" action="{% url 'admit_patient_nurse' %}" id="admit-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="patient_id" id="admit-patient-id">
+                                            <div class="row">
+                                                <div class="col-sm-12">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-user-md"></i> Assign Doctor</label>
+                                                        <select name="doctor" class="form-control" required>
+                                                            <option disabled selected>-- Select Doctor --</option>
+                                                            {% for doctor in doctors %}
+                                                            <option value="{{ doctor.user.id }}">{{ doctor.user.get_full_name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label><i class="fas fa-clipboard-list"></i> Reason for Admission</label>
+                                                <textarea name="admission_reason" class="form-control" rows="4" required placeholder="Enter detailed reason for admission..."></textarea>
+                                            </div>
+                                            <div class="form-group text-center">
+                                                <button class="btn btn-primary btn-lg" type="submit" id="admit-btn">
+                                                    <i class="fas fa-plus-circle"></i> Admit Patient
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="tab-pane fade" id="discharge" role="tabpanel">
+                                        <div class="alert alert-warning" id="discharge-alert" style="display: none;">
+                                            <i class="icon fas fa-exclamation-triangle"></i>
+                                            Please select an admitted patient to proceed with discharge.
+                                        </div>
+                                        <form method="POST" action="{% url 'discharge_patient' %}" id="discharge-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="patient_id" id="discharge-patient-id">
+                                            <div class="form-group">
+                                                <label><i class="fas fa-file-medical-alt"></i> Discharge Summary</label>
+                                                <textarea name="discharge_summary" class="form-control" rows="5" required placeholder="Provide comprehensive discharge summary including condition, medications, follow-up instructions..."></textarea>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-calendar-alt"></i> Follow-up Date</label>
+                                                        <input type="date" name="followup_date" class="form-control">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-user-md"></i> Follow-up Doctor</label>
+                                                        <select name="followup_doctor" class="form-control" required>
+                                                            <option disabled selected>-- Select Doctor --</option>
+                                                            {% for doctor in doctors %}
+                                                            <option value="{{ doctor.user.get_full_name }}">{{ doctor.user.get_full_name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group text-center">
+                                                <button class="btn btn-danger btn-lg" type="submit" id="discharge-btn">
+                                                    <i class="fas fa-sign-out-alt"></i> Discharge Patient
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="tab-pane fade" id="monitor" role="tabpanel">
+                                        <div class="alert alert-info" id="monitor-alert" style="display: none;">
+                                            <i class="icon fas fa-info"></i>
+                                            Please select a patient to update monitoring status.
+                                        </div>
+                                        <form method="POST" action="{% url 'update_patient_status' %}" id="monitor-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="patient_id" id="monitor-patient-id">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-thermometer-half"></i> Current Condition</label>
+                                                        <select name="status" class="form-control" required>
+                                                            <option value="stable">Stable</option>
+                                                            <option value="critical">Critical</option>
+                                                            <option value="under_observation">Under Observation</option>
+                                                            <option value="improving">Improving</option>
+                                                            <option value="deteriorating">Deteriorating</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-clock"></i> Next Check Time</label>
+                                                        <input type="datetime-local" name="next_check" class="form-control">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label><i class="fas fa-notes-medical"></i> Monitoring Notes</label>
+                                                <textarea name="notes" class="form-control" rows="4" required placeholder="Enter detailed monitoring observations..."></textarea>
+                                            </div>
+                                            <div class="form-group text-center">
+                                                <button class="btn btn-info btn-lg" type="submit" id="monitor-btn">
+                                                    <i class="fas fa-heartbeat"></i> Update Status
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="tab-pane fade" id="referral" role="tabpanel">
+                                        <div class="alert alert-info" id="referral-alert" style="display: none;">
+                                            <i class="icon fas fa-info"></i>
+                                            Please select a patient to create referral.
+                                        </div>
+                                        <form method="POST" action="{% url 'refer_patient' %}" id="referral-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="patient_id" id="referral-patient-id">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-hospital"></i> Department</label>
+                                                        <select name="department" class="form-control" required>
+                                                            <option disabled selected>-- Select Department --</option>
+                                                            {% for department in departments %}
+                                                            <option value="{{department.id}}">{{department.name}}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-exclamation-circle"></i> Priority</label>
+                                                        <select name="priority" class="form-control" required>
+                                                            <option value="routine">Routine</option>
+                                                            <option value="urgent">Urgent</option>
+                                                            <option value="emergency">Emergency</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label><i class="fas fa-clipboard"></i> Referral Notes</label>
+                                                <textarea name="notes" class="form-control" rows="4" required placeholder="Provide detailed reason for referral and relevant patient information..."></textarea>
+                                            </div>
+                                            <div class="form-group text-center">
+                                                <button class="btn btn-warning btn-lg" type="submit" id="referral-btn">
+                                                    <i class="fas fa-share"></i> Submit Referral
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="tab-pane fade" id="nursing_note" role="tabpanel">
+                                        <div class="alert alert-info" id="nursing-note-alert" style="display: none;">
+                                            <i class="icon fas fa-info"></i>
+                                            Please select a patient to add nursing notes.
+                                        </div>
+                                        <form method="POST" action="{% url 'nursing_note' %}" id="nursing-note-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="patient_id" id="nursing-note-patient-id">
+                                            <div class="row">
+                                                <div class="col-sm-12">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-tags"></i> Note Type</label>
+                                                        <select name="note_type" class="form-control" required>
+                                                            <option value="observation">Observation</option>
+                                                            <option value="medication">Medication Administered</option>
+                                                            <option value="care_plan">Care Plan Update</option>
+                                                            <option value="response">Patient Response</option>
+                                                            <option value="vital_signs">Vital Signs</option>
+                                                            <option value="other">Other</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label><i class="fas fa-edit"></i> Note Details</label>
+                                                <textarea name="notes" class="form-control" rows="5" required placeholder="Enter detailed nursing notes..."></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label><i class="fas fa-tasks"></i> Follow Up Actions (optional)</label>
+                                                <textarea name="follow_up" class="form-control" rows="2" placeholder="Any follow-up actions required..."></textarea>
+                                            </div>
+                                            <div class="form-group text-center">
+                                                <button class="btn btn-success btn-lg" type="submit" id="nursing-note-btn">
+                                                    <i class="fas fa-save"></i> Save Note
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="tab-pane fade" id="handover" role="tabpanel">
+                                        <div class="alert alert-info" id="handover-alert" style="display: none;">
+                                            <i class="icon fas fa-info"></i>
+                                            Please select a patient to log handover.
+                                        </div>
+                                        <form method="POST" action="{% url 'handover_log' %}" id="handover-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="patient_id" id="handover-patient-id">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-user-nurse"></i> Handover To</label>
+                                                        <select name="handover_to" class="form-control" required>
+                                                            <option disabled selected>-- Select Nurse --</option>
+                                                            {% for nurse in nurses %}
+                                                            {% if nurse.user.id != request.user.id %}
+                                                            <option value="{{ nurse.user.id }}">{{ nurse.user.get_full_name }}</option>
+                                                            {% endif %}
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label><i class="fas fa-clock"></i> Shift</label>
+                                                        <select name="shift" class="form-control" required>
+                                                            <option value="morning">Morning Shift</option>
+                                                            <option value="afternoon">Afternoon Shift</option>
+                                                            <option value="night">Night Shift</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label><i class="fas fa-clipboard-check"></i> Handover Notes</label>
+                                                <textarea name="notes" class="form-control" rows="5" required placeholder="Provide comprehensive handover information including current status, medications, care plans, and any concerns..."></textarea>
+                                            </div>
+                                            <div class="form-group text-center">
+                                                <button class="btn btn-primary btn-lg" type="submit" id="handover-btn">
+                                                    <i class="fas fa-exchange-alt"></i> Log Handover
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
-                                <form method="POST" action="{% url 'discharge_patient' %}" id="discharge-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="patient_id" id="discharge-patient-id">
-                                    <div class="form-group">
-                                        <label><i class="fas fa-file-medical-alt"></i> Discharge Summary</label>
-                                        <textarea name="discharge_summary" class="form-control" rows="5" required placeholder="Provide comprehensive discharge summary including condition, medications, follow-up instructions..."></textarea>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-calendar-alt"></i> Follow-up Date</label>
-                                                <input type="date" name="followup_date" class="form-control">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-user-md"></i> Follow-up Doctor</label>
-                                                <select name="followup_doctor" class="form-control" required>
-                                                    <option disabled selected>-- Select Doctor --</option>
-                                                    {% for doctor in doctors %}
-                                                    <option value="{{ doctor.user.get_full_name }}">{{ doctor.user.get_full_name }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group text-center">
-                                        <button class="btn btn-danger btn-lg" type="submit" id="discharge-btn">
-                                            <i class="fas fa-sign-out-alt"></i> Discharge Patient
-                                        </button>
-                                    </div>
-                                </form>
                             </div>
+                        </div>
 
-                            <!-- 3. Monitor Tab -->
-                            <div class="tab-pane fade" id="monitor" role="tabpanel">
-                                <div class="alert alert-info" id="monitor-alert" style="display: none;">
-                                    <i class="icon fas fa-info"></i>
-                                    Please select a patient to update monitoring status.
+                        <div class="card card-info card-outline">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-pills"></i> Active Medications
+                                </h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="patient-medications-table">
+                                    <div class="alert alert-info text-center" role="alert">
+                                        <i class="fas fa-info-circle"></i> Select a patient to view their active medications.
+                                    </div>
                                 </div>
-                                <form method="POST" action="{% url 'update_patient_status' %}" id="monitor-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="patient_id" id="monitor-patient-id">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-thermometer-half"></i> Current Condition</label>
-                                                <select name="status" class="form-control" required>
-                                                    <option value="stable">Stable</option>
-                                                    <option value="critical">Critical</option>
-                                                    <option value="under_observation">Under Observation</option>
-                                                    <option value="improving">Improving</option>
-                                                    <option value="deteriorating">Deteriorating</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-clock"></i> Next Check Time</label>
-                                                <input type="datetime-local" name="next_check" class="form-control">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fas fa-notes-medical"></i> Monitoring Notes</label>
-                                        <textarea name="notes" class="form-control" rows="4" required placeholder="Enter detailed monitoring observations..."></textarea>
-                                    </div>
-                                    <div class="form-group text-center">
-                                        <button class="btn btn-info btn-lg" type="submit" id="monitor-btn">
-                                            <i class="fas fa-heartbeat"></i> Update Status
-                                        </button>
-                                    </div>
-                                </form>
                             </div>
-
-                            <!-- 4. Referral Tab -->
-                            <div class="tab-pane fade" id="referral" role="tabpanel">
-                                <div class="alert alert-info" id="referral-alert" style="display: none;">
-                                    <i class="icon fas fa-info"></i>
-                                    Please select a patient to create referral.
-                                </div>
-                                <form method="POST" action="{% url 'refer_patient' %}" id="referral-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="patient_id" id="referral-patient-id">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-hospital"></i> Department</label>
-                                                <select name="department" class="form-control" required>
-                                                    <option disabled selected>-- Select Department --</option>
-                                                    {% for department in departments %}
-                                                    <option value="{{department.id}}">{{department.name}}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-exclamation-circle"></i> Priority</label>
-                                                <select name="priority" class="form-control" required>
-                                                    <option value="routine">Routine</option>
-                                                    <option value="urgent">Urgent</option>
-                                                    <option value="emergency">Emergency</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fas fa-clipboard"></i> Referral Notes</label>
-                                        <textarea name="notes" class="form-control" rows="4" required placeholder="Provide detailed reason for referral and relevant patient information..."></textarea>
-                                    </div>
-                                    <div class="form-group text-center">
-                                        <button class="btn btn-warning btn-lg" type="submit" id="referral-btn">
-                                            <i class="fas fa-share"></i> Submit Referral
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            <!-- 5. Nursing Notes Tab -->
-                            <div class="tab-pane fade" id="nursing_note" role="tabpanel">
-                                <div class="alert alert-info" id="nursing-note-alert" style="display: none;">
-                                    <i class="icon fas fa-info"></i>
-                                    Please select a patient to add nursing notes.
-                                </div>
-                                <form method="POST" action="{% url 'nursing_note' %}" id="nursing-note-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="patient_id" id="nursing-note-patient-id">
-                                    <div class="row">
-                                        <div class="col-sm-12">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-tags"></i> Note Type</label>
-                                                <select name="note_type" class="form-control" required>
-                                                    <option value="observation">Observation</option>
-                                                    <option value="medication">Medication Administered</option>
-                                                    <option value="care_plan">Care Plan Update</option>
-                                                    <option value="response">Patient Response</option>
-                                                    <option value="vital_signs">Vital Signs</option>
-                                                    <option value="other">Other</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fas fa-edit"></i> Note Details</label>
-                                        <textarea name="notes" class="form-control" rows="5" required placeholder="Enter detailed nursing notes..."></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fas fa-tasks"></i> Follow Up Actions (optional)</label>
-                                        <textarea name="follow_up" class="form-control" rows="2" placeholder="Any follow-up actions required..."></textarea>
-                                    </div>
-                                    <div class="form-group text-center">
-                                        <button class="btn btn-success btn-lg" type="submit" id="nursing-note-btn">
-                                            <i class="fas fa-save"></i> Save Note
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
-                            <!-- 6. Handover Tab -->
-                            <div class="tab-pane fade" id="handover" role="tabpanel">
-                                <div class="alert alert-info" id="handover-alert" style="display: none;">
-                                    <i class="icon fas fa-info"></i>
-                                    Please select a patient to log handover.
-                                </div>
-                                <form method="POST" action="{% url 'handover_log' %}" id="handover-form">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="patient_id" id="handover-patient-id">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-user-nurse"></i> Handover To</label>
-                                                <select name="handover_to" class="form-control" required>
-                                                    <option disabled selected>-- Select Nurse --</option>
-                                                    {% for nurse in nurses %}
-                                                    {% if nurse.user.id != request.user.id %}
-                                                    <option value="{{ nurse.user.id }}">{{ nurse.user.get_full_name }}</option>
-                                                    {% endif %}
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label><i class="fas fa-clock"></i> Shift</label>
-                                                <select name="shift" class="form-control" required>
-                                                    <option value="morning">Morning Shift</option>
-                                                    <option value="afternoon">Afternoon Shift</option>
-                                                    <option value="night">Night Shift</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label><i class="fas fa-clipboard-check"></i> Handover Notes</label>
-                                        <textarea name="notes" class="form-control" rows="5" required placeholder="Provide comprehensive handover information including current status, medications, care plans, and any concerns..."></textarea>
-                                    </div>
-                                    <div class="form-group text-center">
-                                        <button class="btn btn-primary btn-lg" type="submit" id="handover-btn">
-                                            <i class="fas fa-exchange-alt"></i> Log Handover
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Right Column: Patient Overview -->
-            <div class="col-lg-5">
-                <div class="card card-secondary card-outline sticky-top">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-user-injured"></i>
-                            Patient Clinical Overview
-                        </h3>
-                    </div>
-                    <div class="card-body" id="patient-details" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
-                        <div class="text-center text-muted">
-                            <i class="fas fa-user-plus fa-3x mb-3"></i>
-                            <p>Select a patient from the dropdown above to view their clinical details and medical history.</p>
+                    <div class="col-lg-5">
+                        <div class="card card-secondary card-outline sticky-top">
+                            <div class="card-header">
+                                <h3 class="card-title">
+                                    <i class="fas fa-user-injured"></i>
+                                    Patient Clinical Overview
+                                </h3>
+                            </div>
+                            <div class="card-body" id="patient-details" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-user-plus fa-3x mb-3"></i>
+                                    <p>Select a patient from the dropdown above to view their clinical details and medical history.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -680,6 +674,8 @@
         const masterSelect = document.getElementById("master-patient-select");
         const selectedPatientInfo = document.getElementById("selected-patient-info");
         const selectedPatientName = document.getElementById("selected-patient-name");
+        const selectedPatientStatus = document.getElementById("selected-patient-status");
+        const patientPhotoContainer = document.getElementById("patient-photo-container");
 
         // All form buttons and alerts
         const formElements = {
@@ -750,6 +746,11 @@
           <p>Select a patient from the dropdown above to view their clinical details and medical history.</p>
         </div>
       `;
+                document.getElementById("patient-medications-table").innerHTML = `
+                <div class="alert alert-info text-center" role="alert">
+                    <i class="fas fa-info-circle"></i> Select a patient to view their active medications.
+                </div>
+            `;
             }
         });
 
@@ -770,180 +771,183 @@
                 });
             }
         });
-
-        // Set current datetime for nursing notes
-        document.getElementById('nursing-note-tab').addEventListener('click', function () {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.querySelector('input[name="note_datetime"]').value = now.toISOString().slice(0, 16);
-        });
     });
 
     // Enhanced patient details fetching
     function fetchPatientDetails(patientId) {
-        const container = document.getElementById("patient-details");
+        const patientDetailsContainer = document.getElementById("patient-details");
+        const patientPhotoContainer = document.getElementById("patient-photo-container");
+        const selectedPatientStatus = document.getElementById("selected-patient-status");
+        const patientMedicationsTable = document.getElementById("patient-medications-table");
 
-        container.innerHTML = `
-    <div class="text-center">
-      <div class="spinner-border text-primary" role="status">
-        <span class="sr-only">Loading...</span>
-      </div>
-      <p>Loading patient details...</p>
-    </div>
-  `;
+        // Show loading state for both containers
+        patientDetailsContainer.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading patient details...</p>
+        </div>
+        `;
+
+        patientMedicationsTable.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-info spinner-border-sm" role="status">
+                <span class="sr-only">Loading medications...</span>
+            </div>
+        </div>
+        `;
 
         fetch(`/n/get_patient_details/${patientId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    container.innerHTML = `
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-triangle"></i>
-            Patient details not found.
-          </div>
-        `;
+                    patientDetailsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Patient details not found.
+                    </div>
+                    `;
+                    patientMedicationsTable.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Medications not found.
+                    </div>
+                    `;
                     return;
                 }
 
+                // Update top-level patient info
+                patientPhotoContainer.innerHTML = data.photo_url ?
+                    `<img src="${data.photo_url}" class="img-circle elevation-2" style="width: 40px; height: 40px;">` :
+                    `<div class="bg-secondary img-circle d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fas fa-user fa-lg text-white"></i></div>`;
+                
+                selectedPatientStatus.textContent = data.status.toUpperCase();
+                selectedPatientStatus.className = `badge badge-${data.status === 'admitted' ? 'success' : data.status === 'critical' ? 'danger' : 'info'}`;
+
+                // --- Populate the new Medications Table Card ---
+                if (data.prescriptions.length > 0) {
+                    let medicationsTableHTML = `
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Medication</th>
+                                    <th>Instructions</th>
+                                    <th>Start Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.prescriptions.map(p => `
+                                    <tr>
+                                        <td>${p.medication}</td>
+                                        <td>${p.instructions}</td>
+                                        <td>${new Date(p.start_date).toLocaleDateString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    patientMedicationsTable.innerHTML = medicationsTableHTML;
+                } else {
+                    patientMedicationsTable.innerHTML = `
+                        <div class="alert alert-warning text-center" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> No active medications found for this patient.
+                        </div>
+                    `;
+                }
+
+
+                // --- Build the main patient details view (right column) ---
                 let vitalsHTML = data.vitals.map(v => `
-        <div class="info-box bg-light mb-2">
-          <span class="info-box-icon bg-info elevation-1"><i class="fas fa-heartbeat"></i></span>
-          <div class="info-box-content">
-            <span class="info-box-text">
-              <strong>${new Date(v.recorded_at).toLocaleDateString()} at ${new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
-            </span>
-            <span class="info-box-number text-sm">
-              Temp: ${v.temperature ? v.temperature + '°C' : 'N/A'} | BP: ${v.blood_pressure || 'N/A'} | Pulse: ${v.pulse ? v.pulse + ' bpm' : 'N/A'}
-            </span>
-            <span class="info-box-number text-sm">
-              RR: ${v.respiratory_rate ? v.respiratory_rate + ' rpm' : 'N/A'} | Weight: ${v.weight ? v.weight + ' kg' : 'N/A'} | Height: ${v.height ? v.height + ' cm' : 'N/A'} | BMI: ${v.bmi || 'N/A'}
-            </span>
-            ${v.notes ? `<small class="text-muted mt-1 d-block">Notes: ${v.notes}</small>` : ''}
-          </div>
-        </div>
-      `).join('') || '<p class="text-muted">No vitals recorded.</p>';
-
-                let prescriptionsHTML = data.prescriptions.map(p => `
-        <div class="bg-light p-2 mb-2 rounded">
-          <strong>${p.medication}</strong><br>
-          <small class="text-muted">${p.instructions}</small>
-        </div>
-      `).join('') || '<p class="text-muted">No prescriptions found.</p>';
-
+                    <div class="info-box bg-light mb-2">
+                        <span class="info-box-icon bg-info elevation-1"><i class="fas fa-heartbeat"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">
+                                <strong>${new Date(v.recorded_at).toLocaleDateString()} at ${new Date(v.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                            </span>
+                            <span class="info-box-number text-sm">
+                                Temp: ${v.temperature ? v.temperature + '°C' : 'N/A'} | BP: ${v.blood_pressure || 'N/A'} | Pulse: ${v.pulse ? v.pulse + ' bpm' : 'N/A'}
+                            </span>
+                            <span class="info-box-number text-sm">
+                                RR: ${v.respiratory_rate ? v.respiratory_rate + ' rpm' : 'N/A'} | Weight: ${v.weight ? v.weight + ' kg' : 'N/A'} | Height: ${v.height ? v.height + ' cm' : 'N/A'} | BMI: ${v.bmi || 'N/A'}
+                            </span>
+                            ${v.notes ? `<small class="text-muted mt-1 d-block">Notes: ${v.notes}</small>` : ''}
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-muted">No vitals recorded.</p>';
+                
                 let labsHTML = data.lab_tests.map(l => `
-        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-          <span><strong>${l.test_name}</strong>: ${l.result_value || 'Pending'}</span>
-          <span class="badge badge-${l.status === 'completed' ? 'success' : 'warning'}">${l.status}</span>
-        </div>
-      `).join('') || '<p class="text-muted">No lab results found.</p>';
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                        <span><strong>${l.test_name}</strong>: ${l.result_value || 'Pending'}</span>
+                        <span class="badge badge-${l.status === 'completed' ? 'success' : 'warning'}">${l.status}</span>
+                    </div>
+                `).join('') || '<p class="text-muted">No lab results found.</p>';
 
                 let notesHTML = data.nursing_notes.slice(0, 3).map(n => `
-        <div class="timeline-item mb-2">
-          <div class="bg-light p-2 rounded">
-            <small class="text-muted">${new Date(n.note_datetime).toLocaleString()}</small><br>
-            <span class="badge badge-primary">${n.note_type}</span><br>
-            <small>${n.notes.substring(0, 100)}${n.notes.length > 100 ? '...' : ''}</small>
-          </div>
-        </div>
-      `).join('') || '<p class="text-muted">No nursing notes available.</p>';
+                    <div class="timeline-item mb-2">
+                        <div class="bg-light p-2 rounded">
+                            <small class="text-muted">${new Date(n.note_datetime).toLocaleString()}</small><br>
+                            <span class="badge badge-primary">${n.note_type}</span><br>
+                            <small>${n.notes.substring(0, 100)}${n.notes.length > 100 ? '...' : ''}</small>
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-muted">No nursing notes available.</p>';
 
-                container.innerHTML = `
-        <!-- Patient Header -->
-        <div class="text-center mb-4">
-          ${data.photo_url ? `<img src="${data.photo_url}" class="img-circle elevation-2" style="width: 80px; height: 80px;">` : '<div class="bg-secondary img-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;"><i class="fas fa-user fa-2x text-white"></i></div>'}
-          <h5 class="mt-2 mb-1">${data.full_name}</h5>
-          <span class="badge badge-lg badge-${data.status === 'admitted' ? 'success' : data.status === 'critical' ? 'danger' : 'info'}">${data.status.toUpperCase()}</span>
-        </div>
+                patientDetailsContainer.innerHTML = `
+                    <div class="accordion" id="patientAccordion">
+                        <div class="card">
+                            <div class="card-header" data-toggle="collapse" data-target="#vitalsCollapse">
+                                <h6 class="mb-0"><i class="fas fa-heartbeat text-danger"></i> Recent Vitals</h6>
+                            </div>
+                            <div id="vitalsCollapse" class="collapse show" data-parent="#patientAccordion">
+                                <div class="card-body">${vitalsHTML}</div>
+                            </div>
+                        </div>
 
-        <!-- Quick Stats -->
-        <div class="row mb-3">
-          <div class="col-4">
-            <div class="info-box bg-primary">
-              <span class="info-box-icon"><i class="fas fa-heartbeat"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">Vitals</span>
-                <span class="info-box-number">${data.vitals.length}</span>
-              </div>
-            </div>
-          </div>
-          <div class="col-4">
-            <div class="info-box bg-success">
-              <span class="info-box-icon"><i class="fas fa-pills"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">Meds</span>
-                <span class="info-box-number">${data.prescriptions.length}</span>
-              </div>
-            </div>
-          </div>
-          <div class="col-4">
-            <div class="info-box bg-warning">
-              <span class="info-box-icon"><i class="fas fa-vials"></i></span>
-              <div class="info-box-content">
-                <span class="info-box-text">Labs</span>
-                <span class="info-box-number">${data.lab_tests.length}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+                        <div class="card">
+                            <div class="card-header" data-toggle="collapse" data-target="#labsCollapse">
+                                <h6 class="mb-0"><i class="fas fa-vials text-warning"></i> Lab Results</h6>
+                            </div>
+                            <div id="labsCollapse" class="collapse" data-parent="#patientAccordion">
+                                <div class="card-body">${labsHTML}</div>
+                            </div>
+                        </div>
 
-        <!-- Collapsible Sections -->
-        <div class="accordion" id="patientAccordion">
-          <div class="card">
-            <div class="card-header" data-toggle="collapse" data-target="#vitalsCollapse">
-              <h6 class="mb-0"><i class="fas fa-heartbeat text-danger"></i> Recent Vitals</h6>
-            </div>
-            <div id="vitalsCollapse" class="collapse show" data-parent="#patientAccordion">
-              <div class="card-body">${vitalsHTML}</div>
-            </div>
-          </div>
+                        <div class="card">
+                            <div class="card-header" data-toggle="collapse" data-target="#careCollapse">
+                                <h6 class="mb-0"><i class="fas fa-clipboard-list text-info"></i> Care Plan</h6>
+                            </div>
+                            <div id="careCollapse" class="collapse" data-parent="#patientAccordion">
+                                <div class="card-body">
+                                    <p class="small">${data.care_plan || 'No care plan available.'}</p>
+                                </div>
+                            </div>
+                        </div>
 
-          <div class="card">
-            <div class="card-header" data-toggle="collapse" data-target="#medsCollapse">
-              <h6 class="mb-0"><i class="fas fa-pills text-success"></i> Active Medications</h6>
-            </div>
-            <div id="medsCollapse" class="collapse" data-parent="#patientAccordion">
-              <div class="card-body">${prescriptionsHTML}</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header" data-toggle="collapse" data-target="#labsCollapse">
-              <h6 class="mb-0"><i class="fas fa-vials text-warning"></i> Lab Results</h6>
-            </div>
-            <div id="labsCollapse" class="collapse" data-parent="#patientAccordion">
-              <div class="card-body">${labsHTML}</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header" data-toggle="collapse" data-target="#careCollapse">
-              <h6 class="mb-0"><i class="fas fa-clipboard-list text-info"></i> Care Plan</h6>
-            </div>
-            <div id="careCollapse" class="collapse" data-parent="#patientAccordion">
-              <div class="card-body">
-                <p class="small">${data.care_plan || 'No care plan available.'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header" data-toggle="collapse" data-target="#notesCollapse">
-              <h6 class="mb-0"><i class="fas fa-sticky-note text-secondary"></i> Recent Notes</h6>
-            </div>
-            <div id="notesCollapse" class="collapse" data-parent="#patientAccordion">
-              <div class="card-body">${notesHTML}</div>
-            </div>
-          </div>
-        </div>
-      `;
+                        <div class="card">
+                            <div class="card-header" data-toggle="collapse" data-target="#notesCollapse">
+                                <h6 class="mb-0"><i class="fas fa-sticky-note text-secondary"></i> Recent Notes</h6>
+                            </div>
+                            <div id="notesCollapse" class="collapse" data-parent="#patientAccordion">
+                                <div class="card-body">${notesHTML}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             })
             .catch(error => {
-                container.innerHTML = `
-        <div class="alert alert-danger">
-          <i class="fas fa-exclamation-triangle"></i>
-          Failed to load patient details. Please try again.
-        </div>
-      `;
+                patientDetailsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Failed to load patient details. Please try again.
+                </div>
+                `;
+                patientMedicationsTable.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Failed to load medications. Please try again.
+                </div>
+                `;
             });
     }
 </script>

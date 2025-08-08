@@ -167,7 +167,7 @@
                         <select name="patient_id" id="patient_id" class="form-control nurse-form-control" required autocomplete="off">
                             <option value="" disabled selected>Select Patient</option>
                             {% for patient in patients %}
-                            <option value="{{ patient.id }}">{{ patient.id }}- {{ patient.full_name }}</option>
+                            <option value="{{ patient.id }}">{{ patient.patient_id }}- {{ patient.full_name }}</option>
                             {% endfor %}
                         </select>
                     </div>

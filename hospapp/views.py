@@ -291,7 +291,7 @@ def nurses(request):
         # Utility
         'today': today,
         'current_time': timezone.now(),
-        'patients': Patient.objects.all(), # Keep for generic patient lists in modals
+        'patients': Patient.objects.filter(is_inpatient=False),
         'doctors': Staff.objects.select_related('user').filter(Q(role='doctor')),
 
         # ⭐ NEW: Data for patient status monitoring (excluding rooms)
@@ -2519,7 +2519,7 @@ def update_ivf_status(request):
 
 @login_required
 @require_http_methods(["GET"])
-@check_doctor_role
+# @check_doctor_role
 def get_ivf_progress(request, record_id):
     ivf_record = get_object_or_404(IVFRecord, id=record_id)
     patient = ivf_record.patient
@@ -4886,7 +4886,8 @@ def refer_patient(request):
 def notification_data(request):
     """
     Generates a list of notifications for the current staff user based on their role.
-    """
+    Notifications only show items that need attention and haven't been completed.
+    """    
     today = timezone.localdate()
     notifications = []
 
@@ -4895,76 +4896,89 @@ def notification_data(request):
         current_staff = Staff.objects.get(user=request.user)
         user_role = current_staff.role.lower()
     except Staff.DoesNotExist:
-        # Handle cases where the user is not a staff member
         return JsonResponse({"notifications": notifications})
 
-    # Notifications for Nurses
+    # ===================== NURSE NOTIFICATIONS =====================
     if user_role == 'nurse':
         
-        # 1. Patients needing Vital Signs recorded
-        # Identify admitted patients who haven't had vitals recorded today.
-        admitted_patients_with_vitals_today_ids = Vitals.objects.filter(
+        # 1. Admitted patients who need vitals recorded today
+        # Only show patients who are currently admitted AND haven't had vitals today
+        patients_with_vitals_today = Vitals.objects.filter(
             recorded_at__date=today
         ).values_list('patient_id', flat=True)
-
-        patients_to_monitor_count = Admission.objects.filter(
+        
+        admitted_patients_needing_vitals = Admission.objects.filter(
             status='Admitted'
         ).exclude(
-            patient__id__in=admitted_patients_with_vitals_today_ids
+            patient_id__in=patients_with_vitals_today
         ).count()
         
-        if patients_to_monitor_count > 0:
+        if admitted_patients_needing_vitals > 0:
             notifications.append({
-                "title": "Vitals to Record",
-                "count": patients_to_monitor_count,
-                "url": "/n/vitals"
+                "title": "Admitted Patients Need Vitals",
+                "count": admitted_patients_needing_vitals,
+                "url": "/n/vitals",
+                "priority": "high"
             })
             
-        # 2. New patient admissions today that need nursing attention
-        new_admissions_today = Admission.objects.filter(
+        # 2. New admissions today needing initial nursing assessment
+        patients_with_nursing_notes_today = NursingNote.objects.filter(
+            created_at__date=today,
+            nurse=request.user
+        ).values_list('patient_id', flat=True)
+        
+        new_admissions_needing_assessment = Admission.objects.filter(
             admitted_on=today,
             status='Admitted'
+        ).exclude(
+            patient_id__in=patients_with_nursing_notes_today
         ).count()
-        if new_admissions_today > 0:
+        
+        if new_admissions_needing_assessment > 0:
             notifications.append({
-                "title": "New Patients Admitted",
-                "count": new_admissions_today,
-                "url": "/n/home"
+                "title": "New Admissions Need Assessment",
+                "count": new_admissions_needing_assessment,
+                "url": "/n/nursing_actions",
+                "priority": "high"
             })
             
-        # 3. Patients with prescriptions needing administration
-        # Find patients with active prescriptions who haven't had medication notes today
-        patients_with_recent_prescriptions = Prescription.objects.filter(
-            start_date__lte=today
-        ).values_list('patient_id', flat=True).distinct()
-        
+        # 3. Patients with active prescriptions needing medication administration
+        # Find admitted patients with recent prescriptions who haven't had medication notes today
         patients_with_med_notes_today = NursingNote.objects.filter(
             note_type='medication',
             created_at__date=today
-        ).values_list('patient_id', flat=True).distinct()
+        ).values_list('patient_id', flat=True)
         
-        patients_needing_medication = set(patients_with_recent_prescriptions) - set(patients_with_med_notes_today)
+        admitted_patients_with_prescriptions = Admission.objects.filter(
+            status='Admitted',
+            patient__prescriptions__start_date__lte=today
+        ).exclude(
+            patient_id__in=patients_with_med_notes_today
+        ).values('patient_id').distinct().count()
         
-        if patients_needing_medication:
+        if admitted_patients_with_prescriptions > 0:
             notifications.append({
                 "title": "Medications to Administer",
-                "count": len(patients_needing_medication),
-                "url": "/n/nursing_actions"
+                "count": admitted_patients_with_prescriptions,
+                "url": "/n/nursing_actions",
+                "priority": "high"
             })
 
-        # 4. Handover logs for the nurse
-        new_handovers = HandoverLog.objects.filter(
+        # 4. Unread handover logs for today
+        unread_handovers = HandoverLog.objects.filter(
             recipient=request.user,
             timestamp__date=today
         ).count()
-        if new_handovers > 0:
+        
+        if unread_handovers > 0:
             notifications.append({
-                "title": "New Handovers",
-                "count": new_handovers,
-                "url": "/n/handover_log"
+                "title": "New Handovers Today",
+                "count": unread_handovers,
+                "url": "/n/handover_log",
+                "priority": "medium"
             })
 
-        # 5. IVF Cycles needing progress updates
+        # 5. IVF Cycles needing daily monitoring/updates
         ivf_cycles_needing_updates = IVFRecord.objects.filter(
             status__in=['in_progress', 'stimulation', 'egg_retrieval', 'fertilization', 'embryo_transfer', 'luteal_phase']
         ).exclude(
@@ -4973,237 +4987,392 @@ def notification_data(request):
         
         if ivf_cycles_needing_updates > 0:
             notifications.append({
-                "title": "IVF Cycles to Monitor",
+                "title": "IVF Cycles Need Updates",
                 "count": ivf_cycles_needing_updates,
-                "url": "/n/ivf-progress"
+                "url": "/n/ivf-progress",
+                "priority": "medium"
             })
-            
-    # Notifications for Doctors
+
+    # ===================== DOCTOR NOTIFICATIONS =====================
     elif user_role == 'doctor':
         
-        # 1. New Referrals to the doctor's department
+        # 1. New referrals to doctor's department (unattended)
         if current_staff.department:
-            new_referrals_count = Referral.objects.filter(
+            patients_with_consultations_today = Consultation.objects.filter(
+                created_at__date=today,
+                doctor=request.user
+            ).values_list('patient_id', flat=True)
+            
+            new_referrals = Referral.objects.filter(
                 department=current_staff.department,
                 created_at__date=today
+            ).exclude(
+                patient_id__in=patients_with_consultations_today
             ).count()
-            if new_referrals_count > 0:
+            
+            if new_referrals > 0:
                 notifications.append({
                     "title": "New Patient Referrals",
-                    "count": new_referrals_count,
-                    "url": "/d/consultations"
+                    "count": new_referrals,
+                    "url": "/d/consultations",
+                    "priority": "high"
                 })
             
-        # 2. New Admissions assigned to the doctor
-        new_admissions_count = Admission.objects.filter(
+        # 2. New admissions assigned to doctor (need initial consultation)
+        patients_with_consultations_today = Consultation.objects.filter(
+            created_at__date=today,
+            doctor=request.user
+        ).values_list('patient_id', flat=True)
+        
+        new_assigned_admissions = Admission.objects.filter(
             doctor_assigned=request.user,
-            admitted_on=today
+            admitted_on=today,
+            status='Admitted'
+        ).exclude(
+            patient_id__in=patients_with_consultations_today
         ).count()
-        if new_admissions_count > 0:
+        
+        if new_assigned_admissions > 0:
             notifications.append({
                 "title": "New Patients Assigned",
-                "count": new_admissions_count,
-                "url": "consultations"
+                "count": new_assigned_admissions,
+                "url": "/d/consultations",
+                "priority": "high"
             })
             
-        # 3. Completed Lab Test Results awaiting doctor's review
-        pending_lab_results_count = LabTest.objects.filter(
+        # 3. Completed lab results awaiting doctor's review
+        pending_lab_results = LabTest.objects.filter(
             requested_by=request.user,
             status='completed',
             testcompleted=True
         ).exclude(
-            # Exclude tests that have doctor comments (indicating they've been reviewed)
-            id__in=DoctorComments.objects.values_list('labtech_name', flat=True)
+            # Exclude tests that have doctor comments (reviewed)
+            id__in=DoctorComments.objects.filter(
+                doctor=request.user
+            ).values_list('labtech_name', flat=True)
         ).count()
         
-        if pending_lab_results_count > 0:
+        if pending_lab_results > 0:
             notifications.append({
                 "title": "Lab Results to Review",
-                "count": pending_lab_results_count,
-                "url": "/d/recomended_tests"
+                "count": pending_lab_results,
+                "url": "/d/recomended_tests",
+                "priority": "high"
             })
         
-        # 4. IVF Records needing doctor attention
-        ivf_records_needing_attention = IVFRecord.objects.filter(
+        # 4. New IVF cases needing doctor's initial assessment
+        new_ivf_cases = IVFRecord.objects.filter(
             status='open'
         ).count()
-        if ivf_records_needing_attention > 0:
+        
+        if new_ivf_cases > 0:
             notifications.append({
                 "title": "New IVF Cases",
-                "count": ivf_records_needing_attention,
-                "url": "/d/ivf/start/"
+                "count": new_ivf_cases,
+                "url": "/d/ivf/start/",
+                "priority": "medium"
             })
 
-    # Notifications for Lab Technicians
+        # 5. Critical patients needing attention
+        critical_patients = Patient.objects.filter(
+            status='critical',
+            is_inpatient=True
+        ).count()
+        
+        if critical_patients > 0:
+            notifications.append({
+                "title": "Critical Patients",
+                "count": critical_patients,
+                "url": "/d/consultations",
+                "priority": "critical"
+            })
+
+    # ===================== LAB TECHNICIAN NOTIFICATIONS =====================
     elif user_role == 'lab':
         
         # 1. Pending lab tests to be performed
-        pending_tests_count = LabTest.objects.filter(
+        pending_tests = LabTest.objects.filter(
             status='pending',
             testcompleted=False
         ).count()
-        if pending_tests_count > 0:
+        
+        if pending_tests > 0:
             notifications.append({
                 "title": "Pending Lab Tests",
-                "count": pending_tests_count,
-                "url": "/l/test_entry"
+                "count": pending_tests,
+                "url": "/l/test_entry",
+                "priority": "high"
             })
             
-        # 2. Tests requested today
+        # 2. Tests requested today (new work)
         tests_requested_today = LabTest.objects.filter(
-            requested_at__date=today
+            requested_at__date=today,
+            status='pending'
         ).count()
+        
         if tests_requested_today > 0:
             notifications.append({
-                "title": "Tests Requested Today",
+                "title": "New Tests Today",
                 "count": tests_requested_today,
-                "url": "/l/home"
+                "url": "/l/test_entry",
+                "priority": "medium"
             })
 
         # 3. IVF cycles requiring lab monitoring
+        ivf_updates_by_lab_today = IVFProgressUpdate.objects.filter(
+            timestamp__date=today,
+            updated_by__staff__role='lab'
+        ).values_list('ivf_record_id', flat=True)
+        
         ivf_lab_monitoring = IVFRecord.objects.filter(
             status__in=['stimulation', 'fertilization', 'pregnancy_test']
+        ).exclude(
+            id__in=ivf_updates_by_lab_today
         ).count()
+        
         if ivf_lab_monitoring > 0:
             notifications.append({
                 "title": "IVF Lab Monitoring",
                 "count": ivf_lab_monitoring,
-                "url": "/l/ivf-progress"
+                "url": "/l/ivf-progress",
+                "priority": "medium"
             })
 
-    # Notifications for Receptionists
+    # ===================== RECEPTIONIST NOTIFICATIONS =====================
     elif user_role == 'receptionist':
         
-        # 1. New patient registrations today
+        # 1. Today's appointments needing check-in
+        appointments_today = Appointment.objects.filter(
+            scheduled_time__date=today
+        ).count()
+        
+        if appointments_today > 0:
+            notifications.append({
+                "title": "Today's Appointments",
+                "count": appointments_today,
+                "url": "/r/home",
+                "priority": "medium"
+            })
+
+        # 2. Patients registered today (for tracking)
         new_patients_today = Patient.objects.filter(
             date_registered__date=today
         ).count()
+        
         if new_patients_today > 0:
             notifications.append({
                 "title": "Patients Registered Today",
                 "count": new_patients_today,
-                "url": "/r/home"
-            })
-            
-        # 2. Scheduled appointments for today
-        appointments_today = Appointment.objects.filter(
-            scheduled_time__date=today
-        ).count()
-        if appointments_today > 0:
-            notifications.append({
-                "title": "Appointments Today",
-                "count": appointments_today,
-                "url": "/r/home"
+                "url": "/r/home",
+                "priority": "low"
             })
 
-    # Notifications for Accountants
+        # 3. Discharged patients needing checkout processing
+        patients_with_bills_today = PatientBill.objects.filter(
+            created_at__date=today
+        ).values_list('patient_id', flat=True)
+        
+        pending_discharges = Admission.objects.filter(
+            discharge_date=today,
+            status='Discharged'
+        ).exclude(
+            patient_id__in=patients_with_bills_today
+        ).count()
+        
+        if pending_discharges > 0:
+            notifications.append({
+                "title": "Discharges Need Processing",
+                "count": pending_discharges,
+                "url": "/r/home",
+                "priority": "high"
+            })
+
+    # ===================== ACCOUNTANT NOTIFICATIONS =====================
     elif user_role == 'account':
         
-        # 1. Pending bills
-        pending_bills_count = PatientBill.objects.filter(
-            status='pending'
+        # 1. Unpaid bills (overdue priority)
+        overdue_bills = PatientBill.objects.filter(
+            status__in=['pending', 'partial'],
+            created_at__date__lt=today
         ).count()
-        if pending_bills_count > 0:
+        
+        if overdue_bills > 0:
             notifications.append({
-                "title": "Pending Bills",
-                "count": pending_bills_count,
-                "url": "/a/payment_tracker"
+                "title": "Overdue Bills",
+                "count": overdue_bills,
+                "url": "/a/payment_tracker",
+                "priority": "high"
             })
             
-        # 2. Payments received today
+        # 2. Today's bills needing follow-up
+        todays_pending_bills = PatientBill.objects.filter(
+            created_at__date=today,
+            status='pending'
+        ).count()
+        
+        if todays_pending_bills > 0:
+            notifications.append({
+                "title": "Today's Pending Bills",
+                "count": todays_pending_bills,
+                "url": "/a/payment_tracker",
+                "priority": "medium"
+            })
+            
+        # 3. Payments received today (for verification)
         payments_today = Payment.objects.filter(
             payment_date__date=today,
             status='completed'
         ).count()
+        
         if payments_today > 0:
             notifications.append({
                 "title": "Payments Today",
                 "count": payments_today,
-                "url": "/a/payment_tracker"
+                "url": "/a/payment_tracker",
+                "priority": "low"
             })
 
-        # 3. Pending expenses needing approval
-        if request.user.has_perm('main.approve_expenses'):
+        # 4. Expenses pending approval (if user has permission)
+        if request.user.has_perm('main.approve_expenses') or user_role == 'admin':
             pending_expenses = Expense.objects.filter(
                 status='pending'
             ).count()
+            
             if pending_expenses > 0:
                 notifications.append({
-                    "title": "Expenses Pending Approval",
+                    "title": "Expenses Need Approval",
                     "count": pending_expenses,
-                    "url": "/a/home"
+                    "url": "/a/home",
+                    "priority": "medium"
                 })
 
-    # Notifications for HR
+    # ===================== HR NOTIFICATIONS =====================
     elif user_role == 'hr':
         
-        # 1. Staff attendance not recorded today
+        # 1. Missing attendance records for today
         total_active_staff = Staff.objects.filter(user__is_active=True).count()
         attendance_recorded_today = Attendance.objects.filter(
             date__date=today
-        ).count()
+        ).values('staff').distinct().count()
         
         missing_attendance = total_active_staff - attendance_recorded_today
         if missing_attendance > 0:
             notifications.append({
-                "title": "Missing Attendance Records",
+                "title": "Missing Attendance",
                 "count": missing_attendance,
-                "url": "/hr/attendance-shifts"
+                "url": "/hr/attendance-shifts",
+                "priority": "high"
             })
             
-        # 2. New staff transitions
-        new_transitions = StaffTransition.objects.filter(
+        # 2. New staff transitions needing processing
+        pending_transitions = StaffTransition.objects.filter(
             created_at__date=today
         ).count()
-        if new_transitions > 0:
+        
+        if pending_transitions > 0:
             notifications.append({
                 "title": "New Staff Transitions",
-                "count": new_transitions,
-                "url": "/hr/staff_transitions"
+                "count": pending_transitions,
+                "url": "/hr/staff_transitions",
+                "priority": "medium"
             })
 
-    # Notifications for Administrators
+        # 3. Staff without shift assignments for tomorrow
+        tomorrow = today + timezone.timedelta(days=1)
+        staff_without_shifts = Staff.objects.filter(
+            user__is_active=True
+        ).exclude(
+            user__shift_assignments__date=tomorrow
+        ).count()
+        
+        if staff_without_shifts > 0:
+            notifications.append({
+                "title": "Tomorrow's Shifts Incomplete",
+                "count": staff_without_shifts,
+                "url": "/hr/attendance-shifts",
+                "priority": "medium"
+            })
+
+    # ===================== ADMINISTRATOR NOTIFICATIONS =====================
     elif user_role == 'admin':
         
-        # 1. Unacknowledged Emergency Alerts
-        unacknowledged_alerts_count = EmergencyAlert.objects.exclude(
+        # 1. Unacknowledged emergency alerts
+        unacknowledged_alerts = EmergencyAlert.objects.exclude(
             acknowledged_by=request.user
         ).count()
-        if unacknowledged_alerts_count > 0:
+        
+        if unacknowledged_alerts > 0:
             notifications.append({
                 "title": "Emergency Alerts",
-                "count": unacknowledged_alerts_count,
-                "url": "/ad/operations"
+                "count": unacknowledged_alerts,
+                "url": "/ad/operations",
+                "priority": "critical"
             })
             
         # 2. Expenses pending approval
         pending_expenses = Expense.objects.filter(
             status='pending'
         ).count()
+        
         if pending_expenses > 0:
             notifications.append({
-                "title": "Expenses Pending Approval",
+                "title": "Expenses Need Approval",
                 "count": pending_expenses,
-                "url": "/ad/operations"
-            })
-            
-        # 3. System activities today (general overview)
-        activities_today = {
-            'patients': Patient.objects.filter(date_registered__date=today).count(),
-            'admissions': Admission.objects.filter(admitted_on=today).count(),
-            'tests': LabTest.objects.filter(requested_at__date=today).count(),
-        }
-        
-        total_activities = sum(activities_today.values())
-        if total_activities > 0:
-            notifications.append({
-                "title": "System Activities Today",
-                "count": total_activities,
-                "url": "/ad/reports"
+                "url": "/ad/operations",
+                "priority": "high"
             })
 
+        # 5. Discharged patients needing final approval
+        pending_discharges = Admission.objects.filter(
+            status='Discharged',
+            discharge_date__isnull=False,
+            discharged_by__isnull=True  # Not yet approved by admin
+        ).count()
+        
+        if pending_discharges > 0:
+            notifications.append({
+                "title": "Discharges Need Approval",
+                "count": pending_discharges,
+                "url": "/ad/operations",
+                "priority": "high"
+            })
+            
+        # 4. System overview - critical patients
+        critical_patients = Patient.objects.filter(
+            status='critical',
+            is_inpatient=True
+        ).count()
+        
+        if critical_patients > 0:
+            notifications.append({
+                "title": "Critical Patients",
+                "count": critical_patients,
+                "url": "/ad/reports",
+                "priority": "critical"
+            })
+
+        # 5. Inactive staff accounts that might need attention
+        inactive_staff = Staff.objects.filter(
+            user__is_active=False,
+            user__last_login__date__gte=today - timezone.timedelta(days=30)
+        ).count()
+        
+        if inactive_staff > 0:
+            notifications.append({
+                "title": "Recently Inactive Staff",
+                "count": inactive_staff,
+                "url": "/ad/user_accounts",
+                "priority": "low"
+            })
+
+    # Sort notifications by priority (critical > high > medium > low)
+    priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+    notifications.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 3))
+
     return JsonResponse({
-        "notifications": notifications
+        "notifications": notifications,
+        "total_count": sum(notif['count'] for notif in notifications),
+        "user_role": user_role
     })
 
 
