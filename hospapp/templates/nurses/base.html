@@ -86,6 +86,15 @@
                                 <p>Dashboard</p>
                             </a>
                         </li>
+                       
+                        <li class="nav-item">
+                            <a href="{% url 'n_register_patient' %}" class="nav-link {% if request.resolver_match.url_name == 'register' %}active{% endif %}">
+                                <i class="nav-icon fas fa-heartbeat"></i>
+                                <p>Registers</p>
+                            </a>
+                        </li>
+
+                        
                         <li class="nav-item">
                             <a href="{% url 'vitals' %}" class="nav-link {% if request.resolver_match.url_name == 'vitals' %}active{% endif %}">
                                 <i class="nav-icon fas fa-heartbeat"></i>

@@ -89,9 +89,9 @@
             <div class="card nurse-dashboard-card">
                 <div class="card-body text-center">
                     <i class="fas fa-list-ul nurse-card-icon"></i>
-                    <h5 class="nurse-card-title">Activities</h5>
-                    <a href="{% url 'nurse_activity_report' %}" class="btn btn-success nurse-card-btn">
-                        <i class="fas fa-clipboard-list me-2"></i> My Activities
+                    <h5 class="nurse-card-title">New patient registers</h5>
+                    <a href="{% url 'n_register_patient' %}" class="btn btn-success nurse-card-btn">
+                        <i class="fas fa-clipboard-list me-2"></i> Registration
                     </a>
                 </div>
             </div>
@@ -118,6 +118,17 @@
                     <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#dischargeModal">
                         <i class="fas fa-sign-out-alt"></i> Discharge
                     </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-list-ul nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Activities</h5>
+                    <a href="{% url 'nurse_activity_report' %}" class="btn btn-success nurse-card-btn">
+                        <i class="fas fa-clipboard-list me-2"></i> My Activities
+                    </a>
                 </div>
             </div>
         </div>

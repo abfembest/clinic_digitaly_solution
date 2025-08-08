@@ -1,6 +1,6 @@
-{% extends "receptionist/base.html" %}
+{% extends "nurses/base.html" %}
 
-{% block title %}HMS | Receptionist{% endblock %}
+{% block title %}HMS | Nurses register{% endblock %}
 
 {% block content %}
 <!-- Content Header (Page header) -->
@@ -94,7 +94,13 @@
                         New Patient
                     </a>
                 </li>
+
                 <li class="nav-item">
+                    <a class="nav-link" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
+                        Schedule Appointment
+                    </a>
+                </li>
+                <!--<li class="nav-item">
                     <a class="nav-link" id="admit-tab" data-toggle="tab" href="#admit" role="tab">
                         Admit Patient
                     </a>
@@ -102,17 +108,13 @@
                 <li class="nav-item">
                     <a class="nav-link" id="update-tab" data-toggle="tab" href="#update" role="tab">Update Info</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="schedule-tab" data-toggle="tab" href="#schedule" role="tab">
-                        Schedule Appointment
-                    </a>
-                </li>
+
                 <li class="nav-item">
                     <a class="nav-link" id="refer-tab" data-toggle="tab" href="#refer" role="tab">
                         Department
                         Referral
                     </a>
-                </li>
+                </li> -->
             </ul>
 
             <!-- Tab Content -->
@@ -743,7 +745,7 @@
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
         submitButton.disabled = true;
 
-        fetch(`/ajax/patient-info/${patientId}/`)
+        fetch(`/ajax/n_patient-info/${patientId}/`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

@@ -26,6 +26,9 @@ urlpatterns = [
     path('n/handover_log', views.handover_log, name='handover_log'),
     path('n/get_patient_details/<int:patient_id>', views.get_patient_details, name='get_patient_details'),
     path('api/generate-nurse-report/', views.generate_nurse_report, name='generate_nurse_report'),
+    path('n/new_patient', views.n_register_patient, name='n_register_patient'),
+    path('ajax/n_patient-info/<int:patient_id>/', views.n_get_patient_info, name='n_get_patient_info'),
+    path('nurses/register/submit', views.n_register_p, name='n_register_p'),
 
     ########################### End Nurses URLS #################################
 
