@@ -57,7 +57,7 @@
             font-size: 1rem;
             padding: 0.6rem 1.25rem;
         }
-        /*Camera CSS*/
+    /*Camera CSS*/
     #camera-container {
         display: none;
         margin-top: 10px;
@@ -121,7 +121,7 @@
             <div class="tab-content" id="patientTabsContent">
                 <!-- Register Patient Tab -->
                 <div class="tab-pane fade show active" id="register" role="tabpanel">
-                    <form enctype="multipart/form-data" action="{% url 'n_register_p' %}" method="post">
+                    <form action="{% url 'n_register_p' %}" id="patient-form" enctype="multipart/form-data" method="POST">
                         {% csrf_token %}
 
                         <!-- Patient Basic Information -->
@@ -669,6 +669,20 @@
         </div>
     </div>
 </section>
+
+
+{% if print_card %}
+<script>
+    alert(`/patients/print_card/{{ print_card_id }}/`);
+    // Delay slightly so DOM loads fully
+    setTimeout(function() {
+        window.open(`/patients/print_card/{{ print_card_id }}/`, "_blank");
+    }, 500);
+</script>
+{% else %}
+No id
+{% endif %}
+
 
 
 <script>
