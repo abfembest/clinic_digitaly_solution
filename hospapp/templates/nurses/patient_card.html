@@ -1,0 +1,276 @@
+﻿{%load static%}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Patient Card</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+            .print-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            }
+
+        .card-container {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            width: 380px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+            .card-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #007bff, #00d4aa, #007bff);
+                border-radius: 20px 20px 0 0;
+            }
+
+        .logo {
+            width: 70px;
+            margin-bottom: 4px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            transition: transform 0.3s ease;
+        }
+
+            .logo:hover {
+                transform: scale(1.05);
+            }
+
+        h5 {
+            color: #2c3e50;
+            margin: 5px 0 12px 0;
+            font-size: 20px;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .patient-photo {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #007bff;
+            margin: 0 auto 10px auto;
+            display: block;
+            box-shadow: 0 8px 16px rgba(0, 123, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+            .patient-photo:hover {
+                transform: scale(1.05);
+                box-shadow: 0 12px 24px rgba(0, 123, 255, 0.3);
+            }
+
+        .patient-id {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 0 auto 15px auto;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+        }
+
+        .details {
+            text-align: left;
+            margin-top: 7px;
+            background: rgba(248, 249, 250, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 4px solid #007bff;
+        }
+
+            .details p {
+                margin: 12px 0;
+                color: #495057;
+                font-size: 15px;
+                display: flex;
+                align-items: center;
+                transition: color 0.2s ease;
+            }
+
+                .details p:hover {
+                    color: #007bff;
+                }
+
+            .details strong {
+                color: #2c3e50;
+                min-width: 80px;
+                margin-right: 10px;
+                font-weight: 600;
+            }
+
+            .details p::before {
+                content: '●';
+                color: #007bff;
+                margin-right: 8px;
+                font-size: 8px;
+            }
+
+        .qr-code {
+            margin-top: 8px;
+            padding: 7px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+            .qr-code img {
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                margin: 0;
+                padding: 0;
+            }
+
+            .print-button {
+                display: none !important;
+            }
+
+            .card-container {
+                width: 100% !important;
+                max-width: 400px !important;
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .card-container {
+                width: 90%;
+                padding: 20px;
+            }
+
+            .print-button {
+                top: 10px;
+                right: 10px;
+                padding: 10px 20px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="printCard()">🖨️ Print Card</button>
+
+    <div class="card-container">
+        <img src="{% static 'dist/img/ayologo.jpg' %}" alt="Hospital Logo" class="logo">
+        <h5>Ayomide Specialist Hospital Osogbo Osun State, Nigeria</h5>
+        {% if patient.photo %}
+        <img src="{{ patient.photo.url }}" alt="Patient Photo" class="patient-photo">
+        {% endif %}
+        <div class="patient-id">ID: {{patient.patient_id}}</div>
+        <div class="details">
+            <p><strong>Name:</strong> {{ patient.full_name }}</p>
+            <p><strong>DOB:</strong> {{ patient.date_of_birth }}</p>
+            <p><strong>Gender:</strong> {{ patient.gender }}</p>
+            <p><strong>Phone:</strong> {{ patient.phone }}</p>
+        </div>
+        <div class="qr-code">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+        </div>
+    </div>
+
+    <script>
+        function printCard() {
+            // Hide the print button temporarily
+            const printButton = document.querySelector('.print-button');
+            const originalDisplay = printButton.style.display;
+            printButton.style.display = 'none';
+
+            // Create a new window for printing
+            const printWindow = window.open('', '_blank');
+            const cardContainer = document.querySelector('.card-container');
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Patient Card - Print</title>
+                    <style>
+                        ${document.querySelector('style').innerHTML}
+                        body {
+                            background: white !important;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            padding: 20px;
+                        }
+                        .print-button { display: none !important; }
+                        .card-container {
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+                            border: 1px solid #ddd !important;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${cardContainer.outerHTML}
+                </body>
+                </html>
+            `);
+
+            printWindow.document.close();
+
+            // Wait for images to load, then print
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+
+            // Restore the print button
+            printButton.style.display = originalDisplay;
+        }
+    </script>
+</body>
+</html>

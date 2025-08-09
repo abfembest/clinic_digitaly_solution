@@ -671,18 +671,18 @@
 </section>
 
 
-{% if print_card %}
+{% if print_card_id %}
 <script>
-    alert(`/patients/print_card/{{ print_card_id }}/`);
-    // Delay slightly so DOM loads fully
-    setTimeout(function() {
-        window.open(`/patients/print_card/{{ print_card_id }}/`, "_blank");
-    }, 500);
+    document.addEventListener("DOMContentLoaded", function() {
+        const url = `/patients/print_card/{{ print_card_id }}/`;
+        setTimeout(function() {
+            window.open(url, "_blank");
+        }, 500);
+    });
 </script>
 {% else %}
 No id
 {% endif %}
-
 
 
 <script>
