@@ -168,7 +168,122 @@ def n_register_patient(request):
 
 
 
-@csrf_exempt
+
+import qrcode
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A7
+from reportlab.lib.units import mm
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from django.contrib import messages
+from .models import Patient
+
+def generate_patient_card_pdf(patient):
+    qr_data = f"ID: {patient.id}\nName: {patient.full_name}\nDOB: {patient.date_of_birth}"
+    qr = qrcode.QRCode(box_size=2, border=2)
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    qr_buffer = BytesIO()
+    qr_img.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+
+    pdf_buffer = BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=A7)
+    p.setFont("Helvetica-Bold", 10)
+    p.drawCentredString(52 * mm, 70 * mm, "Hospital Patient Card")
+
+    p.setFont("Helvetica", 8)
+    p.drawString(10 * mm, 60 * mm, f"Name: {patient.full_name}")
+    p.drawString(10 * mm, 55 * mm, f"DOB: {patient.date_of_birth}")
+    p.drawString(10 * mm, 50 * mm, f"Gender: {patient.gender}")
+    p.drawString(10 * mm, 45 * mm, f"Phone: {patient.phone}")
+
+    p.drawInlineImage(qr_buffer, 10 * mm, 25 * mm, width=25 * mm, height=25 * mm)
+    p.showPage()
+    p.save()
+    pdf_buffer.seek(0)
+
+    return pdf_buffer
+
+def print_patient_card(request, patient_id):
+    patient = Patient.objects.get(id=patient_id)
+    pdf_buffer = generate_patient_card_pdf(patient)
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename=patient_{patient.id}_card.pdf'
+    return response
+
+def n_register_p(request):
+    if request.method == 'POST':
+        data = request.POST
+        photo = request.FILES.get('photo')
+
+        if not all([
+            data.get('full_name'), data.get('date_of_birth'), data.get('gender'),
+            data.get('phone'), data.get('marital_status'), data.get('address'),
+            data.get('nationality'), data.get('next_of_kin_name'),
+            data.get('next_of_kin_phone'), data.get('next_of_kin_relationship'),
+            photo, data.get('email')
+        ]):
+            messages.error(request, "Please fill all required fields marked with * or check image")
+            return redirect('n_register_patient')
+
+        if Patient.objects.filter(
+            full_name=data.get('full_name'),
+            date_of_birth=data.get('date_of_birth'),
+            email=data.get('email')
+        ).exists():
+            messages.warning(request, "A patient with this name and date of birth already exists.")
+            return redirect('n_register_patient')
+
+        try:
+            patient = Patient.objects.create(
+                full_name=data.get('full_name'),
+                date_of_birth=data.get('date_of_birth'),
+                gender=data.get('gender'),
+                phone=data.get('phone'),
+                email=data.get('email'),
+                marital_status=data.get('marital_status'),
+                address=data.get('address'),
+                nationality=data.get('nationality'),
+                state_of_origin=data.get('state_of_origin'),
+                registered_by=request.user,
+                id_type=data.get('id_type'),
+                id_number=data.get('id_number'),
+                photo=photo,
+                blood_group=data.get('blood_group'),
+                referred_by=data.get('referred_by'),
+                notes=data.get('notes'),
+                first_time=data.get('first_time'),
+                next_of_kin_name=data.get('next_of_kin_name'),
+                next_of_kin_phone=data.get('next_of_kin_phone'),
+                next_of_kin_relationship=data.get('next_of_kin_relationship'),
+                next_of_kin_email=data.get('next_of_kin_email'),
+                next_of_kin_address=data.get('next_of_kin_address'),
+            )
+
+            messages.success(request, f"Patient '{patient.full_name}' registered successfully!")
+            # Redirect back, passing patient ID in GET param so JS can open card in new tab
+            return redirect(f"{request.path}?print_card={patient.id}")
+
+        except Exception as e:
+            # Instead of redirecting, render the same template with patient_id
+            messages.success(request, f"Patient '{patient.full_name}' registered successfully!")
+            return render(request, "register.html", {"print_card_id": patient.id})
+    return render(request, "nurses/register.html")
+
+"""
+            messages.error(request, f"An error occurred during registration: {e}")
+            return redirect('n_register_patient')
+
+    return redirect('n_register_patient')
+
+"""    
+
+
+"""@csrf_exempt
 @check_nurse_role
 def n_register_p(request):
     if request.method == 'POST':
@@ -234,6 +349,8 @@ def n_register_p(request):
             return redirect('n_register_patient')
 
     return redirect('n_register_patient')
+
+"""        
 
 
 
