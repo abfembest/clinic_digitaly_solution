@@ -1077,11 +1077,15 @@ def doctors(request):
     # Get today's date
     today = timezone.now().date()
     seven_days_ago = today - timedelta(days=7)
-
+    
     # Get the current doctor's staff object and department
-    staff_profile = Staff.objects.get(user=request.user)
-    doctor_department = staff_profile.department
-
+    try:
+        staff_profile = Staff.objects.get(user=request.user)
+        doctor_department = staff_profile.department
+    except Staff.DoesNotExist:
+        messages.error(request, "Staff profile not found. Please contact administration.")
+        return redirect('home')
+    
     # 1. Patient Records and Test Requests
     pending_reviews_count = LabTest.objects.filter(status='pending').count()
     new_results_count = LabTest.objects.filter(status='completed', date_performed__date=today).count()
@@ -1102,7 +1106,7 @@ def doctors(request):
     # 4. Recommended Tests
     recommendations_count = LabTest.objects.filter(status='pending').count()
     available_results_count = LabTest.objects.filter(status='completed').count()
-
+    
     # 5. Reports & Data
     reports_available_count = LabResultFile.objects.count()
     updated_today_count = LabResultFile.objects.filter(uploaded_at__date=today).count()
@@ -1110,8 +1114,10 @@ def doctors(request):
     # 6. Appointments Data
     # Fetch all upcoming appointments for the doctor's department, ordered by scheduled time
     upcoming_appointments = Appointment.objects.filter(
-        department=doctor_department, 
+        department=doctor_department,
         scheduled_time__date__gte=today
+    ).select_related('patient', 'department').prefetch_related(
+        'patient__admission_set'
     ).order_by('scheduled_time')
     
     upcoming_appointments_count = upcoming_appointments.count()
@@ -1120,15 +1126,17 @@ def doctors(request):
     
     # 7. Chart Data (Last 7 Days)
     admissions_last_7_days = Admission.objects.filter(admitted_on__gte=seven_days_ago) \
-                                             .values('admitted_on') \
-                                             .annotate(count=Count('id')) \
-                                             .order_by('admitted_on')
+                                                .values('admitted_on') \
+                                                .annotate(count=Count('id')) \
+                                                .order_by('admitted_on')
     
-    tests_completed_last_7_days = LabTest.objects.filter(status='completed', date_performed__date__gte=seven_days_ago) \
-                                             .values('date_performed__date') \
-                                             .annotate(count=Count('id')) \
-                                             .order_by('date_performed__date')
-
+    tests_completed_last_7_days = LabTest.objects.filter(
+        status='completed', 
+        date_performed__date__gte=seven_days_ago
+    ).values('date_performed__date') \
+     .annotate(count=Count('id')) \
+     .order_by('date_performed__date')
+    
     # Prepare context dictionary to pass to the template
     context = {
         'new_results_count': new_results_count,
@@ -1145,10 +1153,90 @@ def doctors(request):
         'tests_completed_data': list(tests_completed_last_7_days),
         'upcoming_appointments_count': upcoming_appointments_count,
         'today_appointments_count': today_appointments_count,
-        'upcoming_appointments': upcoming_appointments, # Pass the full queryset
+        'today_appointments': today_appointments,
     }
-
+    
     return render(request, 'doctors/index.html', context)
+
+
+@login_required(login_url='home')
+@check_doctor_role
+@require_POST
+def admit_patient_doctor(request):
+    appointment_id = request.POST.get('appointment_id')
+    admission_reason = request.POST.get('admission_reason', '').strip()
+    
+    # Validate inputs
+    if not appointment_id:
+        messages.error(request, "No appointment ID provided.")
+        return redirect('doctors')
+    
+    if not admission_reason:
+        messages.error(request, "Please provide a reason for admission.")
+        return redirect('doctors')
+    
+    try:
+        # Get the appointment and associated patient
+        appointment = get_object_or_404(Appointment, id=appointment_id)
+        patient = appointment.patient
+        
+        # Get the current doctor's staff profile (for validation purposes)
+        try:
+            doctor_staff = Staff.objects.get(user=request.user)
+        except Staff.DoesNotExist:
+            messages.error(request, "Doctor staff profile not found. Please contact administration.")
+            return redirect('doctors')
+        
+        # Check if the patient is already admitted
+        existing_admission = Admission.objects.filter(
+            patient=patient, 
+            status='Admitted'
+        ).first()
+        
+        if existing_admission:
+            messages.warning(
+                request, 
+                f"{patient.full_name} is already admitted on {existing_admission.admission_date}."
+            )
+            return redirect('doctors')
+        
+        # Create a new admission record
+        admission = Admission.objects.create(
+            patient=patient,
+            admission_reason=admission_reason,
+            admitted_by=request.user,
+            doctor_assigned=request.user,  # This should be User instance, not Staff
+            status='Admitted',
+            admission_date=timezone.now().date(),
+            admitted_on=timezone.now().date()
+        )
+        
+        # Update the patient's status to admitted
+        patient.is_inpatient = True
+        patient.save()
+        
+        # Success message with more details
+        messages.success(
+            request, 
+            f"✅ Patient {patient.full_name} has been successfully admitted. "
+            f"Admission ID: {admission.id} | Reason: {admission_reason}"
+        )
+        
+        print(f"DEBUG: Successfully admitted patient {patient.full_name} with ID {admission.id}")
+        
+    except Appointment.DoesNotExist:
+        messages.error(request, "❌ Appointment not found. It may have been deleted.")
+        print(f"DEBUG: Appointment with ID {appointment_id} not found")
+        
+    except Exception as e:
+        messages.error(request, f"❌ An error occurred while admitting the patient: {str(e)}")
+        print(f"DEBUG: Error in admit_patient_doctor: {str(e)}")
+        
+        # Log the full traceback for debugging
+        import traceback
+        print(traceback.format_exc())
+    
+    return redirect('doctors')
 
 @login_required(login_url='home')
 @check_doctor_role
@@ -4953,7 +5041,7 @@ def register_p(request):
             )
 
             messages.success(request, f"Patient '{patient.full_name}' registered successfully.")
-            return redirect('register_patient')
+            return render(request, 'receptionist/print.html', {'patient': patient})
 
         except Exception as e:
             messages.error(request, f"An error occurred during registration: {e}")
@@ -5140,7 +5228,7 @@ def notification_data(request):
     """
     Generates a list of notifications for the current staff user based on their role.
     Notifications only show items that need attention and haven't been completed.
-    """    
+    """
     today = timezone.localdate()
     notifications = []
 
@@ -5249,19 +5337,45 @@ def notification_data(request):
     # ===================== DOCTOR NOTIFICATIONS =====================
     elif user_role == 'doctor':
         
-        # 1. New referrals to doctor's department (unattended)
+        # 1. Appointments that haven't been attended to (not admitted and no consultation)
         if current_staff.department:
-            patients_with_consultations_today = Consultation.objects.filter(
+            appointments_today = Appointment.objects.filter(
+                scheduled_time__date=today,
+                department=current_staff.department
+            ).values_list('patient_id', flat=True)
+            
+            admitted_patients = Admission.objects.filter(
+                Q(status='Admitted')
+            ).values_list('patient_id', flat=True)
+            
+            consulted_patients_today = Consultation.objects.filter(
                 created_at__date=today,
                 doctor=request.user
             ).values_list('patient_id', flat=True)
             
-            new_referrals = Referral.objects.filter(
+            unattended_appointments = len(set(appointments_today) - set(admitted_patients) - set(consulted_patients_today))
+            
+            if unattended_appointments > 0:
+                notifications.append({
+                    "title": "Unattended Appointments",
+                    "count": unattended_appointments,
+                    "url": "/d/consultations",
+                    "priority": "high"
+                })
+        
+        # 2. New referrals to doctor's department (not yet consulted)
+        if current_staff.department:
+            todays_referrals = Referral.objects.filter(
                 department=current_staff.department,
                 created_at__date=today
-            ).exclude(
-                patient_id__in=patients_with_consultations_today
-            ).count()
+            ).values_list('patient_id', flat=True)
+            
+            consulted_patients_today = Consultation.objects.filter(
+                created_at__date=today,
+                doctor=request.user
+            ).values_list('patient_id', flat=True)
+            
+            new_referrals = len(set(todays_referrals) - set(consulted_patients_today))
             
             if new_referrals > 0:
                 notifications.append({
@@ -5271,39 +5385,39 @@ def notification_data(request):
                     "priority": "high"
                 })
             
-        # 2. New admissions assigned to doctor (need initial consultation)
-        patients_with_consultations_today = Consultation.objects.filter(
-            created_at__date=today,
+        # 3. CORRECTED: Admitted patients assigned to doctor (not yet consulted at all)
+        assigned_admissions = Admission.objects.filter(
+            doctor_assigned=request.user,
+            status='Admitted'
+        ).values_list('patient_id', flat=True)
+        
+        consulted_patients = Consultation.objects.filter(
             doctor=request.user
         ).values_list('patient_id', flat=True)
         
-        new_assigned_admissions = Admission.objects.filter(
-            doctor_assigned=request.user,
-            admitted_on=today,
-            status='Admitted'
-        ).exclude(
-            patient_id__in=patients_with_consultations_today
-        ).count()
+        unattended_new_admissions = len(set(assigned_admissions) - set(consulted_patients))
         
-        if new_assigned_admissions > 0:
+        if unattended_new_admissions > 0:
             notifications.append({
-                "title": "New Patients Assigned",
-                "count": new_assigned_admissions,
+                "title": "Assigned Patients to Consult",
+                "count": unattended_new_admissions,
                 "url": "/d/consultations",
                 "priority": "high"
             })
             
-        # 3. Completed lab results awaiting doctor's review
+        # 4. Completed lab results awaiting doctor's review (grouped by test_request_id)
+        reviewed_test_request_ids = LabTest.objects.filter(
+            doctor_comments__isnull=False,
+            requested_by=request.user
+        ).values_list('test_request_id', flat=True)
+        
         pending_lab_results = LabTest.objects.filter(
-            requested_by=request.user,
             status='completed',
-            testcompleted=True
+            testcompleted=True,
+            requested_by=request.user
         ).exclude(
-            # Exclude tests that have doctor comments (reviewed)
-            id__in=DoctorComments.objects.filter(
-                doctor=request.user
-            ).values_list('labtech_name', flat=True)
-        ).count()
+            test_request_id__in=reviewed_test_request_ids
+        ).values('test_request_id').distinct().count()
         
         if pending_lab_results > 0:
             notifications.append({
@@ -5313,7 +5427,7 @@ def notification_data(request):
                 "priority": "high"
             })
         
-        # 4. New IVF cases needing doctor's initial assessment
+        # 5. New IVF cases needing doctor's initial assessment
         new_ivf_cases = IVFRecord.objects.filter(
             status='open'
         ).count()
@@ -5326,7 +5440,7 @@ def notification_data(request):
                 "priority": "medium"
             })
 
-        # 5. Critical patients needing attention
+        # 6. Critical patients needing attention
         critical_patients = Patient.objects.filter(
             status='critical',
             is_inpatient=True
@@ -5575,7 +5689,7 @@ def notification_data(request):
                 "priority": "high"
             })
 
-        # 5. Discharged patients needing final approval
+        # 3. Discharged patients needing final approval
         pending_discharges = Admission.objects.filter(
             status='Discharged',
             discharge_date__isnull=False,

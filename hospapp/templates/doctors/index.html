@@ -19,7 +19,6 @@
         </div>
     </div>
 
-
     <div class="row g-4">
         <div class="col-md-6 col-lg-4">
             <div class="card card-feature">
@@ -155,52 +154,71 @@
                     </div>
                 </div>
                 <div class="card-footer py-3 text-center">
-                    <a href="{ url 'appointments' %}" class="action-link">View Appointments <i
-                            class="bi bi-arrow-right"></i></a>
+                    <a href="#" class="action-link">View Appointments <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
-        
     </div>
 
     <div class="container py-5">
         <div class="card shadow-lg">
             <div class="card-body">
-                <h4 class="text-center mb-4">Upcoming Appointments</h4>
+                <h4 class="text-center mb-4">Today's Appointments</h4>
                 <div class="table-responsive">
                     <table class="table table-hover table-striped">
-                        <thead>
+                        <thead class="thead-dark">
                             <tr>
                                 <th>Patient Name</th>
                                 <th>Scheduled Time</th>
                                 <th>Department</th>
-                                <th>Actions</th>
+                                <th>Status/Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for appointment in upcoming_appointments %}
+                            {% for appointment in today_appointments %}
                             <tr>
-                                <td>{{ appointment.patient.full_name }}</td>
+                                <td>
+                                    {{ appointment.patient.full_name }}
+                                    {% if appointment.patient.is_inpatient %}
+                                        <span class="badge badge-success ml-2">Admitted</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ appointment.scheduled_time|date:"F j, Y, h:i A" }}</td>
                                 <td>{{ appointment.department.name }}</td>
                                 <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{ url 'view_patient_info' appointment.patient.pk %}" class="btn btn-sm btn-info" title="View Patient Info"><i class="bi bi-person-lines-fill"></i></a>
-                                        <a href="{ url 'admit_patient' appointment.patient.pk %}" class="btn btn-sm btn-primary" title="Admit Patient"><i class="bi bi-hospital"></i></a>
-                                        <a href="{ url 'consultation' appointment.patient.pk %}" class="btn btn-sm btn-success" title="Start Consultation"><i class="bi bi-person-md"></i></a>
-                                    </div>
+                                    {% if appointment.patient.is_inpatient %}
+                                        <!-- Patient is already admitted -->
+                                        {% for admission in appointment.patient.admission_set.all %}
+                                            {% if admission.status == 'Admitted' %}
+                                                <button type="button" class="btn btn-sm btn-success" disabled title="Patient already admitted">
+                                                    <i class="fas fa-check mr-1"></i>Already Admitted
+                                                </button>
+                                                <br><small class="text-muted">Reason: {{ admission.admission_reason|truncatechars:30 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <!-- Patient not admitted yet -->
+                                        <button type="button" 
+                                                class="btn btn-sm btn-info view-appointment-btn" 
+                                                onclick="openAppointmentModal(
+                                                    '{{ appointment.id }}',
+                                                    '{{ appointment.patient.full_name|addslashes }}',
+                                                    '{{ appointment.scheduled_time|date:"F j, Y, h:i A" }}',
+                                                    'Not specified'
+                                                )"
+                                                title="View Appointment Details">
+                                            <i class="fas fa-user-plus mr-1"></i>View/Admit
+                                        </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted">No upcoming appointments found.</td>
+                                <td colspan="4" class="text-center text-muted">No appointments scheduled for today.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                </div>
-                <div class="text-center mt-3">
-                    <a href="{ url 'all_appointments' %}" class="btn btn-primary">View All Appointments</a>
                 </div>
             </div>
         </div>
@@ -231,65 +249,181 @@
             </div>
         </div>
     </div>
-    <script>
-    // Data from Django context
-    const admissionsData = {{ admissions_data|safe }};
-    const testsCompletedData = {{ tests_completed_data|safe }};
-
-    // Prepare labels and data for the charts
-    const admissionsLabels = admissionsData.map(item => item.admitted_on);
-    const admissionsCounts = admissionsData.map(item => item.count);
-
-    const testsLabels = testsCompletedData.map(item => item.date_performed__date);
-    const testsCounts = testsCompletedData.map(item => item.count);
     
-    // Create the charts using Chart.js
-    document.addEventListener('DOMContentLoaded', function() {
-        // Patient Admissions Chart
-        const admissionsCtx = document.getElementById('requestedtest').getContext('2d');
-        const admissionsChart = new Chart(admissionsCtx, {
-            type: 'bar',
-            data: {
-                labels: admissionsLabels,
-                datasets: [{
-                    label: '# of Admissions',
-                    data: admissionsCounts,
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
+    <!-- Modal for Appointment Details -->
+    <div class="modal fade" id="appointmentDetailModal" tabindex="-1" role="dialog" aria-labelledby="appointmentDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="appointmentDetailModalLabel">Appointment Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="appointment-details">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Patient Name:</strong></div>
+                            <div class="col-sm-8" id="modal-patient-name">Loading...</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Scheduled Time:</strong></div>
+                            <div class="col-sm-8" id="modal-scheduled-time">Loading...</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Reason:</strong></div>
+                            <div class="col-sm-8" id="modal-appointment-reason">Loading...</div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5>Admit Patient</h5>
+                    <form method="post" action="{% url 'admit_patient_doctor' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="appointment_id" id="modal-appointment-id">
+                        <div class="form-group">
+                            <label for="id_admission_reason">Reason for Admission</label>
+                            <textarea name="admission_reason" 
+                                    class="form-control" 
+                                    id="id_admission_reason" 
+                                    rows="3"
+                                    placeholder="Enter reason for admission" 
+                                    required></textarea>
+                        </div>
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-user-plus mr-2"></i>Admit Patient
+                            </button>
+                            <button type="button" class="btn btn-secondary ml-2" data-dismiss="modal">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global function to open modal with appointment details
+        function openAppointmentModal(appointmentId, patientName, scheduledTime, appointmentReason) {
+            console.log('Opening modal with data:', {
+                appointmentId: appointmentId,
+                patientName: patientName, 
+                scheduledTime: scheduledTime,
+                appointmentReason: appointmentReason
+            });
+
+            // Update modal content
+            document.getElementById('modal-patient-name').textContent = patientName || 'N/A';
+            document.getElementById('modal-scheduled-time').textContent = scheduledTime || 'N/A';
+            document.getElementById('modal-appointment-reason').textContent = appointmentReason || 'Not specified';
+            document.getElementById('modal-appointment-id').value = appointmentId || '';
+
+            // Show the modal
+            $('#appointmentDetailModal').modal('show');
+        }
+
+        // Data from Django context
+        const admissionsData = {{ admissions_data|safe }};
+        const testsCompletedData = {{ tests_completed_data|safe }};
+
+        // Prepare labels and data for the charts
+        const admissionsLabels = admissionsData.map(item => item.admitted_on);
+        const admissionsCounts = admissionsData.map(item => item.count);
+
+        const testsLabels = testsCompletedData.map(item => item.date_performed__date);
+        const testsCounts = testsCompletedData.map(item => item.count);
         
-        // Tests Completed Chart
-        const completedCtx = document.getElementById('completedChart').getContext('2d');
-        const completedChart = new Chart(completedCtx, {
-            type: 'line',
-            data: {
-                labels: testsLabels,
-                datasets: [{
-                    label: '# of Tests Completed',
-                    data: testsCounts,
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+        // Create the charts using Chart.js (using the Chart.js from base.html)
+        $(document).ready(function() {
+            // Patient Admissions Chart
+            const admissionsCtx = document.getElementById('requestedtest').getContext('2d');
+            const admissionsChart = new Chart(admissionsCtx, {
+                type: 'bar',
+                data: {
+                    labels: admissionsLabels,
+                    datasets: [{
+                        label: '# of Admissions',
+                        data: admissionsCounts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
+            });
+            
+            // Tests Completed Chart
+            const completedCtx = document.getElementById('completedChart').getContext('2d');
+            const completedChart = new Chart(completedCtx, {
+                type: 'line',
+                data: {
+                    labels: testsLabels,
+                    datasets: [{
+                        label: '# of Tests Completed',
+                        data: testsCounts,
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Form submission handler with confirmation
+            $('#appointmentDetailModal form').on('submit', function(e) {
+                const patientName = document.getElementById('modal-patient-name').textContent;
+                const admissionReason = document.getElementById('id_admission_reason').value.trim();
+                
+                if (!admissionReason) {
+                    e.preventDefault();
+                    alert('Please enter a reason for admission.');
+                    return false;
+                }
+                
+                const confirmation = confirm(`Are you sure you want to admit ${patientName}?\n\nReason: ${admissionReason}`);
+                if (!confirmation) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Show loading state
+                const submitBtn = $(this).find('button[type="submit"]');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Processing...');
+            });
+
+            // Auto-refresh page if there are success messages (indicating successful admission)
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags == 'success' %}
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000); // Reload after 2 seconds to show the updated status
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            // Clear modal data when closed
+            $('#appointmentDetailModal').on('hidden.bs.modal', function () {
+                document.getElementById('modal-patient-name').textContent = '';
+                document.getElementById('modal-scheduled-time').textContent = '';
+                document.getElementById('modal-appointment-reason').textContent = '';
+                document.getElementById('modal-appointment-id').value = '';
+                document.getElementById('id_admission_reason').value = '';
+            });
         });
-    });
     </script>
 {% endblock %}

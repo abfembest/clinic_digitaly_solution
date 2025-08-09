@@ -34,7 +34,9 @@ urlpatterns = [
 
     ########################### Doctors URLS ####################################
 
+    # path('d/home', views.doctors, name='doctors'),
     path('d/home', views.doctors, name='doctors'),
+    path('d/admit-patient', views.admit_patient_doctor, name='admit_patient_doctor'),
     path('d/consultations', views.doctor_consultation, name='doctor_consultation'),
     path('d/medical-records/', views.access_medical_records, name='access_medical_records'),
     path('d/requesttest/', views.requesttest, name='requesttest'),
