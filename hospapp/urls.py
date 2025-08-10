@@ -124,6 +124,9 @@ urlpatterns = [
     path('r/new_patient', views.register_patient, name='register_patient'),
     path('r/reports/', views.receptionist_activity_report, name='receptionist_activity_report'),
     path('generate-activity-report/', views.generate_activity_report, name='generate_activity_report'),
+    path('patient_file/', views.patient_file_page, name='patient_file_page'),
+    path('ajax_patient_search/', views.ajax_patient_search, name='ajax_patient_search'),
+
 
     path('receptionist/register/submit', views.register_p, name='register_p'),
     path('receptionist/admit', views.admit_patient, name='admit_patient'),

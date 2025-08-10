@@ -5194,6 +5194,47 @@ def generate_activity_report(request):
         # Log the error for debugging
         print(f"Error generating activity report: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+    
+def patient_file_page(request):
+    """
+    Renders the patient file page with a search form and displays patient data
+    based on the search query.
+    """
+    patient = None
+    if request.method == 'POST':
+        query = request.POST.get('patient_id', '').strip()
+        if query:
+            # Try to find a patient by ID or full name
+            try:
+                # Use Q objects for OR queries
+                patient = Patient.objects.get(Q(patient_id=query) | Q(id=query))
+            except (Patient.DoesNotExist, ValueError): # ValueError handles non-integer ID
+                messages.error(request, f"No patient found with ID or name: '{query}'. Please try again.")
+        else:
+            messages.error(request, "Please enter a patient ID or name.")
+
+    return render(request, 'receptionist/basic.html', {'patient': patient})
+
+
+def ajax_patient_search(request):
+    """
+    Handles AJAX requests from Select2 to search for patients.
+    """
+    query = request.GET.get('q', '')
+    if query:
+        patients = Patient.objects.filter(
+            Q(patient_id__icontains=query) | Q(full_name__icontains=query)
+        ).values('id', 'patient_id', 'full_name')
+
+        results = []
+        for p in patients:
+            results.append({
+                'id': p['id'],
+                'text': f"({p['patient_id']}) {p['full_name']}"
+            })
+        return JsonResponse({'patients': results})
+    return JsonResponse({'patients': []})
+
 
 @csrf_exempt
 @check_receiption_role
@@ -5215,7 +5256,7 @@ def register_p(request):
         next_of_kin_relationship = data.get('next_of_kin_relationship')
 
         if not all([full_name, date_of_birth, gender, phone, marital_status, address,
-                    nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
+                        nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
             messages.error(request, "Please fill all required fields marked with *.")
             return redirect('register_patient')
 
@@ -5252,8 +5293,26 @@ def register_p(request):
                 next_of_kin_address=data.get('next_of_kin_address'),
             )
 
+            # Generate QR code after patient creation
+            qr_data = f"ID: {patient.id}\nName: {patient.full_name}\nDOB: {patient.date_of_birth}"
+            qr = qrcode.QRCode(box_size=4, border=2)
+            qr.add_data(qr_data)
+            qr.make(fit=True)
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+
+            # Convert QR code to base64
+            qr_buffer = BytesIO()
+            qr_img.save(qr_buffer, format="PNG")
+            qr_base64 = base64.b64encode(qr_buffer.getvalue()).decode("utf-8")
+
             messages.success(request, f"Patient '{patient.full_name}' registered successfully.")
-            return render(request, 'receptionist/print.html', {'patient': patient})
+
+            # Pass both patient and QR code data to the template
+            context = {
+                'patient': patient,
+                'qr_code': qr_base64
+            }
+            return render(request, 'receptionist/print.html', context)
 
         except Exception as e:
             messages.error(request, f"An error occurred during registration: {e}")

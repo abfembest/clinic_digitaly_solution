@@ -95,6 +95,12 @@
                                 <p>Register New Patient</p>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="{% url 'patient_file_page' %}" class="nav-link {% if request.resolver_match.url_name == 'patient_file_page' %}active{% endif %}">
+                                <i class="nav-icon fas fa-file-medical"></i>
+                                <p>Patient File</p>
+                            </a>
+                        </li>
                         <li class="nav-header">REPORTS</li>
                         <li class="nav-item">
                             <a href="{% url 'receptionist_activity_report' %}" class="nav-link">

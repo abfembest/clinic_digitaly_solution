@@ -1,460 +1,280 @@
-{% extends "receptionist/base.html" %}
+{%load static%}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Patient Card</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
 
-{% block title %}Print Patient Details{% endblock %}
+        a{
+            text-decoration: none;
+        }
 
-{% block content %}
-<!-- Content Header -->
-<div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0"><i class="fas fa-user-circle mr-2"></i>Patient Profile</h1>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{% url 'receptionist' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item active">Patient Details</li>
-                </ol>
-            </div>
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+            .print-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            }
+
+        .card-container {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            width: 380px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+            .card-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #007bff, #00d4aa, #007bff);
+                border-radius: 20px 20px 0 0;
+            }
+
+        .logo {
+            width: 70px;
+            margin-bottom: 4px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            transition: transform 0.3s ease;
+        }
+
+            .logo:hover {
+                transform: scale(1.05);
+            }
+
+        h5 {
+            color: #2c3e50;
+            margin: 5px 0 12px 0;
+            font-size: 20px;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .patient-photo {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #007bff;
+            margin: 0 auto 10px auto;
+            display: block;
+            box-shadow: 0 8px 16px rgba(0, 123, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+            .patient-photo:hover {
+                transform: scale(1.05);
+                box-shadow: 0 12px 24px rgba(0, 123, 255, 0.3);
+            }
+
+        .patient-id {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 0 auto 15px auto;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+        }
+
+        .details {
+            text-align: left;
+            margin-top: 7px;
+            background: rgba(248, 249, 250, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 4px solid #007bff;
+        }
+
+            .details p {
+                margin: 12px 0;
+                color: #495057;
+                font-size: 15px;
+                display: flex;
+                align-items: center;
+                transition: color 0.2s ease;
+            }
+
+                .details p:hover {
+                    color: #007bff;
+                }
+
+            .details strong {
+                color: #2c3e50;
+                min-width: 80px;
+                margin-right: 10px;
+                font-weight: 600;
+            }
+
+            .details p::before {
+                content: '●';
+                color: #007bff;
+                margin-right: 8px;
+                font-size: 8px;
+            }
+
+        .qr-code {
+            margin-top: 8px;
+            padding: 7px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+            .qr-code img {
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                margin: 0;
+                padding: 0;
+            }
+
+            .print-button {
+                display: none !important;
+            }
+
+            .card-container {
+                width: 100% !important;
+                max-width: 400px !important;
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .card-container {
+                width: 90%;
+                padding: 20px;
+            }
+
+            .print-button {
+                top: 10px;
+                right: 10px;
+                padding: 10px 20px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="printCard()">🖨️ Print Card</button>
+
+    <div class="card-container">
+        <img src="{% static 'dist/img/ayologo.jpg' %}" alt="Hospital Logo" class="logo">
+        <h5>Ayomide Specialist Hospital Osogbo Osun State, Nigeria</h5>
+        {% if patient.photo %}
+        <img src="{{ patient.photo.url }}" alt="Patient Photo" class="patient-photo">
+        {% endif %}
+        <div class="patient-id">ID: {{patient.patient_id}}</div>
+        <div class="details">
+            <p><strong>Name:</strong> {{ patient.full_name }}</p>
+            <p><strong>DOB:</strong> {{ patient.date_of_birth  }}</p>
+            <p><strong>Gender:</strong> {{ patient.gender|title }}</p>
+            <p><strong>Phone:</strong> <a href="tel:{{ patient.phone }}"> {{ patient.phone }} </a> </p>
+        </div>
+        <div class="qr-code">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
         </div>
     </div>
-</div>
 
-<!-- Main content -->
-<section class="content">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <!-- Main Patient Card -->
-                <div class="card card-primary card-outline" id="patient-details-card">
-                    
-                    <!-- Patient Profile Header -->
-                    <div class="card-header">
-                        <div class="row align-items-center">
-                            <div class="col-md-2 text-center">
-                                {% if patient.photo %}
-                                <img class="img-circle elevation-2" 
-                                     src="{{ patient.photo.url }}" 
-                                     alt="Patient Photo"
-                                     style="width: 80px; height: 80px; object-fit: cover;">
-                                {% else %}
-                                <div class="img-circle bg-primary d-flex align-items-center justify-content-center elevation-2" 
-                                     style="width: 80px; height: 80px;">
-                                    <i class="fas fa-user text-white" style="font-size: 2rem;"></i>
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-8">
-                                <h3 class="card-title mb-1">
-                                    <i class="fas fa-user mr-2"></i>{{ patient.full_name|title }}
-                                </h3>
-                                <p class="text-muted mb-0">
-                                    <i class="fas fa-id-badge mr-1"></i>Patient ID: 
-                                    <span class="badge badge-primary">{{ patient.patient_id }}</span>
-                                </p>
-                            </div>
-                            <div class="col-md-2 text-right">
-                                <span class="badge badge-success badge-lg">ACTIVE</span>
-                            </div>
-                        </div>
-                    </div>
+    <script>
+        function printCard() {
+            // Hide the print button temporarily
+            const printButton = document.querySelector('.print-button');
+            const originalDisplay = printButton.style.display;
+            printButton.style.display = 'none';
 
-                    <div class="card-body p-0">
-                        <!-- Complete Patient Information Table -->
-                        <div class="table-responsive">
-                            <table class="table table-striped table-bordered mb-0">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th colspan="4" class="text-center bg-primary text-white">
-                                            <i class="fas fa-user-circle mr-2"></i>COMPLETE PATIENT INFORMATION
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Personal Information Section -->
-                                    <tr class="bg-light">
-                                        <td colspan="4" class="font-weight-bold text-primary">
-                                            <i class="fas fa-user mr-2"></i>PERSONAL INFORMATION
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold" style="width: 25%;">
-                                            <i class="fas fa-signature text-primary mr-2"></i>Full Name
-                                        </td>
-                                        <td style="width: 25%;">{{ patient.full_name|title }}</td>
-                                        <td class="font-weight-bold" style="width: 25%;">
-                                            <i class="fas fa-birthday-cake text-primary mr-2"></i>Date of Birth
-                                        </td>
-                                        <td style="width: 25%;">{{ patient.date_of_birth|date:"F j, Y" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-venus-mars text-primary mr-2"></i>Gender
-                                        </td>
-                                        <td>{{ patient.gender|title }}</td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-heart text-primary mr-2"></i>Marital Status
-                                        </td>
-                                        <td>{{ patient.marital_status|title }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-flag text-primary mr-2"></i>Nationality
-                                        </td>
-                                        <td>{{ patient.nationality|title }}</td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-map-marked-alt text-primary mr-2"></i>State of Origin
-                                        </td>
-                                        <td>{{ patient.state_of_origin|default:"Not specified"|title }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-tint text-danger mr-2"></i>Blood Group
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-danger">{{ patient.blood_group|default:"Unknown" }}</span>
-                                        </td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-calendar-plus text-primary mr-2"></i>Registration Date
-                                        </td>
-                                        <td>{{ patient.created_at|date:"F j, Y g:i A"|default:"N/A" }}</td>
-                                    </tr>
+            // Create a new window for printing
+            const printWindow = window.open('', '_blank');
+            const cardContainer = document.querySelector('.card-container');
 
-                                    <!-- Contact Information Section -->
-                                    <tr class="bg-light">
-                                        <td colspan="4" class="font-weight-bold text-info">
-                                            <i class="fas fa-address-book mr-2"></i>CONTACT INFORMATION
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-phone text-info mr-2"></i>Phone Number
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-info">{{ patient.phone }}</span>
-                                        </td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-envelope text-info mr-2"></i>Email Address
-                                        </td>
-                                        <td>{{ patient.email|default:"Not provided" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-home text-info mr-2"></i>Residential Address
-                                        </td>
-                                        <td colspan="3">{{ patient.address }}</td>
-                                    </tr>
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Patient Card - Print</title>
+                    <style>
+                        ${document.querySelector('style').innerHTML}
+                        body {
+                            background: white !important;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            padding: 20px;
+                        }
+                        .print-button { display: none !important; }
+                        .card-container {
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+                            border: 1px solid #ddd !important;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${cardContainer.outerHTML}
+                </body>
+                </html>
+            `);
 
-                                    <!-- Identification Section -->
-                                    <tr class="bg-light">
-                                        <td colspan="4" class="font-weight-bold text-warning">
-                                            <i class="fas fa-id-card mr-2"></i>IDENTIFICATION DETAILS
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-id-card-alt text-warning mr-2"></i>ID Type
-                                        </td>
-                                        <td>{{ patient.id_type|default:"Not specified"|upper }}</td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-hashtag text-warning mr-2"></i>ID Number
-                                        </td>
-                                        <td>{{ patient.id_number|default:"Not provided" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-user-plus text-warning mr-2"></i>Referred By
-                                        </td>
-                                        <td>{{ patient.referred_by|default:"Walk-in"|title }}</td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-id-badge text-warning mr-2"></i>Patient ID
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-primary">{{ patient.patient_id }}</span>
-                                        </td>
-                                    </tr>
+            printWindow.document.close();
 
-                                    <!-- Emergency Contact Section -->
-                                    <tr class="bg-light">
-                                        <td colspan="4" class="font-weight-bold text-danger">
-                                            <i class="fas fa-exclamation-triangle mr-2"></i>EMERGENCY CONTACT INFORMATION
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-user text-danger mr-2"></i>Next of Kin Name
-                                        </td>
-                                        <td>{{ patient.next_of_kin_name|title }}</td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-users text-danger mr-2"></i>Relationship
-                                        </td>
-                                        <td>{{ patient.next_of_kin_relationship|title }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-phone text-danger mr-2"></i>Emergency Phone
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-danger">{{ patient.next_of_kin_phone }}</span>
-                                        </td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-envelope text-danger mr-2"></i>Email Address
-                                        </td>
-                                        <td>{{ patient.next_of_kin_email|default:"Not provided" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-map-marker-alt text-danger mr-2"></i>Emergency Contact Address
-                                        </td>
-                                        <td colspan="3">{{ patient.next_of_kin_address|default:"Same as patient address" }}</td>
-                                    </tr>
+            // Wait for images to load, then print
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
 
-                                    <!-- Additional Notes Section -->
-                                    {% if patient.notes %}
-                                    <tr class="bg-light">
-                                        <td colspan="4" class="font-weight-bold text-secondary">
-                                            <i class="fas fa-sticky-note mr-2"></i>ADDITIONAL NOTES
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-clipboard text-secondary mr-2"></i>Medical/Special Notes
-                                        </td>
-                                        <td colspan="3">
-                                            <div class="callout callout-warning mb-0">
-                                                {{ patient.notes }}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-
-                                    <!-- System Information Section -->
-                                    <tr class="bg-light">
-                                        <td colspan="4" class="font-weight-bold text-secondary">
-                                            <i class="fas fa-cog mr-2"></i>SYSTEM INFORMATION
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-user-check text-secondary mr-2"></i>Patient Status
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-success">ACTIVE</span>
-                                        </td>
-                                        <td class="font-weight-bold">
-                                            <i class="fas fa-calendar-alt text-secondary mr-2"></i>Last Updated
-                                        </td>
-                                        <td>{{ patient.updated_at|date:"F j, Y g:i A"|default:"N/A" }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Card Footer -->
-                    <div class="card-footer">
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <small class="text-muted">
-                                    <i class="fas fa-calendar mr-1"></i>
-                                    Generated on: {% now "F j, Y g:i A" %}
-                                </small>
-                            </div>
-                            <div class="col-sm-6 text-right">
-                                <small class="text-muted">
-                                    <i class="fas fa-hospital mr-1"></i>
-                                    Hospital Management System
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="row no-print mb-4">
-                    <div class="col-12 text-center">
-                        <button onclick="window.print()" class="btn btn-primary btn-lg mr-2">
-                            <i class="fas fa-print mr-2"></i>Print Details
-                        </button>
-                        <a href="{% url 'register_patient' %}" class="btn btn-success btn-lg mr-2">
-                            <i class="fas fa-user-plus mr-2"></i>New Patient
-                        </a>
-                        <a href="{% url 'receptionist' %}" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-home mr-2"></i>Dashboard
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Print Footer -->
-                <div class="row print-only" style="display: none;">
-                    <div class="col-12 text-center mt-4">
-                        <hr>
-                        <small class="text-muted">
-                            <i class="fas fa-print mr-1"></i>
-                            Printed on: {% now "F j, Y \a\t g:i A" %}
-                            &nbsp;|&nbsp;
-                            <i class="fas fa-hospital mr-1"></i>
-                            Hospital Management System
-                        </small>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Print Styles -->
-<style>
-.table td {
-    vertical-align: middle;
-    padding: 10px 12px;
-    font-size: 14px;
-}
-
-.table th {
-    background-color: #007bff;
-    color: white;
-    font-weight: 600;
-    padding: 12px;
-    text-align: center;
-}
-
-.thead-light th {
-    background-color: #f8f9fa;
-    color: #495057;
-    border-color: #dee2e6;
-}
-
-.callout {
-    padding: 8px 12px;
-    margin: 0;
-    border-left: 3px solid #ffc107;
-    background-color: #fff3cd;
-    font-style: italic;
-}
-
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    
-    #patient-details-card,
-    #patient-details-card *,
-    .print-only,
-    .print-only * {
-        visibility: visible;
-    }
-    
-    #patient-details-card {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        box-shadow: none !important;
-    }
-    
-    .no-print {
-        display: none !important;
-    }
-    
-    .print-only {
-        display: block !important;
-    }
-    
-    .card {
-        box-shadow: none !important;
-        border: 2px solid #333 !important;
-    }
-    
-    .card-header {
-        background-color: #f8f9fa !important;
-        color: #333 !important;
-        border-bottom: 2px solid #333 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .table {
-        border: 2px solid #333 !important;
-    }
-    
-    .table td, .table th {
-        border: 1px solid #333 !important;
-        padding: 8px 10px !important;
-        font-size: 11px !important;
-        line-height: 1.3;
-    }
-    
-    .table th {
-        background-color: #333 !important;
-        color: white !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .bg-light {
-        background-color: #f8f9fa !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .table-striped tbody tr:nth-of-type(odd) {
-        background-color: rgba(0,0,0,.02) !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .badge {
-        border: 1px solid #333 !important;
-        background-color: #f8f9fa !important;
-        color: #333 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .callout {
-        border-left: 3px solid #333 !important;
-        background-color: #f8f9fa !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .text-primary, .text-info, .text-warning, .text-danger, .text-secondary { 
-        color: #333 !important; 
-    }
-    
-    .img-circle {
-        border: 2px solid #333 !important;
-    }
-    
-    h1, h2, h3, h4, h5 {
-        color: #333 !important;
-        font-weight: 600 !important;
-    }
-    
-    .font-weight-bold {
-        font-weight: 600 !important;
-    }
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .table-responsive {
-        border: none;
-    }
-    
-    .table td {
-        padding: 8px 6px;
-        font-size: 13px;
-    }
-    
-    .table th {
-        padding: 10px 8px;
-        font-size: 14px;
-    }
-}
-</style>
-
-{% endblock %}
+            // Restore the print button
+            printButton.style.display = originalDisplay;
+        }
+    </script>
+</body>
+</html>
