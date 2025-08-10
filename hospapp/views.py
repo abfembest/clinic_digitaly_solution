@@ -3379,30 +3379,36 @@ def lab_test_entry(request):
 @check_lab_role
 def lab_internal_logs(request):
     lab_tests = LabTest.objects.select_related('patient', 'recorded_by', 'category').order_by('-requested_at')
-
-    # Get distinct test types for the filter dropdown
     unique_test_types = LabTest.objects.exclude(category__isnull=True).order_by('category__name').values_list('category__name', flat=True).distinct()
 
-    logs = []
+    # Use a dictionary to group tests by test_request_id
+    grouped_logs = {}
     for test in lab_tests:
-        key_results = test.result_value if test.result_value else "N/A"
-        
-        display_status = test.status.capitalize() if test.status else "N/A"
+        test_request_id = test.test_request_id
 
-        logs.append({
-            'patient_id': test.patient.patient_id, # Corrected to patient_id
-            'test_request_id': test.test_request_id, # Added test_request_id
-            'date': test.date_performed.date() if test.date_performed else test.requested_at.date(),
-            'patient_name': test.patient.full_name,
+        # If a new test request ID is found, initialize a new entry
+        if test_request_id not in grouped_logs:
+            grouped_logs[test_request_id] = {
+                'test_request_id': test_request_id,
+                'patient_id': test.patient.patient_id,
+                'date': test.date_performed.date() if test.date_performed else test.requested_at.date(),
+                'patient_name': test.patient.full_name,
+                'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
+                'tests': [],  # This list will hold individual test details
+            }
+
+        # Append details for the current test to the list
+        grouped_logs[test_request_id]['tests'].append({
             'test_type': test.category.name if test.category else "Unknown Test Type",
-            'lab_staff': test.recorded_by.get_full_name() if test.recorded_by else "Unknown",
-            'key_results': key_results,
-            'notes': test.notes if test.notes else '',
-            'status': display_status,
+            'key_results': test.result_value if test.result_value else "N/A",
+            'status': test.status.capitalize() if test.status else "N/A",
         })
 
+    # Convert the dictionary values to a list to be used in the template
+    logs_list = list(grouped_logs.values())
+
     context = {
-        'lab_logs': logs,
+        'lab_logs': logs_list,
         'unique_test_types': unique_test_types,
     }
     return render(request, 'laboratory/logs.html', context)
@@ -5194,6 +5200,47 @@ def generate_activity_report(request):
         # Log the error for debugging
         print(f"Error generating activity report: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+    
+def patient_file_page(request):
+    """
+    Renders the patient file page with a search form and displays patient data
+    based on the search query.
+    """
+    patient = None
+    if request.method == 'POST':
+        query = request.POST.get('patient_id', '').strip()
+        if query:
+            # Try to find a patient by ID or full name
+            try:
+                # Use Q objects for OR queries
+                patient = Patient.objects.get(Q(patient_id=query) | Q(id=query))
+            except (Patient.DoesNotExist, ValueError): # ValueError handles non-integer ID
+                messages.error(request, f"No patient found with ID or name: '{query}'. Please try again.")
+        else:
+            messages.error(request, "Please enter a patient ID or name.")
+
+    return render(request, 'receptionist/basic.html', {'patient': patient})
+
+
+def ajax_patient_search(request):
+    """
+    Handles AJAX requests from Select2 to search for patients.
+    """
+    query = request.GET.get('q', '')
+    if query:
+        patients = Patient.objects.filter(
+            Q(patient_id__icontains=query) | Q(full_name__icontains=query)
+        ).values('id', 'patient_id', 'full_name')
+
+        results = []
+        for p in patients:
+            results.append({
+                'id': p['id'],
+                'text': f"({p['patient_id']}) {p['full_name']}"
+            })
+        return JsonResponse({'patients': results})
+    return JsonResponse({'patients': []})
+
 
 @csrf_exempt
 @check_receiption_role
@@ -5215,7 +5262,7 @@ def register_p(request):
         next_of_kin_relationship = data.get('next_of_kin_relationship')
 
         if not all([full_name, date_of_birth, gender, phone, marital_status, address,
-                    nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
+                        nationality, next_of_kin_name, next_of_kin_phone, next_of_kin_relationship]):
             messages.error(request, "Please fill all required fields marked with *.")
             return redirect('register_patient')
 
@@ -5252,8 +5299,26 @@ def register_p(request):
                 next_of_kin_address=data.get('next_of_kin_address'),
             )
 
+            # Generate QR code after patient creation
+            qr_data = f"ID: {patient.id}\nName: {patient.full_name}\nDOB: {patient.date_of_birth}"
+            qr = qrcode.QRCode(box_size=4, border=2)
+            qr.add_data(qr_data)
+            qr.make(fit=True)
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+
+            # Convert QR code to base64
+            qr_buffer = BytesIO()
+            qr_img.save(qr_buffer, format="PNG")
+            qr_base64 = base64.b64encode(qr_buffer.getvalue()).decode("utf-8")
+
             messages.success(request, f"Patient '{patient.full_name}' registered successfully.")
-            return render(request, 'receptionist/print.html', {'patient': patient})
+
+            # Pass both patient and QR code data to the template
+            context = {
+                'patient': patient,
+                'qr_code': qr_base64
+            }
+            return render(request, 'receptionist/print.html', context)
 
         except Exception as e:
             messages.error(request, f"An error occurred during registration: {e}")
