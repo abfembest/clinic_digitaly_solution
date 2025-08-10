@@ -93,44 +93,43 @@
                 <thead class="thead-light">
                   <tr>
                     <th>Patient ID</th>
-                    <th>Date</th>
+                    <th>Test Request ID</th>
                     <th>Patient</th>
-                    <th>Test Type</th>
+                    <th>Date</th>
                     <th>Lab Staff</th>
-                    <th>Key Results</th>
-                    <th>Status</th>
+                    <th>Tests</th>
                     <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for log in lab_logs %}
+                  {% for log_group in lab_logs %}
                   <tr>
-                    <td><span class="badge badge-secondary">{{ log.patient_id }}</span></td>
-                    <td>{{ log.date|date:"M d, Y" }}</td>
-                    <td>{{ log.patient_name }}</td>
-                    <td>{{ log.test_type }}</td>
-                    <td>{{ log.lab_staff }}</td>
+                    <td><span class="badge badge-secondary">{{ log_group.patient_id }}</span></td>
+                    <td><span class="badge badge-primary">{{ log_group.test_request_id }}</span></td>
+                    <td>{{ log_group.patient_name }}</td>
+                    <td>{{ log_group.date|date:"M d, Y" }}</td>
+                    <td>{{ log_group.lab_staff }}</td>
                     <td>
-                      <span class="text-truncate d-inline-block" style="max-width: 300px;">
-                        {{ log.key_results }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="badge badge-pill 
-                        {% if log.status == 'Completed' %}badge-success
-                        {% elif log.status == 'Pending' %}badge-warning
-                        {% elif log.status == 'In Progress' %}badge-info
-                        {% elif log.status == 'Cancelled' %}badge-danger
-                        {% else %}badge-secondary{% endif %}">
-                        {{ log.status }}
-                      </span>
+                      {% for test in log_group.tests %}
+                        <div>
+                          <strong>{{ test.test_type }}</strong>: 
+                          <span class="badge badge-pill 
+                            {% if test.status == 'Completed' %}badge-success
+                            {% elif test.status == 'Pending' %}badge-warning
+                            {% elif test.status == 'In Progress' %}badge-info
+                            {% elif test.status == 'Cancelled' %}badge-danger
+                            {% else %}badge-secondary{% endif %}">
+                            {{ test.status }}
+                          </span>
+                        </div>
+                      {% endfor %}
                     </td>
                     <td class="text-center">
                       <div class="btn-group">
                         <button type="button" class="btn btn-info btn-sm view-details-btn" 
                           data-toggle="modal" 
                           data-target="#logDetailsModal" 
-                          data-test-request-id="{{ log.test_request_id }}">
+                          data-test-request-id="{{ log_group.test_request_id }}">
                           <i class="fas fa-eye"></i> View
                         </button>
                         <button type="button" class="btn btn-primary btn-sm">
@@ -199,7 +198,7 @@
       "autoWidth": false,
       "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"],
       "columnDefs": [
-        { "orderable": false, "targets": 7 } // Disable ordering on the "Actions" column
+        { "orderable": false, "targets": 6 } // Disable ordering on the "Actions" column
       ]
     });
 
@@ -226,10 +225,10 @@
     // Custom filtering functions
     $.fn.dataTable.ext.search.push(
       function(settings, data, dataIndex) {
-        // Date range filter (assuming date is in the second column, index 1)
+        // Date range filter (assuming date is in the fourth column, index 3)
         var dateRange = $('#date-range-filter').val();
         if (dateRange) {
-          var dateString = data[1]; 
+          var dateString = data[3]; 
           var date = moment(dateString, 'MMM DD, YYYY'); 
           var start = moment(dateRange.split(' - ')[0], 'MM/DD/YYYY');
           var end = moment(dateRange.split(' - ')[1], 'MM/DD/YYYY');
@@ -237,19 +236,25 @@
             return false;
           }
         }
-
-        // Test type filter (assuming test type is in the fourth column, index 3)
+        
+        // Test type filter
         var testType = $('#test-type-filter').val();
-        if (testType && testType !== data[3].trim()) {
-          return false;
+        if (testType) {
+            var cellContent = data[5];
+            if (cellContent.indexOf(testType) === -1) {
+                return false;
+            }
         }
 
-        // Status filter (assuming status is in the seventh column, index 6)
+        // Status filter
         var status = $('#status-filter').val();
-        if (status && status !== data[6].trim()) {
-          return false;
+        if (status) {
+            var cellContent = data[5];
+            if (cellContent.indexOf(status) === -1) {
+                return false;
+            }
         }
-
+        
         return true;
       }
     );
