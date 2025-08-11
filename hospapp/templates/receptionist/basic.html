@@ -19,10 +19,6 @@
     </div>
 </div>
 
-
-    <title>Patient Profile - Enhanced</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
         /* Scoped styles for patient profile */
         .patient-profile-container {
@@ -302,14 +298,12 @@
             backdrop-filter: blur(10px);
         }
     </style>
-</head>
-<body>
+
     <div class="patient-profile-container">
         <section class="content">
             <div class="container-fluid">
-                <!-- Search Patient Section -->
                 <div class="row">
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <div class="card card-primary card-outline">
                             <div class="card-header">
                                 <h3 class="card-title"><i class="fas fa-search mr-2"></i>Search Patient</h3>
@@ -350,12 +344,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {% if patient %}
-                <!-- Patient Profile Header -->
-                <div class="row">
-                    <div class="col-12">
+                    {% if patient %}
+                    <div class="col-md-6">
                         <div class="card card-widget widget-user">
                             <div class="widget-user-header bg-info">
                                 <h3 class="widget-user-username">{{ patient.full_name|title }}</h3>
@@ -365,7 +356,7 @@
                                 {% if patient.photo %}
                                 <img class="img-circle elevation-2" src="{{ patient.photo.url }}" alt="Patient Photo">
                                 {% else %}
-                                <div class="img-circle elevation-2 bg-primary d-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                                <div class="img-circle elevation-2 bg-primary d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                                     <i class="fas fa-user text-white" style="font-size: 2.5rem;"></i>
                                 </div>
                                 {% endif %}
@@ -405,10 +396,8 @@
                     </div>
                 </div>
 
-                <!-- Patient Information Cards -->
                 <div class="row">
-                    <!-- Personal Information -->
-                    <div class="col-lg-6">
+                    <div class="col-lg-12">
                         <div class="card card-primary card-outline">
                             <div class="card-header">
                                 <h3 class="card-title">
@@ -419,13 +408,11 @@
                                 <table class="table table-sm table-striped">
                                     <tbody>
                                         <tr>
-                                            <td class="font-weight-bold" style="width: 40%;">
+                                            <td class="font-weight-bold" style="width: 20%;">
                                                 <i class="fas fa-signature text-primary mr-2"></i>Full Name
                                             </td>
-                                            <td>{{ patient.full_name|title }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-weight-bold">
+                                            <td style="width: 30%;">{{ patient.full_name|title }}</td>
+                                            <td class="font-weight-bold" style="width: 20%;">
                                                 <i class="fas fa-birthday-cake text-success mr-2"></i>Date of Birth
                                             </td>
                                             <td>{{ patient.date_of_birth|date:"F j, Y" }}</td>
@@ -435,8 +422,6 @@
                                                 <i class="fas fa-venus-mars text-info mr-2"></i>Gender
                                             </td>
                                             <td>{{ patient.gender|title }}</td>
-                                        </tr>
-                                        <tr>
                                             <td class="font-weight-bold">
                                                 <i class="fas fa-heart text-danger mr-2"></i>Marital Status
                                             </td>
@@ -449,8 +434,6 @@
                                             <td>
                                                 <span class="badge badge-danger">{{ patient.blood_group|default:"Unknown" }}</span>
                                             </td>
-                                        </tr>
-                                        <tr>
                                             <td class="font-weight-bold">
                                                 <i class="fas fa-globe-americas text-primary mr-2"></i>Nationality
                                             </td>
@@ -461,39 +444,18 @@
                                                 <i class="fas fa-map-marked-alt text-warning mr-2"></i>State of Origin
                                             </td>
                                             <td>{{ patient.state_of_origin|default:"Not specified" }}</td>
-                                        </tr>
-                                        <tr>
                                             <td class="font-weight-bold">
                                                 <i class="fas fa-calendar-plus text-success mr-2"></i>Registration Date
                                             </td>
                                             <td>{{ patient.date_registered|date:"F j, Y g:i A" }}</td>
                                         </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Contact Information -->
-                    <div class="col-lg-6">
-                        <div class="card card-info card-outline">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-address-book mr-2"></i>Contact Information
-                                </h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm table-striped">
-                                    <tbody>
                                         <tr>
-                                            <td class="font-weight-bold" style="width: 40%;">
+                                            <td class="font-weight-bold">
                                                 <i class="fas fa-phone text-success mr-2"></i>Phone
                                             </td>
                                             <td>
                                                 <span class="badge badge-success">{{ patient.phone }}</span>
                                             </td>
-                                        </tr>
-                                        <tr>
                                             <td class="font-weight-bold">
                                                 <i class="fas fa-envelope text-info mr-2"></i>Email
                                             </td>
@@ -504,24 +466,7 @@
                                                 <i class="fas fa-map-marker-alt text-danger mr-2"></i>Address
                                             </td>
                                             <td>{{ patient.address }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- ID Information -->
-                        <div class="card card-secondary card-outline">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-id-card mr-2"></i>Identification
-                                </h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm table-striped">
-                                    <tbody>
-                                        <tr>
-                                            <td class="font-weight-bold" style="width: 40%;">
+                                            <td class="font-weight-bold">
                                                 <i class="fas fa-id-badge text-primary mr-2"></i>ID Type
                                             </td>
                                             <td>{{ patient.id_type|default:"Not specified" }}</td>
@@ -531,7 +476,75 @@
                                                 <i class="fas fa-hashtag text-info mr-2"></i>ID Number
                                             </td>
                                             <td>{{ patient.id_number|default:"Not specified" }}</td>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-user-plus text-primary mr-2"></i>Registered By
+                                            </td>
+                                            <td>{{ patient.registered_by.get_full_name|default:"System" }}</td>
                                         </tr>
+                                        <tr>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-user-md text-info mr-2"></i>Referred By
+                                            </td>
+                                            <td>{{ patient.referred_by|default:"Self/Walk-in" }}</td>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-user-clock text-warning mr-2"></i>Visit Type
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-info">{{ patient.first_time|default:"Regular" }}</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-heartbeat text-danger mr-2"></i>Current Status
+                                            </td>
+                                            <td>
+                                                {% if patient.status == 'stable' %}
+                                                <span class="badge badge-success">{{ patient.status|upper }}</span>
+                                                {% elif patient.status == 'critical' %}
+                                                <span class="badge badge-danger">{{ patient.status|upper }}</span>
+                                                {% else %}
+                                                <span class="badge badge-warning">{{ patient.status|upper }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-bed text-primary mr-2"></i>Inpatient Status
+                                            </td>
+                                            <td>
+                                                {% if patient.is_inpatient %}
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-check"></i> Currently Admitted
+                                                </span>
+                                                {% else %}
+                                                <span class="badge badge-secondary">
+                                                    <i class="fas fa-times"></i> Outpatient
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% if patient.diagnosis %}
+                                        <tr>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-diagnoses text-danger mr-2"></i>Diagnosis
+                                            </td>
+                                            <td colspan="3">{{ patient.diagnosis }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if patient.medication %}
+                                        <tr>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-pills text-success mr-2"></i>Medication
+                                            </td>
+                                            <td colspan="3">{{ patient.medication }}</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if patient.notes %}
+                                        <tr>
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-sticky-note text-dark mr-2"></i>Additional Notes
+                                            </td>
+                                            <td colspan="3">{{ patient.notes }}</td>
+                                        </tr>
+                                        {% endif %}
                                     </tbody>
                                 </table>
                             </div>
@@ -539,9 +552,8 @@
                     </div>
                 </div>
 
-                <!-- Next of Kin Information -->
                 <div class="row">
-                    <div class="col-12">
+                    <div class="col-lg-12">
                         <div class="card card-warning card-outline">
                             <div class="card-header">
                                 <h3 class="card-title">
@@ -585,548 +597,11 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Medical Information & Additional Details -->
-                <div class="row">
-                    <!-- Medical Information -->
-                    <div class="col-lg-8">
-                        <div class="card card-success card-outline">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-stethoscope mr-2"></i>Medical Information
-                                </h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm table-striped">
-                                    <tbody>
-                                        <tr>
-                                            <td class="font-weight-bold" style="width: 30%;">
-                                                <i class="fas fa-user-md text-info mr-2"></i>Referred By
-                                            </td>
-                                            <td>{{ patient.referred_by|default:"Self/Walk-in" }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-weight-bold">
-                                                <i class="fas fa-user-clock text-warning mr-2"></i>Visit Type
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-info">{{ patient.first_time|default:"Regular" }}</span>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-weight-bold">
-                                                <i class="fas fa-heartbeat text-danger mr-2"></i>Current Status
-                                            </td>
-                                            <td>
-                                                {% if patient.status == 'stable' %}
-                                                <span class="badge badge-success">{{ patient.status|upper }}</span>
-                                                {% elif patient.status == 'critical' %}
-                                                <span class="badge badge-danger">{{ patient.status|upper }}</span>
-                                                {% else %}
-                                                <span class="badge badge-warning">{{ patient.status|upper }}</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="font-weight-bold">
-                                                <i class="fas fa-bed text-primary mr-2"></i>Inpatient Status
-                                            </td>
-                                            <td>
-                                                {% if patient.is_inpatient %}
-                                                <span class="badge badge-warning">
-                                                    <i class="fas fa-check"></i> Currently Admitted
-                                                </span>
-                                                {% else %}
-                                                <span class="badge badge-secondary">
-                                                    <i class="fas fa-times"></i> Outpatient
-                                                </span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        {% if patient.diagnosis %}
-                                        <tr>
-                                            <td class="font-weight-bold">
-                                                <i class="fas fa-diagnoses text-danger mr-2"></i>Diagnosis
-                                            </td>
-                                            <td>{{ patient.diagnosis }}</td>
-                                        </tr>
-                                        {% endif %}
-                                        {% if patient.medication %}
-                                        <tr>
-                                            <td class="font-weight-bold">
-                                                <i class="fas fa-pills text-success mr-2"></i>Medication
-                                            </td>
-                                            <td>{{ patient.medication }}</td>
-                                        </tr>
-                                        {% endif %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Additional Information -->
-                    <div class="col-lg-4">
-                        {% if patient.notes %}
-                        <div class="card card-dark card-outline">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-sticky-note mr-2"></i>Additional Notes
-                                </h3>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted">{{ patient.notes }}</p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Registration Information -->
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card card-light card-outline">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-info-circle mr-2"></i>Registration Information
-                                </h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm">
-                                    <tbody>
-                                        <tr>
-                                            <td class="font-weight-bold" style="width: 25%;">
-                                                <i class="fas fa-user-plus text-primary mr-2"></i>Registered By
-                                            </td>
-                                            <td>{{ patient.registered_by.get_full_name|default:"System" }}</td>
-                                            <td class="font-weight-bold" style="width: 25%;">
-                                                <i class="fas fa-calendar-check text-success mr-2"></i>Registration Date
-                                            </td>
-                                            <td>{{ patient.date_registered|date:"F j, Y g:i A" }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        {% endif %}
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.bundle.min.js"></script>
-
-
-<section class="content">
-    <div class="container-fluid">
-        <!-- Search Patient Section -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-search mr-2"></i>Search Patient</h3>
-                    </div>
-                    <div class="card-body">
-                        {% if messages %}
-                        {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        {% endfor %}
-                        {% endif %}
-
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="row">
-                                <div class="col-md-10">
-                                    <div class="form-group">
-                                        <label for="patient_select">Select Patient by ID or Name</label>
-                                        <select class="form-control select2bs4" id="patient_select" name="patient_id" style="width: 100%;" required>
-                                            <option value="">Search for patient by ID or name...</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <label>&nbsp;</label>
-                                        <button type="submit" class="btn btn-primary btn-block">
-                                            <i class="fas fa-search"></i> View File
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {% if patient %}
-        <!-- Patient Profile Header -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-widget widget-user">
-                    <div class="widget-user-header bg-info">
-                        <h3 class="widget-user-username">{{ patient.full_name|title }}</h3>
-                        <h5 class="widget-user-desc">Patient ID: {{ patient.patient_id }}</h5>
-                    </div>
-                    <div class="widget-user-image">
-                        {% if patient.photo %}
-                        <img class="img-circle elevation-2" src="{{ patient.photo.url }}" alt="Patient Photo">
-                        {% else %}
-                        <div class="img-circle elevation-2 bg-primary d-flex align-items-center justify-content-center" style="width: 128px; height: 128px;">
-                            <i class="fas fa-user text-white" style="font-size: 4rem;"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="card-footer">
-                        <div class="row">
-                            <div class="col-sm-4 border-right">
-                                <div class="description-block">
-                                    <span class="description-percentage text-success">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </span>
-                                    <h5 class="description-header">{{ patient.date_registered|date:"M d, Y" }}</h5>
-                                    <span class="description-text">REGISTERED</span>
-                                </div>
-                            </div>
-                            <div class="col-sm-4 border-right">
-                                <div class="description-block">
-                                    <span class="description-percentage text-warning">
-                                        <i class="fas fa-heartbeat"></i>
-                                    </span>
-                                    <h5 class="description-header">{{ patient.status|upper }}</h5>
-                                    <span class="description-text">STATUS</span>
-                                </div>
-                            </div>
-                            <div class="col-sm-4">
-                                <div class="description-block">
-                                    <span class="description-percentage text-danger">
-                                        <i class="fas fa-tint"></i>
-                                    </span>
-                                    <h5 class="description-header">{{ patient.blood_group|default:"Unknown" }}</h5>
-                                    <span class="description-text">BLOOD GROUP</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Patient Information Cards -->
-        <div class="row">
-            <!-- Personal Information -->
-            <div class="col-lg-6">
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-user mr-2"></i>Personal Information
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-striped">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" style="width: 40%;">
-                                        <i class="fas fa-signature text-primary mr-2"></i>Full Name
-                                    </td>
-                                    <td>{{ patient.full_name|title }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-birthday-cake text-success mr-2"></i>Date of Birth
-                                    </td>
-                                    <td>{{ patient.date_of_birth|date:"F j, Y" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-venus-mars text-info mr-2"></i>Gender
-                                    </td>
-                                    <td>{{ patient.gender|title }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-heart text-danger mr-2"></i>Marital Status
-                                    </td>
-                                    <td>{{ patient.marital_status|title }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-tint text-danger mr-2"></i>Blood Group
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-danger">{{ patient.blood_group|default:"Unknown" }}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-globe-americas text-primary mr-2"></i>Nationality
-                                    </td>
-                                    <td>{{ patient.nationality|default:"Not specified" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-map-marked-alt text-warning mr-2"></i>State of Origin
-                                    </td>
-                                    <td>{{ patient.state_of_origin|default:"Not specified" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-calendar-plus text-success mr-2"></i>Registration Date
-                                    </td>
-                                    <td>{{ patient.date_registered|date:"F j, Y g:i A" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Contact Information -->
-            <div class="col-lg-6">
-                <div class="card card-info card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-address-book mr-2"></i>Contact Information
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-striped">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" style="width: 40%;">
-                                        <i class="fas fa-phone text-success mr-2"></i>Phone
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-success">{{ patient.phone }}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-envelope text-info mr-2"></i>Email
-                                    </td>
-                                    <td>{{ patient.email|default:"Not provided" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-map-marker-alt text-danger mr-2"></i>Address
-                                    </td>
-                                    <td>{{ patient.address }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- ID Information -->
-                <div class="card card-secondary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-id-card mr-2"></i>Identification
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-striped">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" style="width: 40%;">
-                                        <i class="fas fa-id-badge text-primary mr-2"></i>ID Type
-                                    </td>
-                                    <td>{{ patient.id_type|default:"Not specified" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-hashtag text-info mr-2"></i>ID Number
-                                    </td>
-                                    <td>{{ patient.id_number|default:"Not specified" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Next of Kin Information -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-warning card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-user-friends mr-2"></i>Next of Kin Information
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-striped">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" style="width: 20%;">
-                                        <i class="fas fa-user text-primary mr-2"></i>Name
-                                    </td>
-                                    <td style="width: 30%;">{{ patient.next_of_kin_name|title }}</td>
-                                    <td class="font-weight-bold" style="width: 20%;">
-                                        <i class="fas fa-users text-info mr-2"></i>Relationship
-                                    </td>
-                                    <td>{{ patient.next_of_kin_relationship|title }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-phone text-success mr-2"></i>Phone
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-warning">{{ patient.next_of_kin_phone }}</span>
-                                    </td>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-envelope text-danger mr-2"></i>Email
-                                    </td>
-                                    <td>{{ patient.next_of_kin_email|default:"Not provided" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-map-marker-alt text-warning mr-2"></i>Address
-                                    </td>
-                                    <td colspan="3">{{ patient.next_of_kin_address|default:"Not specified" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Medical Information & Additional Details -->
-        <div class="row">
-            <!-- Medical Information -->
-            <div class="col-lg-8">
-                <div class="card card-success card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-stethoscope mr-2"></i>Medical Information
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-striped">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" style="width: 30%;">
-                                        <i class="fas fa-user-md text-info mr-2"></i>Referred By
-                                    </td>
-                                    <td>{{ patient.referred_by|default:"Self/Walk-in" }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-user-clock text-warning mr-2"></i>Visit Type
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-info">{{ patient.first_time|default:"Regular" }}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-heartbeat text-danger mr-2"></i>Current Status
-                                    </td>
-                                    <td>
-                                        {% if patient.status == 'stable' %}
-                                        <span class="badge badge-success">{{ patient.status|upper }}</span>
-                                        {% elif patient.status == 'critical' %}
-                                        <span class="badge badge-danger">{{ patient.status|upper }}</span>
-                                        {% else %}
-                                        <span class="badge badge-warning">{{ patient.status|upper }}</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-bed text-primary mr-2"></i>Inpatient Status
-                                    </td>
-                                    <td>
-                                        {% if patient.is_inpatient %}
-                                        <span class="badge badge-warning">
-                                            <i class="fas fa-check"></i> Currently Admitted
-                                        </span>
-                                        {% else %}
-                                        <span class="badge badge-secondary">
-                                            <i class="fas fa-times"></i> Outpatient
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% if patient.diagnosis %}
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-diagnoses text-danger mr-2"></i>Diagnosis
-                                    </td>
-                                    <td>{{ patient.diagnosis }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if patient.medication %}
-                                <tr>
-                                    <td class="font-weight-bold">
-                                        <i class="fas fa-pills text-success mr-2"></i>Medication
-                                    </td>
-                                    <td>{{ patient.medication }}</td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Additional Information -->
-            <div class="col-lg-4">
-                {% if patient.notes %}
-                <div class="card card-dark card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-sticky-note mr-2"></i>Additional Notes
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted">{{ patient.notes }}</p>
-                    </div>
-                </div>
                 {% endif %}
             </div>
-        </div>
-
-        <!-- Registration Information -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card card-light card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-info-circle mr-2"></i>Registration Information
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm">
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold" style="width: 25%;">
-                                        <i class="fas fa-user-plus text-primary mr-2"></i>Registered By
-                                    </td>
-                                    <td>{{ patient.registered_by.get_full_name|default:"System" }}</td>
-                                    <td class="font-weight-bold" style="width: 25%;">
-                                        <i class="fas fa-calendar-check text-success mr-2"></i>Registration Date
-                                    </td>
-                                    <td>{{ patient.date_registered|date:"F j, Y g:i A" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+        </section>
     </div>
-</section>
+
 {% endblock %}
 
 {% block extra_scripts %}
