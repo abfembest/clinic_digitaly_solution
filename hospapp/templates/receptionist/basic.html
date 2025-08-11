@@ -94,19 +94,11 @@
                 font-weight: 400;
                 color: #374151;
             }
-
-            .patient-profile-container .widget-user-image {
-                position: absolute;
-                top: 40px;
-                left: 50%;
-                transform: translateX(-50%);
+            .patient-profile-container .widget-user-image .img-circle {
+                width: 125px;
+                height: 125px;
+                border: 2px solid rgba(255,255,255,0.2);
             }
-
-                .patient-profile-container .widget-user-image .img-circle {
-                    width: 50px;
-                    height: 50px;
-                    border: 2px solid rgba(255,255,255,0.2);
-                }
 
             .patient-profile-container .card-footer {
                 background: rgba(255,255,255,0.95);
@@ -346,52 +338,18 @@
                     </div>
 
                     {% if patient %}
-                    <div class="col-md-6">
-                        <div class="card card-widget widget-user">
-                            <div class="widget-user-header bg-info">
-                                <h3 class="widget-user-username">{{ patient.full_name|title }}</h3>
-                                <h5 class="widget-user-desc">Patient ID: {{ patient.patient_id }}</h5>
-                            </div>
+                    <div class="col-md-6 text-center">
+                        
                             <div class="widget-user-image">
                                 {% if patient.photo %}
                                 <img class="img-circle elevation-2" src="{{ patient.photo.url }}" alt="Patient Photo">
                                 {% else %}
-                                <div class="img-circle elevation-2 bg-primary d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <div class="img-circle elevation-2 bg-primary d-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
                                     <i class="fas fa-user text-white" style="font-size: 2.5rem;"></i>
                                 </div>
                                 {% endif %}
                             </div>
-                            <div class="card-footer">
-                                <div class="row">
-                                    <div class="col-sm-4 border-right">
-                                        <div class="description-block">
-                                            <span class="description-percentage text-success">
-                                                <i class="fas fa-calendar-check"></i>
-                                            </span>
-                                            <h5 class="description-header">{{ patient.date_registered|date:"M d, Y" }}</h5>
-                                            <span class="description-text">REGISTERED</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-4 border-right">
-                                        <div class="description-block">
-                                            <span class="description-percentage text-warning">
-                                                <i class="fas fa-heartbeat"></i>
-                                            </span>
-                                            <h5 class="description-header">{{ patient.status|upper }}</h5>
-                                            <span class="description-text">STATUS</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-4">
-                                        <div class="description-block">
-                                            <span class="description-percentage text-danger">
-                                                <i class="fas fa-tint"></i>
-                                            </span>
-                                            <h5 class="description-header">{{ patient.blood_group|default:"Unknown" }}</h5>
-                                            <span class="description-text">BLOOD GROUP</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                           
                         </div>
                     </div>
                 </div>
@@ -542,7 +500,11 @@
                                             <td class="font-weight-bold">
                                                 <i class="fas fa-sticky-note text-dark mr-2"></i>Additional Notes
                                             </td>
-                                            <td colspan="3">{{ patient.notes }}</td>
+                                            <td colspan="">{{ patient.notes }}</td>
+
+                                            <td class="font-weight-bold">
+                                                <i class="fas fa-hashtag text-dark mr-2"></i>Unique ID                                            </td>          
+                                            <td class="font-weight-bold">{{ patient.patient_id }}</td>
                                         </tr>
                                         {% endif %}
                                     </tbody>
