@@ -67,7 +67,7 @@ def check_lab_role(view_func):
 #       ROLE Receptionist
 #===================================
 
-def check_receiption_role(view_func):
+def check_reception_role(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         try:

@@ -54,7 +54,7 @@ from django.http import HttpResponse # Ensure HttpResponse is imported
 from django.views.decorators.http import require_GET, require_POST
 import re
 from django.utils import timezone
-from .utils import check_nurse_role, check_admin_role, check_receiption_role, check_account_role,check_doctor_role,check_lab_role
+from .utils import check_nurse_role, check_admin_role, check_reception_role, check_account_role,check_doctor_role,check_lab_role
 
 import logging
 
@@ -3439,7 +3439,7 @@ def lab_activity_report(request):
 ##### Form Action #####
 
 @csrf_exempt
-@check_receiption_role
+@check_reception_role
 def get_patient_info(request, patient_id):
     try:
         patient = Patient.objects.get(id=patient_id)
@@ -4867,6 +4867,7 @@ def get_hr_activity_detail(request, activity_type, id):
 
 ''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
 
+@check_reception_role
 @login_required(login_url='home')
 def receptionist(request):
     today = localdate()
@@ -4910,6 +4911,7 @@ def receptionist(request):
     }
     return render(request, 'receptionist/index.html', context)
 
+@check_reception_role
 @login_required(login_url='home')
 def register_patient(request):
     patients = Patient.objects.all().order_by('-date_registered')
@@ -4925,6 +4927,7 @@ def register_patient(request):
         'nurses': nurses,
     })
 
+@check_reception_role
 @login_required(login_url='home')
 def receptionist_activity_report(request):
     """
@@ -5243,7 +5246,7 @@ def ajax_patient_search(request):
 
 
 @csrf_exempt
-@check_receiption_role
+@check_reception_role
 def register_p(request):
     if request.method == 'POST':
         data = request.POST
