@@ -53,6 +53,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.views.decorators.http import require_GET, require_POST
 import re
+from django.conf import settings
 from django.utils import timezone
 from .utils import check_nurse_role, check_admin_role, check_reception_role, check_account_role, check_doctor_role, check_lab_role
 
@@ -4930,305 +4931,485 @@ def register_patient(request):
 @login_required(login_url='home')
 @check_reception_role
 def receptionist_activity_report(request):
-    """
-    Renders the activity report page for receptionists.
-    Passes a list of all patients to populate the patient filter dropdown.
-    """
-    # Fetch all patients to populate the dropdown filter
+    """Render the activity report page with patient list for filtering"""
     patients = Patient.objects.all().order_by('full_name')
-    context = {
-        'patients': patients,
-    }
-    return render(request, 'receptionist/activity_report.html', context)
+    return render(request, 'receptionist/activity_report.html', {'patients': patients})
 
 
 @require_POST
 @login_required(login_url='home')
+@check_reception_role
 def generate_activity_report(request):
-    """
-    Generates activity reports based on AJAX requests, with a specific handler for
-    a comprehensive individual patient report.
-    """
+    """Generate activity reports with improved structure and error handling"""
+    
     try:
-        data = json.loads(request.body)
-        report_type = data.get('report_type')
-        patient_id = data.get('patient_id')
-        alldate_filter = data.get('alldate')
-        start_date_str = data.get('start_date')
-        end_date_str = data.get('end_date')
-
-        # Convert patient_id to int if it's not None or empty
-        patient_id = int(patient_id) if patient_id else None
-
-        # Helper function to get date range
-        def _get_date_range(filter_type, start_str, end_str):
-            today = timezone.localdate()
-            if filter_type == 'today':
-                return today, today
-            elif filter_type == 'week':
-                start_of_week = today - timedelta(days=today.weekday())
-                end_of_week = start_of_week + timedelta(days=6)
-                return start_of_week, end_of_week
-            elif filter_type == 'month':
-                start_of_month = today.replace(day=1)
-                next_month = start_of_month.replace(day=28) + timedelta(days=4)
-                end_of_month = next_month - timedelta(days=next_month.day)
-                return start_of_month, end_of_month
-            elif filter_type == 'range' and start_str and end_str:
-                return datetime.strptime(start_str, '%Y-%m-%d').date(), datetime.strptime(end_str, '%Y-%m-%d').date()
-            return None, None
-
-        start_date, end_date = _get_date_range(alldate_filter, start_date_str, end_date_str)
-
-        # --- Report Data Fetching Functions ---
-
-        def _serialize_attendance(attendance):
-            return {
-                'staff_name': attendance.staff.get_full_name() or attendance.staff.username,
-                'date': attendance.timestamp.strftime('%Y-%m-%d %H:%M'),
-                'status': attendance.status,
-            }
-
-        def _serialize_patient(patient):
-            return {
-                'patient_id': patient.patient_id,
-                'full_name': patient.full_name,
-                'gender': patient.gender,
-                'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d'),
-                'phone': patient.phone,
-                'email': patient.email or 'N/A',
-                'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M'),
-                'registered_by': patient.registered_by.get_full_name() if patient.registered_by else 'N/A',
-            }
-
-        def _get_patients_data(patient_id, start_date, end_date):
-            patients_queryset = Patient.objects.all()
-            if patient_id:
-                patients_queryset = patients_queryset.filter(id=patient_id)
-            if start_date and end_date:
-                patients_queryset = patients_queryset.filter(date_registered__date__range=[start_date, end_date])
-            data = [_serialize_patient(p) for p in patients_queryset.order_by('-date_registered')]
-            headers = ['Patient ID', 'Full Name', 'Gender', 'Date of Birth', 'Phone', 'Email', 'Date Registered', 'Registered By']
-            return headers, data, "Patients Registered Report"
-
-        def _serialize_appointment(appointment):
-            return {
-                'patient_name': appointment.patient.full_name,
-                'patient_id': appointment.patient.patient_id,
-                'department': appointment.department.name,
-                'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M'),
-                'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'N/A',
-            }
-
-        def _get_appointments_data(patient_id, start_date, end_date):
-            appointments_queryset = Appointment.objects.all()
-            if patient_id:
-                appointments_queryset = appointments_queryset.filter(patient_id=patient_id)
-            if start_date and end_date:
-                appointments_queryset = appointments_queryset.filter(scheduled_time__date__range=[start_date, end_date])
-            data = [_serialize_appointment(a) for a in appointments_queryset.order_by('-scheduled_time')]
-            headers = ['Patient Name', 'Patient ID', 'Department', 'Scheduled Time', 'Scheduled By']
-            return headers, data, "Appointments Scheduled Report"
-
-        def _serialize_admission(admission):
-            return {
-                'patient_name': admission.patient.full_name,
-                'patient_id': admission.patient.patient_id,
-                'admission_date': admission.admission_date.strftime('%Y-%m-%d'),
-                'admission_reason': admission.admission_reason or 'N/A',
-                'status': admission.status,
-                'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'N/A',
-                'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else 'N/A',
-            }
-
-        def _get_admissions_data(patient_id, start_date, end_date):
-            admissions_queryset = Admission.objects.all()
-            if patient_id:
-                admissions_queryset = admissions_queryset.filter(patient_id=patient_id)
-            if start_date and end_date:
-                admissions_queryset = admissions_queryset.filter(admission_date__range=[start_date, end_date])
-            data = [_serialize_admission(adm) for adm in admissions_queryset.order_by('-admission_date')]
-            headers = ['Patient Name', 'Patient ID', 'Admission Date', 'Reason', 'Status', 'Admitted By', 'Discharge Date']
-            return headers, data, "Admissions Report"
-
-        def _serialize_referral(referral):
-            return {
-                'patient_name': referral.patient.full_name,
-                'patient_id': referral.patient.patient_id,
-                'department': referral.department.name if referral.department else 'N/A',
-                'notes': referral.notes or 'N/A',
-                'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M'),
-                'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'N/A',
-            }
-
-        def _get_referrals_data(patient_id, start_date, end_date):
-            referrals_queryset = Referral.objects.all()
-            if patient_id:
-                referrals_queryset = referrals_queryset.filter(patient_id=patient_id)
-            if start_date and end_date:
-                referrals_queryset = referrals_queryset.filter(created_at__date__range=[start_date, end_date])
-            data = [_serialize_referral(ref) for ref in referrals_queryset.order_by('-created_at')]
-            headers = ['Patient Name', 'Patient ID', 'Department', 'Referral Note', 'Created At', 'Referred By']
-            return headers, data, "Department Referrals Report"
-
-        def _serialize_bill(bill):
-            return {
-                'bill_number': bill.bill_number,
-                'patient_name': bill.patient.full_name,
-                'patient_id': bill.patient.patient_id,
-                'total_amount': float(bill.total_amount),
-                'discount_amount': float(bill.discount_amount),
-                'final_amount': float(bill.final_amount),
-                'amount_paid': float(bill.amount_paid()),
-                'outstanding_amount': float(bill.outstanding_amount()),
-                'status': bill.status,
-                'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
-                'created_by': bill.created_by.get_full_name() if bill.created_by else 'N/A',
-            }
-
-        def _get_bills_data(patient_id, start_date, end_date):
-            bills_queryset = PatientBill.objects.all()
-            if patient_id:
-                bills_queryset = bills_queryset.filter(patient_id=patient_id)
-            if start_date and end_date:
-                bills_queryset = bills_queryset.filter(created_at__date__range=[start_date, end_date])
-            data = [_serialize_bill(b) for b in bills_queryset.order_by('-created_at')]
-            headers = ['Bill Number', 'Patient Name', 'Patient ID', 'Total Amount', 'Discount', 'Final Amount', 'Amount Paid', 'Outstanding', 'Status', 'Created At', 'Created By']
-            return headers, data, "Patient Bills Report"
-
-        def _serialize_payment(payment):
-            return {
-                'payment_id': payment.id,
-                'patient_name': payment.patient.full_name,
-                'patient_id': payment.patient.patient_id,
-                'amount': float(payment.amount),
-                'payment_method': payment.payment_method,
-                'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M'),
-                'status': payment.status,
-                'bill_number': payment.bill.bill_number if payment.bill else 'N/A',
-                'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'N/A',
-            }
-
-        def _get_payments_data(patient_id, start_date, end_date):
-            payments_queryset = Payment.objects.all()
-            if patient_id:
-                payments_queryset = payments_queryset.filter(patient_id=patient_id)
-            if start_date and end_date:
-                payments_queryset = payments_queryset.filter(payment_date__date__range=[start_date, end_date])
-            data = [_serialize_payment(p) for p in payments_queryset.order_by('-payment_date')]
-            headers = ['Payment ID', 'Patient Name', 'Patient ID', 'Amount', 'Method', 'Payment Date', 'Status', 'Bill Number', 'Processed By']
-            return headers, data, "Patient Payments Report"
-
-        def _get_staff_attendance_data(patient_id, start_date, end_date):
-            attendance_queryset = Attendance.objects.all()
-            if start_date and end_date:
-                attendance_queryset = attendance_queryset.filter(date__date__range=[start_date, end_date])
-            data = [_serialize_attendance(att) for att in attendance_queryset.order_by('-date')]
-            headers = ['Staff Name', 'Date', 'Status']
-            return headers, data, "Staff Attendance Report"
-
-        def _serialize_staff_transition(transition):
-            return {
-                'full_name': transition.full_name,
-                'transition_type': transition.transition_type,
-                'date': transition.date.strftime('%Y-%m-%d'),
-                'notes': transition.notes or 'N/A',
-                'created_at': transition.created_at.strftime('%Y-%m-%d %H:%M'),
-                'created_by': transition.created_by.get_full_name() if transition.created_by else 'N/A',
-            }
-
-        def _get_staff_onboarding_offboarding_data(patient_id, start_date, end_date):
-            transitions_queryset = StaffTransition.objects.all()
-            if start_date and end_date:
-                transitions_queryset = transitions_queryset.filter(date__range=[start_date, end_date])
-            data = [_serialize_staff_transition(t) for t in transitions_queryset.order_by('-date')]
-            headers = ['Full Name', 'Transition Type', 'Date', 'Notes', 'Created At', 'Created By']
-            return headers, data, "Staff Onboarding/Offboarding Report"
-
-        # New function for the combined individual patient report
-        def _get_individual_combined_data(patient_id, start_date, end_date):
-            if not patient_id:
-                return {}, "Please select a patient for this report."
-
+        # Handle data parsing more carefully
+        data = {}
+        
+        # Check content type and parse accordingly
+        content_type = request.content_type or request.META.get('CONTENT_TYPE', '')
+        
+        if 'application/json' in content_type:
             try:
-                patient = Patient.objects.get(id=patient_id)
-                reports_to_fetch = ['appointments', 'admissions', 'referrals', 'bills', 'payments']
-                combined_reports = {}
-
-                for r_type in reports_to_fetch:
-                    handler = report_handlers.get(r_type)
-                    if handler:
-                        headers, data, title = handler(patient_id, start_date, end_date)
-                        combined_reports[r_type] = {
-                            'headers': headers,
-                            'data': data,
-                            'title': title,
-                            'count': len(data)
-                        }
-                return combined_reports, None
-            except Patient.DoesNotExist:
-                return {}, "Patient not found."
-
-        # Map report types to their respective data fetching functions
-        report_handlers = {
-            'all_patients': _get_patients_data,
-            'appointments': _get_appointments_data,
-            'admissions': _get_admissions_data,
-            'referrals': _get_referrals_data,
-            'bills': _get_bills_data,
-            'payments': _get_payments_data,
-            'staff_attendance': _get_staff_attendance_data,
-            'staff_onboarding_offboarding': _get_staff_onboarding_offboarding_data,
-            'individual_combined': _get_individual_combined_data,
-        }
-
-        if report_type == 'all_combined_reports':
-            combined_reports = {}
-            # Define the order and subset of reports to include in combined view
-            combined_report_types = [
-                'all_patients', 'appointments', 'admissions', 'referrals', 'bills', 'payments',
-                'staff_attendance', 'staff_onboarding_offboarding'
-            ]
-            for r_type in combined_report_types:
-                handler = report_handlers.get(r_type)
-                # The patient_id should only be passed to patient-specific reports
-                report_patient_id = patient_id if r_type in ['appointments', 'admissions', 'referrals', 'bills', 'payments'] else None
-                if handler:
-                    headers, data, title = handler(report_patient_id, start_date, end_date)
-                    if data: # Only include reports with data
-                        combined_reports[r_type] = {
-                            'headers': headers,
-                            'data': data,
-                            'title': title,
-                            'count': len(data)
-                        }
-            return JsonResponse({'combined_reports': combined_reports})
-        elif report_type == 'individual_combined':
-            if not patient_id:
-                return JsonResponse({'error': 'No patient selected for individual combined report'}, status=400)
-            
-            combined_reports, error = _get_individual_combined_data(patient_id, start_date, end_date)
-            if error:
-                 return JsonResponse({'error': error}, status=400)
-            return JsonResponse({'combined_reports': combined_reports})
-        elif report_type in report_handlers:
-            report_patient_id = patient_id if report_type in ['appointments', 'admissions', 'referrals', 'bills', 'payments'] else None
-            headers, data, title = report_handlers[report_type](report_patient_id, start_date, end_date)
-            return JsonResponse({
-                'headers': headers,
-                'data': data,
-                'title': title,
-                'count': len(data)
-            })
+                # Only try to read body if request.POST is empty (indicating JSON request)
+                if not request.POST:
+                    data = json.loads(request.body.decode('utf-8'))
+                else:
+                    # Fallback to POST data if body has been consumed
+                    data = request.POST.dict()
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                return JsonResponse({'error': f'Invalid JSON format: {str(e)}'}, status=400)
+            except Exception as e:
+                # If body cannot be read, fall back to POST data
+                data = request.POST.dict()
         else:
-            return JsonResponse({'error': 'Invalid report type'}, status=400)
-
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
+            # Use POST data for form submissions
+            data = request.POST.dict()
+        
+        # Extract and validate parameters
+        report_type = data.get('report_type', '').strip()
+        patient_id = data.get('patient_id', '').strip()
+        
+        # Handle boolean conversion for all_dates - check multiple possible values
+        all_dates_raw = data.get('all_dates', 'true')
+        if isinstance(all_dates_raw, str):
+            # Convert string values to boolean
+            use_date_filter = all_dates_raw.lower() not in ['true', 'on', '1', 'yes', 'checked']
+        elif isinstance(all_dates_raw, bool):
+            use_date_filter = not all_dates_raw
+        else:
+            # Default behavior if checkbox is unchecked (not present in form data)
+            use_date_filter = all_dates_raw != 'on'
+        
+        start_date = data.get('start_date', '').strip()
+        end_date = data.get('end_date', '').strip()
+        
+        # Debug logging
+        print(f"Debug - Report Type: {report_type}")
+        print(f"Debug - Patient ID: {patient_id}")
+        print(f"Debug - All dates raw: {all_dates_raw}")
+        print(f"Debug - Use Date Filter: {use_date_filter}")
+        print(f"Debug - Start Date: {start_date}")
+        print(f"Debug - End Date: {end_date}")
+        print(f"Debug - Content Type: {content_type}")
+        
+        # Validate required fields
+        if not report_type:
+            return JsonResponse({'error': 'Report type is required'}, status=400)
+        
+        # Handle patient ID conversion
+        if patient_id:
+            try:
+                patient_id = int(patient_id)
+                # Verify patient exists
+                if not Patient.objects.filter(id=patient_id).exists():
+                    return JsonResponse({'error': 'Selected patient not found'}, status=404)
+            except (ValueError, TypeError):
+                return JsonResponse({'error': 'Invalid patient ID format'}, status=400)
+        else:
+            patient_id = None
+        
+        # Parse and validate dates
+        date_range = None
+        if use_date_filter:
+            if not start_date or not end_date:
+                return JsonResponse({'error': 'Both start date and end date are required when using date filter'}, status=400)
+            
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+                
+                if start_dt > end_dt:
+                    return JsonResponse({'error': 'Start date must be before or equal to end date'}, status=400)
+                
+                date_range = (start_dt, end_dt)
+                print(f"Debug - Date Range: {date_range}")
+            except ValueError as e:
+                return JsonResponse({'error': f'Invalid date format. Use YYYY-MM-DD format: {str(e)}'}, status=400)
+        
+        # Generate report based on type
+        if report_type == 'all_combined':
+            return handle_combined_reports(patient_id, date_range)
+        elif report_type == 'individual_report':
+            if not patient_id:
+                return JsonResponse({'error': 'Patient selection is required for individual reports'}, status=400)
+            return handle_individual_patient_report(patient_id, date_range)
+        else:
+            return handle_single_report(report_type, patient_id, date_range)
+            
     except Exception as e:
-        # Log the error for debugging
-        print(f"Error generating activity report: {e}")
-        return JsonResponse({'error': str(e)}, status=500)
+        # Enhanced error logging
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Server error in generate_activity_report: {str(e)}")
+        print(f"Full traceback: {error_details}")
+        
+        # Return user-friendly error message
+        return JsonResponse({
+            'error': 'An internal server error occurred while generating the report. Please try again.',
+            'debug_message': str(e) if settings.DEBUG else None
+        }, status=500)
+
+
+def handle_combined_reports(patient_id, date_range):
+    """Handle all combined reports generation"""
+    report_types = ['patients_registered', 'appointments', 'admissions', 'referrals', 'bills', 'payments']
+    combined_data = {}
+    errors = []
+    
+    for report_type in report_types:
+        try:
+            report_data = generate_single_report_data(report_type, patient_id, date_range)
+            # Always include the report, even if it has no data
+            combined_data[report_type] = report_data
+        except Exception as e:
+            # Log error but continue with other reports
+            error_msg = f"Error generating {report_type} report: {str(e)}"
+            print(error_msg)
+            errors.append(error_msg)
+            
+            # Add empty report data to maintain structure
+            combined_data[report_type] = {
+                'title': f'{report_type.replace("_", " ").title()} Report',
+                'headers': [],
+                'data': [],
+                'count': 0,
+                'error': str(e)
+            }
+    
+    response_data = {'combined_reports': combined_data}
+    if errors and settings.DEBUG:
+        response_data['warnings'] = errors
+    
+    return JsonResponse(response_data)
+
+
+def handle_individual_patient_report(patient_id, date_range):
+    """Handle individual patient comprehensive report"""
+    try:
+        # Get patient info
+        patient = Patient.objects.get(id=patient_id)
+    except Patient.DoesNotExist:
+        return JsonResponse({'error': 'Selected patient not found'}, status=404)
+    
+    # Generate patient-specific reports
+    patient_report_types = ['appointments', 'admissions', 'referrals', 'bills', 'payments']
+    combined_data = {}
+    errors = []
+    
+    for report_type in patient_report_types:
+        try:
+            report_data = generate_single_report_data(report_type, patient_id, date_range)
+            combined_data[report_type] = report_data
+        except Exception as e:
+            error_msg = f"Error generating {report_type} for patient {patient_id}: {str(e)}"
+            print(error_msg)
+            errors.append(error_msg)
+            
+            # Add empty report data
+            combined_data[report_type] = {
+                'title': f'{report_type.replace("_", " ").title()} Report',
+                'headers': [],
+                'data': [],
+                'count': 0,
+                'error': str(e)
+            }
+    
+    response_data = {
+        'combined_reports': combined_data,
+        'patient_info': {
+            'id': patient.patient_id,
+            'name': patient.full_name,
+            'phone': patient.phone,
+            'email': patient.email or 'N/A'
+        }
+    }
+    
+    if errors and settings.DEBUG:
+        response_data['warnings'] = errors
+    
+    return JsonResponse(response_data)
+
+
+def handle_single_report(report_type, patient_id, date_range):
+    """Handle single report generation"""
+    try:
+        report_data = generate_single_report_data(report_type, patient_id, date_range)
+        return JsonResponse(report_data)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        print(f"Error in handle_single_report: {str(e)}")
+        return JsonResponse({'error': f'Failed to generate {report_type} report: {str(e)}'}, status=500)
+
+
+def generate_single_report_data(report_type, patient_id, date_range):
+    """Generate data for a single report type with error handling"""
+    
+    report_generators = {
+        'patients_registered': generate_patients_data,
+        'appointments': generate_appointments_data,
+        'admissions': generate_admissions_data,
+        'referrals': generate_referrals_data,
+        'bills': generate_bills_data,
+        'payments': generate_payments_data,
+    }
+    
+    generator = report_generators.get(report_type)
+    if not generator:
+        raise ValueError(f'Invalid report type: {report_type}')
+    
+    try:
+        return generator(patient_id, date_range)
+    except Exception as e:
+        print(f"Error in generator for {report_type}: {str(e)}")
+        raise Exception(f"Failed to generate {report_type} data: {str(e)}")
+
+
+# Enhanced report data generators with better error handling
+def generate_patients_data(patient_id, date_range):
+    """Generate patient registration data"""
+    try:
+        queryset = Patient.objects.all()
+        
+        if patient_id:
+            queryset = queryset.filter(id=patient_id)
+        
+        if date_range:
+            start_date, end_date = date_range
+            queryset = queryset.filter(date_registered__date__range=[start_date, end_date])
+        
+        data = []
+        for patient in queryset.order_by('-date_registered')[:1000]:  # Limit results
+            try:
+                data.append({
+                    'patient_id': patient.patient_id or 'N/A',
+                    'full_name': patient.full_name or 'N/A',
+                    'gender': patient.gender or 'N/A',
+                    'date_of_birth': patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else 'N/A',
+                    'phone': patient.phone or 'N/A',
+                    'email': patient.email or 'N/A',
+                    'date_registered': patient.date_registered.strftime('%Y-%m-%d %H:%M') if patient.date_registered else 'N/A',
+                    'registered_by': patient.registered_by.get_full_name() if patient.registered_by else 'System',
+                })
+            except Exception as e:
+                print(f"Error processing patient {patient.id}: {str(e)}")
+                continue
+        
+        return {
+            'title': 'Patient Registration Report',
+            'headers': ['Patient ID', 'Full Name', 'Gender', 'Date of Birth', 'Phone', 'Email', 'Date Registered', 'Registered By'],
+            'data': data,
+            'count': len(data)
+        }
+    except Exception as e:
+        print(f"Error in generate_patients_data: {str(e)}")
+        raise
+
+
+def generate_appointments_data(patient_id, date_range):
+    """Generate appointments data"""
+    try:
+        queryset = Appointment.objects.select_related('patient', 'department', 'scheduled_by').all()
+        
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+        
+        if date_range:
+            start_date, end_date = date_range
+            queryset = queryset.filter(scheduled_time__date__range=[start_date, end_date])
+        
+        data = []
+        for appointment in queryset.order_by('-scheduled_time')[:1000]:  # Limit results
+            try:
+                data.append({
+                    'patient_name': appointment.patient.full_name if appointment.patient else 'N/A',
+                    'patient_id': appointment.patient.patient_id if appointment.patient else 'N/A',
+                    'department': appointment.department.name if appointment.department else 'N/A',
+                    'scheduled_time': appointment.scheduled_time.strftime('%Y-%m-%d %H:%M') if appointment.scheduled_time else 'N/A',
+                    'scheduled_by': appointment.scheduled_by.get_full_name() if appointment.scheduled_by else 'System',
+                })
+            except Exception as e:
+                print(f"Error processing appointment {appointment.id}: {str(e)}")
+                continue
+        
+        return {
+            'title': 'Appointments Report',
+            'headers': ['Patient Name', 'Patient ID', 'Department', 'Scheduled Time', 'Scheduled By'],
+            'data': data,
+            'count': len(data)
+        }
+    except Exception as e:
+        print(f"Error in generate_appointments_data: {str(e)}")
+        raise
+
+
+def generate_admissions_data(patient_id, date_range):
+    """Generate admissions data"""
+    try:
+        queryset = Admission.objects.select_related('patient', 'admitted_by').all()
+        
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+        
+        if date_range:
+            start_date, end_date = date_range
+            queryset = queryset.filter(admission_date__range=[start_date, end_date])
+        
+        data = []
+        for admission in queryset.order_by('-admission_date')[:1000]:  # Limit results
+            try:
+                data.append({
+                    'patient_name': admission.patient.full_name if admission.patient else 'N/A',
+                    'patient_id': admission.patient.patient_id if admission.patient else 'N/A',
+                    'admission_date': admission.admission_date.strftime('%Y-%m-%d') if admission.admission_date else 'N/A',
+                    'admission_reason': admission.admission_reason or 'Not specified',
+                    'status': admission.status or 'N/A',
+                    'admitted_by': admission.admitted_by.get_full_name() if admission.admitted_by else 'System',
+                    'discharge_date': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else 'Still admitted',
+                })
+            except Exception as e:
+                print(f"Error processing admission {admission.id}: {str(e)}")
+                continue
+        
+        return {
+            'title': 'Patient Admissions Report',
+            'headers': ['Patient Name', 'Patient ID', 'Admission Date', 'Reason', 'Status', 'Admitted By', 'Discharge Date'],
+            'data': data,
+            'count': len(data)
+        }
+    except Exception as e:
+        print(f"Error in generate_admissions_data: {str(e)}")
+        raise
+
+
+def generate_referrals_data(patient_id, date_range):
+    """Generate referrals data"""
+    try:
+        queryset = Referral.objects.select_related('patient', 'department', 'referred_by').all()
+        
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+        
+        if date_range:
+            start_date, end_date = date_range
+            queryset = queryset.filter(created_at__date__range=[start_date, end_date])
+        
+        data = []
+        for referral in queryset.order_by('-created_at')[:1000]:  # Limit results
+            try:
+                notes = referral.notes or 'No notes'
+                if len(notes) > 100:
+                    notes = notes[:100] + '...'
+                
+                data.append({
+                    'patient_name': referral.patient.full_name if referral.patient else 'N/A',
+                    'patient_id': referral.patient.patient_id if referral.patient else 'N/A',
+                    'department': referral.department.name if referral.department else 'N/A',
+                    'notes': notes,
+                    'created_at': referral.created_at.strftime('%Y-%m-%d %H:%M') if referral.created_at else 'N/A',
+                    'referred_by': referral.referred_by.get_full_name() if referral.referred_by else 'System',
+                })
+            except Exception as e:
+                print(f"Error processing referral {referral.id}: {str(e)}")
+                continue
+        
+        return {
+            'title': 'Department Referrals Report',
+            'headers': ['Patient Name', 'Patient ID', 'Department', 'Referral Notes', 'Created At', 'Referred By'],
+            'data': data,
+            'count': len(data)
+        }
+    except Exception as e:
+        print(f"Error in generate_referrals_data: {str(e)}")
+        raise
+
+
+def generate_bills_data(patient_id, date_range):
+    """Generate bills data"""
+    try:
+        queryset = PatientBill.objects.select_related('patient', 'created_by').all()
+        
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+        
+        if date_range:
+            start_date, end_date = date_range
+            queryset = queryset.filter(created_at__date__range=[start_date, end_date])
+        
+        data = []
+        for bill in queryset.order_by('-created_at')[:1000]:  # Limit results
+            try:
+                data.append({
+                    'bill_number': bill.bill_number or 'N/A',
+                    'patient_name': bill.patient.full_name if bill.patient else 'N/A',
+                    'patient_id': bill.patient.patient_id if bill.patient else 'N/A',
+                    'total_amount': f"₦{bill.total_amount:,.2f}" if bill.total_amount else 'N/A',
+                    'discount_amount': f"₦{bill.discount_amount:,.2f}" if bill.discount_amount else 'N/A',
+                    'final_amount': f"₦{bill.final_amount:,.2f}" if bill.final_amount else 'N/A',
+                    'amount_paid': f"₦{bill.amount_paid():,.2f}" if hasattr(bill, 'amount_paid') else 'N/A',
+                    'outstanding_amount': f"₦{bill.outstanding_amount():,.2f}" if hasattr(bill, 'outstanding_amount') else 'N/A',
+                    'status': bill.status.title() if bill.status else 'N/A',
+                    'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M') if bill.created_at else 'N/A',
+                    'created_by': bill.created_by.get_full_name() if bill.created_by else 'System',
+                })
+            except Exception as e:
+                print(f"Error processing bill {bill.id}: {str(e)}")
+                continue
+        
+        return {
+            'title': 'Patient Bills Report',
+            'headers': ['Bill Number', 'Patient Name', 'Patient ID', 'Total Amount', 'Discount', 'Final Amount', 
+                       'Amount Paid', 'Outstanding', 'Status', 'Created At', 'Created By'],
+            'data': data,
+            'count': len(data)
+        }
+    except Exception as e:
+        print(f"Error in generate_bills_data: {str(e)}")
+        raise
+
+
+def generate_payments_data(patient_id, date_range):
+    """Generate payments data"""
+    try:
+        queryset = Payment.objects.select_related('patient', 'bill', 'processed_by').all()
+        
+        if patient_id:
+            queryset = queryset.filter(patient_id=patient_id)
+        
+        if date_range:
+            start_date, end_date = date_range
+            queryset = queryset.filter(payment_date__date__range=[start_date, end_date])
+        
+        data = []
+        for payment in queryset.order_by('-payment_date')[:1000]:  # Limit results
+            try:
+                data.append({
+                    'payment_id': f"PAY-{payment.id:06d}",
+                    'patient_name': payment.patient.full_name if payment.patient else 'N/A',
+                    'patient_id': payment.patient.patient_id if payment.patient else 'N/A',
+                    'amount': f"₦{payment.amount:,.2f}" if payment.amount else 'N/A',
+                    'payment_method': payment.payment_method.title().replace('_', ' ') if payment.payment_method else 'N/A',
+                    'payment_date': payment.payment_date.strftime('%Y-%m-%d %H:%M') if payment.payment_date else 'N/A',
+                    'status': payment.status.title() if payment.status else 'N/A',
+                    'bill_number': payment.bill.bill_number if payment.bill else 'Direct Payment',
+                    'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'System',
+                    'reference': payment.payment_reference or 'N/A',
+                })
+            except Exception as e:
+                print(f"Error processing payment {payment.id}: {str(e)}")
+                continue
+        
+        return {
+            'title': 'Patient Payments Report',
+            'headers': ['Payment ID', 'Patient Name', 'Patient ID', 'Amount', 'Method', 'Payment Date', 
+                       'Status', 'Bill Number', 'Processed By', 'Reference'],
+            'data': data,
+            'count': len(data)
+        }
+    except Exception as e:
+        print(f"Error in generate_payments_data: {str(e)}")
+        raise
     
 def patient_file_page(request):
     """

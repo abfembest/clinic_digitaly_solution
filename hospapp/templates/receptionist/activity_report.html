@@ -3,7 +3,12 @@
 
 {% block title %}HMS | Activity Report{% endblock %}
 
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
 {% block content %}
+<!-- Content Header -->
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -21,142 +26,205 @@
     </div>
 </div>
 
-<div class="generate-reports-page">
+<!-- Debug Info Card -->
+<div class="alert alert-info" id="debugInfo" style="display: none;">
+    <strong>Debug Information:</strong>
+    <div id="debugContent"></div>
+</div>
+
+<!-- Main content -->
+<section class="content">
     <div class="container-fluid">
         <div class="row">
-            <div class="col-lg-4">
-                <div class="card card-primary card-outline">
+            <!-- Report Generation Card -->
+            <div class="col-md-4">
+                <div class="card card-primary">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-chart-bar me-1"></i>
-                            Generate Activity Reports
+                            <i class="fas fa-chart-bar mr-1"></i>
+                            Generate Activity Report
                         </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool btn-sm" onclick="toggleDebug()">
+                                <i class="fas fa-bug"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <form id="reportForm" novalidate>
-                            <div class="mb-3">
-                                <label for="reportType" class="form-label">Report Type</label>
-                                <select class="form-control select2bs4" id="reportType" name="report_type">
+                        <form id="reportForm">
+                            {% csrf_token %}
+                            
+                            <!-- Report Type Selection -->
+                            <div class="form-group">
+                                <label for="reportType">Report Type <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="reportType" name="report_type" style="width: 100%;" required>
                                     <option value="">Select Report Type</option>
-                                    <option value="all_combined_reports">All Combined Reports</option>
-                                    <option value="individual_combined">Individual Patient Report</option>
-                                    <option value="appointments">Appointments</option>
-                                    <option value="admissions">Admissions</option>
+                                    <option value="all_combined">All Combined Reports</option>
+                                    <option value="individual_report">Individual Patient Report</option>
+                                    <option value="patients_registered">Patients Registered</option>
+                                    <option value="appointments">Appointments Scheduled</option>
+                                    <option value="admissions">Patient Admissions</option>
                                     <option value="referrals">Department Referrals</option>
                                     <option value="bills">Patient Bills</option>
                                     <option value="payments">Patient Payments</option>
-                                    <option value="all_patients">Patients Registered</option>
-                                    <option value="staff_attendance">Staff Attendance</option>
-                                    <option value="staff_onboarding_offboarding">Staff Onboarding/Offboarding</option>
                                 </select>
                             </div>
 
-                            <div class="mb-3" id="patientSelectCard" style="display: none;">
-                                <label for="patientId" class="form-label">Select Patient</label>
-                                <select class="form-control select2bs4" id="patientId" name="patient_id">
-                                    <option value="">Select a Patient</option>
+                            <!-- Patient Selection (Hidden by default) -->
+                            <div class="form-group" id="patientSelectionGroup" style="display: none;">
+                                <label for="patientSelect">Select Patient <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="patientSelect" name="patient_id" style="width: 100%;">
+                                    <option value="">Choose a Patient</option>
                                     {% for patient in patients %}
-                                    <option value="{{ patient.id }}">{{ patient.full_name }} ({{ patient.patient_id }})</option>
+                                    <option value="{{ patient.id }}">
+                                        {{ patient.full_name }} (ID: {{ patient.patient_id }})
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
 
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="alldate" name="alldate" checked>
-                                <label class="form-check-label" for="alldate">All Dates</label>
+                            <!-- Date Filtering Options -->
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allDatesCheck" name="all_dates" checked>
+                                    <label class="form-check-label" for="allDatesCheck">
+                                        All Dates (No Date Filter)
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="row" id="dateRangeCard" style="display: none;">
-                                <div class="col-md-6 mb-3">
-                                    <label for="startDate" class="form-label">Start Date</label>
+                            <!-- Date Range Selection (Hidden by default) -->
+                            <div id="dateRangeGroup" style="display: none;">
+                                <div class="form-group">
+                                    <label for="startDate">Start Date</label>
                                     <input type="date" class="form-control" id="startDate" name="start_date">
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="endDate" class="form-label">End Date</label>
+                                <div class="form-group">
+                                    <label for="endDate">End Date</label>
                                     <input type="date" class="form-control" id="endDate" name="end_date">
                                 </div>
                             </div>
 
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary" id="generateReportBtn">Generate Report</button>
+                            <!-- Generate Button -->
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary btn-block" id="generateBtn">
+                                    <i class="fas fa-cog mr-1"></i>
+                                    Generate Report
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-8">
-                <div id="singleReportContainer" class="card card-info" style="display: none;">
+            <!-- Report Display Area -->
+            <div class="col-md-8">
+                <!-- Loading Card -->
+                <div class="card card-info" id="loadingCard" style="display: none;">
+                    <div class="card-body text-center">
+                        <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                        <h5>Generating Report...</h5>
+                        <p class="text-muted">Please wait while we fetch your data</p>
+                    </div>
+                </div>
+
+                <!-- Single Report Display -->
+                <div class="card card-success" id="singleReportCard" style="display: none;">
                     <div class="card-header">
-                        <h3 class="card-title" id="reportTableTitle">Generated Report</h3>
+                        <h3 class="card-title" id="reportTitle">
+                            <i class="fas fa-table mr-1"></i>
+                            Report Results
+                        </h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
                             </button>
-                            <button type="button" class="btn btn-tool" onclick="exportToExcel()">
-                                <i class="fas fa-file-excel"></i> Export
+                            <button type="button" class="btn btn-tool" id="exportBtn" title="Export to Excel">
+                                <i class="fas fa-file-excel"></i>
                             </button>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover table-striped" id="reportDataTable">
-                                <thead></thead>
-                                <tbody></tbody>
+                            <table class="table table-striped table-hover" id="reportTable">
+                                <thead class="thead-light">
+                                    <!-- Dynamic headers will be inserted here -->
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic data will be inserted here -->
+                                </tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer text-center" id="reportTableFooter" style="display: none;">
-                        <span class="text-muted" id="recordCount">Total Records: 0</span>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <span id="recordCount">Total Records: 0</span>
+                        </small>
                     </div>
                 </div>
-                <div id="combinedReportsDisplayArea" class="row">
+
+                <!-- Combined Reports Display Area -->
+                <div id="combinedReportsArea">
+                    <!-- Multiple report cards will be dynamically inserted here -->
+                </div>
+
+                <!-- No Data Card -->
+                <div class="card card-warning" id="noDataCard" style="display: none;">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5>No Data Found</h5>
+                        <p class="text-muted">No records found matching your criteria. Try adjusting your filters.</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-check-circle me-2"></i> Activity Report Generated Successfully
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle mr-2"></i>Report Generated Successfully
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-            <div class="modal-body text-center py-4">
-                <div class="mb-3">
-                    <i class="fas fa-file-download fa-4x text-success"></i>
-                </div>
-                <h5>Your report is ready to view.</h5>
-                <p>You can also export it as an Excel file.</p>
-                <div class="mt-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-file-alt fa-4x text-success mb-3"></i>
+                <h6>Your report has been generated successfully!</h6>
+                <p class="text-muted">You can view the results below and export to Excel if needed.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2"></i> Report Generation Failed
+                <h5 class="modal-title" id="errorModalLabel">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Error Generating Report
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-            <div class="modal-body text-center py-4">
-                <div class="mb-3">
-                    <i class="fas fa-times-circle fa-4x text-danger"></i>
-                </div>
-                <p id="errorMessage"></p>
-                <div class="mt-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-times-circle fa-4x text-danger mb-3"></i>
+                <h6>Something went wrong!</h6>
+                <p class="text-muted" id="errorMessage">An error occurred while generating your report. Please try again.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -166,198 +234,18 @@
 {% block extra_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const reportTypeSelect = document.getElementById('reportType');
-        const patientSelectCard = document.getElementById('patientSelectCard');
-        const alldateCheckbox = document.getElementById('alldate');
-        const dateRangeCard = document.getElementById('dateRangeCard');
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
+// Add debug toggle function
+function toggleDebug() {
+    $('#debugInfo').toggle();
+}
 
-        // Ensure the patient selection card is hidden on page load
-        patientSelectCard.style.display = 'none';
+function updateDebugInfo(info) {
+    $('#debugContent').html('<pre>' + JSON.stringify(info, null, 2) + '</pre>');
+    $('#debugInfo').show();
+}
 
-        // Initialize Select2 after the page loads
-        $('.select2bs4').select2({
-            theme: 'bootstrap4'
-        });
-
-        reportTypeSelect.addEventListener('change', function() {
-            const value = this.value;
-            if (value === 'individual_combined') {
-                patientSelectCard.style.display = 'block';
-            } else {
-                patientSelectCard.style.display = 'none';
-            }
-        });
-
-        alldateCheckbox.addEventListener('change', function () {
-            if (this.checked) {
-                dateRangeCard.style.display = 'none';
-                startDateInput.disabled = true;
-                endDateInput.disabled = true;
-            } else {
-                dateRangeCard.style.display = 'flex';
-                startDateInput.disabled = false;
-                endDateInput.disabled = false;
-            }
-        });
-
-        document.getElementById('reportForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            generateReport();
-        });
-    });
-
-    function generateReport() {
-        const reportType = document.getElementById('reportType').value;
-        const patientId = document.getElementById('patientId').value;
-        const alldateFilter = document.getElementById('alldate').checked;
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        const reportForm = document.getElementById('reportForm');
-        
-        const data = {
-            report_type: reportType,
-            patient_id: patientId,
-            alldate: alldateFilter,
-            start_date: startDate,
-            end_date: endDate,
-        };
-
-        const singleReportContainer = document.getElementById('singleReportContainer');
-        const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
-        singleReportContainer.style.display = 'none';
-        combinedReportsDisplayArea.innerHTML = '';
-
-        fetch('{% url "generate_activity_report" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: JSON.stringify(data),
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(errorData => Promise.reject(errorData));
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.combined_reports) {
-                displayCombinedReports(data.combined_reports);
-            } else {
-                displaySingleReport(data);
-            }
-            new bootstrap.Modal(document.getElementById('successModal')).show();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = error.error || 'An unexpected error occurred. Please try again.';
-            new bootstrap.Modal(document.getElementById('errorModal')).show();
-        });
-    }
-
-    function displaySingleReport(reportData) {
-        const singleReportContainer = document.getElementById('singleReportContainer');
-        const reportTableTitle = document.getElementById('reportTableTitle');
-        const reportDataTable = document.getElementById('reportDataTable');
-        const reportTableFooter = document.getElementById('reportTableFooter');
-        const recordCountSpan = document.getElementById('recordCount');
-
-        const headers = reportData.headers;
-        const data = reportData.data;
-
-        reportTableTitle.textContent = reportData.title;
-        recordCountSpan.textContent = `Total Records: ${reportData.count}`;
-        reportTableFooter.style.display = 'block';
-
-        let headerHtml = '<tr>';
-        headers.forEach(header => {
-            headerHtml += `<th>${header}</th>`;
-        });
-        headerHtml += '</tr>';
-        reportDataTable.querySelector('thead').innerHTML = headerHtml;
-
-        let bodyHtml = '';
-        if (data.length > 0) {
-            data.forEach(row => {
-                bodyHtml += '<tr>';
-                headers.forEach(header => {
-                    const key = formatHeaderToKey(header);
-                    bodyHtml += `<td>${row[key] || 'N/A'}</td>`;
-                });
-                bodyHtml += '</tr>';
-            });
-        } else {
-            bodyHtml = '<tr><td colspan="' + headers.length + '" class="text-center">No records found for the selected criteria.</td></tr>';
-        }
-        reportDataTable.querySelector('tbody').innerHTML = bodyHtml;
-
-        singleReportContainer.style.display = 'block';
-    }
-
-    function displayCombinedReports(combinedReports) {
-        const combinedReportsDisplayArea = document.getElementById('combinedReportsDisplayArea');
-        combinedReportsDisplayArea.innerHTML = '';
-
-        const reportOrder = [
-            'all_patients', 'appointments', 'admissions', 'referrals', 'bills', 'payments',
-            'staff_attendance', 'staff_onboarding_offboarding'
-        ];
-        
-        reportOrder.forEach(reportKey => {
-            const reportData = combinedReports[reportKey];
-            if (reportData) {
-                const cardHtml = `
-                    <div class="col-12 mb-4">
-                        <div class="card card-outline card-info">
-                            <div class="card-header">
-                                <h3 class="card-title">${reportData.title}</h3>
-                                <div class="card-tools">
-                                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-tool" onclick="exportCombinedToExcel('${reportData.title}', this)">
-                                        <i class="fas fa-file-excel"></i> Export
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover table-striped">
-                                        <thead>
-                                            <tr>
-                                                ${reportData.headers.map(h => `<th>${h}</th>`).join('')}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${reportData.data.length > 0 ? reportData.data.map(row => `
-                                                <tr>
-                                                    ${reportData.headers.map(h => `<td>${row[formatHeaderToKey(h)] || 'N/A'}</td>`).join('')}
-                                                </tr>
-                                            `).join('') : `<tr><td colspan="${reportData.headers.length}" class="text-center">No records found.</td></tr>`}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="card-footer text-center">
-                                <span class="text-muted">Total Records: ${reportData.count}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                combinedReportsDisplayArea.innerHTML += cardHtml;
-            }
-        });
-    }
-
-    function formatHeaderToKey(header) {
-        return header.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    }
-
+$(document).ready(function() {
+    // Setup CSRF token for all AJAX requests
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -372,22 +260,408 @@
         }
         return cookieValue;
     }
-
-    function exportToExcel() {
-        const table = document.getElementById('reportDataTable');
-        const title = document.getElementById('reportTableTitle').textContent;
-        const wb = XLSX.utils.table_to_book(table);
-        const cleanFilename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        XLSX.writeFile(wb, `${cleanFilename}_activity_report.xlsx`);
-    }
-
-    function exportCombinedToExcel(filename, button) {
-        const table = button.closest('.card').querySelector('table');
-        if (table) {
-            const wb = XLSX.utils.table_to_book(table);
-            const cleanFilename = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            XLSX.writeFile(wb, `${cleanFilename}_activity_report.xlsx`);
+    
+    const csrftoken = getCookie('csrftoken') || $('meta[name=csrf-token]').attr('content') || $('[name=csrfmiddlewaretoken]').val();
+    
+    // Set up CSRF for all AJAX requests
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
         }
+    });
+
+    // Initialize Select2
+    $('.select2').select2({
+        theme: 'bootstrap4',
+        width: '100%'
+    });
+
+    // Report Type Change Handler
+    $('#reportType').on('change', function() {
+        const reportType = $(this).val();
+        const patientGroup = $('#patientSelectionGroup');
+        
+        if (reportType === 'individual_report') {
+            patientGroup.show();
+            $('#patientSelect').prop('required', true);
+        } else {
+            patientGroup.hide();
+            $('#patientSelect').prop('required', false);
+            $('#patientSelect').val('').trigger('change');
+        }
+        
+        // Clear previous results
+        clearReportDisplay();
+    });
+
+    // Date Filter Toggle
+    $('#allDatesCheck').on('change', function() {
+        const dateRangeGroup = $('#dateRangeGroup');
+        
+        if (this.checked) {
+            dateRangeGroup.hide();
+            $('#startDate, #endDate').prop('required', false).val('');
+        } else {
+            dateRangeGroup.show();
+            $('#startDate, #endDate').prop('required', true);
+        }
+    });
+
+    // Form Submission
+    $('#reportForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate form
+        if (!validateForm()) {
+            return;
+        }
+        
+        generateReport();
+    });
+
+    // Export Button Handler
+    $('#exportBtn').on('click', function() {
+        exportToExcel();
+    });
+});
+
+function validateForm() {
+    const reportType = $('#reportType').val();
+    const allDates = $('#allDatesCheck').is(':checked');
+    const startDate = $('#startDate').val();
+    const endDate = $('#endDate').val();
+    
+    if (!reportType) {
+        showError('Please select a report type.');
+        return false;
     }
+    
+    if (reportType === 'individual_report' && !$('#patientSelect').val()) {
+        showError('Please select a patient for individual report.');
+        return false;
+    }
+    
+    if (!allDates && (!startDate || !endDate)) {
+        showError('Please select both start and end dates, or check "All Dates".');
+        return false;
+    }
+    
+    if (!allDates && startDate > endDate) {
+        showError('Start date cannot be later than end date.');
+        return false;
+    }
+    
+    return true;
+}
+
+function generateReport() {
+    const formData = new FormData();
+    
+    // Add form fields with better checkbox handling
+    formData.append('report_type', $('#reportType').val());
+    formData.append('patient_id', $('#patientSelect').val() || '');
+    
+    // Handle checkbox properly - send 'false' when unchecked, 'true' when checked
+    const allDatesChecked = $('#allDatesCheck').is(':checked');
+    formData.append('all_dates', allDatesChecked ? 'true' : 'false');
+    
+    formData.append('start_date', $('#startDate').val());
+    formData.append('end_date', $('#endDate').val());
+    formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+    
+    // Debug information
+    console.log('Form Data:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    updateDebugInfo({
+        report_type: $('#reportType').val(),
+        patient_id: $('#patientSelect').val() || '',
+        all_dates: allDatesChecked,
+        start_date: $('#startDate').val(),
+        end_date: $('#endDate').val()
+    });
+    
+    // Show loading state
+    showLoading();
+    $('#generateBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Generating...');
+    
+    // Make AJAX request
+    $.ajax({
+        url: "{% url 'generate_activity_report' %}",
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            hideLoading();
+            
+            console.log('Success Response:', response);
+            updateDebugInfo(response);
+            
+            if (response.combined_reports) {
+                displayCombinedReports(response.combined_reports);
+            } else {
+                displaySingleReport(response);
+            }
+            
+            // Show warnings if any (only in debug mode)
+            if (response.warnings && response.warnings.length > 0) {
+                console.warn('Report warnings:', response.warnings);
+            }
+            
+            $('#successModal').modal('show');
+        },
+        error: function(xhr, status, error) {
+            hideLoading();
+            let errorMsg = 'An unexpected error occurred. Please try again.';
+            
+            console.error('AJAX Error:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseText: xhr.responseText
+            });
+            
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.error) {
+                    errorMsg = response.error;
+                }
+                
+                updateDebugInfo({
+                    error: response.error,
+                    debug_message: response.debug_message,
+                    status: xhr.status
+                });
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                updateDebugInfo({
+                    raw_error: xhr.responseText,
+                    status: xhr.status,
+                    parse_error: e.message
+                });
+            }
+            
+            showError(errorMsg);
+        },
+        complete: function() {
+            $('#generateBtn').prop('disabled', false).html('<i class="fas fa-cog mr-1"></i>Generate Report');
+        }
+    });
+}
+
+function displaySingleReport(data) {
+    const reportCard = $('#singleReportCard');
+    const reportTable = $('#reportTable');
+    const reportTitle = $('#reportTitle');
+    const recordCount = $('#recordCount');
+    
+    // Set title and record count
+    reportTitle.html('<i class="fas fa-table mr-1"></i>' + (data.title || 'Report Results'));
+    recordCount.text('Total Records: ' + (data.count || 0));
+    
+    // Clear previous table content
+    reportTable.find('thead').empty();
+    reportTable.find('tbody').empty();
+    
+    if (data.headers && data.headers.length > 0) {
+        // Build table headers
+        let headerRow = '<tr>';
+        data.headers.forEach(header => {
+            headerRow += '<th>' + escapeHtml(header) + '</th>';
+        });
+        headerRow += '</tr>';
+        reportTable.find('thead').html(headerRow);
+        
+        // Build table body
+        if (data.data && data.data.length > 0) {
+            let bodyRows = '';
+            data.data.forEach(row => {
+                bodyRows += '<tr>';
+                data.headers.forEach(header => {
+                    const key = formatHeaderToKey(header);
+                    const value = row[key] || 'N/A';
+                    bodyRows += '<td>' + escapeHtml(String(value)) + '</td>';
+                });
+                bodyRows += '</tr>';
+            });
+            reportTable.find('tbody').html(bodyRows);
+        } else {
+            // No data found
+            const noDataRow = '<tr><td colspan="' + data.headers.length + '" class="text-center text-muted">No records found matching your criteria.</td></tr>';
+            reportTable.find('tbody').html(noDataRow);
+        }
+        
+        // Show report card
+        reportCard.show();
+        $('#combinedReportsArea').empty();
+        $('#noDataCard').hide();
+    } else {
+        showNoData();
+    }
+}
+
+function displayCombinedReports(combinedReports) {
+    const combinedArea = $('#combinedReportsArea');
+    combinedArea.empty();
+    $('#singleReportCard').hide();
+    
+    const reportOrder = [
+        'patients_registered', 'appointments', 'admissions', 
+        'referrals', 'bills', 'payments'
+    ];
+    
+    let hasData = false;
+    
+    reportOrder.forEach(reportKey => {
+        if (combinedReports[reportKey]) {
+            const reportData = combinedReports[reportKey];
+            if (reportData.data && reportData.data.length > 0) {
+                hasData = true;
+            }
+            
+            const cardHtml = generateCombinedReportCard(reportData, reportKey);
+            combinedArea.append(cardHtml);
+        }
+    });
+    
+    if (!hasData) {
+        showNoData();
+    }
+}
+
+function generateCombinedReportCard(reportData, reportKey) {
+    let tableRows = '';
+    
+    if (reportData.data && reportData.data.length > 0) {
+        reportData.data.forEach(row => {
+            tableRows += '<tr>';
+            reportData.headers.forEach(header => {
+                const key = formatHeaderToKey(header);
+                const value = row[key] || 'N/A';
+                tableRows += '<td>' + escapeHtml(String(value)) + '</td>';
+            });
+            tableRows += '</tr>';
+        });
+    } else {
+        tableRows = '<tr><td colspan="' + (reportData.headers ? reportData.headers.length : 1) + '" class="text-center text-muted">No records found.</td></tr>';
+    }
+    
+    const headerCells = reportData.headers ? reportData.headers.map(h => '<th>' + escapeHtml(h) + '</th>').join('') : '';
+    
+    return `
+        <div class="card card-info mb-3">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-table mr-1"></i>${escapeHtml(reportData.title || 'Report')}
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button type="button" class="btn btn-tool export-combined" data-title="${escapeHtml(reportData.title || 'Report')}">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="thead-light">
+                            <tr>${headerCells}</tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Total Records: ${reportData.count || 0}
+                </small>
+            </div>
+        </div>
+    `;
+}
+
+// Event delegation for combined report export buttons
+$(document).on('click', '.export-combined', function() {
+    const table = $(this).closest('.card').find('table')[0];
+    const title = $(this).data('title') || 'Report';
+    exportTableToExcel(table, title);
+});
+
+function showLoading() {
+    clearReportDisplay();
+    $('#loadingCard').show();
+}
+
+function hideLoading() {
+    $('#loadingCard').hide();
+}
+
+function showNoData() {
+    clearReportDisplay();
+    $('#noDataCard').show();
+}
+
+function clearReportDisplay() {
+    $('#singleReportCard').hide();
+    $('#combinedReportsArea').empty();
+    $('#loadingCard').hide();
+    $('#noDataCard').hide();
+}
+
+function showError(message) {
+    $('#errorMessage').text(message);
+    $('#errorModal').modal('show');
+}
+
+function formatHeaderToKey(header) {
+    return header.toLowerCase()
+                 .replace(/[^a-z0-9\s]/g, '')
+                 .replace(/\s+/g, '_')
+                 .replace(/_+/g, '_')
+                 .replace(/^_|_$/g, '');
+}
+
+function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) {
+        return '';
+    }
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function exportToExcel() {
+    const table = $('#reportTable')[0];
+    const title = $('#reportTitle').text().replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    exportTableToExcel(table, title);
+}
+
+function exportTableToExcel(table, filename) {
+    if (!table) {
+        showError('No data available to export.');
+        return;
+    }
+    
+    try {
+        const wb = XLSX.utils.table_to_book(table);
+        const cleanFilename = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        XLSX.writeFile(wb, `${cleanFilename}_activity_report.xlsx`);
+    } catch (error) {
+        console.error('Export error:', error);
+        showError('Failed to export data. Please try again.');
+    }
+}
 </script>
 {% endblock %}
