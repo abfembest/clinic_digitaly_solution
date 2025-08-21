@@ -9,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 from uuid import uuid4
 from django.db import transaction
+from django.db.models import Sum
 
 # =============================================================================
 # CORE SYSTEM MODELS (Alphabetical)
@@ -122,6 +123,19 @@ class Patient(models.Model):
     notes = models.TextField(blank=True, null=True)
     referred_by = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='stable')
+
+    @property
+    def total_bill_amount(self):
+        """Calculates the total amount of all bills for the patient."""
+        return self.bills.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
+
+    @property
+    def total_outstanding_amount(self):
+        """Calculates the total outstanding amount for the patient."""
+        total_outstanding = Decimal('0.00')
+        for bill in self.bills.all():
+            total_outstanding += bill.outstanding_amount()
+        return total_outstanding
 
     def generate_patient_id(self):
         """Generate a unique patient ID in format YYYYMMXXX"""
