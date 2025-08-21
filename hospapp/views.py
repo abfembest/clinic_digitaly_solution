@@ -5213,7 +5213,7 @@ def generate_referrals_report(patient_id, date_range, user):
 
 
 def generate_individual_patient_report(patient_id, date_range):
-    """Generate individual patient report"""
+    """Generate individual patient report with financial details"""
     try:
         patient = Patient.objects.get(id=patient_id)
     except Patient.DoesNotExist:
@@ -5224,12 +5224,16 @@ def generate_individual_patient_report(patient_id, date_range):
     admissions = Admission.objects.filter(patient=patient).select_related('admitted_by', 'discharged_by')
     referrals = Referral.objects.filter(patient=patient).select_related('department', 'referred_by')
     
+    # Get all bills for this patient
+    patient_bills = PatientBill.objects.filter(patient=patient).select_related('patient')
+
     # Apply date filtering
     if date_range:
         start_date, end_date = date_range
         appointments = appointments.filter(scheduled_time__date__range=[start_date, end_date])
         admissions = admissions.filter(admission_date__range=[start_date, end_date])
         referrals = referrals.filter(created_at__date__range=[start_date, end_date])
+        patient_bills = patient_bills.filter(created_at__date__range=[start_date, end_date])
     
     # Compile patient activities
     activities = []
@@ -5261,19 +5265,36 @@ def generate_individual_patient_report(patient_id, date_range):
     # Sort activities by date
     activities.sort(key=lambda x: x['date'], reverse=True)
     
+    # Prepare bill data
+    bill_details = []
+    for bill in patient_bills.order_by('-created_at'):
+        bill_details.append({
+            'bill_number': bill.bill_number,
+            'total_amount': bill.total_amount,
+            'amount_paid': bill.total_amount - bill.outstanding_amount(),
+            'outstanding': bill.outstanding_amount(),
+            'status': 'Paid' if bill.outstanding_amount() == 0 else 'Unpaid',
+            'created_at': bill.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+
     return {
         'report_generated': True,
         'report_type': 'individual_patient',
         'report_title': f'Individual Patient Report - {patient.full_name}',
+        'date_range': date_range,
         'patient': {
             'id': patient.patient_id,
             'name': patient.full_name,
             'phone': patient.phone,
             'email': patient.email or 'N/A',
             'date_registered': patient.date_registered.strftime('%Y-%m-%d'),
+            # Adding new financial properties
+            'total_bill': patient_bills.aggregate(total=Sum('total_amount'))['total'] or Decimal(0),
+            'total_outstanding': sum(bill.outstanding_amount() for bill in patient_bills),
         },
         'activities': activities,
         'count': len(activities),
+        'bill_details': bill_details,
     }
     
 def patient_file_page(request):
