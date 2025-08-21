@@ -40,7 +40,7 @@
                             <!-- Report Type -->
                             <div class="form-group">
                                 <label for="reportType">Report Type <span class="text-danger">*</span></label>
-                                <select class="form-control select2bs4" id="reportType" name="report_type" required>
+                                <select class="form-control select2bs4" id="reportType" name="report_type" required onchange="togglePatientSelection()">
                                     <option value="">Select Report Type</option>
                                     <option value="overall_activity" {% if report_type == 'overall_activity' %}selected{% endif %}>Overall Activity Summary</option>
                                     <option value="patients_registered" {% if report_type == 'patients_registered' %}selected{% endif %}>Patients I Registered</option>
@@ -51,7 +51,7 @@
                                 </select>
                             </div>
 
-                            <!-- Patient Selection (only for individual report) -->
+                            <!-- Patient Selection (only for individual report) - MOVED HERE -->
                             <div class="form-group" id="patientSelectionGroup" {% if report_type != 'individual_patient' %}style="display: none;"{% endif %}>
                                 <label for="patientSelect">Select Patient <span class="text-danger">*</span></label>
                                 <select class="form-control select2bs4" id="patientSelect" name="patient_id" {% if report_type != 'individual_patient' %}disabled{% endif %}>
@@ -288,9 +288,31 @@
 
 {% block extra_scripts %}
 <script>
+    // Inline function for immediate response
+    function togglePatientSelection() {
+        const reportTypeSelect = document.getElementById('reportType');
+        const patientSelectionGroup = document.getElementById('patientSelectionGroup');
+        const patientSelect = document.getElementById('patientSelect');
+        
+        const selectedReportType = reportTypeSelect.value;
+        const isPatientRequired = selectedReportType === 'individual_patient';
+        
+        if (isPatientRequired) {
+            patientSelectionGroup.style.display = 'block';
+            patientSelect.disabled = false;
+            patientSelect.setAttribute('required', 'required');
+        } else {
+            patientSelectionGroup.style.display = 'none';
+            patientSelect.disabled = true;
+            patientSelect.removeAttribute('required');
+            patientSelect.value = '';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const reportTypeSelect = document.getElementById('reportType');
         const patientSelectionGroup = document.getElementById('patientSelectionGroup');
+        const patientSelect = document.getElementById('patientSelect');
         const allDatesCheck = document.getElementById('allDatesCheck');
         const dateRangeGroup = document.getElementById('dateRangeGroup');
 
@@ -299,20 +321,50 @@
             const selectedReportType = reportTypeSelect.value;
             const isPatientRequired = selectedReportType === 'individual_patient';
 
-            // Toggle Patient Selection
-            patientSelectionGroup.style.display = isPatientRequired ? 'block' : 'none';
-            document.getElementById('patientSelect').disabled = !isPatientRequired;
+            // Toggle Patient Selection - Show/hide and enable/disable
+            if (isPatientRequired) {
+                patientSelectionGroup.style.display = 'block';
+                patientSelect.disabled = false;
+                // Make patient selection required when individual report is selected
+                patientSelect.setAttribute('required', 'required');
+            } else {
+                patientSelectionGroup.style.display = 'none';
+                patientSelect.disabled = true;
+                // Remove required attribute when not needed
+                patientSelect.removeAttribute('required');
+                // Clear selection when hiding
+                patientSelect.value = '';
+            }
 
-            // Toggle Date Range
+            // Toggle Date Range based on checkbox
             const isDateRangeVisible = !allDatesCheck.checked;
             dateRangeGroup.style.display = isDateRangeVisible ? 'block' : 'none';
         }
 
         // Event listeners
-        reportTypeSelect.addEventListener('change', toggleFormFields);
-        allDatesCheck.addEventListener('change', toggleFormFields);
+        reportTypeSelect.addEventListener('change', function() {
+            toggleFormFields();
+            // Force immediate visibility update for patient selection
+            const selectedReportType = reportTypeSelect.value;
+            const isPatientRequired = selectedReportType === 'individual_patient';
+            
+            if (isPatientRequired) {
+                patientSelectionGroup.style.display = 'block';
+                patientSelect.disabled = false;
+                patientSelect.setAttribute('required', 'required');
+            } else {
+                patientSelectionGroup.style.display = 'none';
+                patientSelect.disabled = true;
+                patientSelect.removeAttribute('required');
+                patientSelect.value = '';
+            }
+        });
+        
+        allDatesCheck.addEventListener('change', function() {
+            toggleFormFields();
+        });
 
-        // Initial state
+        // Initial state setup
         toggleFormFields();
     });
 </script>
