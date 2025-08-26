@@ -121,6 +121,7 @@
                 </div>
             </div>
         </div>
+        
         <div class="col-lg-4 col-md-6">
             <div class="card nurse-dashboard-card">
                 <div class="card-body text-center">
@@ -144,9 +145,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- NEW: Request Expense -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card nurse-dashboard-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave nurse-card-icon"></i>
+                    <h5 class="nurse-card-title">Request Expense</h5>
+                    <button class="btn btn-success nurse-card-btn" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                        <i class="fas fa-plus"></i> Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-        <div class="nurse-patient-tags mt-4">
+    <div class="nurse-patient-tags mt-4">
         <h5 class="mb-3">Current Patient Status Overview</h5>
         <div class="d-flex flex-wrap gap-2">
             {% for patient in active_patients_details %}
@@ -156,6 +170,53 @@
             {% empty %}
             <p>No active patients to display status for.</p>
             {% endfor %}
+        </div>
+    </div>
+
+    <!-- NEW: My Expense Requests Section -->
+    <div class="mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>My Recent Expense Requests</h5>
+            </div>
+            <div class="card-body">
+                {% if my_expense_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in my_expense_requests %}
+                            <tr>
+                                <td>{{ expense.created_at|date:"M d, Y" }}</td>
+                                <td>{{ expense.description }}</td>
+                                <td>₦{{ expense.amount }}</td>
+                                <td>{{ expense.category.name }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if expense.status == 'approved' %}badge-success
+                                        {% elif expense.status == 'rejected' %}badge-danger
+                                        {% elif expense.status == 'paid' %}badge-info
+                                        {% else %}badge-warning{% endif %}">
+                                        {{ expense.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No expense requests submitted yet.</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -287,28 +348,7 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        function calculateBMI() {
-            const weight = parseFloat(document.getElementById('weight').value);
-            const heightCm = parseFloat(document.getElementById('height').value);
-            const bmiInput = document.getElementById('bmi');
-
-            if (weight > 0 && heightCm > 0) {
-                const heightM = heightCm / 100; // Convert height from cm to meters
-                const bmi = weight / (heightM * heightM);
-                bmiInput.value = bmi.toFixed(2); // Display BMI rounded to 2 decimal places
-            } else {
-                bmiInput.value = ''; // Clear BMI if inputs are invalid or empty
-            }
-        }
-
-        // Attach the calculateBMI function to the input event of height and weight fields
-        document.getElementById('weight').addEventListener('input', calculateBMI);
-        document.getElementById('height').addEventListener('input', calculateBMI);
-    });
-</script>
-
+<!-- Notes Modal -->
 <div class="modal fade" id="notesModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -357,92 +397,7 @@
     </div>
 </div>
 
-<!-- Assign Ward & Bed Modal -->
-<div class="modal fade" id="assignModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header nurse-modal-header">
-                <h5 class="modal-title">Assign Ward & Bed</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label class="form-label">Patient</label>
-                        <select class="form-control nurse-form-control">
-                            <option>Select Patient</option>
-                            <option>John Doe</option>
-                            <option>Jane Smith</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ward</label>
-                        <select class="form-control nurse-form-control">
-                            <option>Select Ward</option>
-                            <option>General Ward</option>
-                            <option>ICU</option>
-                            <option>Pediatric Ward</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Bed Number</label>
-                        <select class="form-control nurse-form-control">
-                            <option>Select Bed</option>
-                            <option>Bed 101</option>
-                            <option>Bed 102</option>
-                            <option>Bed 103</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn nurse-btn-primary">Assign Bed</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Prep for Consultation Modal -->
-<div class="modal fade" id="prepModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header nurse-modal-header">
-                <h5 class="modal-title">Prep for Consultation</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label class="form-label">Patient</label>
-                        <select class="form-control nurse-form-control">
-                            <option>Select Patient</option>
-                            <option>Room 101 - John Doe</option>
-                            <option>Room 205 - Jane Smith</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Doctor</label>
-                        <select class="form-control nurse-form-control">
-                            <option>Select Doctor</option>
-                            <option>Dr. Johnson</option>
-                            <option>Dr. Smith</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Preparation Notes</label>
-                        <textarea class="form-control nurse-form-control" rows="3" placeholder="Enter preparation notes..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn nurse-btn-primary">Complete Prep</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- Discharge Modal -->
 <div class="modal fade" id="dischargeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -452,7 +407,7 @@
             </div>
             <div class="modal-body">
                 <form method="POST" action="{% url 'discharge_patient' %}">
-                    {% csrf_token %} {# Added missing CSRF token #}
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Patient</label>
                         <select name="patient_id" class="form-control nurse-form-control" required>
@@ -466,7 +421,7 @@
                         <label class="form-label">Discharge Summary</label>
                         <textarea class="form-control nurse-form-control" rows="4" placeholder="Enter discharge summary..." name="discharge_summary"></textarea>
                     </div>
-                    <div class="mb-3"> {# Corrected typo from mbb-3 to mb-3 #}
+                    <div class="mb-3">
                         <label><i class="fas fa-user-md"></i> Follow-up Doctor</label>
                         <select name="followup_doctor" class="form-control" required>
                             <option disabled selected>-- Select Doctor --</option>
@@ -479,7 +434,7 @@
                         <label><i class="fas fa-calendar-alt"></i> Follow-up Date</label>
                         <input type="date" name="followup_date" class="form-control">
                     </div>
-                    <div class="modal-footer"> {# Moved modal-footer inside the form #}
+                    <div class="modal-footer">
                         <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn nurse-btn-primary">Discharge Patient</button>
                     </div>
@@ -489,6 +444,7 @@
     </div>
 </div>
 
+<!-- Monitor Modal -->
 <div class="modal fade" id="monitorModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -499,7 +455,7 @@
             <div class="modal-body">
                 <div class="row">
                     {% for patient in active_patients_details %}
-                    <div class="col-md-6 mb-3"> {# Added mb-3 for spacing between cards #}
+                    <div class="col-md-6 mb-3">
                         <div class="card">
                             <div class="card-body">
                                 <h6 class="card-title">{{ patient.full_name }}</h6>
@@ -528,408 +484,91 @@
     </div>
 </div>
 
-
-
-
-{% comment %} <!-- Top Row: Stats + Welcome + Time/Alerts -->
-<div class="row section-spacing">
-    <!-- Stats Cards -->
-    <div class="col-lg-6 col-xl-5">
-        <div class="row">
-            <div class="col-6 mb-2">
-                <div class="stat-card stat-card-info">
-                    <div class="d-flex justify-content-between align-items-center h-100">
-                        <div>
-                            <h3 class="font-weight-bold mb-0">{{ active_patients }}</h3>
-                            <small class="opacity-75">Active Patients</small>
-                        </div>
-                        <i class="fas fa-users floating-icon"></i>
+<!-- NEW: Expense Request Modal -->
+<div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header nurse-modal-header">
+                <h5 class="modal-title" id="expenseModalLabel">Submit Expense Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="expense_request">
+                    
+                    <div class="mb-3">
+                        <label for="expense_date" class="form-label"><i class="fas fa-calendar me-2"></i>Expense Date</label>
+                        <input type="date" name="expense_date" id="expense_date" class="form-control nurse-form-control" required>
                     </div>
-                </div>
-            </div>
-
-            <div class="col-6 mb-2">
-                <div class="stat-card stat-card-danger pulse-animation">
-                    <div class="d-flex justify-content-between align-items-center h-100">
-                        <div>
-                            <h3 class="font-weight-bold mb-0">{{ critical_patients }}</h3>
-                            <small class="opacity-75">Critical Cases</small>
-                        </div>
-                        <i class="fas fa-exclamation-triangle floating-icon"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6">
-                <div class="stat-card stat-card-success">
-                    <div class="d-flex justify-content-between align-items-center h-100">
-                        <div>
-                            <h3 class="font-weight-bold mb-0">{{ todays_admissions }}</h3>
-                            <small class="opacity-75">Today's Admissions</small>
-                        </div>
-                        <i class="fas fa-user-plus floating-icon"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6">
-                <div class="stat-card stat-card-warning">
-                    <div class="d-flex justify-content-between align-items-center h-100">
-                        <div>
-                            <h3 class="font-weight-bold mb-0">{{ todays_discharges }}</h3>
-                            <small class="opacity-75">Today's Discharges</small>
-                        </div>
-                        <i class="fas fa-door-open floating-icon"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Welcome Section -->
-    <div class="col-lg-4 col-xl-5">
-        <div class="welcome-card">
-            <div class="d-flex align-items-center mb-2">
-                <i class="fas fa-user-nurse fa-lg mr-2"></i>
-                <div>
-                    <h4 class="mb-0">
-                        {% if user.is_authenticated %}
-                        Welcome back, {{ user.first_name|default:user.username }}!
-                        {% else %}
-                        Welcome to Nurse Dashboard!
-                        {% endif %}
-                    </h4>
-                    <small class="opacity-75">Ready to provide excellent patient care today</small>
-                </div>
-            </div>
-
-            {% if my_shift_today %}
-            <div class="alert alert-light border-0 mb-2 py-2">
-                <small><i class="fas fa-clock mr-1"></i><strong>Today's Shift:</strong> {{ my_shift_today.shift.name }} Shift</small>
-            </div>
-            {% endif %}
-
-            <div class="row mt-3">
-                <div class="col-6">
-                    <h6 class="text-uppercase font-weight-bold mb-1" style="font-size: 0.7rem;">Patient Status</h6>
-                    <div class="d-flex flex-wrap">
-                        <span class="badge badge-danger badge-modern mr-1 mb-1" style="font-size: 0.7rem;">{{ critical_patients }}</span>
-                        <span class="badge badge-success badge-modern mr-1 mb-1" style="font-size: 0.7rem;">{{ stable_patients }}</span>
-                        <span class="badge badge-info badge-modern mb-1" style="font-size: 0.7rem;">{{ recovered_patients }}</span>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <h6 class="text-uppercase font-weight-bold mb-1" style="font-size: 0.7rem;">My Activity Today</h6>
-                    <small><i class="fas fa-notes-medical mr-1"></i>{{ my_stats.notes_today }} Notes</small><br>
-                    <small><i class="fas fa-heartbeat mr-1"></i>{{ my_stats.vitals_recorded_today }} Vitals</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Time & Alerts -->
-    <div class="col-lg-2 col-xl-2">
-        <div class="time-card mb-2">
-            <div class="h4 font-weight-bold mb-0" id="currentTime"></div>
-            <small class="opacity-75">{{ today|date:"M d, Y" }}</small>
-        </div>
-
-        <div class="alert-card">
-            <h6 class="font-weight-bold mb-1" style="font-size: 0.8rem;">
-                <i class="fas fa-exclamation-triangle mr-1"></i>Alerts
-            </h6>
-            {% if recent_alerts %}
-            <span class="badge badge-light badge-modern" style="font-size: 0.7rem;">{{ recent_alerts|length }} New</span>
-            {% else %}
-            <span class="badge badge-light badge-modern" style="font-size: 0.7rem;">All Clear</span>
-            {% endif %}
-
-            {% if patients_needing_followup %}
-            <br><small class="opacity-75" style="font-size: 0.7rem;">
-                {{ patients_needing_followup|length }} Follow-up{{ patients_needing_followup|length|pluralize }}
-            </small>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
-<!-- Quick Actions Row -->
-<div class="row section-spacing">
-    <div class="col-12">
-        <div class="dashboard-card compact-section">
-            <h5 class="mb-3"><i class="fas fa-bolt text-primary mr-2"></i>Quick Actions</h5>
-            <div class="row">
-                <div class="col-lg-2 col-md-4 col-sm-6 mb-2">
-                    <a href="{% url 'vitals' %}" class="btn btn-danger action-btn btn-block d-flex flex-column align-items-center justify-content-center">
-                        <i class="fas fa-heartbeat fa-lg mb-1"></i>
-                        <small class="font-weight-bold">Record Vitals</small>
-                    </a>
-                </div>
-                <div class="col-lg-2 col-md-4 col-sm-6 mb-2">
-                    <a href="{% url 'nursing_actions' %}" class="btn btn-primary action-btn btn-block d-flex flex-column align-items-center justify-content-center">
-                        <i class="fas fa-hospital-user fa-lg mb-1"></i>
-                        <small class="font-weight-bold">Nursing Actions</small>
-                    </a>
-                </div>
-                <div class="col-lg-2 col-md-4 col-sm-6 mb-2">
-                    <a href="{% url 'nurse_activity_report' %}" class="btn btn-success action-btn btn-block d-flex flex-column align-items-center justify-content-center">
-                        <i class="fas fa-chart-line fa-lg mb-1"></i>
-                        <small class="font-weight-bold">My Activities</small>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Main Content Row -->
-<div class="row section-spacing">
-    <!-- Recent Activities -->
-    <div class="col-lg-7">
-        <div class="dashboard-card">
-            <div class="card-header bg-transparent border-0 minimal-padding">
-                <h5 class="mb-0"><i class="fas fa-clipboard-list text-primary mr-2"></i>Recent Patient Activities</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="border-0">Patient</th>
-                                <th class="border-0">Activity</th>
-                                <th class="border-0">Nurse</th>
-                                <th class="border-0">Status</th>
-                                <th class="border-0">Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for note in recent_notes %}
-                            <tr>
-                                <td class="align-middle py-2">
-                                    <div>
-                                        <span class="badge badge-primary badge-modern">{{ note.patient.patient_id }}</span>
-                                        <div class="small text-muted">{{ note.patient.full_name }}</div>
-                                    </div>
-                                </td>
-                                <td class="align-middle py-2">
-                                    <span class="badge badge-info badge-modern">{{ note.get_note_type_display }}</span>
-                                </td>
-                                <td class="align-middle py-2">
-                                    <small class="{% if note.nurse == user %}text-primary font-weight-bold{% else %}text-muted{% endif %}">
-                                        {{ note.nurse.first_name|default:note.nurse.username }}
-                                        {% if note.nurse == user %}<i class="fas fa-user-check ml-1"></i>{% endif %}
-                                    </small>
-                                </td>
-                                <td class="align-middle py-2">
-                                    {% if note.follow_up %}
-                                    <span class="badge badge-warning badge-modern">
-                                        <i class="fas fa-clock mr-1"></i>Follow-up
-                                    </span>
-                                    {% else %}
-                                    <span class="badge badge-success badge-modern">
-                                        <i class="fas fa-check mr-1"></i>Done
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle py-2">
-                                    <small class="text-muted">{{ note.note_datetime|timesince }} ago</small>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
-                                    <i class="fas fa-clipboard-list fa-2x mb-2 d-block opacity-25"></i>
-                                    <small>No recent activities</small>
-                                </td>
-                            </tr>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label"><i class="fas fa-tags me-2"></i>Category</label>
+                        <select name="category" id="category" class="form-control nurse-form-control" required>
+                            <option value="" disabled selected>Select Category</option>
+                            {% for category in expense_categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-5">
-        <div class="row">
-            <!-- Critical Patients -->
-            {% if critical_patients_list %}
-            <div class="col-md-6 col-lg-12 mb-2">
-                <div class="dashboard-card">
-                    <div class="card-header bg-danger text-white border-0 minimal-padding">
-                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>Critical Patients</h6>
+                        </select>
                     </div>
-                    <div class="card-body p-0">
-                        <ul class="list-group list-group-flush list-group-modern">
-                            {% for patient in critical_patients_list %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
-                                <div>
-                                    <strong class="text-danger">{{ patient.patient_id }}</strong>
-                                    <div class="small text-muted">{{ patient.full_name }}</div>
-                                </div>
-                                <span class="badge badge-danger badge-modern">Critical</span>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label"><i class="fas fa-edit me-2"></i>Description</label>
+                        <input type="text" name="description" id="description" class="form-control nurse-form-control" placeholder="Brief description of expense" required>
                     </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- New Admissions -->
-            {% if todays_new_admissions %}
-            <div class="col-md-6 col-lg-12 mb-2">
-                <div class="dashboard-card">
-                    <div class="card-header bg-success text-white border-0 minimal-padding">
-                        <h6 class="mb-0"><i class="fas fa-user-plus mr-2"></i>Today's Admissions</h6>
+                    
+                    <div class="mb-3">
+                        <label for="amount" class="form-label"><i class="fas fa-naira-sign me-2"></i>Amount (₦)</label>
+                        <input type="number" name="amount" id="amount" class="form-control nurse-form-control" step="0.01" min="0.01" placeholder="0.00" required>
                     </div>
-                    <div class="card-body p-0">
-                        <ul class="list-group list-group-flush list-group-modern">
-                            {% for admission in todays_new_admissions %}
-                            <li class="list-group-item py-2">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="mb-0 text-success">{{ admission.patient.patient_id }}</h6>
-                                        <small>{{ admission.patient.full_name }}</small>
-                                        <div class="small text-muted">by {{ admission.admitted_by.first_name|default:admission.admitted_by.username }}</div>
-                                    </div>
-                                    <small class="text-muted">{{ admission.time|time:"h:i A" }}</small>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                    
+                    <div class="mb-3">
+                        <label for="vendor" class="form-label"><i class="fas fa-store me-2"></i>Vendor/Supplier (Optional)</label>
+                        <input type="text" name="vendor" id="vendor" class="form-control nurse-form-control" placeholder="Where was the expense incurred?">
                     </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Quick Notes -->
-            <div class="col-12">
-                <div class="dashboard-card">
-                    <div class="card-header bg-primary text-white border-0 minimal-padding">
-                        <h6 class="mb-0"><i class="fas fa-sticky-note mr-2"></i>Quick Notes</h6>
+                    
+                    <div class="mb-3">
+                        <label for="receipt_number" class="form-label"><i class="fas fa-receipt me-2"></i>Receipt Number (Optional)</label>
+                        <input type="text" name="receipt_number" id="receipt_number" class="form-control nurse-form-control" placeholder="Receipt or invoice number">
                     </div>
-                    <div class="card-body compact-section">
-                        <textarea class="form-control border-0 bg-light" rows="3" placeholder="Add quick notes here..." id="quickNoteText"></textarea>
-                        <button type="button" class="btn btn-primary btn-sm btn-block mt-2" onclick="saveQuickNote()">
-                            <i class="fas fa-save mr-1"></i>Save Note
-                        </button>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label"><i class="fas fa-sticky-note me-2"></i>Additional Notes</label>
+                        <textarea name="notes" id="notes" class="form-control nurse-form-control" rows="3" placeholder="Any additional details or justification..."></textarea>
                     </div>
-                </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn nurse-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn nurse-btn-primary"><i class="fas fa-paper-plane me-2"></i>Submit Request</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Recent Vitals -->
-            {% if recent_vitals %}
-<div class="row">
-    <div class="col-12">
-        <div class="dashboard-card">
-            <div class="card-header bg-transparent border-0 minimal-padding">
-                <h5 class="mb-0"><i class="fas fa-heartbeat text-danger mr-2"></i>Recent Vitals (Last 24 Hours)</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm mb-0">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="border-0">Patient</th>
-                                <th class="border-0">Blood Pressure</th>
-                                <th class="border-0">Pulse</th>
-                                <th class="border-0">Temperature</th>
-                                <th class="border-0">Recorded By</th>
-                                <th class="border-0">Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for vital in recent_vitals %}
-                            <tr>
-                                <td class="align-middle py-2">
-                                    <div>
-                                        <span class="badge badge-primary badge-modern">{{ vital.patient.patient_id }}</span>
-                                        <div class="small text-muted">{{ vital.patient.full_name }}</div>
-                                    </div>
-                                </td>
-                                <td class="align-middle py-2">
-                                    {% if vital.blood_pressure %}
-                                    <span class="badge badge-light badge-modern">{{ vital.blood_pressure }}</span>
-                                    {% else %}
-                                    <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle py-2">
-                                    {% if vital.pulse %}
-                                    <span class="badge badge-light badge-modern">{{ vital.pulse }} bpm</span>
-                                    {% else %}
-                                    <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle py-2">
-                                    {% if vital.temperature %}
-                                    <span class="badge badge-light badge-modern">{{ vital.temperature }}°C</span>
-                                    {% else %}
-                                    <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td class="align-middle py-2">
-                                    <small class="{% if vital.recorded_by == user %}text-primary font-weight-bold{% else %}text-muted{% endif %}">
-                                        {{ vital.recorded_by.first_name|default:vital.recorded_by.username }}
-                                        {% if vital.recorded_by == user %}<i class="fas fa-user-check ml-1"></i>{% endif %}
-                                    </small>
-                                </td>
-                                <td class="align-middle py-2">
-                                    <small class="text-muted">{{ vital.recorded_at|timesince }} ago</small>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-            {% endif %}
-
-</div>
-</section> {% endcomment %}
 
 <script>
-    function updateClock() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('en-US', {
-            hour12: true,
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        document.getElementById('currentTime').textContent = timeString;
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        function calculateBMI() {
+            const weight = parseFloat(document.getElementById('weight').value);
+            const heightCm = parseFloat(document.getElementById('height').value);
+            const bmiInput = document.getElementById('bmi');
 
-    function saveQuickNote() {
-        const noteText = document.getElementById('quickNoteText').value;
-        if (noteText.trim() === '') {
-            $(document).Toasts('create', {
-                class: 'bg-warning',
-                title: 'Warning',
-                body: 'Please enter a note before saving.'
-            });
-            return;
+            if (weight > 0 && heightCm > 0) {
+                const heightM = heightCm / 100; // Convert height from cm to meters
+                const bmi = weight / (heightM * heightM);
+                bmiInput.value = bmi.toFixed(2); // Display BMI rounded to 2 decimal places
+            } else {
+                bmiInput.value = ''; // Clear BMI if inputs are invalid or empty
+            }
         }
 
-        $(document).Toasts('create', {
-            class: 'bg-success',
-            title: 'Success',
-            body: 'Quick note saved successfully!'
-        });
-        document.getElementById('quickNoteText').value = '';
-    }
-
-    updateClock();
-    setInterval(updateClock, 1000);
+        // Attach the calculateBMI function to the input event of height and weight fields
+        document.getElementById('weight').addEventListener('input', calculateBMI);
+        document.getElementById('height').addEventListener('input', calculateBMI);
+    });
 </script>
-<!--The new dashboard js-->
+
 <!-- Bootstrap 5 JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
@@ -956,70 +595,12 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Add hover effects to cards
-    {% comment %} document.querySelectorAll('.nurse-dashboard-card').forEach(card => {
-        card.addEventListener('mouseenter', function () {
-            this.style.transform = 'translateY(-5px)';
-        });
-
-        card.addEventListener('mouseleave', function () {
-            this.style.transform = 'translateY(0)';
-        });
+    // Set default expense date to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const expenseDateInput = document.getElementById('expense_date');
+        if (expenseDateInput) {
+            expenseDateInput.valueAsDate = new Date();
+        }
     });
-
-    // Add click feedback to buttons
-    document.querySelectorAll('.nurse-card-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            this.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                this.style.transform = 'scale(1)';
-            }, 100);
-        });
-    });
-
-    // Simulate real-time updates for patient status
-    function updatePatientStatus() {
-        const badges = document.querySelectorAll('.nurse-patient-tags .badge');
-        const statuses = ['Stable', 'Critical', 'Moderate'];
-        const badgeClasses = ['nurse-badge-stable', 'nurse-badge-critical', 'nurse-badge-moderate'];
-
-        badges.forEach(badge => {
-            // Small chance to update status
-            if (Math.random() < 0.1) {
-                const randomStatus = Math.floor(Math.random() * statuses.length);
-                const roomNumber = badge.textContent.split(' - ')[0];
-
-                // Remove old classes
-                badge.classList.remove(...badgeClasses);
-
-                // Add new class and text
-                badge.classList.add(badgeClasses[randomStatus]);
-                badge.textContent = `${roomNumber} - ${statuses[randomStatus]}`;
-            }
-        });
-    }
-
-    // Update patient status every 10 seconds
-    setInterval(updatePatientStatus, 10000);
-
-    // Form validation and submission handlers
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            // Basic validation
-            const inputs = this.querySelectorAll('input[required], select[required], textarea[required]');
-            let isValid = true;
-
-            inputs.forEach(input => {
-                if (!input.value.trim()) {
-                    input.classList.add('is-invalid');
-                    isValid = false;
-                } else {
-                    input.classList.remove('is-invalid');
-                }
-            });
-        });
-    }); {% endcomment %}
 </script>
 {% endblock %}

@@ -512,6 +512,51 @@ def n_get_patient_info(request, patient_id):
 def nurses(request):
     user = request.user
     today = timezone.now().date()
+    
+    # Handle POST request for expense submission
+    if request.method == 'POST' and request.POST.get('action') == 'expense_request':
+        try:
+            # Get form data
+            expense_date = request.POST.get('expense_date')
+            category_id = request.POST.get('category')
+            description = request.POST.get('description')
+            amount = request.POST.get('amount')
+            vendor = request.POST.get('vendor', '')
+            receipt_number = request.POST.get('receipt_number', '')
+            notes = request.POST.get('notes', '')
+            
+            # Validate required fields
+            if not all([expense_date, category_id, description, amount]):
+                messages.error(request, 'Please fill in all required fields.')
+                return redirect('nurses')
+            
+            # Get category object
+            category = ExpenseCategory.objects.get(id=category_id)
+            
+            # Create expense record
+            expense = Expense.objects.create(
+                expense_date=expense_date,
+                category=category,
+                description=description,
+                amount=Decimal(amount),
+                vendor=vendor if vendor else None,
+                receipt_number=receipt_number if receipt_number else None,
+                notes=notes if notes else None,
+                requested_by=user,
+                status='pending'
+            )
+            
+            messages.success(request, f'Expense request submitted successfully! Request ID: #{expense.id}')
+            
+        except ExpenseCategory.DoesNotExist:
+            messages.error(request, 'Invalid category selected.')
+        except ValueError:
+            messages.error(request, 'Invalid amount entered.')
+        except Exception as e:
+            messages.error(request, f'Error submitting expense request: {str(e)}')
+        
+        return redirect('nurse')
+    
     # ✅ Get nurse profile
     nurse_profile = Staff.objects.filter(user=user, role='nurse').first()
     
@@ -619,6 +664,14 @@ def nurses(request):
         last_vitals_recorded_at=Coalesce(Max('vitals__recorded_at'), None)
     ).order_by('full_name')
     
+    # ⭐ NEW: Get expense categories for the form
+    expense_categories = ExpenseCategory.objects.filter(is_active=True).order_by('name')
+    
+    # ⭐ NEW: Get current user's expense requests (recent ones)
+    my_expense_requests = Expense.objects.filter(
+        requested_by=user
+    ).select_related('category').order_by('-created_at')[:10]
+    
     context = {
         # Profile & Authentication
         'nurse_profile': nurse_profile,
@@ -658,6 +711,10 @@ def nurses(request):
 
         # ⭐ NEW: Data for patient status monitoring (excluding rooms)
         'active_patients_details': active_patients_details,
+        
+        # ⭐ NEW: Expense-related data
+        'expense_categories': expense_categories,
+        'my_expense_requests': my_expense_requests,
     }
     
     return render(request, 'nurses/index.html', context)
@@ -3182,7 +3239,31 @@ def laboratory(request):
     start_of_day = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     end_of_day = timezone.make_aware(datetime.combine(today, datetime.max.time()))
 
-    # Calculate counts for the entire laboratory, not just the current user
+    # Handle POST request for submitting a new expense
+    if request.method == 'POST':
+        description = request.POST.get('description')
+        amount = request.POST.get('amount')
+        expense_date = request.POST.get('expense_date')
+        category_name = request.POST.get('category')
+        notes = request.POST.get('notes')
+        
+        # Get or create the expense category
+        category, _ = ExpenseCategory.objects.get_or_create(name=category_name)
+        
+        # Create the new Expense object
+        new_expense = Expense(
+            description=description,
+            amount=amount,
+            expense_date=expense_date,
+            category=category,
+            notes=notes,
+            requested_by=request.user,
+            status='pending'
+        )
+        new_expense.save()
+        return redirect('laboratory') # Redirect to the same page to show updated data and clear form
+        
+    # Standard GET request logic for displaying dashboard data
     test_today = LabTest.objects.filter(
         date_performed__range=(start_of_day, end_of_day),
         status='completed'
@@ -3191,21 +3272,16 @@ def laboratory(request):
     pending_count = LabTest.objects.filter(status='pending').count()
     completed_count = LabTest.objects.filter(status='completed').count()
     in_progress_count = LabTest.objects.filter(status='in_progress').count()
-
     total_patients_count = Patient.objects.count()
     uploaded_results_count = LabResultFile.objects.count()
     
-    # All other queries below should still be filtered by user, as they are for personalized data.
-    # We will keep the 'user_filter' for those.
     user_filter = Q(requested_by=request.user) | Q(performed_by=request.user)
     
-    # Data for Today's Test Status Table (Latest 5 tests requested today)
     today_tests_details = LabTest.objects.filter(
         user_filter, 
         requested_at__range=(start_of_day, end_of_day)
     ).select_related('patient', 'category').order_by('-requested_at')[:5]
 
-    # Data for Awaiting Tests (Pending Tests List)
     awaiting_tests = LabTest.objects.filter(status='pending').select_related('patient', 'category').order_by('-requested_at')[:8]
 
     # Data for Weekly Lab Activity Chart (Last 7 days)
@@ -3237,13 +3313,11 @@ def laboratory(request):
     recent_lab_tests = LabTest.objects.filter(user_filter).select_related('patient').order_by('-requested_at')[:5]
 
     for test in recent_lab_tests:
-        # The logic for populating recent activities remains the same
         icon_class = ''
         bg_color = ''
         header_text = ''
         body_text = ''
-        link_url = '#'
-
+        
         if test.status == 'completed':
             icon_class = 'fas fa-vial'
             bg_color = 'bg-primary'
@@ -3265,11 +3339,16 @@ def laboratory(request):
             'icon': icon_class,
             'bg_color': bg_color,
             'header': header_text,
-            'body': body_text,
-            'link': link_url
+            'body': body_text
         })
     
     recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    # Get a list of all expense categories
+    expense_categories = ExpenseCategory.objects.all()
+
+    # Get a list of the user's recent expense requests
+    user_expenses = Expense.objects.filter(requested_by=request.user).order_by('-created_at')[:10]
 
     context = {
         'test_today': test_today,
@@ -3278,15 +3357,14 @@ def laboratory(request):
         'in_progress_count': in_progress_count,
         'total_patients_count': total_patients_count,
         'uploaded_results_count': uploaded_results_count,
-
         'today_tests_details': today_tests_details,
         'awaiting_tests': awaiting_tests,
-
-        'weekly_labels': weekly_labels,
-        'weekly_tests_data_total': weekly_tests_data_total,
-        'weekly_tests_data_completed': weekly_tests_data_completed,
+        'weekly_labels': json.dumps(weekly_labels),
+        'weekly_tests_data_total': json.dumps(weekly_tests_data_total),
+        'weekly_tests_data_completed': json.dumps(weekly_tests_data_completed),
         'recent_activities': recent_activities,
-
+        'expense_categories': expense_categories,
+        'user_expenses': user_expenses,
         'dashboard_url': 'laboratory',
         'pending_tests_url': 'lab_internal_logs',
         'test_logs_url': 'lab_internal_logs',
@@ -4868,40 +4946,71 @@ def get_hr_activity_detail(request, activity_type, id):
 
 ''' ############################################################################################################################ Receptionist View ############################################################################################################################ '''
 
-@check_reception_role
+@check_reception_role 
 @login_required(login_url='home')
 def receptionist(request):
     today = localdate()
     start_of_week = today - timedelta(days=today.weekday())
-
+    
     current_receptionist = request.user
-
+    
+    # Handle expense form submission
+    if request.method == 'POST':
+        try:
+            category_id = request.POST.get('category')
+            category = ExpenseCategory.objects.get(id=category_id)
+            
+            expense = Expense.objects.create(
+                description=request.POST.get('description'),
+                amount=request.POST.get('amount'),
+                expense_date=request.POST.get('expense_date'),
+                category=category,
+                vendor=request.POST.get('vendor', ''),
+                receipt_number=request.POST.get('receipt_number', ''),
+                notes=request.POST.get('notes', ''),
+                requested_by=current_receptionist,
+                status='pending'
+            )
+            
+            messages.success(request, f'Expense request #{expense.id} submitted successfully. Awaiting approval.')
+            return redirect('receptionist')
+            
+        except Exception as e:
+            messages.error(request, f'Error submitting expense request: {str(e)}')
+    
+    # Existing dashboard data
     recent_activity = Patient.objects.filter(
         registered_by=current_receptionist
     ).order_by('-date_registered')[:5]
-
+    
     new_patients_today = Patient.objects.filter(
         date_registered__date=today,
         registered_by=current_receptionist
     ).count()
-
+    
     active_patients = Patient.objects.count()
-
+    
     appointments_today = Appointment.objects.filter(
         scheduled_time__date=today,
         scheduled_by=current_receptionist
     ).count()
-
+    
     admissions_this_week = Admission.objects.filter(
         admitted_on__range=[start_of_week, today],
         admitted_by=current_receptionist
     ).count()
-
+    
     queue = Appointment.objects.filter(
         scheduled_time__date=today,
         scheduled_by=current_receptionist
     ).order_by('scheduled_time')[:5]
-
+    
+    # Expense-related data
+    expense_categories = ExpenseCategory.objects.filter(is_active=True)
+    my_expenses = Expense.objects.filter(
+        requested_by=current_receptionist
+    ).order_by('-created_at')[:10]
+    
     context = {
         'new_patients_today': new_patients_today,
         'active_patients': active_patients,
@@ -4909,6 +5018,8 @@ def receptionist(request):
         'admissions_this_week': admissions_this_week,
         'recent_activity': recent_activity,
         'queue': queue,
+        'expense_categories': expense_categories,
+        'my_expenses': my_expenses,
     }
     return render(request, 'receptionist/index.html', context)
 
