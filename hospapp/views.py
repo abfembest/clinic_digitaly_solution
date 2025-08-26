@@ -1344,7 +1344,41 @@ def generate_nurse_report(request):
 @login_required(login_url='home')
 @check_doctor_role
 def doctors(request):
-    # Get today's date
+    # Handle expense submission via POST request
+    if request.method == 'POST':
+        try:
+            description = request.POST.get('description')
+            amount = request.POST.get('amount')
+            expense_date = request.POST.get('expense_date')
+            category_id = request.POST.get('category')
+            
+            # Basic validation
+            if not all([description, amount, expense_date, category_id]):
+                messages.error(request, "All fields are required.")
+                return redirect('doctors')
+            
+            # Fetch the ExpenseCategory object
+            category = ExpenseCategory.objects.get(id=category_id)
+            
+            # Create the new Expense object
+            new_expense = Expense(
+                description=description,
+                amount=amount,
+                expense_date=expense_date,
+                category=category,
+                requested_by=request.user,
+                status='pending'  # Default status for new requests
+            )
+            new_expense.save()
+            
+            messages.success(request, "Expense request submitted successfully!")
+            return redirect('doctors')
+        except ExpenseCategory.DoesNotExist:
+            messages.error(request, "Invalid expense category selected.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+            
+    # Get today's date and a date from 7 days ago
     today = timezone.now().date()
     seven_days_ago = today - timedelta(days=7)
     
@@ -1396,9 +1430,9 @@ def doctors(request):
     
     # 7. Chart Data (Last 7 Days)
     admissions_last_7_days = Admission.objects.filter(admitted_on__gte=seven_days_ago) \
-                                                .values('admitted_on') \
-                                                .annotate(count=Count('id')) \
-                                                .order_by('admitted_on')
+                                             .values('admitted_on') \
+                                             .annotate(count=Count('id')) \
+                                             .order_by('admitted_on')
     
     tests_completed_last_7_days = LabTest.objects.filter(
         status='completed', 
@@ -1406,6 +1440,19 @@ def doctors(request):
     ).values('date_performed__date') \
      .annotate(count=Count('id')) \
      .order_by('date_performed__date')
+    
+    # 8. Expense Management
+    # Fetch all expense categories for the form
+    expense_categories = ExpenseCategory.objects.all()
+    
+    # Fetch expenses requested by the current user, ordered by date
+    my_expenses = Expense.objects.filter(
+        requested_by=request.user
+    ).order_by('-expense_date')
+
+    # Calculate total pending and approved expenses
+    total_pending_expenses = my_expenses.filter(status='pending').aggregate(Sum('amount'))['amount__sum'] or 0
+    total_approved_expenses = my_expenses.filter(status='approved').aggregate(Sum('amount'))['amount__sum'] or 0
     
     # Prepare context dictionary to pass to the template
     context = {
@@ -1424,6 +1471,12 @@ def doctors(request):
         'upcoming_appointments_count': upcoming_appointments_count,
         'today_appointments_count': today_appointments_count,
         'today_appointments': today_appointments,
+        
+        # New expense management context
+        'expense_categories': expense_categories,
+        'my_expenses': my_expenses,
+        'total_pending_expenses': total_pending_expenses,
+        'total_approved_expenses': total_approved_expenses,
     }
     
     return render(request, 'doctors/index.html', context)
