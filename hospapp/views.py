@@ -1022,7 +1022,7 @@ def get_patient_details(request, patient_id):
 
         vitals = list(Vitals.objects.filter(patient=patient).order_by('-recorded_at').values(
             'temperature', 'blood_pressure', 'pulse', 'recorded_at', 'respiratory_rate',
-            'weight', 'height', 'bmi', 'notes', 'recorded_by' # Add all desired fields
+            'weight', 'height', 'bmi', 'notes', 'recorded_by'
         ))
 
         prescriptions = list(Prescription.objects.filter(patient=patient).order_by('-created_at')[:5].values(
@@ -1040,6 +1040,22 @@ def get_patient_details(request, patient_id):
             'note_type', 'notes', 'note_datetime'
         ))
 
+        # Add payment/billing information
+        bills = list(PatientBill.objects.filter(patient=patient).order_by('-created_at')[:5].values(
+            'bill_number', 'total_amount', 'final_amount', 'status', 'created_at'
+        ))
+
+        payments = list(Payment.objects.filter(patient=patient).order_by('-payment_date')[:5].values(
+            'amount', 'payment_method', 'payment_date', 'status', 'payment_reference'
+        ))
+
+        # Calculate financial summary
+        total_billed = patient.total_bill_amount
+        total_outstanding = patient.total_outstanding_amount
+        total_paid = Payment.objects.filter(patient=patient, status='completed').aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0.00')
+
         return JsonResponse({
             'id': patient.id,
             'full_name': patient.full_name,
@@ -1050,6 +1066,13 @@ def get_patient_details(request, patient_id):
             'lab_tests': lab_tests,
             'care_plan': care_plan_data,
             'nursing_notes': nursing_notes,
+            'bills': bills,
+            'payments': payments,
+            'financial_summary': {
+                'total_billed': str(total_billed),
+                'total_outstanding': str(total_outstanding),
+                'total_paid': str(total_paid),
+            }
         })
 
     except Patient.DoesNotExist:
@@ -2255,7 +2278,7 @@ def patient_history_ajax(request, patient_id):
         for vital in vitals:
             vitals_data.append({
                 'recorded_at_formatted': vital.recorded_at.strftime('%Y-%m-%d %H:%M'),
-                'blood_pressure': vital.blood_pressure or 'N/A', # Add 'N/A' for potentially null fields
+                'blood_pressure': vital.blood_pressure or 'N/A',
                 'temperature': vital.temperature or 'N/A',
                 'pulse': vital.pulse or 'N/A',
                 'respiratory_rate': vital.respiratory_rate or 'N/A',
@@ -2290,7 +2313,10 @@ def patient_history_ajax(request, patient_id):
                 'discharge_date_formatted': admission.discharge_date.strftime('%Y-%m-%d') if admission.discharge_date else 'N/A',
                 'discharge_notes': admission.discharge_notes or 'N/A'
             })
-
+        
+        # Get outstanding payments
+        outstanding_payments = patient.total_outstanding_amount
+        
         # Prepare response data
         data = {
             'patient': {
@@ -2310,7 +2336,8 @@ def patient_history_ajax(request, patient_id):
             'lab_tests': lab_tests_data,
             'vitals': vitals_data,
             'nursing_notes': nursing_notes_data,
-            'admissions': admissions_data
+            'admissions': admissions_data,
+            'outstanding_payments': str(outstanding_payments) # Convert Decimal to string for JSON serialization
         }
 
         return JsonResponse(data, safe=False)
@@ -3192,8 +3219,6 @@ def get_ivf_progress(request, record_id):
         'timestamp': vital.recorded_at,
     })
     
-
-
     # 3. Add LabTest entries for the patient, around the IVF record creation time
     lab_tests = LabTest.objects.filter(patient=patient).order_by('requested_at')
     for test in lab_tests:
@@ -3230,6 +3255,19 @@ def get_ivf_progress(request, record_id):
             'notes': note.notes,
             'nurse': note.nurse.get_full_name() if note.nurse else 'N/A',
             'timestamp': note.note_datetime,
+        })
+
+    # 6. Add Payment entries for the patient
+    payments = Payment.objects.filter(patient=patient).order_by('payment_date')
+    for payment in payments:
+        timeline_entries.append({
+            'type': 'payment',
+            'amount': str(payment.amount),  # Convert Decimal to string
+            'method': payment.get_payment_method_display(),
+            'notes': payment.notes,
+            'processed_by': payment.processed_by.get_full_name() if payment.processed_by else 'N/A',
+            'timestamp': payment.payment_date,
+            'status': payment.get_status_display(),
         })
 
     # Sort all entries by timestamp

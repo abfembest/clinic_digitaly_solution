@@ -856,8 +856,17 @@
                     `;
                 }
 
-
                 // --- Build the main patient details view (right column) ---
+                let financialSummaryHTML = `
+                    <div class="info-box bg-danger mb-3">
+                        <span class="info-box-icon"><i class="fas fa-money-bill-wave-alt"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Outstanding Balance</span>
+                            <span class="info-box-number text-white" id="outstanding-balance">${data.financial_summary.total_outstanding}</span>
+                        </div>
+                    </div>
+                `;
+
                 let vitalsHTML = data.vitals.map(v => `
                     <div class="info-box bg-light mb-2">
                         <span class="info-box-icon bg-info elevation-1"><i class="fas fa-heartbeat"></i></span>
@@ -894,6 +903,7 @@
                 `).join('') || '<p class="text-muted">No nursing notes available.</p>';
 
                 patientDetailsContainer.innerHTML = `
+                    ${financialSummaryHTML}
                     <div class="accordion" id="patientAccordion">
                         <div class="card">
                             <div class="card-header" data-toggle="collapse" data-target="#vitalsCollapse">

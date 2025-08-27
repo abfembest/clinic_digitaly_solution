@@ -40,6 +40,7 @@
                                 <th>Doctor</th>
                                 <th>Start Date</th>
                                 <th>Current Status</th>
+                                <th>Outstanding Balance</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -69,6 +70,7 @@
                                         {{ record.get_status_display }}
                                     </span>
                                 </td>
+                                <td>₦{{ record.patient.total_outstanding_amount|floatformat:2 }}</td>
                                 <td>
                                     <button class="btn btn-sm btn-primary viewProgressBtn"
                                         data-record-id="{{ record.id }}"
@@ -203,6 +205,9 @@
                                 } else if (entry.type === 'nursing_note') {
                                     iconClass = 'fas fa-notes-medical';
                                     bgColorClass = 'bg-purple'; // AdminLTE3 has bg-purple
+                                } else if (entry.type === 'payment') {
+                                    iconClass = 'fas fa-money-bill-wave';
+                                    bgColorClass = 'bg-success'; // Green for financial
                                 }
 
                                 const entryDate = new Date(entry.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -261,6 +266,14 @@
                                         <strong>Note Type:</strong> ${entry.note_type || 'N/A'}<br>
                                         <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
                                         <strong>Nurse:</strong> ${entry.nurse || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'payment') {
+                                    timelineHtml += `
+                                        <strong>Amount:</strong> ₦${entry.amount || '0.00'}<br>
+                                        <strong>Method:</strong> ${entry.method || 'N/A'}<br>
+                                        <strong>Status:</strong> ${entry.status || 'N/A'}<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Processed By:</strong> ${entry.processed_by || 'N/A'}
                                     `;
                                 }
 
