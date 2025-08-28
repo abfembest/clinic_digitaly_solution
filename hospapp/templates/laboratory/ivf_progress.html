@@ -139,7 +139,11 @@
                         </div>
                     </div>
                 </div>
-
+                <div class="text-center my-3">
+                    <button id="toggleTimelineBtn" class="btn btn-info">
+                        <i class="fas fa-eye mr-2"></i> Show Timeline
+                    </button>
+                </div>
                 <div class="row">
                     <div class="col-md-12">
                         <div class="card">
@@ -150,8 +154,8 @@
                                 </h3>
                             </div>
                             <div class="card-body">
-                                <div class="timeline" id="progressTimelineContent">
-                                    </div>
+                                <div class="timeline d-none" id="progressTimelineContent">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -216,194 +220,217 @@ $(function () {
         // Set patient name in modal
         $('#timelinePatientName').text(patientName);
         
+        // Reset the timeline content and button state
+        $('#progressTimelineContent').addClass('d-none').empty();
+        $('#toggleTimelineBtn').text('Show Timeline').removeClass('btn-danger').addClass('btn-info').data('record-id', recordId);
+        
         // Show modal
         $('#ivfProgressModal').modal('show');
-        
-        // Show loading in timeline
-        $('#progressTimelineContent').html(`
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="sr-only">Loading...</span>
+    });
+
+    // Toggle Timeline Button Click Handler
+    $('#toggleTimelineBtn').on('click', function() {
+        const $btn = $(this);
+        const $timelineContent = $('#progressTimelineContent');
+        const recordId = $btn.data('record-id');
+
+        if ($timelineContent.hasClass('d-none')) {
+            // Timeline is hidden, so show it
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Loading...');
+            
+            // Show loading in timeline
+            $timelineContent.html(`
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading timeline...</p>
                 </div>
-                <p class="mt-2">Loading timeline...</p>
-            </div>
-        `);
+            `).removeClass('d-none');
 
-        // Load progress data
-        $.ajax({
-            url: `/ivf/progress/${recordId}/`,
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    const recordDetails = response.record_details;
-                    const timeline = response.timeline;
+            // Load progress data via AJAX
+            $.ajax({
+                url: `/ivf/progress/${recordId}/`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const recordDetails = response.record_details;
+                        const timeline = response.timeline;
 
-                    // Update info boxes
-                    $('#timelinePackage').text(recordDetails.ivf_package);
-                    $('#timelineStartDate').text(recordDetails.created_on);
-                    $('#currentStatusBadge').text(recordDetails.current_status);
+                        // Update info boxes
+                        $('#timelinePackage').text(recordDetails.ivf_package);
+                        $('#timelineStartDate').text(recordDetails.created_on);
+                        $('#currentStatusBadge').text(recordDetails.current_status);
 
-                    // Update status badge color
-                    let statusClass = '';
-                    switch (recordDetails.current_status) {
-                        case 'Open': statusClass = 'badge-secondary'; break;
-                        case 'Pending': statusClass = 'badge-warning'; break;
-                        case 'In Progress': statusClass = 'badge-info'; break;
-                        case 'Stimulation Phase': statusClass = 'badge-primary'; break;
-                        case 'Egg Retrieval': statusClass = 'badge-success'; break;
-                        case 'Fertilization': statusClass = 'badge-light text-dark border'; break;
-                        case 'Embryo Transfer': statusClass = 'badge-dark'; break;
-                        case 'Luteal Phase': statusClass = 'badge-danger'; break;
-                        case 'Pregnancy Test': statusClass = 'badge-warning'; break;
-                        case 'Completed': statusClass = 'badge-success'; break;
-                        case 'Cancelled': statusClass = 'badge-danger'; break;
-                        default: statusClass = 'badge-secondary';
-                    }
-                    $('#currentStatusBadge').removeClass().addClass('badge ' + statusClass);
+                        // Update status badge color
+                        let statusClass = '';
+                        switch (recordDetails.current_status) {
+                            case 'Open': statusClass = 'badge-secondary'; break;
+                            case 'Pending': statusClass = 'badge-warning'; break;
+                            case 'In Progress': statusClass = 'badge-info'; break;
+                            case 'Stimulation Phase': statusClass = 'badge-primary'; break;
+                            case 'Egg Retrieval': statusClass = 'badge-success'; break;
+                            case 'Fertilization': statusClass = 'badge-light text-dark border'; break;
+                            case 'Embryo Transfer': statusClass = 'badge-dark'; break;
+                            case 'Luteal Phase': statusClass = 'badge-danger'; break;
+                            case 'Pregnancy Test': statusClass = 'badge-warning'; break;
+                            case 'Completed': statusClass = 'badge-success'; break;
+                            case 'Cancelled': statusClass = 'badge-danger'; break;
+                            default: statusClass = 'badge-secondary';
+                        }
+                        $('#currentStatusBadge').removeClass().addClass('badge ' + statusClass);
 
-                    // Build timeline HTML
-                    let timelineHtml = '';
-                    if (timeline.length > 0) {
-                        timeline.forEach(entry => {
-                            let iconClass = 'fas fa-info-circle';
-                            let bgColorClass = 'bg-info';
+                        // Build timeline HTML
+                        let timelineHtml = '';
+                        if (timeline.length > 0) {
+                            timeline.forEach(entry => {
+                                let iconClass = 'fas fa-info-circle';
+                                let bgColorClass = 'bg-info';
 
-                            switch (entry.type) {
-                                case 'status_update':
-                                    iconClass = 'fas fa-sync-alt';
-                                    switch (entry.status) {
-                                        case 'Open': bgColorClass = 'bg-secondary'; break;
-                                        case 'Pending': bgColorClass = 'bg-warning'; break;
-                                        case 'In Progress': bgColorClass = 'bg-info'; break;
-                                        case 'Stimulation Phase': bgColorClass = 'bg-primary'; break;
-                                        case 'Egg Retrieval': bgColorClass = 'bg-success'; break;
-                                        case 'Fertilization': bgColorClass = 'bg-light'; break;
-                                        case 'Embryo Transfer': bgColorClass = 'bg-dark'; break;
-                                        case 'Luteal Phase': bgColorClass = 'bg-danger'; break;
-                                        case 'Pregnancy Test': bgColorClass = 'bg-warning'; break;
-                                        case 'Completed': bgColorClass = 'bg-success'; break;
-                                        case 'Cancelled': bgColorClass = 'bg-danger'; break;
-                                        default: bgColorClass = 'bg-info';
-                                    }
-                                    break;
-                                case 'vitals':
-                                    iconClass = 'fas fa-heartbeat';
-                                    bgColorClass = 'bg-danger';
-                                    break;
-                                case 'lab_test':
-                                    iconClass = 'fas fa-vial';
-                                    bgColorClass = 'bg-purple';
-                                    break;
-                                case 'consultation':
-                                    iconClass = 'fas fa-user-md';
-                                    bgColorClass = 'bg-primary';
-                                    break;
-                                case 'nursing_note':
-                                    iconClass = 'fas fa-notes-medical';
-                                    bgColorClass = 'bg-teal';
-                                    break;
-                            }
+                                switch (entry.type) {
+                                    case 'status_update':
+                                        iconClass = 'fas fa-sync-alt';
+                                        switch (entry.status) {
+                                            case 'Open': bgColorClass = 'bg-secondary'; break;
+                                            case 'Pending': bgColorClass = 'bg-warning'; break;
+                                            case 'In Progress': bgColorClass = 'bg-info'; break;
+                                            case 'Stimulation Phase': bgColorClass = 'bg-primary'; break;
+                                            case 'Egg Retrieval': bgColorClass = 'bg-success'; break;
+                                            case 'Fertilization': bgColorClass = 'bg-light'; break;
+                                            case 'Embryo Transfer': bgColorClass = 'bg-dark'; break;
+                                            case 'Luteal Phase': bgColorClass = 'bg-danger'; break;
+                                            case 'Pregnancy Test': bgColorClass = 'bg-warning'; break;
+                                            case 'Completed': bgColorClass = 'bg-success'; break;
+                                            case 'Cancelled': bgColorClass = 'bg-danger'; break;
+                                            default: bgColorClass = 'bg-info';
+                                        }
+                                        break;
+                                    case 'vitals':
+                                        iconClass = 'fas fa-heartbeat';
+                                        bgColorClass = 'bg-danger';
+                                        break;
+                                    case 'lab_test':
+                                        iconClass = 'fas fa-vial';
+                                        bgColorClass = 'bg-purple';
+                                        break;
+                                    case 'consultation':
+                                        iconClass = 'fas fa-user-md';
+                                        bgColorClass = 'bg-primary';
+                                        break;
+                                    case 'nursing_note':
+                                        iconClass = 'fas fa-notes-medical';
+                                        bgColorClass = 'bg-teal';
+                                        break;
+                                }
 
-                            timelineHtml += `
-                                <div class="time-label">
-                                    <span class="${bgColorClass}">${entry.timestamp.split(' ')[0]}</span>
-                                </div>
-                                <div>
-                                    <i class="${iconClass} ${bgColorClass}"></i>
-                                    <div class="timeline-item">
-                                        <span class="time"><i class="fas fa-clock"></i> ${entry.timestamp.split(' ')[1]}</span>
-                                        <h3 class="timeline-header">
-                                            ${entry.type === 'status_update' ? `Status Update: ${entry.status}` : ''}
-                                            ${entry.type === 'vitals' ? 'Vitals Recorded' : ''}
-                                            ${entry.type === 'lab_test' ? `Lab Test: ${entry.test_name} (${entry.status})` : ''}
-                                            ${entry.type === 'consultation' ? 'Consultation' : ''}
-                                            ${entry.type === 'nursing_note' ? `Nursing Note: ${entry.note_type}` : ''}
-                                        </h3>
-                                        <div class="timeline-body">
-                            `;
-
-                            if (entry.type === 'status_update') {
                                 timelineHtml += `
-                                    <strong>Status:</strong> ${entry.status || 'N/A'}<br>
-                                    <strong>Comments:</strong> ${entry.comments || 'N/A'}<br>
-                                    <strong>Updated By:</strong> ${entry.updated_by || 'N/A'}
+                                    <div class="time-label">
+                                        <span class="${bgColorClass}">${entry.timestamp.split(' ')[0]}</span>
+                                    </div>
+                                    <div>
+                                        <i class="${iconClass} ${bgColorClass}"></i>
+                                        <div class="timeline-item">
+                                            <span class="time"><i class="fas fa-clock"></i> ${entry.timestamp.split(' ')[1]}</span>
+                                            <h3 class="timeline-header">
+                                                ${entry.type === 'status_update' ? `Status Update: ${entry.status}` : ''}
+                                                ${entry.type === 'vitals' ? 'Vitals Recorded' : ''}
+                                                ${entry.type === 'lab_test' ? `Lab Test: ${entry.test_name} (${entry.status})` : ''}
+                                                ${entry.type === 'consultation' ? 'Consultation' : ''}
+                                                ${entry.type === 'nursing_note' ? `Nursing Note: ${entry.note_type}` : ''}
+                                            </h3>
+                                            <div class="timeline-body">
                                 `;
-                            } else if (entry.type === 'vitals') {
-                                timelineHtml += `
-                                    <strong>Blood Pressure:</strong> ${entry.blood_pressure || 'N/A'}<br>
-                                    <strong>Temperature:</strong> ${entry.temperature || 'N/A'}<br>
-                                    <strong>Pulse:</strong> ${entry.pulse || 'N/A'}<br>
-                                    <strong>Respiratory Rate:</strong> ${entry.respiratory_rate || 'N/A'}<br>
-                                    <strong>Weight:</strong> ${entry.weight || 'N/A'} kg<br>
-                                    <strong>Height:</strong> ${entry.height || 'N/A'} cm<br>
-                                    <strong>BMI:</strong> ${entry.bmi || 'N/A'}<br>
-                                    <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
-                                    <strong>Recorded By:</strong> ${entry.recorded_by || 'N/A'}
-                                `;
-                            } else if (entry.type === 'lab_test') {
-                                timelineHtml += `
-                                    <strong>Test Name:</strong> ${entry.test_name || 'N/A'}<br>
-                                    <strong>Status:</strong> ${entry.status || 'N/A'}<br>
-                                    <strong>Result:</strong> ${entry.result_value || 'N/A'}<br>
-                                    <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
-                                    <strong>Requested By:</strong> ${entry.requested_by || 'N/A'}<br>
-                                    <strong>Performed By:</strong> ${entry.performed_by || 'N/A'}<br>
-                                    <strong>Test Request ID:</strong> ${entry.test_request_id || 'N/A'}
-                                `;
-                            } else if (entry.type === 'consultation') {
-                                timelineHtml += `
-                                    <strong>Symptoms:</strong> ${entry.symptoms || 'N/A'}<br>
-                                    <strong>Diagnosis:</strong> ${entry.diagnosis_summary || 'N/A'}<br>
-                                    <strong>Advice:</strong> ${entry.advice || 'N/A'}<br>
-                                    <strong>Consultant:</strong> ${entry.doctor || 'N/A'}
-                                `;
-                            } else if (entry.type === 'nursing_note') {
-                                timelineHtml += `
-                                    <strong>Note Type:</strong> ${entry.note_type || 'N/A'}<br>
-                                    <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
-                                    <strong>Nurse:</strong> ${entry.nurse || 'N/A'}
-                                `;
-                            }
 
-                            timelineHtml += `
+                                if (entry.type === 'status_update') {
+                                    timelineHtml += `
+                                        <strong>Status:</strong> ${entry.status || 'N/A'}<br>
+                                        <strong>Comments:</strong> ${entry.comments || 'N/A'}<br>
+                                        <strong>Updated By:</strong> ${entry.updated_by || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'vitals') {
+                                    timelineHtml += `
+                                        <strong>Blood Pressure:</strong> ${entry.blood_pressure || 'N/A'}<br>
+                                        <strong>Temperature:</strong> ${entry.temperature || 'N/A'}<br>
+                                        <strong>Pulse:</strong> ${entry.pulse || 'N/A'}<br>
+                                        <strong>Respiratory Rate:</strong> ${entry.respiratory_rate || 'N/A'}<br>
+                                        <strong>Weight:</strong> ${entry.weight || 'N/A'} kg<br>
+                                        <strong>Height:</strong> ${entry.height || 'N/A'} cm<br>
+                                        <strong>BMI:</strong> ${entry.bmi || 'N/A'}<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Recorded By:</strong> ${entry.recorded_by || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'lab_test') {
+                                    timelineHtml += `
+                                        <strong>Test Name:</strong> ${entry.test_name || 'N/A'}<br>
+                                        <strong>Status:</strong> ${entry.status || 'N/A'}<br>
+                                        <strong>Result:</strong> ${entry.result_value || 'N/A'}<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Requested By:</strong> ${entry.requested_by || 'N/A'}<br>
+                                        <strong>Performed By:</strong> ${entry.performed_by || 'N/A'}<br>
+                                        <strong>Test Request ID:</strong> ${entry.test_request_id || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'consultation') {
+                                    timelineHtml += `
+                                        <strong>Symptoms:</strong> ${entry.symptoms || 'N/A'}<br>
+                                        <strong>Diagnosis:</strong> ${entry.diagnosis_summary || 'N/A'}<br>
+                                        <strong>Advice:</strong> ${entry.advice || 'N/A'}<br>
+                                        <strong>Consultant:</strong> ${entry.doctor || 'N/A'}
+                                    `;
+                                } else if (entry.type === 'nursing_note') {
+                                    timelineHtml += `
+                                        <strong>Note Type:</strong> ${entry.note_type || 'N/A'}<br>
+                                        <strong>Notes:</strong> ${entry.notes || 'N/A'}<br>
+                                        <strong>Nurse:</strong> ${entry.nurse || 'N/A'}
+                                    `;
+                                }
+
+                                timelineHtml += `
+                                            </div>
                                         </div>
                                     </div>
+                                `;
+                            });
+                            timelineHtml += `
+                                <div>
+                                    <i class="far fa-clock bg-gray"></i>
                                 </div>
                             `;
-                        });
-                        timelineHtml += `
-                            <div>
-                                <i class="far fa-clock bg-gray"></i>
-                            </div>
-                        `;
+                        } else {
+                            timelineHtml = `
+                                <div class="callout callout-info">
+                                    <h5><i class="fas fa-info"></i> No Timeline Data</h5>
+                                    <p>No timeline events are available for this record yet.</p>
+                                </div>
+                            `;
+                        }
+                        $timelineContent.html(timelineHtml);
+                        $btn.prop('disabled', false).html('<i class="fas fa-eye-slash mr-2"></i> Hide Timeline').removeClass('btn-info').addClass('btn-danger');
                     } else {
-                        timelineHtml = `
-                            <div class="callout callout-info">
-                                <h5><i class="fas fa-info"></i> No Timeline Data</h5>
-                                <p>No timeline events are available for this record yet.</p>
+                        $timelineContent.html(`
+                            <div class="callout callout-danger">
+                                <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
+                                <p>Error loading timeline: ${response.error}</p>
                             </div>
-                        `;
+                        `);
+                        $btn.prop('disabled', false).html('<i class="fas fa-exclamation-triangle mr-2"></i> Try Again').removeClass('btn-info').addClass('btn-warning');
                     }
-                    $('#progressTimelineContent').html(timelineHtml);
-                } else {
-                    $('#progressTimelineContent').html(`
+                },
+                error: function (xhr) {
+                    $btn.prop('disabled', false).html('<i class="fas fa-exclamation-triangle mr-2"></i> Try Again').removeClass('btn-info').addClass('btn-warning');
+                    const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
+                    $timelineContent.html(`
                         <div class="callout callout-danger">
                             <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
-                            <p>Error loading timeline: ${response.error}</p>
+                            <p>Error loading timeline: ${errorMessage}</p>
                         </div>
                     `);
                 }
-            },
-            error: function (xhr) {
-                const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
-                $('#progressTimelineContent').html(`
-                    <div class="callout callout-danger">
-                        <h5><i class="fas fa-exclamation-triangle"></i> Error</h5>
-                        <p>Error loading timeline: ${errorMessage}</p>
-                    </div>
-                `);
-            }
-        });
+            });
+        } else {
+            // Timeline is visible, so hide it
+            $timelineContent.addClass('d-none').empty();
+            $btn.html('<i class="fas fa-eye mr-2"></i> Show Timeline').removeClass('btn-danger').addClass('btn-info');
+        }
     });
 });
 </script>

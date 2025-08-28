@@ -310,13 +310,18 @@
                     <button type="button" class="btn btn-info btn-sm ml-2" id="addCommentOnlyBtn">
                         <i class="fas fa-comment"></i> Add Comment Only
                     </button>
+                    <button type="button" class="btn btn-secondary btn-sm ml-2" id="toggleTimelineBtn">
+                        <i class="fas fa-history"></i> Show Timeline
+                    </button>
                 </form>
                 <hr>
-                <h5>Progress Timeline</h5>
-                <div class="timeline" id="progressTimelineContent">
-                    <div class="text-center">
-                        <i class="fas fa-spinner fa-spin fa-2x"></i>
-                        <p class="mt-2">Loading timeline...</p>
+                <div id="timelineSection" style="display: none;">
+                    <h5>Progress Timeline</h5>
+                    <div class="timeline" id="progressTimelineContent">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Loading timeline...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -406,7 +411,6 @@
         $('#patientIdSearch').on('keyup', function() {
             ivfTable.column(0).search(this.value).draw(); // Assuming Patient ID is in the first column
         });
-
 
         // Variables to store action data
         let currentRecordId = null;
@@ -542,11 +546,13 @@
             const recordId = button.data('record-id');
             $('#progressRecordId').val(recordId); // Set the hidden input for updates
 
-            // Reset form fields
+            // Reset form fields and hide timeline section
             $('#newProgressStatus').val('');
             $('#progressComments').val('');
+            $('#timelineSection').hide();
+            $('#toggleTimelineBtn').html('<i class="fas fa-history"></i> Show Timeline');
 
-            // Show loading state for timeline
+            // Clear timeline content
             $('#progressTimelineContent').html(`
                 <div class="text-center">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
@@ -554,206 +560,220 @@
                 </div>
             `);
 
-            // Fetch progress data
+            // Fetch record details only (not timeline)
             $.ajax({
                 url: `/ivf/progress/${recordId}/`,
                 type: 'GET',
                 success: function (response) {
                     if (response.success) {
                         const recordDetails = response.record_details;
-                        const timeline = response.timeline;
 
-                               // Populate modal header
-                                $('#progressModalHeader').html(`
-                                    <table class="table table-sm table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th>Patient</th>
-                                                <th>IVF Package</th>
-                                                <th>Current Status</th>
-                                                <th>Doctor</th>
-                                                <th>Cycle Started On</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>${recordDetails.patient_name}</td>
-                                                <td>${recordDetails.ivf_package}</td>
-                                                <td><span class="badge badge-primary">${recordDetails.current_status}</span></td>
-                                                <td>${recordDetails.doctor_name}</td>
-                                                <td>${recordDetails.created_on}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                `);
-
-
+                        // Populate modal header
+                        $('#progressModalHeader').html(`
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>IVF Package</th>
+                                        <th>Current Status</th>
+                                        <th>Doctor</th>
+                                        <th>Cycle Started On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>${recordDetails.patient_name}</td>
+                                        <td>${recordDetails.ivf_package}</td>
+                                        <td><span class="badge badge-primary">${recordDetails.current_status}</span></td>
+                                        <td>${recordDetails.doctor_name}</td>
+                                        <td>${recordDetails.created_on}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        `);
 
                         // Populate the status dropdown with the current status pre-selected
-                        // Normalize the status string to match option values (lowercase, replace spaces with underscores)
                         const currentStatusNormalized = recordDetails.current_status.toLowerCase().replace(/ /g, '_');
                         $('#newProgressStatus').val(currentStatusNormalized);
 
-
-                        // Render timeline using AdminLTE3 classes
-                        let timelineHtml = '<div class="timeline">';
-                        if (timeline.length > 0) {
-                            timeline.forEach(entry => {
-                                // Determine icon and color based on entry type or status
-                                let iconClass = 'fas fa-info-circle'; // Default icon
-                                let badgeClass = 'bg-secondary'; // Default color
-                                let title = '';
-                                let bodyContent = '';
-                                let recordedBy = 'N/A';
-
-                                switch (entry.type) {
-                                    case 'status_update':
-                                        iconClass = 'fas fa-sync-alt';
-                                        title = `Status Update: ${entry.status}`;
-                                        bodyContent = entry.comments ? `<p>${entry.comments}</p>` : '<p class="text-muted font-italic">No specific comments for this update.</p>';
-                                        recordedBy = entry.updated_by;
-                                        
-                                        switch (entry.status.toLowerCase().replace(/ /g, '_')) {
-                                            case 'open': badgeClass = 'bg-success'; break;
-                                            case 'pending': badgeClass = 'bg-warning'; break;
-                                            case 'in_progress': badgeClass = 'bg-primary'; break;
-                                            case 'stimulation': badgeClass = 'bg-info'; break;
-                                            case 'egg_retrieval': badgeClass = 'bg-info'; break;
-                                            case 'fertilization': badgeClass = 'bg-info'; break;
-                                            case 'embryo_transfer': badgeClass = 'bg-info'; break;
-                                            case 'luteal_phase': badgeClass = 'bg-info'; break;
-                                            case 'pregnancy_test': badgeClass = 'bg-info'; break;
-                                            case 'completed': badgeClass = 'bg-success'; break;
-                                            case 'cancelled': badgeClass = 'bg-danger'; break;
-                                            default: badgeClass = 'bg-secondary'; break;
-                                        }
-                                        break;
-                                       case 'vitals':
-                                                iconClass = 'fas fa-heartbeat';
-                                                badgeClass = 'bg-danger';
-                                                title = `Vitals Recorded`;
-                                                bodyContent = `
-                                                    <table class="table table-sm table-bordered">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>BP</th>
-                                                                <th>Temp (°C)</th>
-                                                                <th>Pulse (bpm)</th>
-                                                                <th>Resp Rate</th>
-                                                                <th>Weight (kg)</th>
-                                                                <th>Height (cm)</th>
-                                                                <th>BMI</th>
-                                                                ${entry.notes ? '<th>Notes</th>' : ''}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <tr>
-                                                                <td>${entry.blood_pressure || 'N/A'}</td>
-                                                                <td>${entry.temperature || 'N/A'}°C</td>
-                                                                <td>${entry.pulse || 'N/A'} bpm</td>
-                                                                <td>${entry.respiratory_rate || 'N/A'}</td>
-                                                                <td>${entry.weight || 'N/A'} kg</td>
-                                                                <td>${entry.height || 'N/A'} cm</td>
-                                                                <td>${entry.bmi || 'N/A'}</td>
-                                                                ${entry.notes ? `<td>${entry.notes}</td>` : ''}
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                `;
-                                                break;
-
-                                        recordedBy = entry.recorded_by;
-                                        break;
-                                    case 'lab_test':
-                                        iconClass = 'fas fa-flask';
-                                        badgeClass = 'bg-purple';
-                                        title = `Lab Test: ${entry.test_name}`;
-                                        bodyContent = `
-                                            <p><strong>Status:</strong> ${entry.status}</p>
-                                            <p><strong>Result:</strong> ${entry.result_value || 'N/A'}</p>
-                                            ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
-                                            <p>Requested by: ${entry.requested_by}</p>
-                                            <p>Performed by: ${entry.performed_by}</p>
-                                        `;
-                                        recordedBy = entry.requested_by; // Or performed_by, depending on preference
-                                        break;
-                                    case 'consultation':
-                                        iconClass = 'fas fa-user-md';
-                                        badgeClass = 'bg-primary';
-                                        title = `Consultation by Dr. ${entry.doctor}`;
-                                        bodyContent = `
-                                            <p><strong>Symptoms:</strong> ${entry.symptoms}</p>
-                                            <p><strong>Diagnosis:</strong> ${entry.diagnosis_summary}</p>
-                                            <p><strong>Advice:</strong> ${entry.advice}</p>
-                                        `;
-                                        recordedBy = entry.doctor;
-                                        break;
-                                    case 'nursing_note':
-                                        iconClass = 'fas fa-notes-medical';
-                                        badgeClass = 'bg-teal';
-                                        title = `Nursing Note (${entry.note_type})`;
-                                        bodyContent = `
-                                            <p>${entry.notes}</p>
-                                            <p>Nurse: ${entry.nurse}</p>
-                                        `;
-                                        recordedBy = entry.nurse;
-                                        break;
-                                    default:
-                                        iconClass = 'fas fa-question-circle';
-                                        badgeClass = 'bg-secondary';
-                                        title = `Unknown Event Type`;
-                                        bodyContent = `<p>Details: ${JSON.stringify(entry)}</p>`;
-                                        recordedBy = 'System';
-                                        break;
-                                }
-
-                                timelineHtml += `
-                                    <div>
-                                        <i class="${iconClass} ${badgeClass}"></i>
-                                        <div class="timeline-item">
-                                            <span class="time"><i class="far fa-clock"></i> ${entry.timestamp}</span>
-                                            <h3 class="timeline-header">${title}</h3>
-                                            <div class="timeline-body">
-                                                ${bodyContent}
-                                            </div>
-                                            <div class="timeline-footer">
-                                                <small class="text-muted">Recorded by: ${recordedBy}</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    `;
-                            });
-                            // Add the "End of timeline" entry
-                            timelineHtml += `
-                                <div>
-                                    <i class="fas fa-clock bg-gray"></i>
-                                </div>
-                            `;
-                        } else {
-                            timelineHtml += `
-                                <div>
-                                    <div class="timeline-item">
-                                        <h3 class="timeline-header">No progress updates yet.</h3>
-                                        <div class="timeline-body">
-                                            <p class="text-muted">This cycle has just started or has no recorded progress entries.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        timelineHtml += '</div>'; // Close .timeline div
-                        $('#progressTimelineContent').html(timelineHtml);
+                        // Store timeline data for later use when button is clicked
+                        $('#progressModal').data('timeline', response.timeline);
                     } else {
                         $('#progressModalHeader').html(`<p class="text-danger">Error loading record details: ${response.error}</p>`);
-                        $('#progressTimelineContent').html(`<p class="text-danger">Error loading timeline: ${response.error}</p>`);
                     }
                 },
                 error: function (xhr) {
                     const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
                     $('#progressModalHeader').html(`<p class="text-danger">Error: ${errorMessage}</p>`);
-                    $('#progressTimelineContent').html(`<p class="text-danger">Error: ${errorMessage}</p>`);
                 }
             });
+        });
+
+        // Handle timeline toggle button
+        $('#toggleTimelineBtn').on('click', function() {
+            const $button = $(this);
+            const $timelineSection = $('#timelineSection');
+            const timeline = $('#progressModal').data('timeline');
+
+            if ($timelineSection.is(':visible')) {
+                // Hide timeline
+                $timelineSection.hide();
+                $button.html('<i class="fas fa-history"></i> Show Timeline');
+            } else {
+                // Show timeline and populate if not already done
+                $timelineSection.show();
+                $button.html('<i class="fas fa-eye-slash"></i> Hide Timeline');
+
+                // Only populate timeline if it hasn't been populated yet
+                if (timeline && $('#progressTimelineContent').find('.text-center').length > 0) {
+                    // Render timeline using AdminLTE3 classes
+                    let timelineHtml = '<div class="timeline">';
+                    if (timeline.length > 0) {
+                        timeline.forEach(entry => {
+                            // Determine icon and color based on entry type or status
+                            let iconClass = 'fas fa-info-circle'; // Default icon
+                            let badgeClass = 'bg-secondary'; // Default color
+                            let title = '';
+                            let bodyContent = '';
+                            let recordedBy = 'N/A';
+
+                            switch (entry.type) {
+                                case 'status_update':
+                                    iconClass = 'fas fa-sync-alt';
+                                    title = `Status Update: ${entry.status}`;
+                                    bodyContent = entry.comments ? `<p>${entry.comments}</p>` : '<p class="text-muted font-italic">No specific comments for this update.</p>';
+                                    recordedBy = entry.updated_by;
+                                    
+                                    switch (entry.status.toLowerCase().replace(/ /g, '_')) {
+                                        case 'open': badgeClass = 'bg-success'; break;
+                                        case 'pending': badgeClass = 'bg-warning'; break;
+                                        case 'in_progress': badgeClass = 'bg-primary'; break;
+                                        case 'stimulation': badgeClass = 'bg-info'; break;
+                                        case 'egg_retrieval': badgeClass = 'bg-info'; break;
+                                        case 'fertilization': badgeClass = 'bg-info'; break;
+                                        case 'embryo_transfer': badgeClass = 'bg-info'; break;
+                                        case 'luteal_phase': badgeClass = 'bg-info'; break;
+                                        case 'pregnancy_test': badgeClass = 'bg-info'; break;
+                                        case 'completed': badgeClass = 'bg-success'; break;
+                                        case 'cancelled': badgeClass = 'bg-danger'; break;
+                                        default: badgeClass = 'bg-secondary'; break;
+                                    }
+                                    break;
+                                case 'vitals':
+                                    iconClass = 'fas fa-heartbeat';
+                                    badgeClass = 'bg-danger';
+                                    title = `Vitals Recorded`;
+                                    bodyContent = `
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>BP</th>
+                                                    <th>Temp (°C)</th>
+                                                    <th>Pulse (bpm)</th>
+                                                    <th>Resp Rate</th>
+                                                    <th>Weight (kg)</th>
+                                                    <th>Height (cm)</th>
+                                                    <th>BMI</th>
+                                                    ${entry.notes ? '<th>Notes</th>' : ''}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>${entry.blood_pressure || 'N/A'}</td>
+                                                    <td>${entry.temperature || 'N/A'}°C</td>
+                                                    <td>${entry.pulse || 'N/A'} bpm</td>
+                                                    <td>${entry.respiratory_rate || 'N/A'}</td>
+                                                    <td>${entry.weight || 'N/A'} kg</td>
+                                                    <td>${entry.height || 'N/A'} cm</td>
+                                                    <td>${entry.bmi || 'N/A'}</td>
+                                                    ${entry.notes ? `<td>${entry.notes}</td>` : ''}
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    `;
+                                    recordedBy = entry.recorded_by;
+                                    break;
+                                case 'lab_test':
+                                    iconClass = 'fas fa-flask';
+                                    badgeClass = 'bg-purple';
+                                    title = `Lab Test: ${entry.test_name}`;
+                                    bodyContent = `
+                                        <p><strong>Status:</strong> ${entry.status}</p>
+                                        <p><strong>Result:</strong> ${entry.result_value || 'N/A'}</p>
+                                        ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                        <p>Requested by: ${entry.requested_by}</p>
+                                        <p>Performed by: ${entry.performed_by}</p>
+                                    `;
+                                    recordedBy = entry.requested_by;
+                                    break;
+                                case 'consultation':
+                                    iconClass = 'fas fa-user-md';
+                                    badgeClass = 'bg-primary';
+                                    title = `Consultation by Dr. ${entry.doctor}`;
+                                    bodyContent = `
+                                        <p><strong>Symptoms:</strong> ${entry.symptoms}</p>
+                                        <p><strong>Diagnosis:</strong> ${entry.diagnosis_summary}</p>
+                                        <p><strong>Advice:</strong> ${entry.advice}</p>
+                                    `;
+                                    recordedBy = entry.doctor;
+                                    break;
+                                case 'nursing_note':
+                                    iconClass = 'fas fa-notes-medical';
+                                    badgeClass = 'bg-teal';
+                                    title = `Nursing Note (${entry.note_type})`;
+                                    bodyContent = `
+                                        <p>${entry.notes}</p>
+                                        <p>Nurse: ${entry.nurse}</p>
+                                    `;
+                                    recordedBy = entry.nurse;
+                                    break;
+                                default:
+                                    iconClass = 'fas fa-question-circle';
+                                    badgeClass = 'bg-secondary';
+                                    title = `Unknown Event Type`;
+                                    bodyContent = `<p>Details: ${JSON.stringify(entry)}</p>`;
+                                    recordedBy = 'System';
+                                    break;
+                            }
+
+                            timelineHtml += `
+                                <div>
+                                    <i class="${iconClass} ${badgeClass}"></i>
+                                    <div class="timeline-item">
+                                        <span class="time"><i class="far fa-clock"></i> ${entry.timestamp}</span>
+                                        <h3 class="timeline-header">${title}</h3>
+                                        <div class="timeline-body">
+                                            ${bodyContent}
+                                        </div>
+                                        <div class="timeline-footer">
+                                            <small class="text-muted">Recorded by: ${recordedBy}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        // Add the "End of timeline" entry
+                        timelineHtml += `
+                            <div>
+                                <i class="fas fa-clock bg-gray"></i>
+                            </div>
+                        `;
+                    } else {
+                        timelineHtml += `
+                            <div>
+                                <div class="timeline-item">
+                                    <h3 class="timeline-header">No progress updates yet.</h3>
+                                    <div class="timeline-body">
+                                        <p class="text-muted">This cycle has just started or has no recorded progress entries.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    timelineHtml += '</div>'; // Close .timeline div
+                    $('#progressTimelineContent').html(timelineHtml);
+                }
+            }
         });
 
         // Handle submitting progress update
@@ -773,10 +793,10 @@
             $button.html('<i class="fas fa-spinner fa-spin"></i> Saving...');
             $button.prop('disabled', true);
             $('#addCommentOnlyBtn').prop('disabled', true);
-
+            $('#toggleTimelineBtn').prop('disabled', true);
 
             $.ajax({
-                url: '{% url "update_ivf_status" %}', // Use the existing update status endpoint
+                url: '{% url "update_ivf_status" %}',
                 type: 'POST',
                 data: JSON.stringify({
                     record_id: recordId,
@@ -790,24 +810,25 @@
                 success: function(response) {
                     if (response.success) {
                         showToast('success', response.message);
-                        // Reload the page after a short delay to see the updated table and potentially new buttons
                         setTimeout(() => {
                             location.reload(); 
                         }, 2000);
-                        // Reset form fields
                         $('#progressComments').val('');
-                        $('#progressModal').modal('hide'); // Hide the modal after successful update
+                        $('#progressModal').modal('hide');
                     } else {
                         showToast('error', 'Failed to update progress: ' + response.error);
                     }
                     $button.html(originalHtml);
                     $button.prop('disabled', false);
                     $('#addCommentOnlyBtn').prop('disabled', false);
+                    $('#toggleTimelineBtn').prop('disabled', false);
                 },
                 error: function(xhr) {
                     showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
                     $button.html(originalHtml);
                     $button.prop('disabled', false);
+                    $('#addCommentOnlyBtn').prop('disabled', false);
+                    $('#toggleTimelineBtn').prop('disabled', false);
                 }
             });
         });
@@ -827,9 +848,10 @@
             $button.html('<i class="fas fa-spinner fa-spin"></i> Adding...');
             $button.prop('disabled', true);
             $('#submitProgressUpdateBtn').prop('disabled', true);
+            $('#toggleTimelineBtn').prop('disabled', true);
 
             $.ajax({
-                url: '{% url "add_ivf_progress_comment" %}', // New endpoint for comments only
+                url: '{% url "add_ivf_progress_comment" %}',
                 type: 'POST',
                 data: JSON.stringify({
                     record_id: recordId,
@@ -842,151 +864,148 @@
                 success: function(response) {
                     if (response.success) {
                         showToast('success', response.message);
-                        // Reload the progress modal content to show the updated timeline
-                        // Instead of hiding and showing the modal, just re-fetch the timeline data
-                        // and update the content without closing the modal.
-                        // This provides a smoother UX.
-                        $.ajax({
-                            url: `/ivf/progress/${recordId}/`,
-                            type: 'GET',
-                            success: function (response) {
-                                if (response.success) {
-                                    const timeline = response.timeline;
-                                    let timelineHtml = '<div class="timeline">'; // Changed to div
-                                    if (timeline.length > 0) {
-                                        timeline.forEach(entry => {
-                                            let iconClass = 'fas fa-info-circle'; 
-                                            let badgeClass = 'bg-secondary'; 
-                                            let title = '';
-                                            let bodyContent = '';
-                                            let recordedBy = 'N/A';
+                        // If timeline is currently visible, refresh it
+                        if ($('#timelineSection').is(':visible')) {
+                            // Refresh timeline data
+                            $.ajax({
+                                url: `/ivf/progress/${recordId}/`,
+                                type: 'GET',
+                                success: function (response) {
+                                    if (response.success) {
+                                        // Update stored timeline data
+                                        $('#progressModal').data('timeline', response.timeline);
+                                        
+                                        // Re-render timeline
+                                        const timeline = response.timeline;
+                                        let timelineHtml = '<div class="timeline">';
+                                        if (timeline.length > 0) {
+                                            timeline.forEach(entry => {
+                                                let iconClass = 'fas fa-info-circle';
+                                                let badgeClass = 'bg-secondary';
+                                                let title = '';
+                                                let bodyContent = '';
+                                                let recordedBy = 'N/A';
 
-                                            switch (entry.type) {
-                                                case 'status_update':
-                                                    iconClass = 'fas fa-sync-alt';
-                                                    title = `Status Update: ${entry.status}`;
-                                                    bodyContent = entry.comments ? `<p>${entry.comments}</p>` : '<p class="text-muted font-italic">No specific comments for this update.</p>';
-                                                    recordedBy = entry.updated_by;
-                                                    
-                                                    switch (entry.status.toLowerCase().replace(/ /g, '_')) {
-                                                        case 'open': badgeClass = 'bg-success'; break;
-                                                        case 'pending': badgeClass = 'bg-warning'; break;
-                                                        case 'in_progress': badgeClass = 'bg-primary'; break;
-                                                        case 'stimulation': badgeClass = 'bg-info'; break;
-                                                        case 'egg_retrieval': badgeClass = 'bg-info'; break;
-                                                        case 'fertilization': badgeClass = 'bg-info'; break;
-                                                        case 'embryo_transfer': badgeClass = 'bg-info'; break;
-                                                        case 'luteal_phase': badgeClass = 'bg-info'; break;
-                                                        case 'pregnancy_test': badgeClass = 'bg-info'; break;
-                                                        case 'completed': badgeClass = 'bg-success'; break;
-                                                        case 'cancelled': badgeClass = 'bg-danger'; break;
-                                                        default: badgeClass = 'bg-secondary'; break;
-                                                    }
-                                                    break;
-                                                case 'vitals':
-                                                    iconClass = 'fas fa-heartbeat';
-                                                    badgeClass = 'bg-danger';
-                                                    title = `Vitals Recorded`;
-                                                    bodyContent = `
-                                                        <p><strong>BP:</strong> ${entry.blood_pressure || 'N/A'}</p>
-                                                        <p><strong>Temp:</strong> ${entry.temperature || 'N/A'}°C</p>
-                                                        <p><strong>Pulse:</strong> ${entry.pulse || 'N/A'} bpm</p>
-                                                        <p><strong>Resp Rate:</strong> ${entry.respiratory_rate || 'N/A'}</p>
-                                                        <p><strong>Weight:</strong> ${entry.weight || 'N/A'} kg</p>
-                                                        <p><strong>Height:</strong> ${entry.height || 'N/A'} cm</p>
-                                                        <p><strong>BMI:</strong> ${entry.bmi || 'N/A'}</p>
-                                                        ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
-                                                    `;
-                                                    recordedBy = entry.recorded_by;
-                                                    break;
-                                                case 'lab_test':
-                                                    iconClass = 'fas fa-flask';
-                                                    badgeClass = 'bg-purple';
-                                                    title = `Lab Test: ${entry.test_name}`;
-                                                    bodyContent = `
-                                                        <p><strong>Status:</strong> ${entry.status}</p>
-                                                        <p><strong>Result:</strong> ${entry.result_value || 'N/A'}</p>
-                                                        ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
-                                                        <p>Requested by: ${entry.requested_by}</p>
-                                                        <p>Performed by: ${entry.performed_by}</p>
-                                                    `;
-                                                    recordedBy = entry.requested_by; // Or performed_by, depending on preference
-                                                    break;
-                                                case 'consultation':
-                                                    iconClass = 'fas fa-user-md';
-                                                    badgeClass = 'bg-primary';
-                                                    title = `Consultation by Dr. ${entry.doctor}`;
-                                                    bodyContent = `
-                                                        <p><strong>Symptoms:</strong> ${entry.symptoms}</p>
-                                                        <p><strong>Diagnosis:</strong> ${entry.diagnosis_summary}</p>
-                                                        <p><strong>Advice:</strong> ${entry.advice}</p>
-                                                    `;
-                                                    recordedBy = entry.doctor;
-                                                    break;
-                                                case 'nursing_note':
-                                                    iconClass = 'fas fa-notes-medical';
-                                                    badgeClass = 'bg-teal';
-                                                    title = `Nursing Note (${entry.note_type})`;
-                                                    bodyContent = `
-                                                        <p>${entry.notes}</p>
-                                                        <p>Nurse: ${entry.nurse}</p>
-                                                    `;
-                                                    recordedBy = entry.nurse;
-                                                    break;
-                                                default:
-                                                    iconClass = 'fas fa-question-circle';
-                                                    badgeClass = 'bg-secondary';
-                                                    title = `Unknown Event Type`;
-                                                    bodyContent = `<p>Details: ${JSON.stringify(entry)}</p>`;
-                                                    recordedBy = 'System';
-                                                    break;
-                                            }
+                                                switch (entry.type) {
+                                                    case 'status_update':
+                                                        iconClass = 'fas fa-sync-alt';
+                                                        title = `Status Update: ${entry.status}`;
+                                                        bodyContent = entry.comments ? `<p>${entry.comments}</p>` : '<p class="text-muted font-italic">No specific comments for this update.</p>';
+                                                        recordedBy = entry.updated_by;
+                                                        
+                                                        switch (entry.status.toLowerCase().replace(/ /g, '_')) {
+                                                            case 'open': badgeClass = 'bg-success'; break;
+                                                            case 'pending': badgeClass = 'bg-warning'; break;
+                                                            case 'in_progress': badgeClass = 'bg-primary'; break;
+                                                            case 'stimulation': badgeClass = 'bg-info'; break;
+                                                            case 'egg_retrieval': badgeClass = 'bg-info'; break;
+                                                            case 'fertilization': badgeClass = 'bg-info'; break;
+                                                            case 'embryo_transfer': badgeClass = 'bg-info'; break;
+                                                            case 'luteal_phase': badgeClass = 'bg-info'; break;
+                                                            case 'pregnancy_test': badgeClass = 'bg-info'; break;
+                                                            case 'completed': badgeClass = 'bg-success'; break;
+                                                            case 'cancelled': badgeClass = 'bg-danger'; break;
+                                                            default: badgeClass = 'bg-secondary'; break;
+                                                        }
+                                                        break;
+                                                    case 'vitals':
+                                                        iconClass = 'fas fa-heartbeat';
+                                                        badgeClass = 'bg-danger';
+                                                        title = `Vitals Recorded`;
+                                                        bodyContent = `
+                                                            <p><strong>BP:</strong> ${entry.blood_pressure || 'N/A'}</p>
+                                                            <p><strong>Temp:</strong> ${entry.temperature || 'N/A'}°C</p>
+                                                            <p><strong>Pulse:</strong> ${entry.pulse || 'N/A'} bpm</p>
+                                                            <p><strong>Resp Rate:</strong> ${entry.respiratory_rate || 'N/A'}</p>
+                                                            <p><strong>Weight:</strong> ${entry.weight || 'N/A'} kg</p>
+                                                            <p><strong>Height:</strong> ${entry.height || 'N/A'} cm</p>
+                                                            <p><strong>BMI:</strong> ${entry.bmi || 'N/A'}</p>
+                                                            ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                                        `;
+                                                        recordedBy = entry.recorded_by;
+                                                        break;
+                                                    case 'lab_test':
+                                                        iconClass = 'fas fa-flask';
+                                                        badgeClass = 'bg-purple';
+                                                        title = `Lab Test: ${entry.test_name}`;
+                                                        bodyContent = `
+                                                            <p><strong>Status:</strong> ${entry.status}</p>
+                                                            <p><strong>Result:</strong> ${entry.result_value || 'N/A'}</p>
+                                                            ${entry.notes ? `<p><strong>Notes:</strong> ${entry.notes}</p>` : ''}
+                                                            <p>Requested by: ${entry.requested_by}</p>
+                                                            <p>Performed by: ${entry.performed_by}</p>
+                                                        `;
+                                                        recordedBy = entry.requested_by;
+                                                        break;
+                                                    case 'consultation':
+                                                        iconClass = 'fas fa-user-md';
+                                                        badgeClass = 'bg-primary';
+                                                        title = `Consultation by Dr. ${entry.doctor}`;
+                                                        bodyContent = `
+                                                            <p><strong>Symptoms:</strong> ${entry.symptoms}</p>
+                                                            <p><strong>Diagnosis:</strong> ${entry.diagnosis_summary}</p>
+                                                            <p><strong>Advice:</strong> ${entry.advice}</p>
+                                                        `;
+                                                        recordedBy = entry.doctor;
+                                                        break;
+                                                    case 'nursing_note':
+                                                        iconClass = 'fas fa-notes-medical';
+                                                        badgeClass = 'bg-teal';
+                                                        title = `Nursing Note (${entry.note_type})`;
+                                                        bodyContent = `
+                                                            <p>${entry.notes}</p>
+                                                            <p>Nurse: ${entry.nurse}</p>
+                                                        `;
+                                                        recordedBy = entry.nurse;
+                                                        break;
+                                                    default:
+                                                        iconClass = 'fas fa-question-circle';
+                                                        badgeClass = 'bg-secondary';
+                                                        title = `Unknown Event Type`;
+                                                        bodyContent = `<p>Details: ${JSON.stringify(entry)}</p>`;
+                                                        recordedBy = 'System';
+                                                        break;
+                                                }
+
+                                                timelineHtml += `
+                                                    <div>
+                                                        <i class="${iconClass} ${badgeClass}"></i>
+                                                        <div class="timeline-item">
+                                                            <span class="time"><i class="far fa-clock"></i> ${entry.timestamp}</span>
+                                                            <h3 class="timeline-header">${title}</h3>
+                                                            <div class="timeline-body">
+                                                                ${bodyContent}
+                                                            </div>
+                                                            <div class="timeline-footer">
+                                                                <small class="text-muted">Recorded by: ${recordedBy}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            });
                                             timelineHtml += `
                                                 <div>
-                                                    <i class="${iconClass} ${badgeClass}"></i>
+                                                    <i class="fas fa-clock bg-gray"></i>
+                                                </div>
+                                            `;
+                                        } else {
+                                            timelineHtml += `
+                                                <div>
                                                     <div class="timeline-item">
-                                                        <span class="time"><i class="far fa-clock"></i> ${entry.timestamp}</span>
-                                                        <h3 class="timeline-header">${title}</h3>
+                                                        <h3 class="timeline-header">No progress updates yet.</h3>
                                                         <div class="timeline-body">
-                                                            ${bodyContent}
-                                                        </div>
-                                                        <div class="timeline-footer">
-                                                            <small class="text-muted">Recorded by: ${recordedBy}</small>
+                                                            <p class="text-muted">This cycle has just started or has no recorded progress entries.</p>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                `;
-                                        });
-                                        // Add the "End of timeline" entry
-                                        timelineHtml += `
-                                            <div>
-                                                <i class="fas fa-clock bg-gray"></i>
-                                            </div>
-                                        `;
-                                    } else {
-                                        timelineHtml += `
-                                            <div>
-                                                <div class="timeline-item">
-                                                    <h3 class="timeline-header">No progress updates yet.</h3>
-                                                    <div class="timeline-body">
-                                                        <p class="text-muted">This cycle has just started or has no recorded progress entries.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
+                                            `;
+                                        }
+                                        timelineHtml += '</div>';
+                                        $('#progressTimelineContent').html(timelineHtml);
                                     }
-                                    timelineHtml += '</div>'; // Close .timeline div
-                                    $('#progressTimelineContent').html(timelineHtml);
-                                } else {
-                                    $('#progressTimelineContent').html(`<p class="text-danger">Error reloading timeline: ${response.error}</p>`);
                                 }
-                            },
-                            error: function(xhr) {
-                                const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred. Please try again.';
-                                $('#progressTimelineContent').html(`<p class="text-danger">Error reloading timeline: ${errorMessage}</p>`);
-                            }
-                        });
-                        // Reset comments field
+                            });
+                        }
                         $('#progressComments').val('');
                     } else {
                         showToast('error', 'Failed to add comment: ' + response.error);
@@ -994,12 +1013,14 @@
                     $button.html(originalHtml);
                     $button.prop('disabled', false);
                     $('#submitProgressUpdateBtn').prop('disabled', false);
+                    $('#toggleTimelineBtn').prop('disabled', false);
                 },
                 error: function(xhr) {
                     showToast('error', 'An error occurred: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Please try again.'));
                     $button.html(originalHtml);
                     $button.prop('disabled', false);
                     $('#submitProgressUpdateBtn').prop('disabled', false);
+                    $('#toggleTimelineBtn').prop('disabled', false);
                 }
             });
         });
